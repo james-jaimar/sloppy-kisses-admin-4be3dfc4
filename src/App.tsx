@@ -10,6 +10,9 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import CustomerLayout from "@/components/layout/CustomerLayout";
 import PublicFormLayout from "@/components/layout/PublicFormLayout";
 import PlaceholderPage from "@/components/layout/PlaceholderPage";
+import RequireAdmin from "@/components/auth/RequireAdmin";
+import RequireCustomer from "@/components/auth/RequireCustomer";
+import Login from "@/pages/Login";
 import AdminDashboard from "@/features/dashboard/AdminDashboard";
 import CalendarWeekView from "@/features/calendar/CalendarWeekView";
 import CustomersPage from "@/features/customers/CustomersPage";
@@ -32,7 +35,9 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="/login" element={<Login />} />
 
+              <Route element={<RequireAdmin />}>
               <Route element={<AdminLayout />}>
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="/admin/calendar" element={<CalendarWeekView />} />
@@ -57,7 +62,9 @@ const App = () => (
                 <Route path="/admin/users" element={<PlaceholderPage title="Users & roles" />} />
                 <Route path="/admin/settings" element={<PlaceholderPage title="Settings" />} />
               </Route>
+              </Route>
 
+              <Route element={<RequireCustomer />}>
               <Route element={<CustomerLayout />}>
                 <Route path="/customer/dashboard" element={<CustomerDashboard />} />
                 <Route path="/customer/profile" element={<PlaceholderPage title="Profile" />} />
@@ -68,6 +75,7 @@ const App = () => (
                 <Route path="/customer/documents" element={<PlaceholderPage title="Documents" />} />
                 <Route path="/customer/invoices" element={<PlaceholderPage title="Invoices" />} />
                 <Route path="/customer/payments" element={<PlaceholderPage title="Payments" />} />
+              </Route>
               </Route>
 
               <Route element={<PublicFormLayout />}>

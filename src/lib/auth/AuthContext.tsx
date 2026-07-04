@@ -1,51 +1,73 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
-
-export type UserRole =
-  | "platform_owner"
-  | "tenant_owner"
-  | "tenant_admin"
-  | "staff_frontdesk"
-  | "staff_grooming"
-  | "staff_daycare"
-  | "staff_hotel"
-  | "staff_driver"
-  | "staff_accounts"
-  | "staff_read_only"
-  | "customer";
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  displayName: string;
-  avatarUrl?: string;
-  roles: UserRole[];
-}
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import type { Session, User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase/client";
 
 interface AuthContextValue {
-  user: AuthUser | null;
+  session: Session | null;
+  authUser: User | null;
   loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 }
 
-const mockUser: AuthUser = {
-  id: "mock-user-charlotte",
-  email: "charlotte@sloppykisses.co.za",
-  displayName: "Charlotte",
-  roles: ["tenant_owner"],
-};
-
-const AuthContext = createContext<AuthContextValue>({
-  user: mockUser,
-  loading: false,
-  signOut: async () => {},
-});
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const bootstrapped = useRef(false);
+
+  useEffect(() => {
+    // Register listener FIRST so any auth event during bootstrap is captured.
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+      setSession(next);
+      if (bootstrapped.current) setLoading(false);
+    });
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
+      })
+      .finally(() => {
+        bootstrapped.current = true;
+        setLoading(false);
+      });
+
+    return () => {
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user: mockUser, loading: false, signOut: async () => {} }),
-    [],
+    () => ({
+      session,
+      authUser: session?.user ?? null,
+      loading,
+      async signIn(email, password) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        return { error: error?.message ?? null };
+      },
+      async signOut() {
+        await supabase.auth.signOut();
+      },
+    }),
+    [session, loading],
   );
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export const useAuth = () => useContext(AuthContext);
+export function useAuth() {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  return ctx;
+}
