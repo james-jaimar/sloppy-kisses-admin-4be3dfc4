@@ -1,8 +1,9 @@
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { demoTodayGrooming } from "@/constants/demoData";
-import { Scissors, Truck, Dog, Hotel, ArrowLeftRight, TrendingUp, TrendingDown, MoreHorizontal, ChevronRight } from "lucide-react";
+import { Scissors, Truck, Dog, Hotel, ArrowLeftRight, TrendingUp, TrendingDown, MoreHorizontal, ChevronRight, Users, PawPrint } from "lucide-react";
 import { format } from "date-fns";
+import { useCustomerAndPetCounts } from "@/features/customers/queries";
 
 const stats = [
   { key: "grooming", label: "Today's Grooming", value: 12, delta: "+3", trend: "up",   icon: Scissors,       tone: "coral" },
@@ -36,6 +37,7 @@ const activity = [
 
 export default function AdminDashboard() {
   const today = format(new Date(), "EEEE, d MMMM");
+  const { data: counts, isLoading: countsLoading } = useCustomerAndPetCounts();
   return (
     <>
       <AppHeader
@@ -49,6 +51,32 @@ export default function AdminDashboard() {
         }
       />
       <div className="flex-1 space-y-6 p-6">
+        {/* CRM totals — real data */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="sk-card p-5">
+            <div className="flex items-start justify-between">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-sk-turquoise-soft text-sk-turquoise-dark">
+                <Users className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-4 sk-stat-value tabular-nums">
+              {countsLoading ? "…" : counts?.customers.toLocaleString() ?? 0}
+            </div>
+            <div className="sk-stat-label mt-1">Customers</div>
+          </div>
+          <div className="sk-card p-5">
+            <div className="flex items-start justify-between">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-sk-coral-soft text-sk-coral-dark">
+                <PawPrint className="h-5 w-5" />
+              </div>
+            </div>
+            <div className="mt-4 sk-stat-value tabular-nums">
+              {countsLoading ? "…" : counts?.pets.toLocaleString() ?? 0}
+            </div>
+            <div className="sk-stat-label mt-1">Pets</div>
+          </div>
+        </div>
+
         {/* Stat cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {stats.map((s) => {
