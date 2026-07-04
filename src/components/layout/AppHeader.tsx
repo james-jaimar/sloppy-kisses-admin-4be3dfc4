@@ -1,5 +1,7 @@
-import { Bell, MessageSquare, Plus, Search } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Bell, LogOut, MessageSquare, Plus, Search } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
 
 interface Props {
   title?: string;
@@ -9,8 +11,28 @@ interface Props {
 }
 
 export function AppHeader({ title, subtitle, tabs, actions }: Props) {
-  const { user } = useAuth();
-  const initials = (user?.displayName ?? "?").split(" ").map((s) => s[0]).join("").slice(0, 2);
+  const { authUser, signOut } = useAuth();
+  const { profile, roles } = useCurrentUser();
+  const displayName = profile?.full_name ?? authUser?.email ?? "";
+  const initials =
+    (displayName || "?")
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((s) => s[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?";
+  const roleLabel = roles[0]?.label ?? (profile?.user_type ? profile.user_type : "");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [menuOpen]);
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-sk-surface/85 backdrop-blur">
@@ -35,14 +57,37 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
           <Bell className="h-[18px] w-[18px]" />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-sk-coral" />
         </button>
-        <div className="flex items-center gap-2 pl-2">
-          <div className="grid h-10 w-10 place-items-center rounded-full bg-sk-turquoise-soft text-sk-turquoise-dark text-sm font-semibold">
-            {initials}
-          </div>
-          <div className="hidden sm:block leading-tight">
-            <div className="text-sm font-medium">{user?.displayName}</div>
-            <div className="text-[11px] text-muted-foreground">Tenant owner</div>
-          </div>
+        <div className="relative flex items-center gap-2 pl-2" ref={menuRef}>
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex items-center gap-2 rounded-xl px-1 py-1 hover:bg-muted"
+          >
+            <div className="grid h-10 w-10 place-items-center rounded-full bg-sk-turquoise-soft text-sk-turquoise-dark text-sm font-semibold">
+              {initials}
+            </div>
+            <div className="hidden sm:block leading-tight text-left">
+              <div className="text-sm font-medium">{displayName || "\u2014"}</div>
+              <div className="text-[11px] text-muted-foreground capitalize">{roleLabel || ""}</div>
+            </div>
+          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-12 z-40 w-56 rounded-xl border border-border bg-white p-1 shadow-lg">
+              <div className="px-3 py-2">
+                <div className="text-sm font-medium truncate">{displayName || "\u2014"}</div>
+                <div className="text-xs text-muted-foreground truncate">{authUser?.email}</div>
+              </div>
+              <div className="my-1 h-px bg-border" />
+              <button
+                onClick={async () => {
+                  setMenuOpen(false);
+                  await signOut();
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-muted"
+              >
+                <LogOut className="h-4 w-4" /> Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
       {(title || tabs || actions) && (
