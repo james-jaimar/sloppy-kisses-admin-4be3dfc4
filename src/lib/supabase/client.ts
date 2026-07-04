@@ -1,15 +1,22 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
+// Single source of truth for the Supabase browser client.
+// Config is read from Vite env vars — never hardcode URL or keys here.
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const anon = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+const anonKey =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ??
+  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined);
 
-// The real backend is the user's own Supabase project:
-// https://jsmsyezkfxtgmxvgfuxx.supabase.co
-// Set VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY once the project is wired.
-export const supabase: SupabaseClient | null =
-  url && anon
-    ? createClient(url, anon, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
+export const supabase: SupabaseClient<Database> | null =
+  url && anonKey
+    ? createClient<Database>(url, anonKey, {
+        auth: {
+          storage: typeof window !== "undefined" ? window.localStorage : undefined,
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
       })
     : null;
 
