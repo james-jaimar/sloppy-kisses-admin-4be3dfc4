@@ -481,7 +481,11 @@ export type Database = {
           home_address: string | null
           id: string
           id_number: string | null
+          import_batch: string | null
+          import_source: string | null
+          imported_at: string | null
           last_name: string | null
+          legacy_customer_pet_count: number | null
           linked_profile_id: string | null
           mobile: string | null
           notes_internal: string | null
@@ -496,6 +500,7 @@ export type Database = {
           updated_at: string
           updated_by: string | null
           work_address: string | null
+          xero_customer_id: string | null
         }
         Insert: {
           address_line_1?: string | null
@@ -511,7 +516,11 @@ export type Database = {
           home_address?: string | null
           id?: string
           id_number?: string | null
+          import_batch?: string | null
+          import_source?: string | null
+          imported_at?: string | null
           last_name?: string | null
+          legacy_customer_pet_count?: number | null
           linked_profile_id?: string | null
           mobile?: string | null
           notes_internal?: string | null
@@ -526,6 +535,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           work_address?: string | null
+          xero_customer_id?: string | null
         }
         Update: {
           address_line_1?: string | null
@@ -541,7 +551,11 @@ export type Database = {
           home_address?: string | null
           id?: string
           id_number?: string | null
+          import_batch?: string | null
+          import_source?: string | null
+          imported_at?: string | null
           last_name?: string | null
+          legacy_customer_pet_count?: number | null
           linked_profile_id?: string | null
           mobile?: string | null
           notes_internal?: string | null
@@ -556,6 +570,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           work_address?: string | null
+          xero_customer_id?: string | null
         }
         Relationships: [
           {
@@ -1567,6 +1582,129 @@ export type Database = {
           },
         ]
       }
+      import_customers_raw: {
+        Row: {
+          address_line_1: string | null
+          address_line_2: string | null
+          customer_category: string | null
+          customer_id: string | null
+          customer_pet_number: string | null
+          customer_suburb: string | null
+          customer_type: string | null
+          email: string | null
+          first_name: string | null
+          id: number
+          import_batch: string
+          imported_at: string
+          last_name: string | null
+          last_seen_date: string | null
+          mobile: string | null
+          phone_alt: string | null
+          postcode: string | null
+          raw_row_number: number | null
+          suburb_extra: string | null
+          xero_customer_id: string | null
+        }
+        Insert: {
+          address_line_1?: string | null
+          address_line_2?: string | null
+          customer_category?: string | null
+          customer_id?: string | null
+          customer_pet_number?: string | null
+          customer_suburb?: string | null
+          customer_type?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: number
+          import_batch: string
+          imported_at?: string
+          last_name?: string | null
+          last_seen_date?: string | null
+          mobile?: string | null
+          phone_alt?: string | null
+          postcode?: string | null
+          raw_row_number?: number | null
+          suburb_extra?: string | null
+          xero_customer_id?: string | null
+        }
+        Update: {
+          address_line_1?: string | null
+          address_line_2?: string | null
+          customer_category?: string | null
+          customer_id?: string | null
+          customer_pet_number?: string | null
+          customer_suburb?: string | null
+          customer_type?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: number
+          import_batch?: string
+          imported_at?: string
+          last_name?: string | null
+          last_seen_date?: string | null
+          mobile?: string | null
+          phone_alt?: string | null
+          postcode?: string | null
+          raw_row_number?: number | null
+          suburb_extra?: string | null
+          xero_customer_id?: string | null
+        }
+        Relationships: []
+      }
+      import_pets_raw: {
+        Row: {
+          age: string | null
+          breed: string | null
+          customer_id: string | null
+          gender: string | null
+          id: number
+          import_batch: string
+          imported_at: string
+          notes: string | null
+          pet_id: string | null
+          pet_name: string | null
+          photo_file: string | null
+          raw_row_number: number | null
+          size: string | null
+          temperament: string | null
+          vaccinated: string | null
+        }
+        Insert: {
+          age?: string | null
+          breed?: string | null
+          customer_id?: string | null
+          gender?: string | null
+          id?: number
+          import_batch: string
+          imported_at?: string
+          notes?: string | null
+          pet_id?: string | null
+          pet_name?: string | null
+          photo_file?: string | null
+          raw_row_number?: number | null
+          size?: string | null
+          temperament?: string | null
+          vaccinated?: string | null
+        }
+        Update: {
+          age?: string | null
+          breed?: string | null
+          customer_id?: string | null
+          gender?: string | null
+          id?: number
+          import_batch?: string
+          imported_at?: string
+          notes?: string | null
+          pet_id?: string | null
+          pet_name?: string | null
+          photo_file?: string | null
+          raw_row_number?: number | null
+          size?: string | null
+          temperament?: string | null
+          vaccinated?: string | null
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           booking_id: string | null
@@ -1859,16 +1997,25 @@ export type Database = {
           customer_id: string
           date_of_birth: string | null
           id: string
+          import_batch: string | null
+          import_source: string | null
+          imported_at: string | null
           insurance_number: string | null
           insurance_provider: string | null
           jumper: boolean
+          legacy_customer_number: string | null
           marks_colour: string | null
           medical_notes: string | null
           microchip_number: string | null
           microchipped: boolean
           name: string
           nervous: boolean
+          pet_number: string | null
           photo_url: string | null
+          raw_gender_label: string | null
+          raw_size_label: string | null
+          raw_temperament_label: string | null
+          raw_vaccinated_label: string | null
           sex: Database["public"]["Enums"]["pet_sex"]
           size: Database["public"]["Enums"]["pet_size"] | null
           social: boolean | null
@@ -1891,16 +2038,25 @@ export type Database = {
           customer_id: string
           date_of_birth?: string | null
           id?: string
+          import_batch?: string | null
+          import_source?: string | null
+          imported_at?: string | null
           insurance_number?: string | null
           insurance_provider?: string | null
           jumper?: boolean
+          legacy_customer_number?: string | null
           marks_colour?: string | null
           medical_notes?: string | null
           microchip_number?: string | null
           microchipped?: boolean
           name: string
           nervous?: boolean
+          pet_number?: string | null
           photo_url?: string | null
+          raw_gender_label?: string | null
+          raw_size_label?: string | null
+          raw_temperament_label?: string | null
+          raw_vaccinated_label?: string | null
           sex?: Database["public"]["Enums"]["pet_sex"]
           size?: Database["public"]["Enums"]["pet_size"] | null
           social?: boolean | null
@@ -1923,16 +2079,25 @@ export type Database = {
           customer_id?: string
           date_of_birth?: string | null
           id?: string
+          import_batch?: string | null
+          import_source?: string | null
+          imported_at?: string | null
           insurance_number?: string | null
           insurance_provider?: string | null
           jumper?: boolean
+          legacy_customer_number?: string | null
           marks_colour?: string | null
           medical_notes?: string | null
           microchip_number?: string | null
           microchipped?: boolean
           name?: string
           nervous?: boolean
+          pet_number?: string | null
           photo_url?: string | null
+          raw_gender_label?: string | null
+          raw_size_label?: string | null
+          raw_temperament_label?: string | null
+          raw_vaccinated_label?: string | null
           sex?: Database["public"]["Enums"]["pet_sex"]
           size?: Database["public"]["Enums"]["pet_size"] | null
           social?: boolean | null
@@ -2650,7 +2815,7 @@ export type Database = {
       email_status: "queued" | "sent" | "failed"
       payment_method: "eft" | "cash" | "card" | "yoko" | "payfast" | "other"
       pet_sex: "male" | "female" | "unknown"
-      pet_size: "small" | "medium" | "large" | "xlarge" | "xxlarge"
+      pet_size: "xsmall" | "small" | "medium" | "large" | "xlarge" | "xxlarge"
       pet_species: "dog" | "cat" | "other"
       resource_type:
         | "inhouse_grooming"
@@ -2850,7 +3015,7 @@ export const Constants = {
       email_status: ["queued", "sent", "failed"],
       payment_method: ["eft", "cash", "card", "yoko", "payfast", "other"],
       pet_sex: ["male", "female", "unknown"],
-      pet_size: ["small", "medium", "large", "xlarge", "xxlarge"],
+      pet_size: ["xsmall", "small", "medium", "large", "xlarge", "xxlarge"],
       pet_species: ["dog", "cat", "other"],
       resource_type: [
         "inhouse_grooming",
