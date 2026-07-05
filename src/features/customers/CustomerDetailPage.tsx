@@ -5,6 +5,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useCustomer, useCustomerPets } from "./queries";
+import { CustomerFormModal } from "./CustomerFormModal";
+import { PetFormModal } from "@/features/pets/PetFormModal";
 import { format } from "date-fns";
 import {
   AlertCircle,
@@ -14,8 +16,10 @@ import {
   MapPin,
   Phone,
   Plus,
+  Pencil,
   Users,
 } from "lucide-react";
+import type { PetRow } from "./queries";
 
 const TABS = ["Pets", "Bookings", "Invoices", "Notes", "Documents", "History"] as const;
 type Tab = (typeof TABS)[number];
@@ -36,6 +40,9 @@ export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { tenant } = useCurrentTenant();
   const [tab, setTab] = useState<Tab>("Pets");
+  const [editing, setEditing] = useState(false);
+  const [addingPet, setAddingPet] = useState(false);
+  const [editingPet, setEditingPet] = useState<PetRow | null>(null);
 
   const { data: customer, isLoading, isError, error } = useCustomer(id, tenant?.id);
   const {
@@ -125,8 +132,11 @@ export default function CustomerDetailPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button className="h-9 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted">
-                    Email customer
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Edit customer
                   </button>
                   <button className="h-9 rounded-lg bg-sk-coral px-3 text-sm font-semibold text-white hover:bg-sk-coral-dark">
                     New booking
@@ -202,7 +212,10 @@ export default function CustomerDetailPage() {
                   <>
                     <div className="mb-3 flex items-center justify-between">
                       <h3 className="text-sm font-semibold">Linked pets</h3>
-                      <button className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted">
+                      <button
+                        onClick={() => setAddingPet(true)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                      >
                         <Plus className="h-3.5 w-3.5" /> Add pet
                       </button>
                     </div>
@@ -240,7 +253,10 @@ export default function CustomerDetailPage() {
                             <div className="grid h-12 w-12 place-items-center rounded-xl bg-sk-turquoise-soft text-sk-turquoise-dark font-semibold">
                               {p.name?.[0]?.toUpperCase() ?? "?"}
                             </div>
-                            <div className="min-w-0 flex-1">
+                            <Link
+                              to={`/admin/pets/${p.id}`}
+                              className="min-w-0 flex-1 hover:underline"
+                            >
                               <div className="truncate text-sm font-semibold">{p.name}</div>
                               <div className="truncate text-xs text-muted-foreground">
                                 {[p.breed, p.species, p.size, p.sex].filter(Boolean).join(" · ")}
@@ -250,12 +266,20 @@ export default function CustomerDetailPage() {
                                   #{p.pet_number}
                                 </div>
                               )}
+                            </Link>
+                            <div className="flex flex-col items-end gap-1.5">
+                              <StatusBadge
+                                status={petActive ? "confirmed" : "requested"}
+                                label={p.status ?? "—"}
+                                tone={petActive ? "green" : "orange"}
+                              />
+                              <button
+                                onClick={() => setEditingPet(p)}
+                                className="text-[11px] font-medium text-muted-foreground hover:text-foreground"
+                              >
+                                Edit
+                              </button>
                             </div>
-                            <StatusBadge
-                              status={petActive ? "confirmed" : "requested"}
-                              label={p.status ?? "—"}
-                              tone={petActive ? "green" : "orange"}
-                            />
                           </div>
                         );
                       })}
@@ -276,6 +300,29 @@ export default function CustomerDetailPage() {
           </>
         )}
       </div>
+
+      {editing && customer && tenant?.id && (
+        <CustomerFormModal
+          tenantId={tenant.id}
+          customer={customer}
+          onClose={() => setEditing(false)}
+        />
+      )}
+      {addingPet && customer && tenant?.id && (
+        <PetFormModal
+          tenantId={tenant.id}
+          customerId={customer.id}
+          onClose={() => setAddingPet(false)}
+        />
+      )}
+      {editingPet && customer && tenant?.id && (
+        <PetFormModal
+          tenantId={tenant.id}
+          customerId={customer.id}
+          pet={editingPet}
+          onClose={() => setEditingPet(null)}
+        />
+      )}
     </>
   );
 }
