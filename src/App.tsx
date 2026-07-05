@@ -13,6 +13,9 @@ import PlaceholderPage from "@/components/layout/PlaceholderPage";
 import RequireAdmin from "@/components/auth/RequireAdmin";
 import RequireCustomer from "@/components/auth/RequireCustomer";
 import Login from "@/pages/Login";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
+import ChangePasswordPage from "@/features/settings/ChangePasswordPage";
 import AdminDashboard from "@/features/dashboard/AdminDashboard";
 import CalendarWeekView from "@/features/calendar/CalendarWeekView";
 import CustomersPage from "@/features/customers/CustomersPage";
@@ -36,6 +39,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               <Route element={<RequireAdmin />}>
               <Route element={<AdminLayout />}>
@@ -61,6 +66,7 @@ const App = () => (
                 <Route path="/admin/reports" element={<PlaceholderPage title="Reports" />} />
                 <Route path="/admin/users" element={<PlaceholderPage title="Users & roles" />} />
                 <Route path="/admin/settings" element={<PlaceholderPage title="Settings" />} />
+                <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>
 
@@ -68,6 +74,7 @@ const App = () => (
               <Route element={<CustomerLayout />}>
                 <Route path="/customer/dashboard" element={<CustomerDashboard />} />
                 <Route path="/customer/profile" element={<PlaceholderPage title="Profile" />} />
+                <Route path="/customer/profile/password" element={<ChangePasswordPage />} />
                 <Route path="/customer/pets" element={<PlaceholderPage title="My pets" />} />
                 <Route path="/customer/pets/:id" element={<PlaceholderPage title="Pet detail" />} />
                 <Route path="/customer/bookings" element={<PlaceholderPage title="My bookings" />} />
