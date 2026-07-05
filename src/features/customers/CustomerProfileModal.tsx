@@ -2,6 +2,8 @@ import { ModalShell } from "@/components/modals/ModalShell";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Mail, Phone, MapPin, Plus, ExternalLink, AlertCircle, Loader2 } from "lucide-react";
 import { useCustomer, useCustomerPets } from "./queries";
+import { useCurrentTenant } from "@/lib/tenant/TenantContext";
+import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
 const tabs = ["Pets", "Bookings", "Invoices", "Notes", "Documents", "History"] as const;
@@ -17,8 +19,9 @@ function initialsOf(name: string | null | undefined) {
 }
 
 export function CustomerProfileModal({ customerId, onClose }: { customerId: string; onClose?: () => void }) {
-  const { data: customer, isLoading, isError, error } = useCustomer(customerId);
-  const { data: pets, isLoading: petsLoading } = useCustomerPets(customerId);
+  const { tenant } = useCurrentTenant();
+  const { data: customer, isLoading, isError, error } = useCustomer(customerId, tenant?.id);
+  const { data: pets, isLoading: petsLoading } = useCustomerPets(customerId, tenant?.id);
 
   const name =
     customer?.full_name ||
@@ -46,10 +49,14 @@ export function CustomerProfileModal({ customerId, onClose }: { customerId: stri
         </div>
       }
       headerRight={
-        <button className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted">
+        <Link
+          to={`/admin/customers/${customerId}`}
+          onClick={onClose}
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted"
+        >
           <ExternalLink className="h-3.5 w-3.5" />
           Open full profile
-        </button>
+        </Link>
       }
       footer={
         <div className="flex items-center justify-between">
