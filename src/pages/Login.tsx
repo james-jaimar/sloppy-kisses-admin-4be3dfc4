@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Logo } from "@/components/layout/Logo";
 import { Loader2 } from "lucide-react";
@@ -8,7 +8,9 @@ export default function Login() {
   const { authUser, loading, signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? "/admin/dashboard";
+  const state = location.state as { from?: string; justReset?: boolean } | null;
+  const from = state?.from ?? "/admin/dashboard";
+  const justReset = state?.justReset ?? false;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -74,6 +76,11 @@ export default function Login() {
           {error && (
             <div className="rounded-lg bg-sk-red-soft px-3 py-2 text-xs text-sk-coral-dark">{error}</div>
           )}
+          {justReset && !error && (
+            <div className="rounded-lg bg-sk-turquoise-soft/60 px-3 py-2 text-xs text-sk-turquoise-dark">
+              Password updated. Please sign in with your new password.
+            </div>
+          )}
           <button
             type="submit"
             disabled={submitting}
@@ -82,6 +89,12 @@ export default function Login() {
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
             Sign in
           </button>
+          <Link
+            to="/forgot-password"
+            className="block pt-2 text-center text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            Forgot your password?
+          </Link>
         </form>
       </div>
     </div>
