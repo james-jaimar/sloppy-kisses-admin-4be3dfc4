@@ -36,10 +36,12 @@ export function useCustomers(params: {
   search?: string;
   page?: number;
   pageSize?: number;
+  sortColumn?: "full_name" | "email" | "status" | "customer_number";
+  sortAscending?: boolean;
 }) {
-  const { tenantId, search = "", page = 0, pageSize = 50 } = params;
+  const { tenantId, search = "", page = 0, pageSize = 50, sortColumn = "full_name", sortAscending = true } = params;
   return useQuery({
-    queryKey: ["customers", "list", tenantId, search, page, pageSize],
+    queryKey: ["customers", "list", tenantId, search, page, pageSize, sortColumn, sortAscending],
     enabled: Boolean(tenantId),
     queryFn: async (): Promise<CustomersPage> => {
       const from = page * pageSize;
@@ -51,7 +53,7 @@ export function useCustomers(params: {
           { count: "exact" },
         )
         .eq("tenant_id", tenantId as string)
-        .order("full_name", { ascending: true, nullsFirst: false })
+        .order(sortColumn, { ascending: sortAscending, nullsFirst: false })
         .range(from, to);
 
       const s = search.trim();
@@ -151,10 +153,12 @@ export function useTenantPets(params: {
   search?: string;
   page?: number;
   pageSize?: number;
+  sortColumn?: "name" | "breed" | "species" | "status" | "pet_number";
+  sortAscending?: boolean;
 }) {
-  const { tenantId, search = "", page = 0, pageSize = 50 } = params;
+  const { tenantId, search = "", page = 0, pageSize = 50, sortColumn = "name", sortAscending = true } = params;
   return useQuery({
-    queryKey: ["pets", "tenantList", tenantId, search, page, pageSize],
+    queryKey: ["pets", "tenantList", tenantId, search, page, pageSize, sortColumn, sortAscending],
     enabled: Boolean(tenantId),
     queryFn: async (): Promise<PetsPage> => {
       const from = page * pageSize;
@@ -183,7 +187,7 @@ export function useTenantPets(params: {
           { count: "exact" },
         )
         .eq("tenant_id", tenantId as string)
-        .order("name", { ascending: true, nullsFirst: false })
+        .order(sortColumn, { ascending: sortAscending, nullsFirst: false })
         .range(from, to);
 
       if (s) {
