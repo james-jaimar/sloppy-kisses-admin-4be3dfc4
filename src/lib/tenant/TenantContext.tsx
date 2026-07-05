@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -61,9 +62,12 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return null;
     return window.localStorage.getItem(STORAGE_KEY);
   });
+  const loadedForUserRef = useRef<string | null>(null);
+  const inflightRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!authUser) {
+      loadedForUserRef.current = null;
       setState({
         profile: null,
         memberships: [],
@@ -76,7 +80,14 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setState((s) => ({ ...s, loading: true, error: null }));
+    if (inflightRef.current) return;
+    inflightRef.current = true;
+
+    // Only show the blocking loading state on the very first load for this
+    // user. Subsequent reloads (e.g. after a token refresh on tab focus)
+    // refresh state silently in the background so the UI doesn't flash.
+    const isFirstLoad = loadedForUserRef.current !== authUser.id;
+    setState((s) => (isFirstLoad ? { ...s, loading: true, error: null } : { ...s, error: null }));
 
     // 1. Profile
     const { data: profile, error: profileErr } = await supabase
@@ -86,10 +97,12 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
 
     if (profileErr) {
+      inflightRef.current = false;
       setState((s) => ({ ...s, loading: false, error: profileErr.message }));
       return;
     }
     if (!profile) {
+      inflightRef.current = false;
       setState({
         profile: null,
         memberships: [],
@@ -110,6 +123,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       .eq("status", "active");
 
     if (tuErr) {
+      inflightRef.current = false;
       setState((s) => ({ ...s, profile, loading: false, error: tuErr.message }));
       return;
     }
@@ -152,6 +166,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         .eq("tenant_user_id", tenantUserId);
 
       if (rolesErr) {
+        inflightRef.current = false;
         setState((s) => ({
           ...s,
           profile,
@@ -178,6 +193,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
           );
 
         if (permsErr) {
+          inflightRef.current = false;
           setState((s) => ({
             ...s,
             profile,
@@ -200,6 +216,8 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    loadedForUserRef.current = authUser.id;
+    inflightRef.current = false;
     setState({
       profile,
       memberships,
@@ -214,7 +232,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (authLoading) return;
     load();
-  }, [authLoading, load]);
+    // Re-run only when the signed-in user id or the selected tenant changes,
+    // not on every new session object reference.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, authUser?.id, selectedTenantId]);
 
   const setCurrentTenantId = useCallback((id: string) => {
     if (typeof window !== "undefined") window.localStorage.setItem(STORAGE_KEY, id);
