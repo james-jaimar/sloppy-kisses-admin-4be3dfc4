@@ -6,6 +6,7 @@ import { useCustomers } from "./queries";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { Plus, Search, AlertCircle, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CustomerFormModal } from "./CustomerFormModal";
 
 const PAGE_SIZE = 50;
 
@@ -15,6 +16,7 @@ export default function CustomersPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [creating, setCreating] = useState(false);
 
   // Debounce search input
   useEffect(() => {
@@ -40,7 +42,11 @@ export default function CustomersPage() {
         title="Customers"
         subtitle="Search and manage customer records"
         actions={
-          <button className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark">
+          <button
+            onClick={() => setCreating(true)}
+            disabled={!tenant?.id}
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-60"
+          >
             <Plus className="h-4 w-4" /> Add customer
           </button>
         }
@@ -175,6 +181,13 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
+      {creating && tenant?.id && (
+        <CustomerFormModal
+          tenantId={tenant.id}
+          onClose={() => setCreating(false)}
+          onCreated={(id) => navigate(`/admin/customers/${id}`)}
+        />
+      )}
     </>
   );
 }
