@@ -1,15 +1,39 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { CustomerProfileModal } from "./CustomerProfileModal";
 import { useCustomers } from "./queries";
-import { Plus, Search, AlertCircle, Users } from "lucide-react";
+import { useCurrentTenant } from "@/lib/tenant/TenantContext";
+import { Plus, Search, AlertCircle, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const PAGE_SIZE = 50;
+
 export default function CustomersPage() {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { tenant } = useCurrentTenant();
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const { data: customers, isLoading, isError, error } = useCustomers(search);
+  const [page, setPage] = useState(0);
+
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(0);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const { data, isLoading, isError, error, isFetching } = useCustomers({
+    tenantId: tenant?.id,
+    search,
+    page,
+    pageSize: PAGE_SIZE,
+  });
+  const customers = data?.rows;
+  const total = data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   return (
     <>
       <AppHeader
@@ -22,14 +46,20 @@ export default function CustomersPage() {
         }
       />
       <div className="flex-1 space-y-4 p-6">
-        <div className="relative max-w-md">
+        <div className="flex items-center justify-between gap-4">
+          <div className="relative max-w-md flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search name, email, phone or #"
             className="h-10 w-full rounded-xl border border-border bg-white pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40"
           />
+          </div>
+          <div className="text-xs text-muted-foreground tabular-nums">
+            {isLoading ? "Loading…" : `${total.toLocaleString()} customers`}
+            {isFetching && !isLoading ? " · refreshing…" : ""}
+          </div>
         </div>
         <div className="sk-card overflow-hidden">
           <table className="w-full text-sm">
@@ -56,15 +86,22 @@ export default function CustomersPage() {
               {!isLoading && !isError && customers?.map((c) => {
                 const name = c.full_name || [c.first_name, c.last_name].filter(Boolean).join(" ") || "Unnamed";
                 const active = c.status === "active";
+                const location = [c.suburb, c.city].filter(Boolean).join(", ");
                 return (
-                  <tr key={c.id} className="hover:bg-sk-surface-muted/40">
+                  <tr
+                    key={c.id}
+                    onClick={() => navigate(`/admin/customers/${c.id}`)}
+                    className="cursor-pointer hover:bg-sk-surface-muted/40"
+                  >
                     <td className="px-5 py-3">
                       <div className="font-medium">{name}</div>
                       <div className="text-xs text-muted-foreground">{c.customer_number ?? "—"}</div>
                     </td>
                     <td className="px-5 py-3">
                       <div>{c.email ?? <span className="text-muted-foreground">—</span>}</div>
-                      <div className="text-xs text-muted-foreground">{c.mobile ?? ""}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {[c.mobile, location].filter(Boolean).join(" · ")}
+                      </div>
                     </td>
                     <td className="px-5 py-3 tabular-nums">{c.pet_count}</td>
                     <td className="px-5 py-3">
@@ -75,7 +112,13 @@ export default function CustomersPage() {
                       />
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <button onClick={() => setSelectedId(c.id)} className="rounded-lg border border-border px-3 py-1 text-xs font-medium hover:bg-muted">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/admin/customers/${c.id}`);
+                        }}
+                        className="rounded-lg border border-border px-3 py-1 text-xs font-medium hover:bg-muted"
+                      >
                         View
                       </button>
                     </td>
@@ -104,10 +147,34 @@ export default function CustomersPage() {
             </div>
           )}
         </div>
+        {!isError && total > PAGE_SIZE && (
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="tabular-nums">
+              Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} of{" "}
+              {total.toLocaleString()}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="inline-flex h-8 items-center gap-1 rounded-lg border border-border px-2 font-medium hover:bg-muted disabled:opacity-40"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" /> Prev
+              </button>
+              <div className="tabular-nums">
+                Page {page + 1} / {totalPages}
+              </div>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page + 1 >= totalPages}
+                className="inline-flex h-8 items-center gap-1 rounded-lg border border-border px-2 font-medium hover:bg-muted disabled:opacity-40"
+              >
+                Next <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-      {selectedId && (
-        <CustomerProfileModal customerId={selectedId} onClose={() => setSelectedId(null)} />
-      )}
     </>
   );
 }
