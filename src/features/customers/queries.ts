@@ -13,33 +13,54 @@ export interface CustomerListRow {
   last_name: string | null;
   email: string | null;
   mobile: string | null;
+  city: string | null;
+  suburb: string | null;
   status: CustomerRow["status"];
   portal_access_enabled: boolean | null;
   pet_count: number;
 }
 
-export function useCustomers(search: string = "") {
+export interface CustomersPage {
+  rows: CustomerListRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export function useCustomers(params: {
+  tenantId: string | null | undefined;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const { tenantId, search = "", page = 0, pageSize = 50 } = params;
   return useQuery({
-    queryKey: ["customers", "list", search],
-    queryFn: async (): Promise<CustomerListRow[]> => {
+    queryKey: ["customers", "list", tenantId, search, page, pageSize],
+    enabled: Boolean(tenantId),
+    queryFn: async (): Promise<CustomersPage> => {
+      const from = page * pageSize;
+      const to = from + pageSize - 1;
       let query = supabase
         .from("customers")
         .select(
-          "id, customer_number, full_name, first_name, last_name, email, mobile, status, portal_access_enabled, pets(count)",
+          "id, customer_number, full_name, first_name, last_name, email, mobile, city, suburb, status, portal_access_enabled, pets(count)",
+          { count: "exact" },
         )
-        .order("customer_number", { ascending: true })
-        .limit(200);
+        .eq("tenant_id", tenantId as string)
+        .order("full_name", { ascending: true, nullsFirst: false })
+        .range(from, to);
 
-      if (search.trim()) {
-        const q = `%${search.trim()}%`;
+      const s = search.trim();
+      if (s) {
+        const q = `%${s}%`;
         query = query.or(
-          `full_name.ilike.${q},email.ilike.${q},mobile.ilike.${q},customer_number.ilike.${q}`,
+          `full_name.ilike.${q},first_name.ilike.${q},last_name.ilike.${q},email.ilike.${q},mobile.ilike.${q},customer_number.ilike.${q}`,
         );
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       if (error) throw error;
-      return (data ?? []).map((c: any) => ({
+      const rows = (data ?? []).map((c: any) => ({
         id: c.id,
         customer_number: c.customer_number,
         full_name: c.full_name,
@@ -47,10 +68,13 @@ export function useCustomers(search: string = "") {
         last_name: c.last_name,
         email: c.email,
         mobile: c.mobile,
+        city: c.city,
+        suburb: c.suburb,
         status: c.status,
         portal_access_enabled: c.portal_access_enabled,
         pet_count: Array.isArray(c.pets) ? Number(c.pets[0]?.count ?? 0) : 0,
       }));
+      return { rows, total: count ?? rows.length, page, pageSize };
     },
   });
 }
