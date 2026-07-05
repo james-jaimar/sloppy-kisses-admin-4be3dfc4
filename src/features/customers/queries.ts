@@ -79,15 +79,16 @@ export function useCustomers(params: {
   });
 }
 
-export function useCustomer(customerId: string | null | undefined) {
+export function useCustomer(customerId: string | null | undefined, tenantId?: string | null) {
   return useQuery({
-    queryKey: ["customers", "detail", customerId],
-    enabled: Boolean(customerId),
+    queryKey: ["customers", "detail", tenantId, customerId],
+    enabled: Boolean(customerId) && Boolean(tenantId),
     queryFn: async (): Promise<CustomerRow | null> => {
       const { data, error } = await supabase
         .from("customers")
         .select("*")
         .eq("id", customerId as string)
+        .eq("tenant_id", tenantId as string)
         .maybeSingle();
       if (error) throw error;
       return data ?? null;
@@ -95,15 +96,16 @@ export function useCustomer(customerId: string | null | undefined) {
   });
 }
 
-export function useCustomerPets(customerId: string | null | undefined) {
+export function useCustomerPets(customerId: string | null | undefined, tenantId?: string | null) {
   return useQuery({
-    queryKey: ["pets", "byCustomer", customerId],
-    enabled: Boolean(customerId),
+    queryKey: ["pets", "byCustomer", tenantId, customerId],
+    enabled: Boolean(customerId) && Boolean(tenantId),
     queryFn: async (): Promise<PetRow[]> => {
       const { data, error } = await supabase
         .from("pets")
         .select("*")
         .eq("customer_id", customerId as string)
+        .eq("tenant_id", tenantId as string)
         .order("name", { ascending: true });
       if (error) throw error;
       return data ?? [];
