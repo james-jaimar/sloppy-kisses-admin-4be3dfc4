@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -7,6 +7,9 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { Plus, Search, AlertCircle, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CustomerFormModal } from "./CustomerFormModal";
+import { SortableHeader } from "@/components/ui/sortable-header";
+
+type SortCol = "full_name" | "email" | "status" | "pet_count";
 
 const PAGE_SIZE = 50;
 
@@ -17,6 +20,15 @@ export default function CustomersPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [creating, setCreating] = useState(false);
+  const [sortColumn, setSortColumn] = useState<SortCol>("full_name");
+  const [sortAscending, setSortAscending] = useState(true);
+  const handleSort = (col: SortCol) => {
+    if (col === sortColumn) setSortAscending((a) => !a);
+    else {
+      setSortColumn(col);
+      setSortAscending(true);
+    }
+  };
 
   // Debounce search input
   useEffect(() => {
@@ -32,8 +44,18 @@ export default function CustomersPage() {
     search,
     page,
     pageSize: PAGE_SIZE,
+    // pet_count is aggregated — sort client-side; server sort by full_name in that case
+    sortColumn: sortColumn === "pet_count" ? "full_name" : sortColumn,
+    sortAscending: sortColumn === "pet_count" ? true : sortAscending,
   });
-  const customers = data?.rows;
+  const rawCustomers = data?.rows;
+  const customers = useMemo(() => {
+    if (!rawCustomers) return rawCustomers;
+    if (sortColumn !== "pet_count") return rawCustomers;
+    const copy = [...rawCustomers];
+    copy.sort((a, b) => (sortAscending ? a.pet_count - b.pet_count : b.pet_count - a.pet_count));
+    return copy;
+  }, [rawCustomers, sortColumn, sortAscending]);
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   return (
@@ -71,10 +93,34 @@ export default function CustomersPage() {
           <table className="w-full text-sm">
             <thead className="bg-sk-surface-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-5 py-3">Customer</th>
-                <th className="px-5 py-3">Contact</th>
-                <th className="px-5 py-3">Pets</th>
-                <th className="px-5 py-3">Status</th>
+                <SortableHeader<SortCol>
+                  column="full_name"
+                  label="Customer"
+                  activeColumn={sortColumn}
+                  ascending={sortAscending}
+                  onChange={handleSort}
+                />
+                <SortableHeader<SortCol>
+                  column="email"
+                  label="Contact"
+                  activeColumn={sortColumn}
+                  ascending={sortAscending}
+                  onChange={handleSort}
+                />
+                <SortableHeader<SortCol>
+                  column="pet_count"
+                  label="Pets"
+                  activeColumn={sortColumn}
+                  ascending={sortAscending}
+                  onChange={handleSort}
+                />
+                <SortableHeader<SortCol>
+                  column="status"
+                  label="Status"
+                  activeColumn={sortColumn}
+                  ascending={sortAscending}
+                  onChange={handleSort}
+                />
                 <th className="px-5 py-3 text-right"></th>
               </tr>
             </thead>
