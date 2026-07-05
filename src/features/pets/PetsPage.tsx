@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -6,6 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useTenantPets } from "@/features/customers/queries";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { AlertCircle, ChevronLeft, ChevronRight, Dog, Search } from "lucide-react";
+import { SortableHeader } from "@/components/ui/sortable-header";
+
+type SortCol = "name" | "breed" | "species" | "status" | "owner";
 
 const PAGE_SIZE = 50;
 
@@ -15,6 +18,15 @@ export default function PetsPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [sortColumn, setSortColumn] = useState<SortCol>("name");
+  const [sortAscending, setSortAscending] = useState(true);
+  const handleSort = (col: SortCol) => {
+    if (col === sortColumn) setSortAscending((a) => !a);
+    else {
+      setSortColumn(col);
+      setSortAscending(true);
+    }
+  };
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -29,8 +41,22 @@ export default function PetsPage() {
     search,
     page,
     pageSize: PAGE_SIZE,
+    // owner name lives on the joined customers table — sort client-side
+    sortColumn: sortColumn === "owner" ? "name" : sortColumn,
+    sortAscending: sortColumn === "owner" ? true : sortAscending,
   });
-  const pets = data?.rows;
+  const rawPets = data?.rows;
+  const pets = useMemo(() => {
+    if (!rawPets) return rawPets;
+    if (sortColumn !== "owner") return rawPets;
+    const copy = [...rawPets];
+    copy.sort((a: any, b: any) => {
+      const an = (a.customers?.full_name ?? "").toLowerCase();
+      const bn = (b.customers?.full_name ?? "").toLowerCase();
+      return sortAscending ? an.localeCompare(bn) : bn.localeCompare(an);
+    });
+    return copy;
+  }, [rawPets, sortColumn, sortAscending]);
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -57,11 +83,11 @@ export default function PetsPage() {
           <table className="w-full text-sm">
             <thead className="bg-sk-surface-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-5 py-3">Pet</th>
-                <th className="px-5 py-3">Breed</th>
-                <th className="px-5 py-3">Species</th>
-                <th className="px-5 py-3">Owner</th>
-                <th className="px-5 py-3">Status</th>
+                <SortableHeader<SortCol> column="name" label="Pet" activeColumn={sortColumn} ascending={sortAscending} onChange={handleSort} />
+                <SortableHeader<SortCol> column="breed" label="Breed" activeColumn={sortColumn} ascending={sortAscending} onChange={handleSort} />
+                <SortableHeader<SortCol> column="species" label="Species" activeColumn={sortColumn} ascending={sortAscending} onChange={handleSort} />
+                <SortableHeader<SortCol> column="owner" label="Owner" activeColumn={sortColumn} ascending={sortAscending} onChange={handleSort} />
+                <SortableHeader<SortCol> column="status" label="Status" activeColumn={sortColumn} ascending={sortAscending} onChange={handleSort} />
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
