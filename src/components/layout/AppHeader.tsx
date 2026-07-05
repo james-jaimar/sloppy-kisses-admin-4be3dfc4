@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, LogOut, MessageSquare, Plus, Search } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { Bell, KeyRound, LogOut, MessageSquare, Plus, Search } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 
@@ -13,6 +14,10 @@ interface Props {
 export function AppHeader({ title, subtitle, tabs, actions }: Props) {
   const { authUser, signOut } = useAuth();
   const { profile, roles } = useCurrentUser();
+  const location = useLocation();
+  const passwordPath = location.pathname.startsWith("/customer")
+    ? "/customer/profile/password"
+    : "/admin/settings/password";
   const displayName = profile?.full_name ?? authUser?.email ?? "";
   const initials =
     (displayName || "?")
@@ -77,6 +82,13 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
                 <div className="text-xs text-muted-foreground truncate">{authUser?.email}</div>
               </div>
               <div className="my-1 h-px bg-border" />
+              <Link
+                to={passwordPath}
+                onClick={() => setMenuOpen(false)}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-muted"
+              >
+                <KeyRound className="h-4 w-4" /> Change password
+              </Link>
               <button
                 onClick={async () => {
                   setMenuOpen(false);
