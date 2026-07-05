@@ -56,12 +56,12 @@ export default function CustomerDetailPage() {
     customer?.suburb,
     customer?.city,
     customer?.province,
-    customer?.postal_code,
+    customer?.postcode,
   ]
     .filter(Boolean)
     .join(", ");
   const active = customer?.status === "active";
-  const notes = customer?.notes || customer?.legacy_notes || null;
+  const notes = customer?.notes_internal || null;
 
   return (
     <>
@@ -146,8 +146,8 @@ export default function CustomerDetailPage() {
                   <Phone className="mt-0.5 h-4 w-4 text-muted-foreground" />
                   <div>
                     <div>{customer.mobile ?? <span className="text-muted-foreground">—</span>}</div>
-                    {customer.phone && (
-                      <div className="text-xs text-muted-foreground">Alt: {customer.phone}</div>
+                    {customer.phone_alt && (
+                      <div className="text-xs text-muted-foreground">Alt: {customer.phone_alt}</div>
                     )}
                   </div>
                 </div>
