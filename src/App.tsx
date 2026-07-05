@@ -19,6 +19,7 @@ import ChangePasswordPage from "@/features/settings/ChangePasswordPage";
 import AdminDashboard from "@/features/dashboard/AdminDashboard";
 import CalendarWeekView from "@/features/calendar/CalendarWeekView";
 import CustomersPage from "@/features/customers/CustomersPage";
+import CustomerDetailPage from "@/features/customers/CustomerDetailPage";
 import PetsPage from "@/features/pets/PetsPage";
 import BookingsPage from "@/features/bookings/BookingsPage";
 import DaycareDailyList from "@/features/daycare/DaycareDailyList";
@@ -47,7 +48,7 @@ const App = () => (
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="/admin/calendar" element={<CalendarWeekView />} />
                 <Route path="/admin/customers" element={<CustomersPage />} />
-                <Route path="/admin/customers/:id" element={<PlaceholderPage title="Customer detail" />} />
+                <Route path="/admin/customers/:id" element={<CustomerDetailPage />} />
                 <Route path="/admin/pets" element={<PetsPage />} />
                 <Route path="/admin/pets/:id" element={<PlaceholderPage title="Pet detail" />} />
                 <Route path="/admin/booking-requests" element={<BookingRequestQueue />} />
