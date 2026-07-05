@@ -28,7 +28,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Register listener FIRST so any auth event during bootstrap is captured.
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
+      setSession((prev) => {
+        // Ignore no-op events (tab focus fires SIGNED_IN/TOKEN_REFRESHED with
+        // the same user + token). Returning the previous reference prevents
+        // downstream effects from re-running on every tab switch.
+        if (
+          prev?.user?.id === next?.user?.id &&
+          prev?.access_token === next?.access_token
+        ) {
+          return prev;
+        }
+        return next;
+      });
       if (bootstrapped.current) setLoading(false);
     });
 

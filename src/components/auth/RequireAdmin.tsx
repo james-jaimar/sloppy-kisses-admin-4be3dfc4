@@ -30,7 +30,7 @@ export default function RequireAdmin() {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
-  if (loading) {
+  if (loading && !profile) {
     return (
       <FullScreen>
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">

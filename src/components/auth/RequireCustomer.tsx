@@ -5,10 +5,10 @@ import { useCurrentUser } from "@/lib/tenant/TenantContext";
 
 export default function RequireCustomer() {
   const { authUser, loading: authLoading } = useAuth();
-  const { loading } = useCurrentUser();
+  const { loading, profile } = useCurrentUser();
   const location = useLocation();
 
-  if (authLoading || loading) {
+  if (authLoading || (loading && !profile)) {
     return (
       <div className="grid min-h-screen place-items-center bg-sk-bg text-sm text-muted-foreground">
         <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
