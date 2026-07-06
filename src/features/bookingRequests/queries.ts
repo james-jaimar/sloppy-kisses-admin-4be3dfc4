@@ -39,6 +39,7 @@ export interface BookingRequestListRow {
   updated_at: string;
   customer_id: string | null;
   pet_id: string | null;
+  converted_booking_id: string | null;
   customer: {
     id: string;
     customer_number: string | null;
@@ -99,7 +100,7 @@ export function useBookingRequests(params: {
         .from("booking_requests")
         .select(
           `id, status, source, service_type, preferred_start_at, preferred_end_at,
-           customer_notes, admin_notes, created_at, updated_at, customer_id, pet_id,
+           customer_notes, admin_notes, created_at, updated_at, customer_id, pet_id, converted_booking_id,
            customer:customers(id, customer_number, full_name, email, mobile),
            pet:pets(id, pet_number, name, breed, size, species)`,
           { count: "exact" },
@@ -201,6 +202,49 @@ export function useCreateBookingRequest(tenantId: string | null | undefined) {
         .insert(payload)
         .select("id")
         .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookingRequests"] });
+    },
+  });
+}
+
+/**
+ * Mark a booking request as converted after a booking has been created from it.
+ * Sets status=converted, converted_booking_id, reviewed_at, and reviewed_by (if profile id given).
+ */
+export function useMarkRequestConverted(tenantId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      requestId,
+      bookingId,
+      profileId,
+    }: {
+      requestId: string;
+      bookingId: string;
+      profileId?: string | null;
+    }) => {
+      if (!tenantId) throw new Error("No tenant selected");
+      const update: any = {
+        status: "converted",
+        converted_booking_id: bookingId,
+        reviewed_at: new Date().toISOString(),
+      };
+      if (profileId) {
+        update.reviewed_by = profileId;
+        update.updated_by = profileId;
+      }
+      const { data, error } = await supabase
+        .from("booking_requests")
+        .update(update)
+        .eq("id", requestId)
+        .eq("tenant_id", tenantId)
+        .neq("status", "converted") // avoid re-conversion overwrite
+        .select("id")
+        .maybeSingle();
       if (error) throw error;
       return data;
     },

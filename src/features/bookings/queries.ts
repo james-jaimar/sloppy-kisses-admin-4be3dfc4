@@ -141,6 +141,81 @@ export function useBookingDetail(bookingId: string | null | undefined, tenantId:
   });
 }
 
+export function useBookingsList(params: {
+  tenantId: string | null | undefined;
+  search?: string;
+  serviceType?: ServiceType | "all";
+  status?: BookingStatus | "all";
+  pageSize?: number;
+}) {
+  const { tenantId, search = "", serviceType = "all", status = "all", pageSize = 200 } = params;
+  return useQuery({
+    queryKey: ["bookings", "list", tenantId, search, serviceType, status, pageSize],
+    enabled: Boolean(tenantId),
+    queryFn: async (): Promise<BookingListRow[]> => {
+      const s = search.trim();
+
+      let customerIds: string[] = [];
+      let petIds: string[] = [];
+      if (s) {
+        const q = `%${s}%`;
+        const [{ data: cids }, { data: pids }] = await Promise.all([
+          supabase
+            .from("customers")
+            .select("id")
+            .eq("tenant_id", tenantId as string)
+            .or(`full_name.ilike.${q},customer_number.ilike.${q}`)
+            .limit(500),
+          supabase
+            .from("pets")
+            .select("id")
+            .eq("tenant_id", tenantId as string)
+            .or(`name.ilike.${q},pet_number.ilike.${q}`)
+            .limit(500),
+        ]);
+        customerIds = (cids ?? []).map((c: any) => c.id);
+        petIds = (pids ?? []).map((p: any) => p.id);
+      }
+
+      let bookingIdsFromPets: string[] | null = null;
+      if (s && petIds.length) {
+        const { data: bp } = await supabase
+          .from("booking_pets")
+          .select("booking_id")
+          .eq("tenant_id", tenantId as string)
+          .in("pet_id", petIds)
+          .limit(1000);
+        bookingIdsFromPets = (bp ?? []).map((r: any) => r.booking_id);
+      }
+
+      let q = supabase
+        .from("bookings")
+        .select(BOOKING_SELECT)
+        .eq("tenant_id", tenantId as string)
+        .order("start_at", { ascending: false, nullsFirst: false })
+        .limit(pageSize);
+
+      if (serviceType !== "all") q = q.eq("service_type", serviceType as any);
+      if (status !== "all") q = q.eq("status", status as any);
+
+      if (s) {
+        const parts: string[] = [
+          `booking_number.ilike.%${s}%`,
+          `notes_internal.ilike.%${s}%`,
+        ];
+        if (customerIds.length) parts.push(`customer_id.in.(${customerIds.join(",")})`);
+        const orIds = new Set<string>(bookingIdsFromPets ?? []);
+        if (orIds.size) parts.push(`id.in.(${Array.from(orIds).join(",")})`);
+        q = q.or(parts.join(","));
+      }
+
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as unknown as BookingListRow[];
+    },
+  });
+}
+
 export interface CreateBookingInput {
   customer_id: string;
   pet_ids: string[];

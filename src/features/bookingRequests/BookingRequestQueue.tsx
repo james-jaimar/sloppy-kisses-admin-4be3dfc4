@@ -3,15 +3,18 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { useCurrentTenant } from "@/lib/tenant/TenantContext";
+import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import {
   useBookingRequests,
   useBookingRequestStatusCounts,
   useUpdateBookingRequest,
+  useMarkRequestConverted,
   type BookingRequestListRow,
   type BookingRequestStatus,
 } from "./queries";
 import { BookingRequestFormModal } from "./BookingRequestFormModal";
+import { BookingFormModal } from "@/features/bookings/BookingFormModal";
+import type { ServiceType } from "@/features/bookings/queries";
 import {
   Check,
   X,
@@ -68,6 +71,7 @@ function formatDateTime(iso: string | null) {
 
 export default function BookingRequestQueue() {
   const { tenant } = useCurrentTenant();
+  const { profile } = useCurrentUser();
   const tenantId = tenant?.id ?? null;
   const navigate = useNavigate();
 
@@ -76,6 +80,7 @@ export default function BookingRequestQueue() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
   const [adminNotesDraft, setAdminNotesDraft] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -90,6 +95,7 @@ export default function BookingRequestQueue() {
   });
   const countsQ = useBookingRequestStatusCounts(tenantId);
   const update = useUpdateBookingRequest(tenantId);
+  const markConverted = useMarkRequestConverted(tenantId);
 
   const rows = listQ.data?.rows ?? [];
   const selected: BookingRequestListRow | null = useMemo(() => {
@@ -120,6 +126,15 @@ export default function BookingRequestQueue() {
       toast.error(err?.message ?? "Failed to update request");
     }
   }
+
+  const canConvert = Boolean(
+    selected &&
+      selected.customer_id &&
+      selected.status !== "declined" &&
+      selected.status !== "converted",
+  );
+  const alreadyConverted =
+    Boolean(selected) && selected!.status === "converted";
 
   return (
     <>
@@ -257,6 +272,22 @@ export default function BookingRequestQueue() {
                   </div>
                 </div>
                 <div className="flex-1 space-y-5 overflow-y-auto p-5">
+                  {selected.status === "converted" && (
+                    <div className="flex items-start gap-2 rounded-xl border border-sk-green/40 bg-sk-green-soft/50 p-3 text-xs text-sk-green">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div>
+                        This request has been converted into a booking.{" "}
+                        {selected.converted_booking_id && (
+                          <Link
+                            to={`/admin/bookings/${selected.converted_booking_id}`}
+                            className="font-semibold underline"
+                          >
+                            Open booking
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {(!selected.customer_id || !selected.pet_id) && (
                     <div className="flex items-start gap-2 rounded-xl border border-sk-orange/40 bg-sk-orange-soft/50 p-3 text-xs text-sk-orange">
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -389,18 +420,26 @@ export default function BookingRequestQueue() {
                     <Check className="h-4 w-4" /> Approve
                   </button>
                   <button
-                    disabled={update.isPending}
-                    onClick={async () => {
-                      const params = new URLSearchParams({ newBooking: "1", request: selected.id });
-                      if (selected.customer_id) params.set("customer", selected.customer_id);
-                      if (selected.pet_id) params.set("pet", selected.pet_id);
-                      if (selected.service_type) params.set("service", selected.service_type);
-                      if (selected.preferred_start_at) params.set("start", selected.preferred_start_at);
-                      navigate(`/admin/calendar?${params.toString()}`);
+                    disabled={!canConvert || update.isPending}
+                    title={
+                      alreadyConverted
+                        ? "This request has already been converted"
+                        : selected.status === "declined"
+                          ? "Declined requests cannot be converted"
+                          : !selected.customer_id
+                            ? "Link a customer before converting"
+                            : undefined
+                    }
+                    onClick={() => {
+                      if (alreadyConverted && selected.converted_booking_id) {
+                        navigate(`/admin/bookings/${selected.converted_booking_id}`);
+                        return;
+                      }
+                      setConvertOpen(true);
                     }}
                     className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-sk-coral px-3 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-60"
                   >
-                    Convert <ArrowRight className="h-4 w-4" />
+                    {alreadyConverted ? "View booking" : "Convert"} <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
               </>
@@ -415,6 +454,36 @@ export default function BookingRequestQueue() {
           onCreated={(id) => {
             setSelectedId(id);
             setActiveFilter("pending_review");
+          }}
+        />
+      )}
+      {convertOpen && tenantId && selected && canConvert && (
+        <BookingFormModal
+          tenantId={tenantId}
+          onClose={() => setConvertOpen(false)}
+          prefill={{
+            customer_id: selected.customer_id ?? undefined,
+            pet_ids: selected.pet_id ? [selected.pet_id] : [],
+            service_type: selected.service_type as ServiceType,
+            start_at: selected.preferred_start_at ?? undefined,
+            booking_request_id: selected.id,
+          }}
+          onSaved={async (bookingId) => {
+            try {
+              await markConverted.mutateAsync({
+                requestId: selected.id,
+                bookingId,
+                profileId: profile?.id ?? null,
+              });
+            } catch (err: any) {
+              toast.error(
+                "Booking created, but failed to mark request converted: " +
+                  (err?.message ?? "unknown error"),
+              );
+            }
+            setConvertOpen(false);
+            toast.success("Booking created from request");
+            navigate(`/admin/bookings/${bookingId}`);
           }}
         />
       )}
