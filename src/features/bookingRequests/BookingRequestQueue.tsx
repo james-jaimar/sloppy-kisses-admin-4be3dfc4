@@ -69,6 +69,7 @@ function formatDateTime(iso: string | null) {
 export default function BookingRequestQueue() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const navigate = useNavigate();
 
   const [activeFilter, setActiveFilter] = useState<BookingRequestStatus | "all">("all");
   const [search, setSearch] = useState("");
