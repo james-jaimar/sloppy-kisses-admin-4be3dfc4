@@ -105,18 +105,19 @@ function NowLine({ dayAnchor }: { dayAnchor: Date }) {
   );
 }
 
-function EventCard({ b, onClick }: { b: BookingListRow; onClick: () => void }) {
+function EventCard({ b, onClick, height, hideResource = false }: { b: BookingListRow; onClick: () => void; height?: number; hideResource?: boolean }) {
   const pet = b.booking_pets[0]?.pet;
   const warn = !b.resource_id;
+  const compact = typeof height === "number" && height < 46;
   return (
     <button
       onClick={onClick}
       className={
-        "block h-full w-full overflow-hidden rounded-lg border-l-[3px] px-2 py-1 text-left text-[11px] shadow-sm hover:shadow-md transition-all " +
+        "block h-full w-full overflow-hidden rounded-lg border-l-[3px] px-2 py-0.5 text-left text-[11px] shadow-sm hover:shadow-md transition-all " +
         SERVICE_TONE[b.service_type]
       }
     >
-      <div className="flex items-center justify-between gap-1">
+      <div className="flex items-center justify-between gap-1 leading-[1.15]">
         <span className="tabular-nums font-semibold">
           {b.start_at ? format(new Date(b.start_at), "HH:mm") : ""}
         </span>
@@ -126,11 +127,15 @@ function EventCard({ b, onClick }: { b: BookingListRow; onClick: () => void }) {
           <BookingStatusDot status={b.status} />
         </span>
       </div>
-      <div className="truncate font-semibold leading-tight">
+      <div className="truncate text-[11px] font-semibold leading-[1.15]">
         {pet?.name ?? "—"}{b.booking_pets.length > 1 ? ` +${b.booking_pets.length - 1}` : ""}
       </div>
-      <div className="truncate leading-tight opacity-80">{b.customer?.full_name ?? "—"}</div>
-      {b.resource?.name && <div className="truncate text-[10px] leading-tight opacity-70">{b.resource.name}</div>}
+      {!compact && (
+        <div className="truncate text-[10px] leading-[1.15] opacity-80">{b.customer?.full_name ?? "—"}</div>
+      )}
+      {!compact && !hideResource && b.resource?.name && (
+        <div className="truncate text-[10px] leading-[1.15] opacity-70">{b.resource.name}</div>
+      )}
     </button>
   );
 }
