@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -69,6 +69,7 @@ function formatDateTime(iso: string | null) {
 export default function BookingRequestQueue() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const navigate = useNavigate();
 
   const [activeFilter, setActiveFilter] = useState<BookingRequestStatus | "all">("all");
   const [search, setSearch] = useState("");
@@ -390,8 +391,12 @@ export default function BookingRequestQueue() {
                   <button
                     disabled={update.isPending}
                     onClick={async () => {
-                      await changeStatus(selected.id, "converted", "Marked as converted");
-                      toast("Booking conversion will be wired in the next step.");
+                      const params = new URLSearchParams({ newBooking: "1", request: selected.id });
+                      if (selected.customer_id) params.set("customer", selected.customer_id);
+                      if (selected.pet_id) params.set("pet", selected.pet_id);
+                      if (selected.service_type) params.set("service", selected.service_type);
+                      if (selected.preferred_start_at) params.set("start", selected.preferred_start_at);
+                      navigate(`/admin/calendar?${params.toString()}`);
                     }}
                     className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-sk-coral px-3 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-60"
                   >

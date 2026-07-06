@@ -1,0 +1,287 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
+
+export type BookingRow = Database["public"]["Tables"]["bookings"]["Row"];
+export type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"];
+export type BookingUpdate = Database["public"]["Tables"]["bookings"]["Update"];
+
+export type BookingStatus =
+  | "draft"
+  | "requested"
+  | "needs_info"
+  | "approved"
+  | "confirmed"
+  | "checked_in"
+  | "in_progress"
+  | "ready"
+  | "checked_out"
+  | "completed"
+  | "cancelled"
+  | "no_show";
+
+export type ServiceType =
+  | "daycare"
+  | "daycare_assessment"
+  | "hotel_dog"
+  | "hotel_cat"
+  | "grooming_inhouse"
+  | "grooming_mobile"
+  | "pickup_dropoff";
+
+export type ResourceType =
+  | "inhouse_grooming"
+  | "mobile_van"
+  | "transport_vehicle"
+  | "daycare_area"
+  | "hotel_area"
+  | "cattery_area";
+
+export interface BookingListRow {
+  id: string;
+  booking_number: string;
+  status: BookingStatus;
+  service_type: ServiceType;
+  start_at: string | null;
+  end_at: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  resource_id: string | null;
+  customer_id: string;
+  notes_internal: string | null;
+  notes_customer: string | null;
+  requires_transport: boolean;
+  requires_grooming: boolean;
+  created_at: string;
+  updated_at: string;
+  customer: {
+    id: string;
+    customer_number: string | null;
+    full_name: string | null;
+    email: string | null;
+    mobile: string | null;
+  } | null;
+  resource: { id: string; name: string; type: ResourceType } | null;
+  booking_pets: {
+    pet: { id: string; pet_number: string | null; name: string | null; species: string | null; breed: string | null } | null;
+  }[];
+}
+
+const BOOKING_SELECT = `
+  id, booking_number, status, service_type, start_at, end_at, start_date, end_date,
+  resource_id, customer_id, notes_internal, notes_customer, requires_transport,
+  requires_grooming, created_at, updated_at,
+  customer:customers(id, customer_number, full_name, email, mobile),
+  resource:resources(id, name, type),
+  booking_pets(pet:pets(id, pet_number, name, species, breed))
+` as const;
+
+export function useResources(tenantId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["resources", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("resources")
+        .select("id, name, type, active, sort_order")
+        .eq("tenant_id", tenantId as string)
+        .eq("active", true)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string; type: ResourceType; active: boolean; sort_order: number }[];
+    },
+  });
+}
+
+export function useBookingsByRange(params: {
+  tenantId: string | null | undefined;
+  from: string; // ISO datetime
+  to: string;   // ISO datetime
+  serviceTypes?: ServiceType[];
+  resourceIds?: string[];
+  statuses?: BookingStatus[];
+}) {
+  const { tenantId, from, to, serviceTypes, resourceIds, statuses } = params;
+  return useQuery({
+    queryKey: ["bookings", "range", tenantId, from, to, serviceTypes, resourceIds, statuses],
+    enabled: Boolean(tenantId),
+    queryFn: async (): Promise<BookingListRow[]> => {
+      let q = supabase
+        .from("bookings")
+        .select(BOOKING_SELECT)
+        .eq("tenant_id", tenantId as string)
+        .gte("start_at", from)
+        .lt("start_at", to)
+        .order("start_at", { ascending: true })
+        .limit(1000);
+      if (serviceTypes?.length) q = q.in("service_type", serviceTypes as any);
+      if (resourceIds?.length) q = q.in("resource_id", resourceIds);
+      if (statuses?.length) q = q.in("status", statuses as any);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as unknown as BookingListRow[];
+    },
+  });
+}
+
+export function useBookingDetail(bookingId: string | null | undefined, tenantId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["bookings", "detail", tenantId, bookingId],
+    enabled: Boolean(bookingId) && Boolean(tenantId),
+    queryFn: async (): Promise<BookingListRow | null> => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select(BOOKING_SELECT)
+        .eq("id", bookingId as string)
+        .eq("tenant_id", tenantId as string)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as unknown as BookingListRow | null;
+    },
+  });
+}
+
+export interface CreateBookingInput {
+  customer_id: string;
+  pet_ids: string[];
+  service_type: ServiceType;
+  status?: BookingStatus;
+  start_at: string; // ISO
+  end_at: string;   // ISO
+  resource_id?: string | null;
+  notes_internal?: string | null;
+  notes_customer?: string | null;
+  source?: "website_form" | "customer_portal" | "staff_capture" | "email" | "phone" | "whatsapp" | null;
+  booking_request_id?: string | null;
+  requires_transport?: boolean;
+  requires_grooming?: boolean;
+}
+
+export function useCreateBooking(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CreateBookingInput) => {
+      // Get next booking number
+      const { data: numData, error: numErr } = await (supabase as any).rpc("next_booking_number", {
+        target_tenant_id: tenantId,
+      });
+      if (numErr) throw numErr;
+      const booking_number = numData as string;
+
+      const startDate = input.start_at.slice(0, 10);
+      const endDate = input.end_at.slice(0, 10);
+
+      const { data: created, error } = await supabase
+        .from("bookings")
+        .insert({
+          tenant_id: tenantId,
+          booking_number,
+          customer_id: input.customer_id,
+          service_type: input.service_type as any,
+          status: (input.status ?? "confirmed") as any,
+          source: (input.source ?? "staff_capture") as any,
+          start_at: input.start_at,
+          end_at: input.end_at,
+          start_date: startDate,
+          end_date: endDate,
+          resource_id: input.resource_id ?? null,
+          notes_internal: input.notes_internal ?? null,
+          notes_customer: input.notes_customer ?? null,
+          booking_request_id: input.booking_request_id ?? null,
+          requires_transport: input.requires_transport ?? false,
+          requires_grooming: input.requires_grooming ?? false,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+
+      if (input.pet_ids.length) {
+        const rows = input.pet_ids.map((pid) => ({
+          tenant_id: tenantId,
+          booking_id: created.id,
+          pet_id: pid,
+        }));
+        const { error: bpErr } = await supabase.from("booking_pets").insert(rows);
+        if (bpErr) throw bpErr;
+      }
+
+      return { id: created.id, booking_number };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookings"] });
+    },
+  });
+}
+
+export interface UpdateBookingInput {
+  id: string;
+  patch: Partial<{
+    service_type: ServiceType;
+    status: BookingStatus;
+    start_at: string;
+    end_at: string;
+    resource_id: string | null;
+    notes_internal: string | null;
+    notes_customer: string | null;
+    requires_transport: boolean;
+    requires_grooming: boolean;
+  }>;
+  pet_ids?: string[]; // if provided, replaces booking_pets
+}
+
+export function useUpdateBooking(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch, pet_ids }: UpdateBookingInput) => {
+      const update: any = { ...patch };
+      if (patch.start_at) update.start_date = patch.start_at.slice(0, 10);
+      if (patch.end_at) update.end_date = patch.end_at.slice(0, 10);
+
+      if (Object.keys(update).length) {
+        const { error } = await supabase
+          .from("bookings")
+          .update(update)
+          .eq("id", id)
+          .eq("tenant_id", tenantId);
+        if (error) throw error;
+      }
+
+      if (pet_ids) {
+        const { error: delErr } = await supabase
+          .from("booking_pets")
+          .delete()
+          .eq("booking_id", id)
+          .eq("tenant_id", tenantId);
+        if (delErr) throw delErr;
+        if (pet_ids.length) {
+          const rows = pet_ids.map((pid) => ({ tenant_id: tenantId, booking_id: id, pet_id: pid }));
+          const { error: insErr } = await supabase.from("booking_pets").insert(rows);
+          if (insErr) throw insErr;
+        }
+      }
+      return { id };
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["bookings"] });
+      qc.invalidateQueries({ queryKey: ["bookings", "detail", tenantId, vars.id] });
+    },
+  });
+}
+
+export function useUpdateBookingStatus(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: BookingStatus }) => {
+      const { error } = await supabase
+        .from("bookings")
+        .update({ status: status as any })
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+      return { id, status };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookings"] });
+    },
+  });
+}
