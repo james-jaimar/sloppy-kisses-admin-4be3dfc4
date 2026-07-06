@@ -175,13 +175,17 @@ export function useTenantPets(params: {
       // then OR-match those into the pets query.
       let matchingCustomerIds: string[] = [];
       if (s) {
-        const q = `%${s}%`;
-        const { data: cids, error: cerr } = await supabase
+        const tokens = s.split(/\s+/).filter(Boolean);
+        let cq = supabase
           .from("customers")
           .select("id")
           .eq("tenant_id", tenantId as string)
-          .or(`full_name.ilike.${q},customer_number.ilike.${q}`)
           .limit(500);
+        for (const tok of tokens) {
+          const q = `%${tok}%`;
+          cq = cq.or(`full_name.ilike.${q},first_name.ilike.${q},last_name.ilike.${q},customer_number.ilike.${q}`);
+        }
+        const { data: cids, error: cerr } = await cq;
         if (cerr) throw cerr;
         matchingCustomerIds = (cids ?? []).map((c: any) => c.id);
       }
@@ -197,16 +201,19 @@ export function useTenantPets(params: {
         .range(from, to);
 
       if (s) {
-        const q = `%${s}%`;
-        const parts = [
-          `name.ilike.${q}`,
-          `breed.ilike.${q}`,
-          `pet_number.ilike.${q}`,
-        ];
-        if (matchingCustomerIds.length) {
-          parts.push(`customer_id.in.(${matchingCustomerIds.join(",")})`);
+        const tokens = s.split(/\s+/).filter(Boolean);
+        for (const tok of tokens) {
+          const q = `%${tok}%`;
+          const parts = [
+            `name.ilike.${q}`,
+            `breed.ilike.${q}`,
+            `pet_number.ilike.${q}`,
+          ];
+          if (matchingCustomerIds.length) {
+            parts.push(`customer_id.in.(${matchingCustomerIds.join(",")})`);
+          }
+          query = query.or(parts.join(","));
         }
-        query = query.or(parts.join(","));
       }
 
       const { data, error, count } = await query;
