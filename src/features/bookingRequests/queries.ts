@@ -39,6 +39,7 @@ export interface BookingRequestListRow {
   updated_at: string;
   customer_id: string | null;
   pet_id: string | null;
+  converted_booking_id: string | null;
   customer: {
     id: string;
     customer_number: string | null;
@@ -99,7 +100,7 @@ export function useBookingRequests(params: {
         .from("booking_requests")
         .select(
           `id, status, source, service_type, preferred_start_at, preferred_end_at,
-           customer_notes, admin_notes, created_at, updated_at, customer_id, pet_id,
+           customer_notes, admin_notes, created_at, updated_at, customer_id, pet_id, converted_booking_id,
            customer:customers(id, customer_number, full_name, email, mobile),
            pet:pets(id, pet_number, name, breed, size, species)`,
           { count: "exact" },
