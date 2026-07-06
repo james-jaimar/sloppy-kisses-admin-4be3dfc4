@@ -211,6 +211,49 @@ export function useCreateBookingRequest(tenantId: string | null | undefined) {
   });
 }
 
+/**
+ * Mark a booking request as converted after a booking has been created from it.
+ * Sets status=converted, converted_booking_id, reviewed_at, and reviewed_by (if profile id given).
+ */
+export function useMarkRequestConverted(tenantId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      requestId,
+      bookingId,
+      profileId,
+    }: {
+      requestId: string;
+      bookingId: string;
+      profileId?: string | null;
+    }) => {
+      if (!tenantId) throw new Error("No tenant selected");
+      const update: any = {
+        status: "converted",
+        converted_booking_id: bookingId,
+        reviewed_at: new Date().toISOString(),
+      };
+      if (profileId) {
+        update.reviewed_by = profileId;
+        update.updated_by = profileId;
+      }
+      const { data, error } = await supabase
+        .from("booking_requests")
+        .update(update)
+        .eq("id", requestId)
+        .eq("tenant_id", tenantId)
+        .neq("status", "converted") // avoid re-conversion overwrite
+        .select("id")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookingRequests"] });
+    },
+  });
+}
+
 export function useUpdateBookingRequest(tenantId: string | null | undefined) {
   const qc = useQueryClient();
   return useMutation({
