@@ -14,6 +14,7 @@ import {
 } from "@/features/bookings/queries";
 import { BookingFormModal } from "@/features/bookings/BookingFormModal";
 import { BookingDetailPanel } from "@/features/bookings/BookingDetailPanel";
+import { BookingStatusDot } from "@/features/bookings/statusMeta";
 
 type ViewMode = "day" | "week" | "month";
 type DayLayout = "time" | "resource";
@@ -56,14 +57,52 @@ function hoursRange() {
   return Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i);
 }
 
-function positionFor(start: Date, end: Date, dayAnchor: Date) {
+/** Vertical pixel offset from grid top for a given time on `dayAnchor`. */
+function offsetFor(when: Date, dayAnchor: Date) {
   const dayStart = new Date(dayAnchor);
   dayStart.setHours(HOUR_START, 0, 0, 0);
-  const startH = (start.getTime() - dayStart.getTime()) / (1000 * 60 * 60);
-  const endH = (end.getTime() - dayStart.getTime()) / (1000 * 60 * 60);
-  const top = Math.max(0, startH * ROW_H);
-  const height = Math.max(24, (endH - startH) * ROW_H - 4);
+  const mins = (when.getTime() - dayStart.getTime()) / 60000;
+  return (mins / 60) * ROW_H;
+}
+
+/** Position + height for an event, clamped inside the visible grid. */
+function positionFor(start: Date, end: Date, dayAnchor: Date) {
+  const top = Math.max(0, offsetFor(start, dayAnchor));
+  const rawH = offsetFor(end, dayAnchor) - offsetFor(start, dayAnchor);
+  // gap = 4px total (2 top + 2 bottom); ensures a 60-min slot lands exactly inside its row.
+  const height = Math.max(20, rawH - 4);
   return { top, height };
+}
+
+/** Whether `d` is within the visible hours (used for now-line). */
+function isNowInRange(d: Date) {
+  const h = d.getHours() + d.getMinutes() / 60;
+  return h >= HOUR_START && h <= HOUR_END + 0.99;
+}
+
+/** Live-updating "now" (ticks every 60s). */
+function useNow() {
+  const [now, setNow] = useState<Date>(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
+function NowLine({ dayAnchor }: { dayAnchor: Date }) {
+  const now = useNow();
+  if (!isSameDay(now, dayAnchor) || !isNowInRange(now)) return null;
+  const top = offsetFor(now, dayAnchor);
+  return (
+    <div
+      className="pointer-events-none absolute left-0 right-0 z-20 flex items-center"
+      style={{ top: top - 1 }}
+    >
+      <span className="-ml-1 h-2 w-2 rounded-full bg-sk-coral shadow" />
+      <span className="h-[2px] flex-1 bg-sk-coral" />
+    </div>
+  );
 }
 
 function EventCard({ b, onClick }: { b: BookingListRow; onClick: () => void }) {
@@ -73,7 +112,7 @@ function EventCard({ b, onClick }: { b: BookingListRow; onClick: () => void }) {
     <button
       onClick={onClick}
       className={
-        "block w-full rounded-lg border-l-[3px] px-2 py-1 text-left text-[11px] shadow-sm hover:shadow-md transition-all " +
+        "block h-full w-full overflow-hidden rounded-lg border-l-[3px] px-2 py-1 text-left text-[11px] shadow-sm hover:shadow-md transition-all " +
         SERVICE_TONE[b.service_type]
       }
     >
@@ -81,14 +120,17 @@ function EventCard({ b, onClick }: { b: BookingListRow; onClick: () => void }) {
         <span className="tabular-nums font-semibold">
           {b.start_at ? format(new Date(b.start_at), "HH:mm") : ""}
         </span>
-        {warn && <AlertTriangle className="h-3 w-3 opacity-70" />}
-        {b.notes_internal && <MessageSquare className="h-3 w-3 opacity-70" />}
+        <span className="flex items-center gap-0.5">
+          {warn && <AlertTriangle className="h-3 w-3 opacity-70" />}
+          {b.notes_internal && <MessageSquare className="h-3 w-3 opacity-70" />}
+          <BookingStatusDot status={b.status} />
+        </span>
       </div>
-      <div className="truncate font-semibold">
+      <div className="truncate font-semibold leading-tight">
         {pet?.name ?? "—"}{b.booking_pets.length > 1 ? ` +${b.booking_pets.length - 1}` : ""}
       </div>
-      <div className="truncate opacity-80">{b.customer?.full_name ?? "—"}</div>
-      {b.resource?.name && <div className="truncate text-[10px] opacity-70">{b.resource.name}</div>}
+      <div className="truncate leading-tight opacity-80">{b.customer?.full_name ?? "—"}</div>
+      {b.resource?.name && <div className="truncate text-[10px] leading-tight opacity-70">{b.resource.name}</div>}
     </button>
   );
 }
@@ -386,12 +428,13 @@ function TimeDayView({ bookings, anchor, onSelect }: { bookings: BookingListRow[
       </div>
       <div className="relative border-l border-border">
         {hours.map((h) => <div key={h} className="h-14 border-b border-border/60" />)}
+        <NowLine dayAnchor={anchor} />
         {dayBookings.map((b) => {
           const s = new Date(b.start_at!);
           const e = b.end_at ? new Date(b.end_at) : new Date(s.getTime() + 60 * 60 * 1000);
           const { top, height } = positionFor(s, e, anchor);
           return (
-            <div key={b.id} className="absolute left-1 right-1" style={{ top, height }}>
+            <div key={b.id} className="absolute left-1 right-1 z-10" style={{ top: top + 2, height }}>
               <EventCard b={b} onClick={() => onSelect(b.id)} />
             </div>
           );
@@ -440,12 +483,13 @@ function ResourceDayView({
             return (
               <div key={c.id} className="relative border-l border-border">
                 {hours.map((h) => <div key={h} className="h-14 border-b border-border/60" />)}
+                <NowLine dayAnchor={anchor} />
                 {colBookings.map((b) => {
                   const s = new Date(b.start_at!);
                   const e = b.end_at ? new Date(b.end_at) : new Date(s.getTime() + 60 * 60 * 1000);
                   const { top, height } = positionFor(s, e, anchor);
                   return (
-                    <div key={b.id} className="absolute left-1 right-1" style={{ top, height }}>
+                    <div key={b.id} className="absolute left-1 right-1 z-10" style={{ top: top + 2, height }}>
                       <EventCard b={b} onClick={() => onSelect(b.id)} />
                     </div>
                   );
@@ -489,12 +533,13 @@ function WeekView({ bookings, anchor, onSelect }: { bookings: BookingListRow[]; 
           return (
             <div key={i} className="relative border-l border-border">
               {hours.map((h) => <div key={h} className="h-14 border-b border-border/60" />)}
+              <NowLine dayAnchor={d} />
               {dayBookings.map((b) => {
                 const s = new Date(b.start_at!);
                 const e = b.end_at ? new Date(b.end_at) : new Date(s.getTime() + 60 * 60 * 1000);
                 const { top, height } = positionFor(s, e, d);
                 return (
-                  <div key={b.id} className="absolute left-1 right-1" style={{ top, height }}>
+                  <div key={b.id} className="absolute left-1 right-1 z-10" style={{ top: top + 2, height }}>
                     <EventCard b={b} onClick={() => onSelect(b.id)} />
                   </div>
                 );

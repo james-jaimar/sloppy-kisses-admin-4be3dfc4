@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { X, Pencil, ExternalLink, AlertTriangle } from "lucide-react";
+import { X, Pencil, ExternalLink, AlertTriangle, Mail } from "lucide-react";
 import { format } from "date-fns";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { useUpdateBookingStatus, type BookingListRow, type BookingStatus } from "./queries";
+import { useUpdateBookingStatus, useBookingNotifications, type BookingListRow, type BookingStatus } from "./queries";
 import { BookingFormModal } from "./BookingFormModal";
+import { BookingStatusChip } from "./statusMeta";
 
 const STATUS_ACTIONS: { status: BookingStatus; label: string }[] = [
   { status: "confirmed", label: "Confirm" },
@@ -27,6 +27,7 @@ interface Props {
 export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const updateStatus = useUpdateBookingStatus(tenantId);
+  const notificationsQ = useBookingNotifications(booking.id, tenantId);
 
   const start = booking.start_at ? new Date(booking.start_at) : null;
   const end = booking.end_at ? new Date(booking.end_at) : null;
@@ -56,7 +57,7 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
             <h2 className="mt-0.5 text-lg font-semibold">
               {booking.service_type.replace(/_/g, " ")}
             </h2>
-            <div className="mt-2"><StatusBadge status={booking.status} /></div>
+            <div className="mt-2"><BookingStatusChip status={booking.status} /></div>
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -147,6 +148,40 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
               <p className="mt-1 whitespace-pre-wrap">{booking.notes_customer}</p>
             </section>
           )}
+
+          <section>
+            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Mail className="h-3.5 w-3.5" /> Notifications
+            </div>
+            {notificationsQ.isLoading ? (
+              <div className="mt-1 text-xs text-muted-foreground">Loading…</div>
+            ) : (notificationsQ.data ?? []).length === 0 ? (
+              <div className="mt-1 text-xs text-muted-foreground">No notifications queued yet.</div>
+            ) : (
+              <ul className="mt-1 space-y-1 text-xs">
+                {notificationsQ.data!.map((n) => (
+                  <li key={n.id} className="flex items-center justify-between gap-2">
+                    <span className="truncate">{n.event_type.replace(/_/g, " ")}</span>
+                    <span
+                      className={
+                        "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide " +
+                        (n.status === "sent"    ? "bg-sk-green-soft text-sk-green" :
+                         n.status === "pending" ? "bg-sk-turquoise-soft text-sk-turquoise-dark" :
+                         n.status === "skipped" ? "bg-muted text-muted-foreground" :
+                                                  "bg-destructive/10 text-destructive")
+                      }
+                      title={n.error ?? undefined}
+                    >
+                      {n.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Emails send once SMTP is configured. Customer must have an email and opt-in.
+            </p>
+          </section>
 
           <section>
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Quick status</div>
