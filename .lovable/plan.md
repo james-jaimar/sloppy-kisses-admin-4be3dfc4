@@ -1,18 +1,13 @@
-## Fix event card sizing so a 1-hour booking fits its row
+## Problem
 
-A 60-minute slot is 56px tall minus a 4px gap = 52px of usable card. The current card packs four lines (time+icons, pet, customer, resource) plus `py-1` (8px) padding, needing ~63px — so the last line clips.
+The booking detail side panel (`BookingDetailPanel`) uses `z-40` for its backdrop and `z-50` for the panel itself. When "Edit" is clicked, `BookingFormModal` opens via `ModalShell`, which also uses `z-40`. Result: the edit modal renders behind the side panel.
 
-### Changes (all in `src/features/calendar/CalendarWeekView.tsx`, `EventCard`)
+## Fix
 
-- Reduce vertical padding: `py-1` → `py-0.5`.
-- Tighten typography: header row stays `text-[11px]`; pet name `text-[11px]`; customer & resource drop to `text-[10px]`.
-- Explicit `leading-[1.15]` on all text lines instead of relying on default line-height.
-- In the resource-day view, hide the resource sub-line (the column header already names the resource) — accept a `hideResource` prop from `ResourceDayView`.
-- If height < 46px (i.e. <50-min booking), hide the customer & resource lines to prevent clipping; keep time + pet only.
-- Cap `EventCard` content with `overflow-hidden` (already there) and add `min-h-0` on flex children as needed.
+Bump `ModalShell`'s root overlay from `z-40` to `z-[60]` so any modal always layers above side panels/drawers (which top out at `z-50`). The panel and its backdrop stay visible behind the modal's own dimmed backdrop, which is the standard stacking approach.
 
-Result for the 09:00–10:00 example: 3 lines × ~13px + 4px padding ≈ 43px, well within 52px.
+### Change
 
-### Out of scope
+- `src/components/modals/ModalShell.tsx`: change the outer overlay `div`'s `z-40` → `z-[60]`.
 
-- No changes to the now-line, filters, status icons, or data. Purely CSS/layout inside `EventCard`.
+That's the entire change — one class swap. No component API changes, no behavioral changes to the side panel or modal contents.
