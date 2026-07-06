@@ -1,0 +1,195 @@
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { format } from "date-fns";
+import { ArrowLeft, Pencil, CalendarDays, ExternalLink, Loader2 } from "lucide-react";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { useCurrentTenant } from "@/lib/tenant/TenantContext";
+import { useBookingDetail } from "./queries";
+import { BookingStatusChip } from "./statusMeta";
+import { BookingFormModal } from "./BookingFormModal";
+
+const SERVICE_LABELS: Record<string, string> = {
+  daycare: "Daycare",
+  daycare_assessment: "Daycare assessment",
+  hotel_dog: "Hotel — dog",
+  hotel_cat: "Hotel — cat",
+  grooming_inhouse: "Grooming (in-house)",
+  grooming_mobile: "Grooming (mobile)",
+  pickup_dropoff: "Pick up / drop-off",
+};
+
+function fmt(iso: string | null) {
+  if (!iso) return "—";
+  try {
+    return format(new Date(iso), "EEE d MMM yyyy · HH:mm");
+  } catch {
+    return iso;
+  }
+}
+
+export default function BookingDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { tenant } = useCurrentTenant();
+  const tenantId = tenant?.id ?? null;
+  const navigate = useNavigate();
+  const [editOpen, setEditOpen] = useState(false);
+
+  const detailQ = useBookingDetail(id, tenantId);
+  const b = detailQ.data;
+
+  return (
+    <>
+      <AppHeader
+        title={b ? `Booking ${b.booking_number}` : "Booking"}
+        subtitle={b ? SERVICE_LABELS[b.service_type] ?? b.service_type : "Loading…"}
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate("/admin/bookings")}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted"
+            >
+              <ArrowLeft className="h-4 w-4" /> Back
+            </button>
+            {b && (
+              <button
+                onClick={() => setEditOpen(true)}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark"
+              >
+                <Pencil className="h-4 w-4" /> Edit
+              </button>
+            )}
+          </div>
+        }
+      />
+      <div className="flex-1 p-6">
+        {detailQ.isLoading ? (
+          <div className="flex items-center justify-center gap-2 py-20 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading booking…
+          </div>
+        ) : detailQ.isError ? (
+          <div className="sk-card p-6 text-sm text-sk-coral-dark">
+            Failed to load booking: {(detailQ.error as any)?.message ?? "Unknown error"}
+          </div>
+        ) : !b ? (
+          <div className="sk-card p-6 text-sm text-muted-foreground">Booking not found.</div>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+            <div className="space-y-6">
+              <div className="sk-card p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {b.booking_number}
+                    </div>
+                    <h2 className="mt-0.5 text-xl font-semibold">
+                      {SERVICE_LABELS[b.service_type] ?? b.service_type}
+                    </h2>
+                    <div className="mt-2"><BookingStatusChip status={b.status} /></div>
+                  </div>
+                  <Link
+                    to="/admin/calendar"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-white px-3 py-2 text-xs font-medium hover:bg-muted"
+                  >
+                    <CalendarDays className="h-4 w-4" /> Open calendar
+                  </Link>
+                </div>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                  <Field label="Start">{fmt(b.start_at)}</Field>
+                  <Field label="End">{fmt(b.end_at)}</Field>
+                  <Field label="Resource">
+                    {b.resource?.name ?? <span className="text-muted-foreground">Unassigned</span>}
+                  </Field>
+                  <Field label="Created">{fmt(b.created_at)}</Field>
+                  <Field label="Updated">{fmt(b.updated_at)}</Field>
+                </div>
+              </div>
+
+              {(b.notes_internal || b.notes_customer) && (
+                <div className="sk-card p-5 space-y-4">
+                  {b.notes_internal && (
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Internal notes</div>
+                      <p className="mt-1 whitespace-pre-wrap text-sm">{b.notes_internal}</p>
+                    </div>
+                  )}
+                  {b.notes_customer && (
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Customer notes</div>
+                      <p className="mt-1 whitespace-pre-wrap text-sm">{b.notes_customer}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-6">
+              <div className="sk-card p-5">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Customer</div>
+                {b.customer ? (
+                  <div className="mt-2 text-sm">
+                    <Link
+                      to={`/admin/customers/${b.customer.id}`}
+                      className="inline-flex items-center gap-1 font-medium hover:text-sk-coral-dark"
+                    >
+                      {b.customer.full_name ?? "Unnamed"}
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                    <div className="text-xs text-muted-foreground">
+                      {b.customer.customer_number} · {b.customer.mobile ?? b.customer.email ?? "—"}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-1 text-sm text-muted-foreground">—</div>
+                )}
+              </div>
+
+              <div className="sk-card p-5">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Pets</div>
+                {b.booking_pets.length ? (
+                  <ul className="mt-2 space-y-2 text-sm">
+                    {b.booking_pets.map((bp, i) =>
+                      bp.pet ? (
+                        <li key={bp.pet.id ?? i}>
+                          <Link
+                            to={`/admin/pets/${bp.pet.id}`}
+                            className="inline-flex items-center gap-1 font-medium hover:text-sk-coral-dark"
+                          >
+                            {bp.pet.name}
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Link>
+                          <div className="text-xs text-muted-foreground">
+                            {bp.pet.pet_number} · {bp.pet.breed ?? bp.pet.species ?? "—"}
+                          </div>
+                        </li>
+                      ) : null,
+                    )}
+                  </ul>
+                ) : (
+                  <div className="mt-1 text-sm text-muted-foreground">No pets linked</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {editOpen && b && tenantId && (
+        <BookingFormModal
+          tenantId={tenantId}
+          booking={b}
+          onClose={() => setEditOpen(false)}
+          onSaved={() => setEditOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-1 text-sm">{children}</div>
+    </div>
+  );
+}
