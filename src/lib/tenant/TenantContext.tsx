@@ -46,28 +46,90 @@ interface TenantContextValue extends CurrentUserState {
 const TenantContext = createContext<TenantContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "sk.currentTenantId";
+const CACHE_KEY = "sk.currentUserCache.v1";
+
+type CachedState = Omit<CurrentUserState, "loading" | "error"> & { authUserId: string };
+
+function readCache(): CachedState | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as CachedState;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(authUserId: string, s: CurrentUserState) {
+  if (typeof window === "undefined") return;
+  try {
+    const payload: CachedState = {
+      authUserId,
+      profile: s.profile,
+      memberships: s.memberships,
+      currentTenant: s.currentTenant,
+      roles: s.roles,
+      permissions: s.permissions,
+    };
+    window.sessionStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    /* ignore quota */
+  }
+}
+
+function clearCache() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(CACHE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
 
 export function TenantProvider({ children }: { children: ReactNode }) {
   const { authUser, loading: authLoading } = useAuth();
-  const [state, setState] = useState<CurrentUserState>({
-    profile: null,
-    memberships: [],
-    currentTenant: null,
-    roles: [],
-    permissions: [],
-    loading: true,
-    error: null,
+  const [state, setState] = useState<CurrentUserState>(() => {
+    const cached = readCache();
+    if (cached) {
+      return {
+        profile: cached.profile,
+        memberships: cached.memberships,
+        currentTenant: cached.currentTenant,
+        roles: cached.roles,
+        permissions: cached.permissions,
+        loading: false,
+        error: null,
+      };
+    }
+    return {
+      profile: null,
+      memberships: [],
+      currentTenant: null,
+      roles: [],
+      permissions: [],
+      loading: true,
+      error: null,
+    };
   });
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return window.localStorage.getItem(STORAGE_KEY);
   });
-  const loadedForUserRef = useRef<string | null>(null);
+  const loadedForUserRef = useRef<string | null>(() => {
+    const cached = readCache();
+    return cached?.authUserId ?? null;
+  } as unknown as string | null);
+  // Initialize ref from cache so a hydrated session doesn't re-flash loading.
+  if (loadedForUserRef.current && typeof loadedForUserRef.current === "function") {
+    loadedForUserRef.current = (loadedForUserRef.current as unknown as () => string | null)();
+  }
   const inflightRef = useRef(false);
 
   const load = useCallback(async () => {
     if (!authUser) {
       loadedForUserRef.current = null;
+      clearCache();
       setState({
         profile: null,
         memberships: [],
@@ -218,7 +280,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
 
     loadedForUserRef.current = authUser.id;
     inflightRef.current = false;
-    setState({
+    const next: CurrentUserState = {
       profile,
       memberships,
       currentTenant: current,
@@ -226,7 +288,9 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       permissions,
       loading: false,
       error: null,
-    });
+    };
+    setState(next);
+    writeCache(authUser.id, next);
   }, [authUser, selectedTenantId]);
 
   useEffect(() => {
