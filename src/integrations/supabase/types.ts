@@ -2749,6 +2749,10 @@ export type Database = {
       }
       current_profile_id: { Args: never; Returns: string }
       is_platform_owner: { Args: never; Returns: boolean }
+      next_booking_number: {
+        Args: { target_tenant_id: string }
+        Returns: string
+      }
       next_customer_number: {
         Args: { target_tenant_id: string }
         Returns: string
