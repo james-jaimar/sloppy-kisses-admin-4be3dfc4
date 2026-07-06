@@ -440,7 +440,7 @@ function TimeDayView({ bookings, anchor, onSelect }: { bookings: BookingListRow[
           const { top, height } = positionFor(s, e, anchor);
           return (
             <div key={b.id} className="absolute left-1 right-1 z-10" style={{ top: top + 2, height }}>
-              <EventCard b={b} onClick={() => onSelect(b.id)} />
+              <EventCard b={b} onClick={() => onSelect(b.id)} height={height} />
             </div>
           );
         })}
@@ -495,7 +495,7 @@ function ResourceDayView({
                   const { top, height } = positionFor(s, e, anchor);
                   return (
                     <div key={b.id} className="absolute left-1 right-1 z-10" style={{ top: top + 2, height }}>
-                      <EventCard b={b} onClick={() => onSelect(b.id)} />
+                      <EventCard b={b} onClick={() => onSelect(b.id)} height={height} hideResource />
                     </div>
                   );
                 })}
@@ -545,7 +545,7 @@ function WeekView({ bookings, anchor, onSelect }: { bookings: BookingListRow[]; 
                 const { top, height } = positionFor(s, e, d);
                 return (
                   <div key={b.id} className="absolute left-1 right-1 z-10" style={{ top: top + 2, height }}>
-                    <EventCard b={b} onClick={() => onSelect(b.id)} />
+                    <EventCard b={b} onClick={() => onSelect(b.id)} height={height} />
                   </div>
                 );
               })}
