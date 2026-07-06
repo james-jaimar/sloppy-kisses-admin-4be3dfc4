@@ -1,5 +1,9 @@
+import { useEffect } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Module-level stack so nested modals close top-most first on Escape.
+const modalStack: Array<() => void> = [];
 
 interface Props {
   title: React.ReactNode;
@@ -10,11 +14,41 @@ interface Props {
   children: React.ReactNode;
   className?: string;
   wide?: boolean;
+  closeOnBackdrop?: boolean;
+  closeOnEscape?: boolean;
 }
 
-export function ModalShell({ title, subtitle, onClose, headerRight, footer, children, className, wide }: Props) {
+export function ModalShell({
+  title, subtitle, onClose, headerRight, footer, children, className, wide,
+  closeOnBackdrop = true, closeOnEscape = true,
+}: Props) {
+  useEffect(() => {
+    if (!onClose) return;
+    const handler = () => onClose();
+    if (closeOnEscape) modalStack.push(handler);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || !closeOnEscape) return;
+      const top = modalStack[modalStack.length - 1];
+      if (top === handler) {
+        e.stopPropagation();
+        top();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      const idx = modalStack.lastIndexOf(handler);
+      if (idx >= 0) modalStack.splice(idx, 1);
+    };
+  }, [onClose, closeOnEscape]);
+
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+    <div
+      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+      onClick={(e) => {
+        if (closeOnBackdrop && onClose && e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
         className={cn(
           "relative flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl",

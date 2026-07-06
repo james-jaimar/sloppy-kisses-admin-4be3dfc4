@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 export function Logo({ className, compact = false }: { className?: string; compact?: boolean }) {
   return (
-    <div className={cn("flex items-center gap-2.5", className)}>
+    <div className={cn("flex items-center gap-2.5", compact && "justify-center", className)}>
       <span className="grid h-9 w-9 place-items-center rounded-xl bg-sk-coral text-white shadow-sm">
         <PawPrint className="h-5 w-5" />
       </span>

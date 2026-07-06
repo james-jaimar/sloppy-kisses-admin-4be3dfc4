@@ -285,3 +285,30 @@ export function useUpdateBookingStatus(tenantId: string) {
     },
   });
 }
+
+export interface BookingNotificationRow {
+  id: string;
+  event_type: string;
+  status: "pending" | "sent" | "failed" | "skipped";
+  error: string | null;
+  created_at: string;
+  sent_at: string | null;
+}
+
+export function useBookingNotifications(bookingId: string | null | undefined, tenantId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["notifications", "booking", tenantId, bookingId],
+    enabled: Boolean(bookingId) && Boolean(tenantId),
+    queryFn: async (): Promise<BookingNotificationRow[]> => {
+      const { data, error } = await (supabase as any)
+        .from("notification_events")
+        .select("id, event_type, status, error, created_at, sent_at")
+        .eq("tenant_id", tenantId as string)
+        .eq("booking_id", bookingId as string)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return (data ?? []) as BookingNotificationRow[];
+    },
+  });
+}

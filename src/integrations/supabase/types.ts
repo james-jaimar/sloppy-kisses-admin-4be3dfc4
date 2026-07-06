@@ -489,6 +489,7 @@ export type Database = {
           linked_profile_id: string | null
           mobile: string | null
           notes_internal: string | null
+          notify_email: boolean
           occupation: string | null
           phone_alt: string | null
           portal_access_enabled: boolean
@@ -524,6 +525,7 @@ export type Database = {
           linked_profile_id?: string | null
           mobile?: string | null
           notes_internal?: string | null
+          notify_email?: boolean
           occupation?: string | null
           phone_alt?: string | null
           portal_access_enabled?: boolean
@@ -559,6 +561,7 @@ export type Database = {
           linked_profile_id?: string | null
           mobile?: string | null
           notes_internal?: string | null
+          notify_email?: boolean
           occupation?: string | null
           phone_alt?: string | null
           portal_access_enabled?: boolean
@@ -1874,6 +1877,77 @@ export type Database = {
           },
         ]
       }
+      notification_events: {
+        Row: {
+          booking_id: string | null
+          booking_request_id: string | null
+          created_at: string
+          customer_id: string | null
+          error: string | null
+          event_type: Database["public"]["Enums"]["notification_event_type"]
+          id: string
+          payload: Json
+          sent_at: string | null
+          status: Database["public"]["Enums"]["notification_status"]
+          tenant_id: string
+        }
+        Insert: {
+          booking_id?: string | null
+          booking_request_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          error?: string | null
+          event_type: Database["public"]["Enums"]["notification_event_type"]
+          id?: string
+          payload?: Json
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+          tenant_id: string
+        }
+        Update: {
+          booking_id?: string | null
+          booking_request_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          error?: string | null
+          event_type?: Database["public"]["Enums"]["notification_event_type"]
+          id?: string
+          payload?: Json
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["notification_status"]
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_events_booking_request_id_fkey"
+            columns: ["booking_request_id"]
+            isOneToOne: false
+            referencedRelation: "booking_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_events_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -2743,6 +2817,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _customer_notify_status: {
+        Args: { target_customer_id: string }
+        Returns: Database["public"]["Enums"]["notification_status"]
+      }
       current_customer_id: {
         Args: { target_tenant_id: string }
         Returns: string
@@ -2822,6 +2900,14 @@ export type Database = {
       customer_status: "active" | "inactive" | "archived"
       document_status: "pending" | "verified" | "rejected" | "expired"
       email_status: "queued" | "sent" | "failed"
+      notification_event_type:
+        | "booking_created"
+        | "booking_rescheduled"
+        | "booking_cancelled"
+        | "booking_status_changed"
+        | "booking_request_created"
+        | "booking_request_status_changed"
+      notification_status: "pending" | "sent" | "failed" | "skipped"
       payment_method: "eft" | "cash" | "card" | "yoko" | "payfast" | "other"
       pet_sex: "male" | "female" | "unknown"
       pet_size: "xsmall" | "small" | "medium" | "large" | "xlarge" | "xxlarge"
@@ -3022,6 +3108,15 @@ export const Constants = {
       customer_status: ["active", "inactive", "archived"],
       document_status: ["pending", "verified", "rejected", "expired"],
       email_status: ["queued", "sent", "failed"],
+      notification_event_type: [
+        "booking_created",
+        "booking_rescheduled",
+        "booking_cancelled",
+        "booking_status_changed",
+        "booking_request_created",
+        "booking_request_status_changed",
+      ],
+      notification_status: ["pending", "sent", "failed", "skipped"],
       payment_method: ["eft", "cash", "card", "yoko", "payfast", "other"],
       pet_sex: ["male", "female", "unknown"],
       pet_size: ["xsmall", "small", "medium", "large", "xlarge", "xxlarge"],
