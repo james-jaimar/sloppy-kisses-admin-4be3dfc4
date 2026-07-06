@@ -58,10 +58,16 @@ export function useCustomers(params: {
 
       const s = search.trim();
       if (s) {
-        const q = `%${s}%`;
-        query = query.or(
-          `full_name.ilike.${q},first_name.ilike.${q},last_name.ilike.${q},email.ilike.${q},mobile.ilike.${q},customer_number.ilike.${q}`,
-        );
+        // Split on whitespace so "james hawkins" matches "James  Hawkins"
+        // (extra spaces, punctuation, etc). Each token must match some field;
+        // chained .or() calls are AND-ed together by PostgREST.
+        const tokens = s.split(/\s+/).filter(Boolean);
+        for (const tok of tokens) {
+          const q = `%${tok}%`;
+          query = query.or(
+            `full_name.ilike.${q},first_name.ilike.${q},last_name.ilike.${q},email.ilike.${q},mobile.ilike.${q},customer_number.ilike.${q}`,
+          );
+        }
       }
 
       const { data, error, count } = await query;
