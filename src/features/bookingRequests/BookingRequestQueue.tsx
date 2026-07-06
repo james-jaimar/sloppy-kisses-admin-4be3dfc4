@@ -272,6 +272,22 @@ export default function BookingRequestQueue() {
                   </div>
                 </div>
                 <div className="flex-1 space-y-5 overflow-y-auto p-5">
+                  {selected.status === "converted" && (
+                    <div className="flex items-start gap-2 rounded-xl border border-sk-green/40 bg-sk-green-soft/50 p-3 text-xs text-sk-green">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div>
+                        This request has been converted into a booking.{" "}
+                        {selected.converted_booking_id && (
+                          <Link
+                            to={`/admin/bookings/${selected.converted_booking_id}`}
+                            className="font-semibold underline"
+                          >
+                            Open booking
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {(!selected.customer_id || !selected.pet_id) && (
                     <div className="flex items-start gap-2 rounded-xl border border-sk-orange/40 bg-sk-orange-soft/50 p-3 text-xs text-sk-orange">
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
