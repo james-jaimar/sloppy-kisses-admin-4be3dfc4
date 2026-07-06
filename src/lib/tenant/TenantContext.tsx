@@ -116,14 +116,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined") return null;
     return window.localStorage.getItem(STORAGE_KEY);
   });
-  const loadedForUserRef = useRef<string | null>(() => {
-    const cached = readCache();
-    return cached?.authUserId ?? null;
-  } as unknown as string | null);
-  // Initialize ref from cache so a hydrated session doesn't re-flash loading.
-  if (loadedForUserRef.current && typeof loadedForUserRef.current === "function") {
-    loadedForUserRef.current = (loadedForUserRef.current as unknown as () => string | null)();
-  }
+  const loadedForUserRef = useRef<string | null>(readCache()?.authUserId ?? null);
   const inflightRef = useRef(false);
 
   const load = useCallback(async () => {
