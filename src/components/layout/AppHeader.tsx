@@ -7,7 +7,7 @@ import { useCurrentUser } from "@/lib/tenant/TenantContext";
 interface Props {
   title?: string;
   subtitle?: string;
-  tabs?: { label: string; active?: boolean }[];
+  tabs?: { label: string; active?: boolean; onClick?: () => void; badge?: number | string }[];
   actions?: React.ReactNode;
 }
 
@@ -112,6 +112,7 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
                 {tabs.map((t) => (
                   <button
                     key={t.label}
+                    onClick={t.onClick}
                     className={
                       "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors " +
                       (t.active
@@ -120,6 +121,9 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
                     }
                   >
                     {t.label}
+                    {t.badge !== undefined && t.badge !== null && (
+                      <span className="ml-1.5 text-xs text-muted-foreground">{t.badge}</span>
+                    )}
                   </button>
                 ))}
               </div>
