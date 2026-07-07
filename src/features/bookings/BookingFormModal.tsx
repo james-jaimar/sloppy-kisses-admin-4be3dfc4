@@ -80,6 +80,18 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
   const customersQ = useCustomers({ tenantId, search: debouncedSearch, pageSize: 25 });
   const petsQ = useCustomerPets(customerId, tenantId);
+
+  // When creating a new booking, auto-select all of the chosen customer's pets
+  // as soon as they load. Editing keeps the booking's existing pet selection.
+  useEffect(() => {
+    if (isEdit) return;
+    if (!customerId) return;
+    if (!petsQ.data) return;
+    if (petIds.length > 0) return; // don't overwrite prefilled or user-toggled state
+    if (petsQ.data.length === 0) return;
+    setPetIds(petsQ.data.map((p) => p.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerId, petsQ.data, isEdit]);
   const resourcesQ = useResources(tenantId);
   const create = useCreateBooking(tenantId);
   const update = useUpdateBooking(tenantId);
@@ -99,6 +111,9 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     if (!customerId) return toast.error("Please select a customer");
     if (!startAt || !endAt) return toast.error("Please pick a start and end time");
     if (new Date(endAt) <= new Date(startAt)) return toast.error("End time must be after start time");
+    if ((petsQ.data?.length ?? 0) > 0 && petIds.length === 0) {
+      return toast.error("Select at least one pet for this booking");
+    }
 
     try {
       if (isEdit && booking) {
