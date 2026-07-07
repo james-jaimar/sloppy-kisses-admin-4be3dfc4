@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { useUpdateBookingStatus, useBookingNotifications, type BookingListRow, type BookingStatus } from "./queries";
 import { BookingFormModal } from "./BookingFormModal";
 import { BookingStatusChip } from "./statusMeta";
+import { useBookingServiceDetails } from "./detailsQueries";
 
 const STATUS_ACTIONS: { status: BookingStatus; label: string }[] = [
   { status: "confirmed", label: "Confirm" },
@@ -28,6 +29,7 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const updateStatus = useUpdateBookingStatus(tenantId);
   const notificationsQ = useBookingNotifications(booking.id, tenantId);
+  const detailsQ = useBookingServiceDetails(booking.id, booking.service_type, tenantId);
 
   const start = booking.start_at ? new Date(booking.start_at) : null;
   const end = booking.end_at ? new Date(booking.end_at) : null;
@@ -146,6 +148,31 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
             <section>
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Customer notes</div>
               <p className="mt-1 whitespace-pre-wrap">{booking.notes_customer}</p>
+            </section>
+          )}
+
+          {detailsQ.data && detailsQ.data.kind !== "none" && detailsQ.data.data && (
+            <section>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {detailsQ.data.kind === "grooming"
+                  ? "Grooming details"
+                  : detailsQ.data.kind === "hotel"
+                    ? "Stay details"
+                    : "Transport details"}
+              </div>
+              <dl className="mt-1 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-xs">
+                {Object.entries(detailsQ.data.data)
+                  .filter(([k, v]) =>
+                    !["id", "tenant_id", "booking_id", "created_at", "updated_at"].includes(k) &&
+                    v !== null && v !== "" && v !== false,
+                  )
+                  .map(([k, v]) => (
+                    <div key={k} className="contents">
+                      <dt className="text-muted-foreground">{k.replace(/_/g, " ")}</dt>
+                      <dd className="whitespace-pre-wrap">{String(v)}</dd>
+                    </div>
+                  ))}
+              </dl>
             </section>
           )}
 

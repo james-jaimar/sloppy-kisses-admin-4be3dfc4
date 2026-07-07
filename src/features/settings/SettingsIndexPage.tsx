@@ -1,0 +1,80 @@
+import { Link } from "react-router-dom";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight } from "lucide-react";
+import { AppHeader } from "@/components/layout/AppHeader";
+
+const SECTIONS = [
+  {
+    to: "/admin/settings/resources",
+    label: "Resources",
+    description: "Groomers, mobile vans, kennels, runs, daycare areas.",
+    icon: Sliders,
+    ready: true,
+  },
+  {
+    to: "/admin/users",
+    label: "Users & roles",
+    description: "Staff accounts, roles and permissions.",
+    icon: Users,
+    ready: false,
+  },
+  {
+    to: "/admin/settings/password",
+    label: "Change password",
+    description: "Update your own password.",
+    icon: KeyRound,
+    ready: true,
+  },
+  {
+    to: "#",
+    label: "Email templates",
+    description: "Confirmations, reminders, marketing.",
+    icon: Mail,
+    ready: false,
+  },
+  {
+    to: "#",
+    label: "Branch details",
+    description: "Trading hours, address, tax settings.",
+    icon: Building2,
+    ready: false,
+  },
+];
+
+export default function SettingsIndexPage() {
+  return (
+    <>
+      <AppHeader title="Settings" subtitle="Configure the business." />
+      <div className="flex-1 p-6">
+        <div className="grid gap-3 sm:grid-cols-2">
+          {SECTIONS.map((s) => {
+            const Icon = s.icon;
+            const content = (
+              <div className="sk-card flex items-center gap-4 p-5 transition-colors hover:border-sk-coral">
+                <div className="grid h-11 w-11 place-items-center rounded-xl bg-sk-coral-soft text-sk-coral-dark">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <div className="font-semibold">{s.label}</div>
+                    {!s.ready && (
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                        Soon
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{s.description}</div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </div>
+            );
+            return s.ready ? (
+              <Link key={s.label} to={s.to}>{content}</Link>
+            ) : (
+              <div key={s.label} className="cursor-not-allowed opacity-60">{content}</div>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
