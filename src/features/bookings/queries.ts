@@ -14,6 +14,7 @@ export type BookingStatus =
   | "confirmed"
   | "checked_in"
   | "in_progress"
+  | "grooming"
   | "ready"
   | "checked_out"
   | "completed"

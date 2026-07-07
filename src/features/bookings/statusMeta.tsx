@@ -1,5 +1,5 @@
 import {
-  FilePen, Inbox, HelpCircle, CheckCircle2, CalendarCheck, LogIn,
+  FilePen, Inbox, HelpCircle, CheckCircle2, CalendarCheck, LogIn, Scissors,
   Loader2, BellRing, LogOut, CheckCheck, XCircle, AlertOctagon,
 } from "lucide-react";
 import type { BookingStatus } from "./queries";
@@ -22,6 +22,7 @@ export const BOOKING_STATUS_META: Record<BookingStatus, BookingStatusMeta> = {
   confirmed:     { label: "Confirmed",   icon: CalendarCheck, chip: "bg-sk-green text-white border-sk-green",                 dot: "bg-sk-green text-white" },
   checked_in:    { label: "Checked in",  icon: LogIn,         chip: "bg-sk-turquoise text-white border-sk-turquoise",         dot: "bg-sk-turquoise text-white" },
   in_progress:   { label: "In progress", icon: Loader2,       chip: "bg-sk-coral text-white border-sk-coral",                 dot: "bg-sk-coral text-white", spin: true },
+  grooming:      { label: "Grooming",    icon: Scissors,      chip: "bg-sk-coral text-white border-sk-coral",                 dot: "bg-sk-coral text-white" },
   ready:         { label: "Ready",       icon: BellRing,      chip: "bg-sk-orange text-white border-sk-orange",               dot: "bg-sk-orange text-white" },
   checked_out:   { label: "Checked out", icon: LogOut,        chip: "bg-slate-200 text-slate-700 border-slate-400",           dot: "bg-slate-200 text-slate-700" },
   completed:     { label: "Completed",   icon: CheckCheck,    chip: "bg-sk-green-dark text-white border-sk-green-dark",       dot: "bg-sk-green-dark text-white" },

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -8,6 +8,20 @@ const SECTIONS = [
     label: "Resources",
     description: "Groomers, mobile vans, kennels, runs, daycare areas.",
     icon: Sliders,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/grooming-packages",
+    label: "Grooming rate card",
+    description: "Package prices by species and size. Admin-editable.",
+    icon: Scissors,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/grooming-addons",
+    label: "Grooming add-ons",
+    description: "Teeth, nails, ear clean, shampoo upgrades, travel fee.",
+    icon: PlusCircle,
     ready: true,
   },
   {
