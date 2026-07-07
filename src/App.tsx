@@ -16,6 +16,8 @@ import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import ChangePasswordPage from "@/features/settings/ChangePasswordPage";
+import SettingsIndexPage from "@/features/settings/SettingsIndexPage";
+import ResourcesPage from "@/features/settings/ResourcesPage";
 import AdminDashboard from "@/features/dashboard/AdminDashboard";
 import CalendarWeekView from "@/features/calendar/CalendarWeekView";
 import CustomersPage from "@/features/customers/CustomersPage";
@@ -68,7 +70,8 @@ const App = () => (
                 <Route path="/admin/shop-stock" element={<PlaceholderPage title="Shop & Stock" />} />
                 <Route path="/admin/reports" element={<PlaceholderPage title="Reports" />} />
                 <Route path="/admin/users" element={<PlaceholderPage title="Users & roles" />} />
-                <Route path="/admin/settings" element={<PlaceholderPage title="Settings" />} />
+                <Route path="/admin/settings" element={<SettingsIndexPage />} />
+                <Route path="/admin/settings/resources" element={<ResourcesPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>

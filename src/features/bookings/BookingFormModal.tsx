@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Search } from "lucide-react";
+import { Search, AlertTriangle } from "lucide-react";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { useCustomers, useCustomerPets } from "@/features/customers/queries";
 import {
@@ -12,6 +12,16 @@ import {
   type BookingStatus,
   type ResourceType,
 } from "./queries";
+import {
+  serviceKind,
+  useBookingServiceDetails,
+  useResourceConflicts,
+  useUpsertBookingDetails,
+  type GroomingDetails,
+  type HotelDetails,
+  type TransportDetails,
+} from "./detailsQueries";
+import { GroomingFields, HotelFields, TransportFields } from "./BookingDetailsFields";
 
 const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: ResourceType }[] = [
   { value: "daycare", label: "Daycare", resourceType: "daycare_area" },
@@ -95,6 +105,38 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const resourcesQ = useResources(tenantId);
   const create = useCreateBooking(tenantId);
   const update = useUpdateBooking(tenantId);
+  const upsertDetails = useUpsertBookingDetails(tenantId);
+
+  // Service-typed details state
+  const kind = serviceKind(serviceType);
+  const [grooming, setGrooming] = useState<Partial<GroomingDetails>>({});
+  const [hotel, setHotel] = useState<Partial<HotelDetails>>({});
+  const [transport, setTransport] = useState<Partial<TransportDetails>>({});
+
+  // Load existing details when editing
+  const detailsQ = useBookingServiceDetails(
+    isEdit ? booking?.id ?? null : null,
+    serviceType,
+    tenantId,
+  );
+  useEffect(() => {
+    if (!isEdit || !detailsQ.data) return;
+    if (detailsQ.data.kind === "grooming" && detailsQ.data.data) setGrooming(detailsQ.data.data);
+    if (detailsQ.data.kind === "hotel" && detailsQ.data.data) setHotel(detailsQ.data.data);
+    if (detailsQ.data.kind === "transport" && detailsQ.data.data) setTransport(detailsQ.data.data);
+  }, [isEdit, detailsQ.data]);
+
+  // Resource conflict soft-check
+  const startIso = startAt ? new Date(startAt).toISOString() : null;
+  const endIso = endAt ? new Date(endAt).toISOString() : null;
+  const conflictsQ = useResourceConflicts({
+    tenantId,
+    resourceId,
+    startAt: startIso,
+    endAt: endIso,
+    excludeBookingId: booking?.id ?? null,
+  });
+  const conflicts = conflictsQ.data ?? [];
 
   const selectedCustomer = useMemo(() => {
     if (booking?.customer && booking.customer.id === customerId) return booking.customer;
@@ -115,6 +157,15 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       return toast.error("Select at least one pet for this booking");
     }
 
+    if (conflicts.length > 0) {
+      const proceed = confirm(
+        `Resource is already booked in this window (${conflicts
+          .map((c: any) => c.booking_number)
+          .join(", ")}). Save anyway?`,
+      );
+      if (!proceed) return;
+    }
+
     try {
       if (isEdit && booking) {
         await update.mutateAsync({
@@ -130,6 +181,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           },
           pet_ids: petIds,
         });
+        await saveDetails(booking.id);
         toast.success("Booking updated");
         onSaved?.(booking.id);
       } else {
@@ -145,12 +197,30 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           notes_customer: notesCustomer.trim() || null,
           booking_request_id: prefill?.booking_request_id ?? null,
         });
+        await saveDetails(res.id);
         toast.success(`Booking ${res.booking_number} created`);
         onSaved?.(res.id);
       }
       onClose();
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to save booking");
+    }
+  }
+
+  async function saveDetails(bookingId: string) {
+    if (kind === "grooming") {
+      await upsertDetails.mutateAsync({
+        kind: "grooming",
+        bookingId,
+        data: {
+          ...grooming,
+          grooming_mode: serviceType === "grooming_mobile" ? "mobile" : "in_house",
+        },
+      });
+    } else if (kind === "hotel") {
+      await upsertDetails.mutateAsync({ kind: "hotel", bookingId, data: hotel });
+    } else if (kind === "transport") {
+      await upsertDetails.mutateAsync({ kind: "transport", bookingId, data: transport });
     }
   }
 
@@ -312,8 +382,41 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </select>
+            {conflicts.length > 0 && (
+              <div className="mt-2 flex items-start gap-2 rounded-lg border border-sk-orange bg-sk-orange-soft p-2 text-xs text-sk-orange">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <div>
+                  This resource overlaps with{" "}
+                  <span className="font-semibold">
+                    {conflicts.map((c: any) => c.booking_number).join(", ")}
+                  </span>
+                  . You can still save — you'll be asked to confirm.
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        {kind === "grooming" && (
+          <GroomingFields
+            value={grooming}
+            onChange={(patch) => setGrooming((p) => ({ ...p, ...patch }))}
+            mode={serviceType === "grooming_mobile" ? "mobile" : "in_house"}
+          />
+        )}
+        {kind === "hotel" && (
+          <HotelFields
+            value={hotel}
+            onChange={(patch) => setHotel((p) => ({ ...p, ...patch }))}
+            species={serviceType === "hotel_cat" ? "cat" : "dog"}
+          />
+        )}
+        {kind === "transport" && (
+          <TransportFields
+            value={transport}
+            onChange={(patch) => setTransport((p) => ({ ...p, ...patch }))}
+          />
+        )}
 
         <div>
           <div className="mb-1 text-sm font-medium">Internal notes</div>
