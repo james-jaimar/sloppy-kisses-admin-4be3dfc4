@@ -47,10 +47,15 @@ const GROOMING_SERVICE_TYPES: ServiceType[] = ["grooming_inhouse", "grooming_mob
  */
 export function useGroomingBoardBookings(params: { tenantId: string | null | undefined; day: Date }) {
   const { tenantId, day } = params;
-  const dayStr = day.toISOString().slice(0, 10);
+  const dayStart = new Date(day);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  const dayStartIso = dayStart.toISOString();
+  const dayEndIso = dayEnd.toISOString();
 
   return useQuery({
-    queryKey: ["grooming_board", tenantId, dayStr],
+    queryKey: ["grooming_board", tenantId, dayStartIso],
     enabled: Boolean(tenantId),
     refetchInterval: 30000,
     queryFn: async (): Promise<GroomingBoardCard[]> => {
@@ -65,8 +70,8 @@ export function useGroomingBoardBookings(params: { tenantId: string | null | und
         `)
         .eq("tenant_id", tenantId as string)
         .in("service_type", GROOMING_SERVICE_TYPES as any)
-        .gte("start_date", dayStr)
-        .lte("start_date", dayStr)
+        .gte("start_at", dayStartIso)
+        .lt("start_at", dayEndIso)
         .order("start_at", { ascending: true });
       if (error) throw error;
       return (data ?? []).map((b: any) => ({
@@ -129,7 +134,8 @@ export async function checkVaccinations(petIds: string[]): Promise<VaccinationCh
   const { data: vaxx, error: vaxxErr } = await supabase.from("vaccinations").select("pet_id, expires_on").in("pet_id", petIds);
   if (vaxxErr) throw vaxxErr;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const byPet = new Map<string, { expires_on: string | null }[]>();
   for (const v of vaxx ?? []) {
     const arr = byPet.get((v as any).pet_id) ?? [];
