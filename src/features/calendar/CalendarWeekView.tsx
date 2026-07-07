@@ -191,7 +191,7 @@ export default function CalendarWeekView() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const [searchParams, setSearchParams] = useSearchParams();
-  const updateBooking = tenantId ? useUpdateBooking(tenantId) : null;
+  const updateBooking = useUpdateBooking(tenantId ?? "");
 
   async function handleReschedule(
     booking: BookingListRow,
@@ -199,7 +199,7 @@ export default function CalendarWeekView() {
     durationMs: number,
     newResourceId?: string | null,
   ) {
-    if (!updateBooking) return;
+    if (!tenantId) return;
     const newEnd = new Date(newStart.getTime() + durationMs);
     // No-op guard
     if (
