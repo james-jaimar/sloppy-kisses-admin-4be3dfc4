@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { X, Pencil, ExternalLink, AlertTriangle, Mail } from "lucide-react";
+import { Repeat } from "lucide-react";
 import { format } from "date-fns";
 import { useUpdateBookingStatus, useBookingNotifications, type BookingListRow, type BookingStatus } from "./queries";
 import { BookingFormModal } from "./BookingFormModal";
 import { BookingStatusChip } from "./statusMeta";
 import { useBookingServiceDetails } from "./detailsQueries";
+import { useCancelSeriesForward } from "./recurringQueries";
 
 const STATUS_ACTIONS: { status: BookingStatus; label: string }[] = [
   { status: "confirmed", label: "Confirm" },
@@ -28,6 +30,7 @@ interface Props {
 export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const updateStatus = useUpdateBookingStatus(tenantId);
+  const cancelSeries = useCancelSeriesForward(tenantId);
   const notificationsQ = useBookingNotifications(booking.id, tenantId);
   const detailsQ = useBookingServiceDetails(booking.id, booking.service_type, tenantId);
 
@@ -47,6 +50,20 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
     }
   }
 
+  async function cancelThisAndFuture() {
+    const ok = confirm(
+      "Cancel this booking AND every future booking in the series? The rule will be deactivated too.",
+    );
+    if (!ok) return;
+    try {
+      await cancelSeries.mutateAsync({ bookingId: booking.id });
+      toast.success("Series cancelled from this date forward");
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to cancel series");
+    }
+  }
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
@@ -60,6 +77,11 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
               {booking.service_type.replace(/_/g, " ")}
             </h2>
             <div className="mt-2"><BookingStatusChip status={booking.status} /></div>
+            {(booking as any).recurring_rule_id && (
+              <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-sk-turquoise-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sk-turquoise-dark">
+                <Repeat className="h-3 w-3" /> Part of a series
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <button
@@ -230,6 +252,19 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
               ))}
             </div>
           </section>
+
+          {(booking as any).recurring_rule_id && (
+            <section>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Series actions</div>
+              <button
+                onClick={cancelThisAndFuture}
+                disabled={cancelSeries.isPending}
+                className="mt-2 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 disabled:opacity-60"
+              >
+                Cancel this and all future bookings
+              </button>
+            </section>
+          )}
         </div>
       </aside>
 

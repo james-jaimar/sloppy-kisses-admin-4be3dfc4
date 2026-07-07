@@ -54,6 +54,7 @@ export interface BookingListRow {
   requires_grooming: boolean;
   created_at: string;
   updated_at: string;
+  recurring_rule_id: string | null;
   customer: {
     id: string;
     customer_number: string | null;
@@ -70,7 +71,7 @@ export interface BookingListRow {
 const BOOKING_SELECT = `
   id, booking_number, status, service_type, start_at, end_at, start_date, end_date,
   resource_id, customer_id, notes_internal, notes_customer, requires_transport,
-  requires_grooming, created_at, updated_at,
+  requires_grooming, created_at, updated_at, recurring_rule_id,
   customer:customers(id, customer_number, full_name, email, mobile),
   resource:resources(id, name, type),
   booking_pets(pet:pets(id, pet_number, name, species, breed))

@@ -22,6 +22,8 @@ import {
   type TransportDetails,
 } from "./detailsQueries";
 import { GroomingFields, HotelFields, TransportFields } from "./BookingDetailsFields";
+import { RecurrenceFields, DEFAULT_RECURRENCE, toRule, type RecurrenceValue } from "./RecurrenceFields";
+import { useCreateRecurringBooking } from "./recurringQueries";
 
 const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: ResourceType }[] = [
   { value: "daycare", label: "Daycare", resourceType: "daycare_area" },
@@ -106,12 +108,14 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const create = useCreateBooking(tenantId);
   const update = useUpdateBooking(tenantId);
   const upsertDetails = useUpsertBookingDetails(tenantId);
+  const createRecurring = useCreateRecurringBooking(tenantId);
 
   // Service-typed details state
   const kind = serviceKind(serviceType);
   const [grooming, setGrooming] = useState<Partial<GroomingDetails>>({});
   const [hotel, setHotel] = useState<Partial<HotelDetails>>({});
   const [transport, setTransport] = useState<Partial<TransportDetails>>({});
+  const [recurrence, setRecurrence] = useState<RecurrenceValue>(DEFAULT_RECURRENCE);
 
   // Load existing details when editing
   const detailsQ = useBookingServiceDetails(
@@ -185,6 +189,30 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         toast.success("Booking updated");
         onSaved?.(booking.id);
       } else {
+        const rule = toRule(recurrence);
+        if (rule) {
+          const res = await createRecurring.mutateAsync({
+            customer_id: customerId,
+            pet_ids: petIds,
+            service_type: serviceType,
+            status,
+            start_at: new Date(startAt).toISOString(),
+            end_at: new Date(endAt).toISOString(),
+            resource_id: resourceId,
+            notes_internal: notesInternal.trim() || null,
+            notes_customer: notesCustomer.trim() || null,
+            booking_request_id: prefill?.booking_request_id ?? null,
+            rule,
+          });
+          // Persist service-typed details for every occurrence.
+          for (const b of res.bookings) {
+            await saveDetails(b.id);
+          }
+          toast.success(`Created ${res.bookings.length} bookings in series`);
+          onSaved?.(res.bookings[0]?.id);
+          onClose();
+          return;
+        }
         const res = await create.mutateAsync({
           customer_id: customerId,
           pet_ids: petIds,
@@ -229,6 +257,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   }
 
   const saving = create.isPending || update.isPending;
+  const savingAny = saving || createRecurring.isPending;
 
   return (
     <ModalShell
@@ -418,6 +447,14 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           />
         )}
 
+        {!isEdit && (
+          <RecurrenceFields
+            value={recurrence}
+            onChange={(patch) => setRecurrence((p) => ({ ...p, ...patch }))}
+            anchorDate={startAt ? new Date(startAt) : null}
+          />
+        )}
+
         <div>
           <div className="mb-1 text-sm font-medium">Internal notes</div>
           <textarea
@@ -443,10 +480,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           </button>
           <button
             type="submit"
-            disabled={saving}
+            disabled={savingAny}
             className="h-10 rounded-lg bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-60"
           >
-            {saving ? "Saving…" : isEdit ? "Save changes" : "Create booking"}
+            {savingAny ? "Saving…" : isEdit ? "Save changes" : recurrence.enabled ? "Create series" : "Create booking"}
           </button>
         </div>
       </form>

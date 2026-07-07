@@ -9,12 +9,13 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import {
-  useBookingsByRange, useResources,
+  useBookingsByRange, useResources, useUpdateBooking,
   type BookingListRow, type BookingStatus, type ServiceType, type ResourceType,
 } from "@/features/bookings/queries";
 import { BookingFormModal } from "@/features/bookings/BookingFormModal";
 import { BookingDetailPanel } from "@/features/bookings/BookingDetailPanel";
 import { BookingStatusDot } from "@/features/bookings/statusMeta";
+import { toast } from "sonner";
 
 type ViewMode = "day" | "week" | "month";
 type DayLayout = "time" | "resource";
@@ -52,6 +53,36 @@ const SERVICE_TONE: Record<ServiceType, string> = {
 const HOUR_START = 7;
 const HOUR_END = 19;
 const ROW_H = 56;
+
+/** Statuses where dragging to reschedule is disabled. */
+const LOCKED_FOR_DRAG: BookingStatus[] = [
+  "checked_in", "in_progress", "ready", "checked_out", "completed", "cancelled", "no_show",
+];
+
+const DRAG_MIME = "application/x-sk-booking";
+
+interface DragPayload {
+  bookingId: string;
+  durationMs: number;
+  offsetTopPx: number;
+}
+
+/** Round to nearest 15-min in pixels within our grid. */
+function snapMinutes(rawMinutes: number): number {
+  const clamped = Math.max(0, Math.min((HOUR_END - HOUR_START) * 60, rawMinutes));
+  return Math.round(clamped / 15) * 15;
+}
+
+/** Turn a mouse drop event on a day/lane column into the new booking start Date. */
+function dropToStart(clientY: number, columnEl: HTMLElement, dayAnchor: Date, offsetTopPx: number): Date {
+  const rect = columnEl.getBoundingClientRect();
+  const y = clientY - rect.top - offsetTopPx;
+  const minutes = snapMinutes((y / ROW_H) * 60);
+  const start = new Date(dayAnchor);
+  start.setHours(HOUR_START, 0, 0, 0);
+  start.setMinutes(start.getMinutes() + minutes);
+  return start;
+}
 
 function hoursRange() {
   return Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i);
@@ -109,11 +140,27 @@ function EventCard({ b, onClick, height, hideResource = false }: { b: BookingLis
   const pet = b.booking_pets[0]?.pet;
   const warn = !b.resource_id;
   const compact = typeof height === "number" && height < 46;
+  const draggable = !LOCKED_FOR_DRAG.includes(b.status);
   return (
     <button
       onClick={onClick}
+      draggable={draggable}
+      onDragStart={(e) => {
+        if (!draggable || !b.start_at || !b.end_at) return;
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        const payload: DragPayload = {
+          bookingId: b.id,
+          durationMs: new Date(b.end_at).getTime() - new Date(b.start_at).getTime(),
+          offsetTopPx: e.clientY - rect.top,
+        };
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData(DRAG_MIME, JSON.stringify(payload));
+        // Fallback text so the browser doesn't treat this as unsupported.
+        e.dataTransfer.setData("text/plain", b.booking_number);
+      }}
       className={
         "block h-full w-full overflow-hidden rounded-lg border-l-[3px] px-2 py-0.5 text-left text-[11px] shadow-sm hover:shadow-md transition-all " +
+        (draggable ? "cursor-grab active:cursor-grabbing " : "cursor-pointer ") +
         SERVICE_TONE[b.service_type]
       }
     >
@@ -144,6 +191,40 @@ export default function CalendarWeekView() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const [searchParams, setSearchParams] = useSearchParams();
+  const updateBooking = useUpdateBooking(tenantId ?? "");
+
+  async function handleReschedule(
+    booking: BookingListRow,
+    newStart: Date,
+    durationMs: number,
+    newResourceId?: string | null,
+  ) {
+    if (!tenantId) return;
+    const newEnd = new Date(newStart.getTime() + durationMs);
+    // No-op guard
+    if (
+      booking.start_at &&
+      Math.abs(new Date(booking.start_at).getTime() - newStart.getTime()) < 60_000 &&
+      (newResourceId === undefined || newResourceId === booking.resource_id)
+    ) {
+      return;
+    }
+    try {
+      await updateBooking.mutateAsync({
+        id: booking.id,
+        patch: {
+          start_at: newStart.toISOString(),
+          end_at: newEnd.toISOString(),
+          ...(newResourceId !== undefined ? { resource_id: newResourceId } : {}),
+        },
+      });
+      toast.success(
+        `Rescheduled ${booking.booking_number} to ${format(newStart, "EEE d MMM HH:mm")}`,
+      );
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to reschedule");
+    }
+  }
 
   const [view, setView] = useState<ViewMode>("week");
   const [dayLayout, setDayLayout] = useState<DayLayout>("resource");
@@ -359,13 +440,19 @@ export default function CalendarWeekView() {
           )}
 
           {!bookingsQ.isLoading && bookings.length > 0 && view === "day" && dayLayout === "resource" && (
-            <ResourceDayView bookings={bookings} anchor={anchor} resources={resourcesQ.data ?? []} onSelect={setDetailId} />
+            <ResourceDayView
+              bookings={bookings}
+              anchor={anchor}
+              resources={resourcesQ.data ?? []}
+              onSelect={setDetailId}
+              onReschedule={handleReschedule}
+            />
           )}
           {!bookingsQ.isLoading && bookings.length > 0 && view === "day" && dayLayout === "time" && (
-            <TimeDayView bookings={bookings} anchor={anchor} onSelect={setDetailId} />
+            <TimeDayView bookings={bookings} anchor={anchor} onSelect={setDetailId} onReschedule={handleReschedule} />
           )}
           {!bookingsQ.isLoading && bookings.length > 0 && view === "week" && (
-            <WeekView bookings={bookings} anchor={range.from} onSelect={setDetailId} />
+            <WeekView bookings={bookings} anchor={range.from} onSelect={setDetailId} onReschedule={handleReschedule} />
           )}
           {!bookingsQ.isLoading && bookings.length > 0 && view === "month" && (
             <MonthView bookings={bookings} anchor={anchor} rangeStart={range.from} onSelect={setDetailId} />
@@ -419,7 +506,12 @@ function EmptyState({ onNew }: { onNew: () => void }) {
   );
 }
 
-function TimeDayView({ bookings, anchor, onSelect }: { bookings: BookingListRow[]; anchor: Date; onSelect: (id: string) => void }) {
+function TimeDayView({
+  bookings, anchor, onSelect, onReschedule,
+}: {
+  bookings: BookingListRow[]; anchor: Date; onSelect: (id: string) => void;
+  onReschedule: (b: BookingListRow, newStart: Date, durationMs: number, newResourceId?: string | null) => void;
+}) {
   const hours = hoursRange();
   const dayBookings = bookings.filter((b) => b.start_at && isSameDay(new Date(b.start_at), anchor));
   return (
@@ -431,7 +523,25 @@ function TimeDayView({ bookings, anchor, onSelect }: { bookings: BookingListRow[
           </div>
         ))}
       </div>
-      <div className="relative border-l border-border">
+      <div
+        className="relative border-l border-border"
+        onDragOver={(e) => {
+          if (e.dataTransfer.types.includes(DRAG_MIME)) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          }
+        }}
+        onDrop={(e) => {
+          const raw = e.dataTransfer.getData(DRAG_MIME);
+          if (!raw) return;
+          e.preventDefault();
+          const payload = JSON.parse(raw) as DragPayload;
+          const b = bookings.find((x) => x.id === payload.bookingId);
+          if (!b) return;
+          const newStart = dropToStart(e.clientY, e.currentTarget as HTMLElement, anchor, payload.offsetTopPx);
+          onReschedule(b, newStart, payload.durationMs);
+        }}
+      >
         {hours.map((h) => <div key={h} className="h-14 border-b border-border/60" />)}
         <NowLine dayAnchor={anchor} />
         {dayBookings.map((b) => {
@@ -450,11 +560,12 @@ function TimeDayView({ bookings, anchor, onSelect }: { bookings: BookingListRow[
 }
 
 function ResourceDayView({
-  bookings, anchor, resources, onSelect,
+  bookings, anchor, resources, onSelect, onReschedule,
 }: {
   bookings: BookingListRow[]; anchor: Date;
   resources: { id: string; name: string; type: ResourceType }[];
   onSelect: (id: string) => void;
+  onReschedule: (b: BookingListRow, newStart: Date, durationMs: number, newResourceId?: string | null) => void;
 }) {
   const hours = hoursRange();
   const cols = [...resources, { id: "__unassigned", name: "Unassigned", type: "inhouse_grooming" as ResourceType }];
@@ -486,7 +597,26 @@ function ResourceDayView({
               c.id === "__unassigned" ? !b.resource_id : b.resource_id === c.id,
             );
             return (
-              <div key={c.id} className="relative border-l border-border">
+              <div
+                key={c.id}
+                className="relative border-l border-border"
+                onDragOver={(e) => {
+                  if (e.dataTransfer.types.includes(DRAG_MIME)) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                  }
+                }}
+                onDrop={(e) => {
+                  const raw = e.dataTransfer.getData(DRAG_MIME);
+                  if (!raw) return;
+                  e.preventDefault();
+                  const payload = JSON.parse(raw) as DragPayload;
+                  const b = bookings.find((x) => x.id === payload.bookingId);
+                  if (!b) return;
+                  const newStart = dropToStart(e.clientY, e.currentTarget as HTMLElement, anchor, payload.offsetTopPx);
+                  onReschedule(b, newStart, payload.durationMs, c.id === "__unassigned" ? null : c.id);
+                }}
+              >
                 {hours.map((h) => <div key={h} className="h-14 border-b border-border/60" />)}
                 <NowLine dayAnchor={anchor} />
                 {colBookings.map((b) => {
@@ -508,7 +638,12 @@ function ResourceDayView({
   );
 }
 
-function WeekView({ bookings, anchor, onSelect }: { bookings: BookingListRow[]; anchor: Date; onSelect: (id: string) => void }) {
+function WeekView({
+  bookings, anchor, onSelect, onReschedule,
+}: {
+  bookings: BookingListRow[]; anchor: Date; onSelect: (id: string) => void;
+  onReschedule: (b: BookingListRow, newStart: Date, durationMs: number, newResourceId?: string | null) => void;
+}) {
   const hours = hoursRange();
   const days = Array.from({ length: 7 }, (_, i) => addDays(anchor, i));
   return (
@@ -536,7 +671,26 @@ function WeekView({ bookings, anchor, onSelect }: { bookings: BookingListRow[]; 
         {days.map((d, i) => {
           const dayBookings = bookings.filter((b) => b.start_at && isSameDay(new Date(b.start_at), d));
           return (
-            <div key={i} className="relative border-l border-border">
+            <div
+              key={i}
+              className="relative border-l border-border"
+              onDragOver={(e) => {
+                if (e.dataTransfer.types.includes(DRAG_MIME)) {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                }
+              }}
+              onDrop={(e) => {
+                const raw = e.dataTransfer.getData(DRAG_MIME);
+                if (!raw) return;
+                e.preventDefault();
+                const payload = JSON.parse(raw) as DragPayload;
+                const b = bookings.find((x) => x.id === payload.bookingId);
+                if (!b) return;
+                const newStart = dropToStart(e.clientY, e.currentTarget as HTMLElement, d, payload.offsetTopPx);
+                onReschedule(b, newStart, payload.durationMs);
+              }}
+            >
               {hours.map((h) => <div key={h} className="h-14 border-b border-border/60" />)}
               <NowLine dayAnchor={d} />
               {dayBookings.map((b) => {
