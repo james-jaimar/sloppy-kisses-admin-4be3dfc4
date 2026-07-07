@@ -18,6 +18,9 @@ import ResetPassword from "@/pages/ResetPassword";
 import ChangePasswordPage from "@/features/settings/ChangePasswordPage";
 import SettingsIndexPage from "@/features/settings/SettingsIndexPage";
 import ResourcesPage from "@/features/settings/ResourcesPage";
+import GroomingPackagesPage from "@/features/settings/GroomingPackagesPage";
+import GroomingAddonsPage from "@/features/settings/GroomingAddonsPage";
+import GroomingBoardPage from "@/features/grooming/GroomingBoardPage";
 import AdminDashboard from "@/features/dashboard/AdminDashboard";
 import CalendarWeekView from "@/features/calendar/CalendarWeekView";
 import CustomersPage from "@/features/customers/CustomersPage";
@@ -62,7 +65,7 @@ const App = () => (
                 <Route path="/admin/daycare/daily-list" element={<DaycareDailyList />} />
                 <Route path="/admin/daycare/plans" element={<PlaceholderPage title="Daycare plans" />} />
                 <Route path="/admin/hotel-cattery" element={<PlaceholderPage title="Hotel & Cattery" />} />
-                <Route path="/admin/grooming" element={<PlaceholderPage title="Grooming" />} />
+                <Route path="/admin/grooming" element={<GroomingBoardPage />} />
                 <Route path="/admin/mobile-vans" element={<PlaceholderPage title="Mobile vans" />} />
                 <Route path="/admin/pickup-dropoff" element={<PlaceholderPage title="Pick Up / Drop Off" />} />
                 <Route path="/admin/invoices" element={<PlaceholderPage title="Invoices & Payments" />} />
@@ -72,6 +75,8 @@ const App = () => (
                 <Route path="/admin/users" element={<PlaceholderPage title="Users & roles" />} />
                 <Route path="/admin/settings" element={<SettingsIndexPage />} />
                 <Route path="/admin/settings/resources" element={<ResourcesPage />} />
+                <Route path="/admin/settings/grooming-packages" element={<GroomingPackagesPage />} />
+                <Route path="/admin/settings/grooming-addons" element={<GroomingAddonsPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>
