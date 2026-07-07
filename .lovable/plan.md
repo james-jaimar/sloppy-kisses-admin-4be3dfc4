@@ -1,32 +1,80 @@
-## What's happening
+## Finish Phase 1 — Recurring bookings, drag-to-reschedule, per-resource day view
 
-Booking `BK00001` was created directly via **New booking** (not via a request). At creation time the modal loaded the customer's pets as togglable chips but nothing was pre-selected, so no rows were inserted into `booking_pets`. The DB confirms:
+Three deferred slices, delivered together, then memory-bank the rest of the roadmap so we don't lose it.
 
-- `bookings.BK00001` → customer James Hawkins, `booking_request_id: null`, pet_count: **0**
-- `pets` → Charlie (SP04983) is correctly linked to the same customer
-- `booking_requests` → empty (this booking didn't come from a request)
+---
 
-So the schema and the customer→pet link are fine. The gap is purely in the booking-creation UX: pets are treated as optional and silently default to none.
+### 1. Recurring bookings (uses existing `recurring_rules` table)
 
-## Fix (app-level guard so this never happens again)
+**UI**
+- New "Repeat" section inside `BookingFormModal` (collapsed by default).
+- Fields: frequency (none / daily / weekly / monthly), interval, weekdays (Mon–Sun chips when weekly), end mode (never / on date / after N occurrences).
+- Human-readable summary line ("Every week on Mon, Wed until 30 Nov 2026").
 
-1. **`src/features/bookings/BookingFormModal.tsx`** — make pet linking non-silent:
-   - When creating a new booking (not editing) and a customer is selected, auto-populate `petIds` with **all** of that customer's pets as soon as `petsQ.data` loads. If the customer has exactly one pet, it's pre-checked; if they have several, all are pre-checked and staff can uncheck any they don't want.
-   - Reset `petIds` to `[]` when the customer changes (already happens) so the auto-populate can re-run for the new customer.
-   - Block submit with a clear toast if the customer has pets available but the user has unchecked all of them ("Select at least one pet for this booking"). If the customer genuinely has zero pets, submission is still allowed (with the existing "This customer has no pets yet" notice).
-   - Same rules apply when the modal is opened from the **Convert Booking Request** flow — the prefill already passes `pet_ids`, and the same auto-populate logic applies if the request had no `pet_id` but the customer has pets.
+**Data flow**
+- On create: if a rule is set, insert into `recurring_rules` linked to the "template" booking, then generate occurrences up to a rolling horizon (default 60 days).
+- Each generated occurrence is a real row in `bookings` with `recurring_rule_id` set + all typed details copied.
+- On edit of a single occurrence: offer "this only" vs "this and future" (future = re-generate from this date forward).
+- On cancel: same choice; "this and future" deactivates the rule and cancels forward occurrences.
 
-2. **Backfill BK00001** — one-time data fix so the current booking shows Charlie:
-   - Insert `booking_pets(booking_id = BK00001, pet_id = Charlie, tenant_id = <tenant>)`.
+**Backend**
+- One migration: add `recurring_rule_id uuid` + `is_recurring_template boolean` to `bookings` if missing; add index; ensure `recurring_rules` has the needed columns (freq, interval, byweekday int[], until, count, active).
+- Occurrence generator lives client-side for now (pure function in `src/features/bookings/recurrence.ts`) with unit tests — no edge function needed yet.
 
-## Out of scope
+**New/edited files**
+- `src/features/bookings/recurrence.ts` (rule → dates)
+- `src/features/bookings/RecurrenceFields.tsx`
+- `src/features/bookings/recurringQueries.ts` (create rule + generate + bulk insert; update-forward; cancel-forward)
+- `BookingFormModal.tsx` — mount RecurrenceFields, wire save
+- `BookingDetailPanel.tsx` — show "Part of a series" badge + "Edit / Cancel: this / this & future" actions
 
-- No schema changes.
-- No changes to the booking-request creation flow, calendar, or detail panel logic beyond what re-renders naturally when `booking_pets` is populated.
-- Not touching `NewBookingModal.tsx` (unused mock component — the real form is `BookingFormModal.tsx`).
+---
 
-## Acceptance
+### 2. Drag-to-reschedule on the calendar
 
-- Creating a new booking for a customer with pets auto-checks their pets; submitting without any pet selected (when pets exist) shows an error.
-- `BK00001` detail page and side panel show Charlie under Pets.
-- Converting a booking request still works and pre-selects the request's pet (or all customer pets if the request had none).
+- `CalendarWeekView.tsx` gets HTML5 drag on booking chips.
+- Drop target = time slot cell; snap to 15-min grid.
+- On drop: optimistic update, call `updateBooking({ start_at, end_at })` preserving duration, re-run conflict check, toast + undo.
+- Show a ghost chip while dragging with the new time label.
+- Blocked for statuses `checked_in`, `in_progress`, `checked_out`, `completed`, `cancelled`, `no_show` (visual "not-draggable" cursor).
+
+---
+
+### 3. Per-resource day view (resource lanes)
+
+- New view mode toggle on calendar: **Week / Day**. Default stays Week.
+- Day view lays resources out as columns (lanes), 15-min rows.
+- Filter chips at top: resource type (grooming / mobile van / hotel / cattery / daycare / transport) — hides irrelevant lanes.
+- Empty lanes for active resources still render so ops can drop into them.
+- Drag-to-reschedule works across lanes too → changes `resource_id` on drop.
+
+**New/edited files**
+- `src/features/calendar/CalendarDayView.tsx`
+- `src/features/calendar/CalendarPage.tsx` (or wherever the toggle lives) — view switcher + resource-type filter
+- `CalendarWeekView.tsx` — extract shared chip + drag helpers into `calendarShared.ts`
+
+---
+
+### 4. Memory-bank the remaining roadmap
+
+Write these so future sessions apply them automatically:
+
+- `mem://index.md` — bootstrap Core rules (semantic tokens only, one-booking + typed-details pattern, resources as first-class, notifications via `notification_events`).
+- `mem://features/roadmap` — Phases 2–8 exactly as approved (Grooming board → Hotel/Cattery occupancy → Mobile vans + maps → Pickup/Drop-off → Daycare enrolments → Estimates/Invoices/Payments + provider decision → Automated comms + vaccination gate → Customer portal → Retail & inventory → Reports → Users/roles/settings).
+- `mem://features/booking-model` — "one bookings row + typed `*_booking_details` row per service; never split into per-service booking tables."
+- `mem://features/notifications` — "all customer-facing comms flow through `notification_events`; respect `customers.notify_email`."
+- `mem://design/tokens` — coral primary, semantic tokens in `index.css`, no hardcoded colors.
+
+### Technical notes
+
+- Recurrence generation: pure function, tested with vitest against DST edges and month-end weekly cases.
+- Bulk occurrence insert uses a single `.insert([...])` per call; details rows inserted in a follow-up `.insert([...])` keyed by returned booking ids.
+- Drag uses native HTML5 DnD (no new dep). Snap logic shared with future resize handles.
+- Day view reuses existing `useResources` + `useBookings` queries with a date-scoped range.
+- Conflict guard already exists — reused on drop and on recurring generation (skips + reports conflicts, doesn't block the whole series).
+
+### Out of scope for this pass
+
+- Resize-to-extend on calendar (add after drag ships)
+- iCal export
+- Server-side recurrence expansion (revisit when horizon grows past 60 days)
