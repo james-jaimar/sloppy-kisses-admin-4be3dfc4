@@ -308,6 +308,57 @@ export type Database = {
           },
         ]
       }
+      booking_status_events: {
+        Row: {
+          actor_user_id: string | null
+          booking_id: string
+          created_at: string
+          event_kind: string
+          from_status: Database["public"]["Enums"]["booking_status"] | null
+          id: string
+          note: string | null
+          tenant_id: string
+          to_status: Database["public"]["Enums"]["booking_status"]
+        }
+        Insert: {
+          actor_user_id?: string | null
+          booking_id: string
+          created_at?: string
+          event_kind?: string
+          from_status?: Database["public"]["Enums"]["booking_status"] | null
+          id?: string
+          note?: string | null
+          tenant_id: string
+          to_status: Database["public"]["Enums"]["booking_status"]
+        }
+        Update: {
+          actor_user_id?: string | null
+          booking_id?: string
+          created_at?: string
+          event_kind?: string
+          from_status?: Database["public"]["Enums"]["booking_status"] | null
+          id?: string
+          note?: string | null
+          tenant_id?: string
+          to_status?: Database["public"]["Enums"]["booking_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_status_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_status_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           assigned_staff_id: string | null
@@ -1444,8 +1495,118 @@ export type Database = {
           },
         ]
       }
+      grooming_addons: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          kind: string
+          name: string
+          price_zar: number
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          kind: string
+          name: string
+          price_zar: number
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          name?: string
+          price_zar?: number
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grooming_addons_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grooming_booking_addons: {
+        Row: {
+          addon_code: string
+          addon_id: string | null
+          addon_name: string
+          booking_id: string
+          created_at: string
+          id: string
+          note: string | null
+          price_zar_snapshot: number
+          qty: number
+          tenant_id: string
+        }
+        Insert: {
+          addon_code: string
+          addon_id?: string | null
+          addon_name: string
+          booking_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          price_zar_snapshot: number
+          qty?: number
+          tenant_id: string
+        }
+        Update: {
+          addon_code?: string
+          addon_id?: string | null
+          addon_name?: string
+          booking_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          price_zar_snapshot?: number
+          qty?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grooming_booking_addons_addon_id_fkey"
+            columns: ["addon_id"]
+            isOneToOne: false
+            referencedRelation: "grooming_addons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grooming_booking_addons_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grooming_booking_addons_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       grooming_booking_details: {
         Row: {
+          actual_end_at: string | null
+          actual_start_at: string | null
           booking_id: string
           created_at: string
           duration_minutes: number | null
@@ -1453,8 +1614,14 @@ export type Database = {
           grooming_mode: string
           grooming_notes: string | null
           id: string
+          loyalty_free_groom: boolean
+          matted_surcharge_zar: number | null
+          overtime_minutes: number
+          package_id: string | null
           pensioner_discount: boolean
+          pensioner_discount_applied: boolean
           recurring: boolean
+          sedation_surcharge_zar: number | null
           service_package: string | null
           surcharge_amount: number
           tenant_id: string
@@ -1462,6 +1629,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          actual_end_at?: string | null
+          actual_start_at?: string | null
           booking_id: string
           created_at?: string
           duration_minutes?: number | null
@@ -1469,8 +1638,14 @@ export type Database = {
           grooming_mode: string
           grooming_notes?: string | null
           id?: string
+          loyalty_free_groom?: boolean
+          matted_surcharge_zar?: number | null
+          overtime_minutes?: number
+          package_id?: string | null
           pensioner_discount?: boolean
+          pensioner_discount_applied?: boolean
           recurring?: boolean
+          sedation_surcharge_zar?: number | null
           service_package?: string | null
           surcharge_amount?: number
           tenant_id: string
@@ -1478,6 +1653,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          actual_end_at?: string | null
+          actual_start_at?: string | null
           booking_id?: string
           created_at?: string
           duration_minutes?: number | null
@@ -1485,8 +1662,14 @@ export type Database = {
           grooming_mode?: string
           grooming_notes?: string | null
           id?: string
+          loyalty_free_groom?: boolean
+          matted_surcharge_zar?: number | null
+          overtime_minutes?: number
+          package_id?: string | null
           pensioner_discount?: boolean
+          pensioner_discount_applied?: boolean
           recurring?: boolean
+          sedation_surcharge_zar?: number | null
           service_package?: string | null
           surcharge_amount?: number
           tenant_id?: string
@@ -1502,7 +1685,70 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "grooming_booking_details_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "grooming_packages"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "grooming_booking_details_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grooming_packages: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          expected_minutes: number
+          id: string
+          name: string
+          package_type: string
+          price_zar: number
+          size_band: string | null
+          sort_order: number
+          species: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          expected_minutes?: number
+          id?: string
+          name: string
+          package_type: string
+          price_zar: number
+          size_band?: string | null
+          sort_order?: number
+          species: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          expected_minutes?: number
+          id?: string
+          name?: string
+          package_type?: string
+          price_zar?: number
+          size_band?: string | null
+          sort_order?: number
+          species?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grooming_packages_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2897,6 +3143,7 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "no_show"
+        | "grooming"
       customer_status: "active" | "inactive" | "archived"
       document_status: "pending" | "verified" | "rejected" | "expired"
       email_status: "queued" | "sent" | "failed"
@@ -3104,6 +3351,7 @@ export const Constants = {
         "completed",
         "cancelled",
         "no_show",
+        "grooming",
       ],
       customer_status: ["active", "inactive", "archived"],
       document_status: ["pending", "verified", "rejected", "expired"],
