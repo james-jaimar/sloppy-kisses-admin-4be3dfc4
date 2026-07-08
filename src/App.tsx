@@ -25,6 +25,8 @@ import HotelBoardPage from "@/features/hotelCattery/HotelBoardPage";
 import HotelWorkflowPage from "@/features/settings/HotelWorkflowPage";
 import MobileVansPage from "@/features/mobileVans/MobileVansPage";
 import VanWorkflowPage from "@/features/settings/VanWorkflowPage";
+import TransportBoardPage from "@/features/transport/TransportBoardPage";
+import TransportWorkflowPage from "@/features/settings/TransportWorkflowPage";
 import AdminDashboard from "@/features/dashboard/AdminDashboard";
 import CalendarWeekView from "@/features/calendar/CalendarWeekView";
 import CustomersPage from "@/features/customers/CustomersPage";
@@ -71,7 +73,7 @@ const App = () => (
                 <Route path="/admin/hotel-cattery" element={<HotelBoardPage />} />
                 <Route path="/admin/grooming" element={<GroomingBoardPage />} />
                 <Route path="/admin/mobile-vans" element={<MobileVansPage />} />
-                <Route path="/admin/pickup-dropoff" element={<PlaceholderPage title="Pick Up / Drop Off" />} />
+                <Route path="/admin/pickup-dropoff" element={<TransportBoardPage />} />
                 <Route path="/admin/invoices" element={<PlaceholderPage title="Invoices & Payments" />} />
                 <Route path="/admin/payments" element={<PlaceholderPage title="Payments" />} />
                 <Route path="/admin/shop-stock" element={<PlaceholderPage title="Shop & Stock" />} />
@@ -83,6 +85,7 @@ const App = () => (
                 <Route path="/admin/settings/grooming-addons" element={<GroomingAddonsPage />} />
                 <Route path="/admin/settings/hotel-workflow" element={<HotelWorkflowPage />} />
                 <Route path="/admin/settings/van-workflow" element={<VanWorkflowPage />} />
+                <Route path="/admin/settings/transport-workflow" element={<TransportWorkflowPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>

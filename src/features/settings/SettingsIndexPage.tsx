@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -36,6 +36,13 @@ const SECTIONS = [
     label: "Mobile van workflow",
     description: "Travel gap warnings, working hours, per-van home suburb.",
     icon: Truck,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/transport-workflow",
+    label: "Transport workflow",
+    description: "Pick-up / drop-off gap warnings, working hours, default lead times.",
+    icon: ArrowLeftRight,
     ready: true,
   },
   {
