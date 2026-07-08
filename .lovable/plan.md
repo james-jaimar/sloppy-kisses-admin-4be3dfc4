@@ -1,79 +1,75 @@
-## Phase 8 — Communications & Vaccination Gate
+## Phase 9 — Customer Portal
 
-Phases 1–7 shipped the operational scaffolding (bookings across all services, daycare enrolments, invoices & payments). The next roadmap item is turning the `notification_events` queue into actual outbound comms, plus enforcing vaccination requirements before pets can attend daycare, hotel, or grooming. Both are "settings-first": the operator configures templates and rules; the system reacts.
+Phase 8 shipped comms + vaccination gate on the operator side. The customer-facing shell already exists (`/customer/*` routes, `CustomerLayout`, `RequireCustomer`, sidebar entries for Dashboard, Pets, Bookings, Documents, Invoices, Payments, Profile) but most pages are placeholders. Phase 9 turns that shell into a real self-service portal so customers can manage their pets, request bookings, upload vaccination certificates, and pay invoices — without any operator touch.
 
 ### What we'll build
 
-1. **Comms Inbox at `/admin/comms`**
-   - Tabbed view: **Outbox** (queued/sending), **Sent**, **Failed**, **All**.
-   - Row: channel icon (email / whatsapp / sms), recipient, subject/preview, related booking/invoice link, status chip, timestamp.
-   - Filters: channel, status, template, date range, customer.
-   - Row click → drawer with full rendered body, delivery log, "Resend" and "Cancel" actions.
-   - Top stat cards: Queued, Sent today, Failed (7d), Bounces.
+1. **Customer dashboard (`/customer/dashboard`)**
+   - Greeting, next upcoming booking card (service, pet, date, resource, status chip), outstanding balance card (link to invoices), pets-needing-attention card (expired/expiring vaccines), quick actions: "Book again", "Add pet", "Upload vaccine".
+   - Recent activity feed: last 5 bookings + last 5 comms received.
 
-2. **Message Templates at `/admin/settings/message-templates`**
-   - CRUD list of templates keyed by `event_code` (e.g. `booking.confirmed`, `booking.reminder_24h`, `invoice.issued`, `invoice.reminder`, `daycare.enrolment.low_credits`, `vax.expiring_30d`, `vax.expired`).
-   - Per template: channel (email / whatsapp / sms), subject (email only), body with mustache-style tokens (`{{customer.first_name}}`, `{{booking.start_at}}`, `{{invoice.number}}`, `{{invoice.balance}}`, `{{pet.name}}`), active toggle, "send to" (customer / internal / both).
-   - Live preview panel that renders against a sample payload.
-   - Seeded with sensible defaults for every event code the DB already emits.
+2. **My Pets (`/customer/pets`, `/customer/pets/:id`)**
+   - List of the signed-in customer's pets with photo, species/breed chip, age, vax status chip.
+   - Detail: edit basic info (name, DOB, breed, weight, temperament notes, feeding, meds, vet). Vaccinations tab reusing `PetVaccinationsPanel` in read+upload mode — customer can add records + upload certificate to storage; `verified_by/verified_at` stays null until an operator verifies.
+   - "Add pet" flow that mirrors the operator `PetFormModal` but scoped to the current customer.
 
-3. **Comms Settings at `/admin/settings/comms`**
-   - Sender identity: from-name, from-email (verified via existing Resend domain), reply-to, WhatsApp sender number (stub — provider TBD), SMS sender ID (stub).
-   - Global quiet hours (no automated sends outside window) + timezone (Africa/Johannesburg default).
-   - Per-event toggles: which templates fire automatically vs. manual-only.
-   - Test send: pick a template + a customer → sends a real message to the operator's own address to sanity-check rendering.
+3. **Bookings (`/customer/bookings`, `/customer/bookings/:id`, `/customer/bookings/new`)**
+   - List split into Upcoming / Past with status chip, service icon, pet, date, resource, balance-due badge.
+   - Detail: read-only summary + "Request change", "Request cancellation" buttons that write a `booking_requests` row (not direct edits).
+   - New request: pick service → pet(s) → preferred date/time → notes → submits as a `booking_requests` row for the operator queue (reuses existing `booking_requests` table + operator `/admin/booking-requests` inbox).
 
-4. **Dispatcher edge function `send-notifications`**
-   - Cron-triggered (every 1 min) + on-demand invoke.
-   - Picks pending `notification_events` rows, resolves template by `event_code`, renders body with the row's payload + related record lookups, sends via provider (Resend for email — already wired for auth; WhatsApp/SMS providers stubbed with pluggable interface), writes result back to the event row (`status`, `sent_at`, `error`, `provider_message_id`).
-   - Respects `customers.notify_email` / `notify_whatsapp` / `notify_sms` flags and quiet hours.
-   - Idempotent: `status = 'pending'` → claim with `for update skip locked`.
+4. **Documents (`/customer/documents`)**
+   - List of files the customer can access: their invoices (PDF), their pets' vaccination certificates, signed intake forms.
+   - Download + upload-new-vaccine shortcut.
 
-5. **Vaccination gate**
-   - **Vaccination records**: extend existing `pet_vaccinations` (or create if missing) with `vaccine_type`, `administered_on`, `expires_on`, `certificate_url` (upload to Supabase storage), `verified_by`, `verified_at`.
-   - **Requirements settings at `/admin/settings/vaccination-rules`**: per service (daycare / hotel / grooming), list required vaccine types (rabies, 5-in-1, kennel cough, snuffles for cats, etc.) with grace-period days.
-   - **Enforcement**:
-     - Booking create/edit shows a red banner + list of missing/expired vaccines for the pet; operator with `bookings.override_vax` permission can proceed with a required override reason (logged).
-     - Daycare board & attendance flag pets with expired vaccines with a warning chip.
-     - Nightly cron writes `notification_events` for `vax.expiring_30d`, `vax.expiring_7d`, `vax.expired` (deduped per pet per window).
-   - **Pet detail** gets a "Vaccinations" tab: table, add/edit dialog, upload certificate, status chips (valid / expiring soon / expired).
+5. **Invoices & Payments (`/customer/invoices`, `/customer/invoices/:id`, `/customer/payments`)**
+   - Invoices list scoped by `customer_id = me`, status chips reused from `features/invoices/status.tsx`.
+   - Invoice detail: line items, totals, download PDF, "Pay now" (stub button that opens a modal listing enabled payment methods — real gateway integration is Phase 10).
+   - Payments list: read-only history of payments recorded against the customer.
 
-6. **Wiring across existing screens**
-   - Booking detail: "Comms" panel listing all `notification_events` for the booking + "Send message" (pick template).
-   - Invoice detail: "Send reminder" now goes through the dispatcher path.
-   - Customer detail: "Comms" tab (existing events + manual send).
+6. **Profile (`/customer/profile`)**
+   - Edit name, mobile, email, address, suburb, emergency contact.
+   - Notification preferences (`notify_email`, `notify_whatsapp`, `notify_sms`) — wire the toggles the dispatcher already respects.
+   - Change password (reuse `ChangePasswordPage`).
+
+### Access & data model
+
+- Customers already authenticate via Supabase auth and are linked to a `customers` row through `auth_user_id` (existing pattern used in `RequireCustomer` / `CustomerDashboard`). Portal queries filter by `customer_id = (select id from customers where auth_user_id = auth.uid())`.
+- RLS: audit every table the portal reads (`customers`, `pets`, `pet_vaccinations`, `bookings`, `booking_pets`, `booking_requests`, `invoices`, `invoice_lines`, `payments`, `notification_events`, `documents`/storage). Add "customer can read own" + "customer can insert own" policies where missing. All write policies stay scoped to `auth_user_id`; operators keep tenant-wide access via existing `user_has_tenant_access` policies.
+- New permissions (operator-side) if any: none — portal is customer-role only.
+- Storage: reuse the vaccination-certificates bucket from Phase 8; add a customer-scoped policy so a customer can upload/read only files under `pets/<pet_id>/…` for their own pets.
+- Booking-change/cancellation requests reuse the existing `booking_requests` table (add a `kind` column if it doesn't already distinguish "new" vs "change" vs "cancel", plus `related_booking_id`).
+
+### Technical notes
+
+- Files (planned):
+  - `src/features/customerPortal/CustomerDashboard.tsx` (upgrade the existing placeholder)
+  - `src/features/customerPortal/pets/{MyPetsPage,MyPetDetailPage,MyPetFormModal}.tsx`
+  - `src/features/customerPortal/bookings/{MyBookingsPage,MyBookingDetailPage,NewBookingRequestModal}.tsx`
+  - `src/features/customerPortal/documents/MyDocumentsPage.tsx`
+  - `src/features/customerPortal/invoices/{MyInvoicesPage,MyInvoiceDetailPage,PayInvoiceModal}.tsx`
+  - `src/features/customerPortal/payments/MyPaymentsPage.tsx`
+  - `src/features/customerPortal/profile/MyProfilePage.tsx`
+  - `src/features/customerPortal/queries.ts` (shared "current customer" hook + scoped queries)
+- Route wiring in `src/App.tsx` under the existing `RequireCustomer` group; sidebar in `src/constants/navigation.ts` already lists the entries.
+- Migration:
+  - New RLS policies (SELECT own for `pets`, `pet_vaccinations`, `bookings`, `booking_pets`, `invoices`, `invoice_lines`, `payments`, `notification_events`; INSERT own for `pet_vaccinations`, `booking_requests`, `documents`).
+  - `booking_requests`: add `kind` (`new`/`change`/`cancel`) + `related_booking_id` if missing.
+  - Storage policy for the vax-certs bucket scoped by customer ownership.
 
 ### Out of scope (deferred)
 
-- WhatsApp Business API + SMS provider integration — provider stubs only this phase; real integration in 8b once the operator picks a vendor (likely Twilio or MessageBird).
-- Two-way inbound replies / conversation threading — Phase 8c.
-- Customer portal self-service vaccination upload — Phase 9 (portal).
-- Marketing broadcasts / segments — later.
-
-### Files (planned)
-
-- `src/features/comms/CommsInboxPage.tsx`, `CommsEventDrawer.tsx`, `SendMessageDialog.tsx`, `queries.ts`, `status.tsx`
-- `src/features/settings/MessageTemplatesPage.tsx`, `MessageTemplateEditor.tsx`, `CommsSettingsPage.tsx`, `VaccinationRulesPage.tsx`
-- `src/features/pets/PetVaccinationsPanel.tsx`, `VaccinationDialog.tsx`
-- `src/features/bookings/BookingCommsPanel.tsx`, `BookingVaxWarning.tsx`
-- `supabase/functions/send-notifications/index.ts` (dispatcher) + pg_cron schedule
-- Migration:
-  - `message_templates` (tenant, event_code, channel, subject, body, active, send_to)
-  - `comms_settings` (tenant, from_name, from_email, reply_to, whatsapp_from, sms_from, quiet_start, quiet_end, timezone, per_event_auto jsonb)
-  - `vaccination_rules` (tenant, service_type, vaccine_type, grace_days, required)
-  - Extend `pet_vaccinations` if needed; add `certificate_path`, `verified_by`, `verified_at`
-  - Add `override_reason` + `override_by` to `bookings` (nullable) for vax override audit
-  - New permissions: `comms.view`, `comms.send`, `settings.comms.manage`, `settings.vaccination.manage`, `bookings.override_vax`, `pets.manage_vaccinations`
-  - All tables get GRANTs + RLS + `updated_at` triggers per project rules
-- Route wiring in `src/App.tsx`, Settings index, sidebar entry for **Comms** under Operations
+- Real online payment gateway (PayFast/Yoco/Stripe) — Phase 10.
+- Loyalty points / package credit purchases in the portal — Phase 10.
+- Two-way messaging (customer ↔ operator) — Phase 8c.
+- Guest checkout / public booking widget for non-customers — later.
 
 ### Verification
 
-- Issue an invoice → row appears in Comms Outbox → dispatcher runs → status flips to `sent` → email arrives via Resend.
-- Edit `invoice.issued` template → next issue uses new copy; preview matches actual send.
-- Create a daycare booking for a pet with expired rabies → red banner blocks confirm; user with `bookings.override_vax` can proceed with reason, which appears on booking detail.
-- Nightly cron writes `vax.expiring_30d` events for pets in window; not duplicated on re-run.
-- Toggle `customers.notify_email` off → dispatcher skips that recipient and marks event `skipped`.
-- Non-admin without `settings.comms.manage` cannot open template / comms settings pages.
+- Sign in as a customer → dashboard shows next booking + outstanding balance from real data.
+- Add pet + upload rabies certificate → row appears in `pet_vaccinations`, file lands in storage, operator sees it unverified.
+- Request a new booking → row appears in operator `/admin/booking-requests` queue.
+- Toggle notify_email off in profile → dispatcher marks next event `skipped` for that customer.
+- Customer A cannot read customer B's pets, bookings, invoices, or certificates (RLS test).
 
-Shall I proceed with Phase 8 as above?
+Shall I proceed with Phase 9 as above?
