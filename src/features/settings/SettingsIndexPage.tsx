@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -92,6 +92,27 @@ const SECTIONS = [
     label: "Vaccination rules",
     description: "Per-service vaccine requirements and grace periods.",
     icon: Syringe,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/product-categories",
+    label: "Product categories",
+    description: "Group retail products for filtering and reports.",
+    icon: Package,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/stock-locations",
+    label: "Stock locations",
+    description: "Where retail stock is held (front counter, storeroom, van).",
+    icon: Warehouse,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/retail",
+    label: "Retail settings",
+    description: "Default VAT, negative-stock rule, low-stock notifications.",
+    icon: ShoppingBag,
     ready: true,
   },
   {
