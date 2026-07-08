@@ -40,6 +40,10 @@ import EnrolmentsPage from "@/features/daycare/EnrolmentsPage";
 import AttendancePage from "@/features/daycare/AttendancePage";
 import DaycarePlansPage from "@/features/settings/DaycarePlansPage";
 import DaycareWorkflowPage from "@/features/settings/DaycareWorkflowPage";
+import InvoicesListPage from "@/features/invoices/InvoicesListPage";
+import InvoiceDetailPage from "@/features/invoices/InvoiceDetailPage";
+import InvoicingSettingsPage from "@/features/settings/InvoicingSettingsPage";
+import PaymentMethodsPage from "@/features/settings/PaymentMethodsPage";
 import BookingRequestQueue from "@/features/bookingRequests/BookingRequestQueue";
 import CustomerDashboard from "@/features/customerPortal/CustomerDashboard";
 import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
@@ -78,8 +82,9 @@ const App = () => (
                 <Route path="/admin/grooming" element={<GroomingBoardPage />} />
                 <Route path="/admin/mobile-vans" element={<MobileVansPage />} />
                 <Route path="/admin/pickup-dropoff" element={<TransportBoardPage />} />
-                <Route path="/admin/invoices" element={<PlaceholderPage title="Invoices & Payments" />} />
-                <Route path="/admin/payments" element={<PlaceholderPage title="Payments" />} />
+                <Route path="/admin/invoices" element={<InvoicesListPage />} />
+                <Route path="/admin/invoices/:id" element={<InvoiceDetailPage />} />
+                <Route path="/admin/payments" element={<InvoicesListPage />} />
                 <Route path="/admin/shop-stock" element={<PlaceholderPage title="Shop & Stock" />} />
                 <Route path="/admin/reports" element={<PlaceholderPage title="Reports" />} />
                 <Route path="/admin/users" element={<PlaceholderPage title="Users & roles" />} />
@@ -92,6 +97,8 @@ const App = () => (
                 <Route path="/admin/settings/transport-workflow" element={<TransportWorkflowPage />} />
                 <Route path="/admin/settings/daycare-plans" element={<DaycarePlansPage />} />
                 <Route path="/admin/settings/daycare-workflow" element={<DaycareWorkflowPage />} />
+                <Route path="/admin/settings/invoicing" element={<InvoicingSettingsPage />} />
+                <Route path="/admin/settings/payment-methods" element={<PaymentMethodsPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>
