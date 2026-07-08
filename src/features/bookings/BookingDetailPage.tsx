@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { ArrowLeft, Pencil, CalendarDays, ExternalLink, Loader2 } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -32,6 +32,8 @@ export default function BookingDetailPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const navigate = useNavigate();
+  const location = useLocation();
+  const backTo = (location.state as { from?: string } | null)?.from ?? "/admin/bookings";
   const [editOpen, setEditOpen] = useState(false);
 
   const detailQ = useBookingDetail(id, tenantId);
@@ -45,7 +47,10 @@ export default function BookingDetailPage() {
         actions={
           <div className="flex items-center gap-2">
             <button
-              onClick={() => navigate("/admin/bookings")}
+              onClick={() => {
+                if ((location.state as { from?: string } | null)?.from) navigate(-1);
+                else navigate(backTo);
+              }}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted"
             >
               <ArrowLeft className="h-4 w-4" /> Back
