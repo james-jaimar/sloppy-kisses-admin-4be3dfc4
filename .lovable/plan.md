@@ -1,52 +1,56 @@
-## Next up: Phase 3 — Hotel & Cattery occupancy
+## Phase 4 — Mobile Vans scheduling
 
-Grooming board (Phase 2) is live and wired to real bookings. Following the roadmap in project memory, the next slice is **Hotel & Cattery** — the multi-night boarding view that runs off the same `bookings` + typed details model.
+Hotel & Cattery (Phase 3) is live. Per the roadmap, the next slice is **Mobile Vans** — day-by-day route planning for the grooming vans, running off the same `bookings` + `resources` model we've been using.
 
 ### What we'll build
 
-1. **Occupancy grid at `/admin/hotel-cattery`**
-   - Rows = kennels / runs / cattery pens (from `resources`, filtered by hotel/cattery kinds).
-   - Columns = days across a rolling window (default 14 days, prev/next/today controls like the calendar).
-   - Cells show a booking bar spanning check-in → check-out, coloured by status, with pet name + owner initial.
-   - Click a bar → opens the existing Booking Detail page with `from: "/admin/hotel-cattery"` so Back returns here (same pattern we just added for grooming).
+1. **Van day view at `/admin/mobile-vans`**
+   - Tabs / selector across the top for each active van (resource type `mobile_van`).
+   - Day picker (prev / today / next), defaulting to today.
+   - Timeline of stops for that van on that day, ordered by `start_at`, showing: time, pet + owner, suburb, package, expected minutes, status chip.
+   - Click a stop → Booking Detail page with `from: "/admin/mobile-vans"` so Back returns to the van view (same pattern as grooming/hotel).
 
-2. **Today panel (right side)**
-   - **Arrivals today** (bookings with `start_at` in today) with a "Check in" action → status `checked_in`.
-   - **Departures today** (`end_at` in today) with a "Check out" action → status `checked_out` + prompts for final invoice items (deferred: link to Phase 6).
-   - **Currently in-house** count + capacity utilisation %.
+2. **Route summary panel (right side)**
+   - Total stops, total grooming minutes, first / last stop time, unique suburbs.
+   - "Travel gaps" list: any gap < 15 min or > 90 min between consecutive stops flagged as a soft warning (configurable in settings).
+   - Quick actions per stop: mark `in_progress`, `completed`, or `no_show` (status transitions consistent with grooming board).
 
-3. **Vaccination gate (soft warning)**
-   - On the check-in action, if the pet's vaccination record is missing/expired, show a warning modal with "Proceed anyway" (logged) or "Cancel". Matches the "soft warning with audit trail" decision from earlier.
-   - Audit entry written to a new `booking_events` row (kind `vax_override`).
+3. **Unassigned mobile bookings strip**
+   - A horizontal strip at the bottom showing mobile-grooming bookings on the selected day with no `resource_id` yet.
+   - Assign-to-van via a small dropdown on each card (writes `resource_id`); no drag-drop yet.
 
 4. **Settings-first (per Core rule)**
-   - New Settings screen **Hotel & Cattery rate card** (`/admin/settings/hotel-rates`): per-species, per-size, per-resource-kind nightly price, plus peak-season multiplier. Admin-only CRUD, same shape as grooming rate card.
-   - New Settings screen **Hotel workflow** (`/admin/settings/hotel-workflow`): toggle vaccination gate strictness (soft/hard), define check-in/out cutoff times, late check-out fee.
+   - New Settings screen **Mobile Van workflow** (`/admin/settings/van-workflow`), admin-gated by new permission `settings.vans.manage`:
+     - Min travel gap (minutes) — default 15
+     - Max travel gap (minutes) — default 90
+     - Day start / day end cutoff (used to flag stops outside working hours)
+     - Per-van optional home suburb (free text, used later for routing)
+   - Van resources themselves are already managed under existing Resources settings — no duplication.
+
+### Out of scope (deferred)
+
+- Actual map / geocoding / route optimisation (Phase 4b or later).
+- Travel-fee auto-calc on invoices (Phase 6: Invoices).
+- Driver mobile view / GPS check-in (Phase 7+).
+- Drag-drop re-ordering (follow-up once the read view is solid).
 
 ### Files (planned)
 
-- `src/features/hotelCattery/HotelBoardPage.tsx` — page shell + date window controls
-- `src/features/hotelCattery/OccupancyGrid.tsx` — resource-rows × day-columns grid
-- `src/features/hotelCattery/OccupancyBar.tsx` — booking bar component
-- `src/features/hotelCattery/TodayPanel.tsx` — arrivals / departures / in-house
-- `src/features/hotelCattery/queries.ts` — hotel bookings query (uses `start_at`/`end_at` range, local-time boundaries — same fix pattern as grooming)
-- `src/features/hotelCattery/vaccinationGate.tsx` — warning modal
-- `src/features/settings/HotelRatesPage.tsx` + `hotelRateCardQueries.ts`
-- `src/features/settings/HotelWorkflowPage.tsx`
-- Migration: `hotel_rate_card`, `hotel_workflow_settings`, `booking_events` (if not present), all with GRANTs + RLS + `has_role` policies
-- Route wiring in `src/App.tsx`, Settings index links, sidebar already points at `/admin/hotel-cattery`
-
-### Not in this phase
-
-- Actual invoice generation on checkout (that's Phase 6: Invoices/Payments).
-- Notification dispatch (Phase 7).
-- Mobile van scheduling (Phase 4).
+- `src/features/mobileVans/MobileVansPage.tsx` — page shell + van tabs + day controls
+- `src/features/mobileVans/VanTimeline.tsx` — ordered stop list
+- `src/features/mobileVans/RouteSummary.tsx` — totals + gap warnings + status actions
+- `src/features/mobileVans/UnassignedStrip.tsx` — assign-to-van cards
+- `src/features/mobileVans/queries.ts` — vans, day bookings, unassigned mobile bookings, assign mutation (local-time day boundaries, same pattern as grooming/hotel fixes)
+- `src/features/settings/VanWorkflowPage.tsx` + `vanWorkflowQueries.ts`
+- Migration: `van_workflow_settings` table + `settings.vans.manage` permission (grant to any role that already has `settings.hotel.manage`), with GRANTs + RLS
+- Route wiring in `src/App.tsx`, Settings index link; sidebar already points at `/admin/mobile-vans`
 
 ### Verification
 
-- Seed a boarding booking spanning 3 nights → bar renders across 3 day columns on the right kennel row.
-- "Today" filter shows it in Arrivals on check-in day, In-house on middle days, Departures on last day.
-- Vaccination modal fires when pet has no vax record; audit row appears.
-- Non-admin user cannot open the two new Settings pages.
+- Seed a mobile-grooming booking on a van for today → appears in that van's timeline in the correct time slot.
+- Change the day → list updates; empty state renders when no stops.
+- A booking with no `resource_id` appears in the Unassigned strip; assigning it moves it into the timeline on refetch.
+- Two stops 5 min apart trigger the "gap too small" warning; 2 h apart trigger "gap too large".
+- Non-admin user cannot open `/admin/settings/van-workflow`.
 
-Shall I proceed with this?
+Shall I proceed with Phase 4 as above?
