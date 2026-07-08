@@ -387,6 +387,9 @@ export type Database = {
           tenant_id: string
           updated_at: string
           updated_by: string | null
+          vax_override_at: string | null
+          vax_override_by: string | null
+          vax_override_reason: string | null
         }
         Insert: {
           assigned_staff_id?: string | null
@@ -415,6 +418,9 @@ export type Database = {
           tenant_id: string
           updated_at?: string
           updated_by?: string | null
+          vax_override_at?: string | null
+          vax_override_by?: string | null
+          vax_override_reason?: string | null
         }
         Update: {
           assigned_staff_id?: string | null
@@ -443,6 +449,9 @@ export type Database = {
           tenant_id?: string
           updated_at?: string
           updated_by?: string | null
+          vax_override_at?: string | null
+          vax_override_by?: string | null
+          vax_override_reason?: string | null
         }
         Relationships: [
           {
@@ -513,6 +522,66 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_vax_override_by_fkey"
+            columns: ["vax_override_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comms_settings: {
+        Row: {
+          created_at: string
+          from_email: string
+          from_name: string
+          quiet_end: string
+          quiet_start: string
+          reply_to: string | null
+          sms_from: string | null
+          tenant_id: string
+          test_recipient: string | null
+          timezone: string
+          updated_at: string
+          whatsapp_from: string | null
+        }
+        Insert: {
+          created_at?: string
+          from_email?: string
+          from_name?: string
+          quiet_end?: string
+          quiet_start?: string
+          reply_to?: string | null
+          sms_from?: string | null
+          tenant_id: string
+          test_recipient?: string | null
+          timezone?: string
+          updated_at?: string
+          whatsapp_from?: string | null
+        }
+        Update: {
+          created_at?: string
+          from_email?: string
+          from_name?: string
+          quiet_end?: string
+          quiet_start?: string
+          reply_to?: string | null
+          sms_from?: string | null
+          tenant_id?: string
+          test_recipient?: string | null
+          timezone?: string
+          updated_at?: string
+          whatsapp_from?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comms_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -2270,45 +2339,134 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          auto_send: boolean
+          body: string
+          channel: Database["public"]["Enums"]["comms_channel"]
+          created_at: string
+          event_code: string
+          id: string
+          is_active: boolean
+          name: string
+          send_to: string
+          subject: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_send?: boolean
+          body: string
+          channel?: Database["public"]["Enums"]["comms_channel"]
+          created_at?: string
+          event_code: string
+          id?: string
+          is_active?: boolean
+          name: string
+          send_to?: string
+          subject?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_send?: boolean
+          body?: string
+          channel?: Database["public"]["Enums"]["comms_channel"]
+          created_at?: string
+          event_code?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          send_to?: string
+          subject?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_events: {
         Row: {
+          attempts: number
+          body_rendered: string | null
           booking_id: string | null
           booking_request_id: string | null
+          channel: Database["public"]["Enums"]["comms_channel"]
           created_at: string
           customer_id: string | null
           error: string | null
           event_type: Database["public"]["Enums"]["notification_event_type"]
           id: string
+          invoice_id: string | null
           payload: Json
+          pet_id: string | null
+          provider_message_id: string | null
+          recipient_email: string | null
+          recipient_phone: string | null
+          scheduled_for: string | null
           sent_at: string | null
           status: Database["public"]["Enums"]["notification_status"]
+          subject: string | null
+          template_key: string | null
           tenant_id: string
+          updated_at: string
         }
         Insert: {
+          attempts?: number
+          body_rendered?: string | null
           booking_id?: string | null
           booking_request_id?: string | null
+          channel?: Database["public"]["Enums"]["comms_channel"]
           created_at?: string
           customer_id?: string | null
           error?: string | null
           event_type: Database["public"]["Enums"]["notification_event_type"]
           id?: string
+          invoice_id?: string | null
           payload?: Json
+          pet_id?: string | null
+          provider_message_id?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          scheduled_for?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["notification_status"]
+          subject?: string | null
+          template_key?: string | null
           tenant_id: string
+          updated_at?: string
         }
         Update: {
+          attempts?: number
+          body_rendered?: string | null
           booking_id?: string | null
           booking_request_id?: string | null
+          channel?: Database["public"]["Enums"]["comms_channel"]
           created_at?: string
           customer_id?: string | null
           error?: string | null
           event_type?: Database["public"]["Enums"]["notification_event_type"]
           id?: string
+          invoice_id?: string | null
           payload?: Json
+          pet_id?: string | null
+          provider_message_id?: string | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          scheduled_for?: string | null
           sent_at?: string | null
           status?: Database["public"]["Enums"]["notification_status"]
+          subject?: string | null
+          template_key?: string | null
           tenant_id?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -2330,6 +2488,20 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_events_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_events_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
             referencedColumns: ["id"]
           },
           {
@@ -3162,6 +3334,50 @@ export type Database = {
           },
         ]
       }
+      vaccination_rules: {
+        Row: {
+          created_at: string
+          grace_days: number
+          id: string
+          required: boolean
+          service_type: Database["public"]["Enums"]["service_type"]
+          species: string
+          tenant_id: string
+          updated_at: string
+          vaccine_type: string
+        }
+        Insert: {
+          created_at?: string
+          grace_days?: number
+          id?: string
+          required?: boolean
+          service_type: Database["public"]["Enums"]["service_type"]
+          species?: string
+          tenant_id: string
+          updated_at?: string
+          vaccine_type: string
+        }
+        Update: {
+          created_at?: string
+          grace_days?: number
+          id?: string
+          required?: boolean
+          service_type?: Database["public"]["Enums"]["service_type"]
+          species?: string
+          tenant_id?: string
+          updated_at?: string
+          vaccine_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaccination_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vaccinations: {
         Row: {
           administered_date: string | null
@@ -3427,6 +3643,7 @@ export type Database = {
         | "cancelled"
         | "no_show"
         | "grooming"
+      comms_channel: "email" | "whatsapp" | "sms"
       customer_status: "active" | "inactive" | "archived"
       document_status: "pending" | "verified" | "rejected" | "expired"
       email_status: "queued" | "sent" | "failed"
@@ -3437,6 +3654,13 @@ export type Database = {
         | "booking_status_changed"
         | "booking_request_created"
         | "booking_request_status_changed"
+        | "invoice_issued"
+        | "invoice_reminder"
+        | "invoice_paid"
+        | "vax_expiring_30d"
+        | "vax_expiring_7d"
+        | "vax_expired"
+        | "manual_message"
       notification_status: "pending" | "sent" | "failed" | "skipped"
       payment_method: "eft" | "cash" | "card" | "yoko" | "payfast" | "other"
       pet_sex: "male" | "female" | "unknown"
@@ -3636,6 +3860,7 @@ export const Constants = {
         "no_show",
         "grooming",
       ],
+      comms_channel: ["email", "whatsapp", "sms"],
       customer_status: ["active", "inactive", "archived"],
       document_status: ["pending", "verified", "rejected", "expired"],
       email_status: ["queued", "sent", "failed"],
@@ -3646,6 +3871,13 @@ export const Constants = {
         "booking_status_changed",
         "booking_request_created",
         "booking_request_status_changed",
+        "invoice_issued",
+        "invoice_reminder",
+        "invoice_paid",
+        "vax_expiring_30d",
+        "vax_expiring_7d",
+        "vax_expired",
+        "manual_message",
       ],
       notification_status: ["pending", "sent", "failed", "skipped"],
       payment_method: ["eft", "cash", "card", "yoko", "payfast", "other"],
