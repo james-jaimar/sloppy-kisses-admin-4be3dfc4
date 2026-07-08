@@ -1831,6 +1831,50 @@ export type Database = {
           },
         ]
       }
+      hotel_workflow_settings: {
+        Row: {
+          check_in_close_time: string
+          check_in_open_time: string
+          check_out_by_time: string
+          created_at: string
+          id: string
+          late_checkout_fee_zar: number
+          tenant_id: string
+          updated_at: string
+          vax_gate_mode: string
+        }
+        Insert: {
+          check_in_close_time?: string
+          check_in_open_time?: string
+          check_out_by_time?: string
+          created_at?: string
+          id?: string
+          late_checkout_fee_zar?: number
+          tenant_id: string
+          updated_at?: string
+          vax_gate_mode?: string
+        }
+        Update: {
+          check_in_close_time?: string
+          check_in_open_time?: string
+          check_out_by_time?: string
+          created_at?: string
+          id?: string
+          late_checkout_fee_zar?: number
+          tenant_id?: string
+          updated_at?: string
+          vax_gate_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_workflow_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_customers_raw: {
         Row: {
           address_line_1: string | null

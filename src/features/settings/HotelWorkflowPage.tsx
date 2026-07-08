@@ -1,0 +1,154 @@
+import { useEffect, useState } from "react";
+import { Save } from "lucide-react";
+import { toast } from "sonner";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
+import {
+  useHotelWorkflowSettings, useUpdateHotelWorkflowSettings, type VaxGateMode,
+} from "@/features/hotelCattery/queries";
+
+const PERMISSION = "settings.hotel.manage";
+
+function trimTime(t: string | undefined | null): string {
+  if (!t) return "";
+  // Postgres time columns come back as "HH:MM:SS"; <input type="time"> wants "HH:MM"
+  return t.length >= 5 ? t.slice(0, 5) : t;
+}
+
+export default function HotelWorkflowPage() {
+  const { tenant } = useCurrentTenant();
+  const tenantId = tenant?.id ?? null;
+  const { hasPermission } = useCurrentUser();
+  const canManage = hasPermission(PERMISSION);
+
+  const settingsQ = useHotelWorkflowSettings(tenantId);
+  const update = useUpdateHotelWorkflowSettings(tenantId ?? "");
+
+  const [form, setForm] = useState({
+    vax_gate_mode: "soft" as VaxGateMode,
+    check_in_open_time: "08:00",
+    check_in_close_time: "18:00",
+    check_out_by_time: "11:00",
+    late_checkout_fee_zar: 0,
+  });
+
+  useEffect(() => {
+    if (settingsQ.data) {
+      setForm({
+        vax_gate_mode: settingsQ.data.vax_gate_mode,
+        check_in_open_time: trimTime(settingsQ.data.check_in_open_time),
+        check_in_close_time: trimTime(settingsQ.data.check_in_close_time),
+        check_out_by_time: trimTime(settingsQ.data.check_out_by_time),
+        late_checkout_fee_zar: Number(settingsQ.data.late_checkout_fee_zar ?? 0),
+      });
+    }
+  }, [settingsQ.data]);
+
+  async function save() {
+    try {
+      await update.mutateAsync({
+        vax_gate_mode: form.vax_gate_mode,
+        check_in_open_time: form.check_in_open_time,
+        check_in_close_time: form.check_in_close_time,
+        check_out_by_time: form.check_out_by_time,
+        late_checkout_fee_zar: form.late_checkout_fee_zar,
+      });
+      toast.success("Hotel workflow settings saved");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to save");
+    }
+  }
+
+  return (
+    <>
+      <AppHeader
+        title="Hotel & Cattery workflow"
+        subtitle="Vaccination gate, check-in window and late-checkout fee."
+      />
+      <div className="flex-1 p-6">
+        <div className="sk-card max-w-2xl p-6 space-y-6">
+          {!canManage && (
+            <div className="rounded-lg border border-sk-orange bg-sk-orange-soft px-3 py-2 text-xs text-sk-orange">
+              You have read-only access. Only staff with the "Manage hotel & cattery settings" permission can change these values.
+            </div>
+          )}
+
+          <Field label="Vaccination gate" hint="What happens on check-in when a pet's vaccinations are missing or expired.">
+            <select
+              disabled={!canManage}
+              value={form.vax_gate_mode}
+              onChange={(e) => setForm((f) => ({ ...f, vax_gate_mode: e.target.value as VaxGateMode }))}
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+            >
+              <option value="soft">Soft — warn and allow with logged override</option>
+              <option value="hard">Hard — block check-in</option>
+              <option value="off">Off — skip check</option>
+            </select>
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Check-in opens at">
+              <input
+                type="time"
+                disabled={!canManage}
+                value={form.check_in_open_time}
+                onChange={(e) => setForm((f) => ({ ...f, check_in_open_time: e.target.value }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+              />
+            </Field>
+            <Field label="Check-in closes at">
+              <input
+                type="time"
+                disabled={!canManage}
+                value={form.check_in_close_time}
+                onChange={(e) => setForm((f) => ({ ...f, check_in_close_time: e.target.value }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+              />
+            </Field>
+            <Field label="Check-out by">
+              <input
+                type="time"
+                disabled={!canManage}
+                value={form.check_out_by_time}
+                onChange={(e) => setForm((f) => ({ ...f, check_out_by_time: e.target.value }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+              />
+            </Field>
+            <Field label="Late check-out fee (ZAR)">
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                disabled={!canManage}
+                value={form.late_checkout_fee_zar}
+                onChange={(e) => setForm((f) => ({ ...f, late_checkout_fee_zar: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+              />
+            </Field>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              disabled={!canManage || update.isPending}
+              onClick={save}
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral/90 disabled:opacity-50"
+            >
+              <Save className="h-4 w-4" />
+              Save changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+      {children}
+      {hint && <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>}
+    </label>
+  );
+}
