@@ -48,6 +48,13 @@ import CommsInboxPage from "@/features/comms/CommsInboxPage";
 import MessageTemplatesPage from "@/features/settings/MessageTemplatesPage";
 import CommsSettingsPage from "@/features/settings/CommsSettingsPage";
 import VaccinationRulesPage from "@/features/settings/VaccinationRulesPage";
+import ShopIndexPage from "@/features/shop/ShopIndexPage";
+import ProductsPage from "@/features/shop/ProductsPage";
+import StockPage from "@/features/shop/StockPage";
+import QuickSalePage from "@/features/shop/QuickSalePage";
+import ProductCategoriesPage from "@/features/settings/ProductCategoriesPage";
+import StockLocationsPage from "@/features/settings/StockLocationsPage";
+import RetailSettingsPage from "@/features/settings/RetailSettingsPage";
 import BookingRequestQueue from "@/features/bookingRequests/BookingRequestQueue";
 import CustomerDashboard from "@/features/customerPortal/CustomerDashboard";
 import MyPetsPage from "@/features/customerPortal/pets/MyPetsPage";
@@ -100,7 +107,10 @@ const App = () => (
                 <Route path="/admin/invoices/:id" element={<InvoiceDetailPage />} />
                 <Route path="/admin/payments" element={<InvoicesListPage />} />
                 <Route path="/admin/comms" element={<CommsInboxPage />} />
-                <Route path="/admin/shop-stock" element={<PlaceholderPage title="Shop & Stock" />} />
+                <Route path="/admin/shop-stock" element={<ShopIndexPage />} />
+                <Route path="/admin/shop-stock/products" element={<ProductsPage />} />
+                <Route path="/admin/shop-stock/stock" element={<StockPage />} />
+                <Route path="/admin/shop-stock/sale" element={<QuickSalePage />} />
                 <Route path="/admin/reports" element={<PlaceholderPage title="Reports" />} />
                 <Route path="/admin/users" element={<PlaceholderPage title="Users & roles" />} />
                 <Route path="/admin/settings" element={<SettingsIndexPage />} />
@@ -117,6 +127,9 @@ const App = () => (
                 <Route path="/admin/settings/message-templates" element={<MessageTemplatesPage />} />
                 <Route path="/admin/settings/comms" element={<CommsSettingsPage />} />
                 <Route path="/admin/settings/vaccination-rules" element={<VaccinationRulesPage />} />
+                <Route path="/admin/settings/product-categories" element={<ProductCategoriesPage />} />
+                <Route path="/admin/settings/stock-locations" element={<StockLocationsPage />} />
+                <Route path="/admin/settings/retail" element={<RetailSettingsPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>
