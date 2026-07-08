@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -29,6 +29,13 @@ const SECTIONS = [
     label: "Hotel & Cattery workflow",
     description: "Vaccination gate, check-in window, late-checkout fee.",
     icon: Hotel,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/van-workflow",
+    label: "Mobile van workflow",
+    description: "Travel gap warnings, working hours, per-van home suburb.",
+    icon: Truck,
     ready: true,
   },
   {

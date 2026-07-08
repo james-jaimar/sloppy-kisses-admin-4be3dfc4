@@ -23,6 +23,8 @@ import GroomingAddonsPage from "@/features/settings/GroomingAddonsPage";
 import GroomingBoardPage from "@/features/grooming/GroomingBoardPage";
 import HotelBoardPage from "@/features/hotelCattery/HotelBoardPage";
 import HotelWorkflowPage from "@/features/settings/HotelWorkflowPage";
+import MobileVansPage from "@/features/mobileVans/MobileVansPage";
+import VanWorkflowPage from "@/features/settings/VanWorkflowPage";
 import AdminDashboard from "@/features/dashboard/AdminDashboard";
 import CalendarWeekView from "@/features/calendar/CalendarWeekView";
 import CustomersPage from "@/features/customers/CustomersPage";
@@ -68,7 +70,7 @@ const App = () => (
                 <Route path="/admin/daycare/plans" element={<PlaceholderPage title="Daycare plans" />} />
                 <Route path="/admin/hotel-cattery" element={<HotelBoardPage />} />
                 <Route path="/admin/grooming" element={<GroomingBoardPage />} />
-                <Route path="/admin/mobile-vans" element={<PlaceholderPage title="Mobile vans" />} />
+                <Route path="/admin/mobile-vans" element={<MobileVansPage />} />
                 <Route path="/admin/pickup-dropoff" element={<PlaceholderPage title="Pick Up / Drop Off" />} />
                 <Route path="/admin/invoices" element={<PlaceholderPage title="Invoices & Payments" />} />
                 <Route path="/admin/payments" element={<PlaceholderPage title="Payments" />} />
@@ -80,6 +82,7 @@ const App = () => (
                 <Route path="/admin/settings/grooming-packages" element={<GroomingPackagesPage />} />
                 <Route path="/admin/settings/grooming-addons" element={<GroomingAddonsPage />} />
                 <Route path="/admin/settings/hotel-workflow" element={<HotelWorkflowPage />} />
+                <Route path="/admin/settings/van-workflow" element={<VanWorkflowPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>
