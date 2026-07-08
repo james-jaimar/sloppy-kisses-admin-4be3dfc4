@@ -1,42 +1,52 @@
-## Root cause
+## Next up: Phase 3 — Hotel & Cattery occupancy
 
-Confirmed by inspecting the DB: booking `BK00001` for Charlie exists on `2026-07-09` (`start_at = 2026-07-09 07:00 UTC` = 09:00 SAST), status `confirmed`, service `grooming_inhouse`. It should appear in the **Booked** column.
+Grooming board (Phase 2) is live and wired to real bookings. Following the roadmap in project memory, the next slice is **Hotel & Cattery** — the multi-night boarding view that runs off the same `bookings` + typed details model.
 
-The grooming board query filters like this:
+### What we'll build
 
-```ts
-const dayStr = day.toISOString().slice(0, 10);   // ← UTC-based
-.gte("start_date", dayStr).lte("start_date", dayStr)
-```
+1. **Occupancy grid at `/admin/hotel-cattery`**
+   - Rows = kennels / runs / cattery pens (from `resources`, filtered by hotel/cattery kinds).
+   - Columns = days across a rolling window (default 14 days, prev/next/today controls like the calendar).
+   - Cells show a booking bar spanning check-in → check-out, coloured by status, with pet name + owner initial.
+   - Click a bar → opens the existing Booking Detail page with `from: "/admin/hotel-cattery"` so Back returns here (same pattern we just added for grooming).
 
-`day` is set to local midnight (`startOfDay(new Date())`). In SAST (UTC+2), local midnight of 9 Jul is `2026-07-08 22:00 UTC`, so `toISOString().slice(0,10)` returns **`"2026-07-08"`** — one day behind. The query asks for bookings dated 8 Jul, finds none, and every column shows 0.
+2. **Today panel (right side)**
+   - **Arrivals today** (bookings with `start_at` in today) with a "Check in" action → status `checked_in`.
+   - **Departures today** (`end_at` in today) with a "Check out" action → status `checked_out` + prompts for final invoice items (deferred: link to Phase 6).
+   - **Currently in-house** count + capacity utilisation %.
 
-The calendar page doesn't have this bug because it filters with `isSameDay(new Date(b.start_at), anchor)`, which is timezone-correct.
+3. **Vaccination gate (soft warning)**
+   - On the check-in action, if the pet's vaccination record is missing/expired, show a warning modal with "Proceed anyway" (logged) or "Cancel". Matches the "soft warning with audit trail" decision from earlier.
+   - Audit entry written to a new `booking_events` row (kind `vax_override`).
 
-I searched the whole codebase — `toISOString().slice(0, 10)` only appears in the two spots I added last turn (`src/features/grooming/queries.ts` lines 50 and 132). No other view is affected.
+4. **Settings-first (per Core rule)**
+   - New Settings screen **Hotel & Cattery rate card** (`/admin/settings/hotel-rates`): per-species, per-size, per-resource-kind nightly price, plus peak-season multiplier. Admin-only CRUD, same shape as grooming rate card.
+   - New Settings screen **Hotel workflow** (`/admin/settings/hotel-workflow`): toggle vaccination gate strictness (soft/hard), define check-in/out cutoff times, late check-out fee.
 
-## Fix
+### Files (planned)
 
-**1. Replace date-string filter with a `start_at` range in `useGroomingBoardBookings`.** This is what the calendar effectively does, guarantees timezone-correct matching, and doesn't rely on `start_date` being kept in sync with `start_at`.
+- `src/features/hotelCattery/HotelBoardPage.tsx` — page shell + date window controls
+- `src/features/hotelCattery/OccupancyGrid.tsx` — resource-rows × day-columns grid
+- `src/features/hotelCattery/OccupancyBar.tsx` — booking bar component
+- `src/features/hotelCattery/TodayPanel.tsx` — arrivals / departures / in-house
+- `src/features/hotelCattery/queries.ts` — hotel bookings query (uses `start_at`/`end_at` range, local-time boundaries — same fix pattern as grooming)
+- `src/features/hotelCattery/vaccinationGate.tsx` — warning modal
+- `src/features/settings/HotelRatesPage.tsx` + `hotelRateCardQueries.ts`
+- `src/features/settings/HotelWorkflowPage.tsx`
+- Migration: `hotel_rate_card`, `hotel_workflow_settings`, `booking_events` (if not present), all with GRANTs + RLS + `has_role` policies
+- Route wiring in `src/App.tsx`, Settings index links, sidebar already points at `/admin/hotel-cattery`
 
-```ts
-const dayStart = new Date(day); dayStart.setHours(0, 0, 0, 0);
-const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1);
-...
-.gte("start_at", dayStart.toISOString())
-.lt("start_at", dayEnd.toISOString())
-```
+### Not in this phase
 
-Also update the react-query key from `dayStr` to `dayStart.toISOString()` so the cache keys off the correct day.
+- Actual invoice generation on checkout (that's Phase 6: Invoices/Payments).
+- Notification dispatch (Phase 7).
+- Mobile van scheduling (Phase 4).
 
-**2. Fix the vaccination-check "today" string** to use local date parts (`YYYY-MM-DD` built from `getFullYear/getMonth/getDate`) instead of `toISOString()`. Currently only affects behaviour in the 2 hours around local midnight, but same bug family — fix it while we're here.
+### Verification
 
-**3. No other files touched.** Sweep confirms this pattern only exists in the two lines above.
+- Seed a boarding booking spanning 3 nights → bar renders across 3 day columns on the right kennel row.
+- "Today" filter shows it in Arrivals on check-in day, In-house on middle days, Departures on last day.
+- Vaccination modal fires when pet has no vax record; audit row appears.
+- Non-admin user cannot open the two new Settings pages.
 
-## Verification after fix
-
-- Navigate to `/admin/grooming` with "Today" = 9 Jul 2026 → the Booked column should show Charlie's card.
-- Drag the card to **Checked in**, then **Grooming**, then **Ready** → confirm status updates and the timer appears in Grooming.
-- Flip the date picker back one day → Charlie disappears; forward one day → still empty. Correct behaviour.
-
-No schema changes. No changes to the calendar, bookings list, or any other view.
+Shall I proceed with this?
