@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -57,6 +57,20 @@ const SECTIONS = [
     label: "Daycare workflow",
     description: "Arrival window, late cutoff, auto-checkout, vax gate.",
     icon: Sun,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/invoicing",
+    label: "Invoicing",
+    description: "Company details, invoice numbering, VAT, reminders.",
+    icon: Receipt,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/payment-methods",
+    label: "Payment methods",
+    description: "Manual payment methods available when recording payments.",
+    icon: CreditCard,
     ready: true,
   },
   {
