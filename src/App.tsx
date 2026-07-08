@@ -44,6 +44,10 @@ import InvoicesListPage from "@/features/invoices/InvoicesListPage";
 import InvoiceDetailPage from "@/features/invoices/InvoiceDetailPage";
 import InvoicingSettingsPage from "@/features/settings/InvoicingSettingsPage";
 import PaymentMethodsPage from "@/features/settings/PaymentMethodsPage";
+import CommsInboxPage from "@/features/comms/CommsInboxPage";
+import MessageTemplatesPage from "@/features/settings/MessageTemplatesPage";
+import CommsSettingsPage from "@/features/settings/CommsSettingsPage";
+import VaccinationRulesPage from "@/features/settings/VaccinationRulesPage";
 import BookingRequestQueue from "@/features/bookingRequests/BookingRequestQueue";
 import CustomerDashboard from "@/features/customerPortal/CustomerDashboard";
 import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
@@ -85,6 +89,7 @@ const App = () => (
                 <Route path="/admin/invoices" element={<InvoicesListPage />} />
                 <Route path="/admin/invoices/:id" element={<InvoiceDetailPage />} />
                 <Route path="/admin/payments" element={<InvoicesListPage />} />
+                <Route path="/admin/comms" element={<CommsInboxPage />} />
                 <Route path="/admin/shop-stock" element={<PlaceholderPage title="Shop & Stock" />} />
                 <Route path="/admin/reports" element={<PlaceholderPage title="Reports" />} />
                 <Route path="/admin/users" element={<PlaceholderPage title="Users & roles" />} />
@@ -99,6 +104,9 @@ const App = () => (
                 <Route path="/admin/settings/daycare-workflow" element={<DaycareWorkflowPage />} />
                 <Route path="/admin/settings/invoicing" element={<InvoicingSettingsPage />} />
                 <Route path="/admin/settings/payment-methods" element={<PaymentMethodsPage />} />
+                <Route path="/admin/settings/message-templates" element={<MessageTemplatesPage />} />
+                <Route path="/admin/settings/comms" element={<CommsSettingsPage />} />
+                <Route path="/admin/settings/vaccination-rules" element={<VaccinationRulesPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>
