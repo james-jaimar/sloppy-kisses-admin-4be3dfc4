@@ -197,9 +197,11 @@ export type Database = {
           customer_id: string | null
           customer_notes: string | null
           id: string
+          kind: Database["public"]["Enums"]["booking_request_kind"]
           pet_id: string | null
           preferred_end_at: string | null
           preferred_start_at: string | null
+          related_booking_id: string | null
           request_payload: Json
           reviewed_at: string | null
           reviewed_by: string | null
@@ -220,9 +222,11 @@ export type Database = {
           customer_id?: string | null
           customer_notes?: string | null
           id?: string
+          kind?: Database["public"]["Enums"]["booking_request_kind"]
           pet_id?: string | null
           preferred_end_at?: string | null
           preferred_start_at?: string | null
+          related_booking_id?: string | null
           request_payload?: Json
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -243,9 +247,11 @@ export type Database = {
           customer_id?: string | null
           customer_notes?: string | null
           id?: string
+          kind?: Database["public"]["Enums"]["booking_request_kind"]
           pet_id?: string | null
           preferred_end_at?: string | null
           preferred_start_at?: string | null
+          related_booking_id?: string | null
           request_payload?: Json
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -283,6 +289,13 @@ export type Database = {
             columns: ["pet_id"]
             isOneToOne: false
             referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_requests_related_booking_id_fkey"
+            columns: ["related_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
           {
@@ -3616,6 +3629,7 @@ export type Database = {
         | "overdue"
         | "cancelled"
         | "expired"
+      booking_request_kind: "new" | "change" | "cancel"
       booking_request_status:
         | "pending_review"
         | "needs_info"
@@ -3830,6 +3844,7 @@ export const Constants = {
         "cancelled",
         "expired",
       ],
+      booking_request_kind: ["new", "change", "cancel"],
       booking_request_status: [
         "pending_review",
         "needs_info",
