@@ -9,6 +9,7 @@ import { BookingStatusChip } from "./statusMeta";
 import { BookingFormModal } from "./BookingFormModal";
 import { useTransportLegExistsForBooking } from "@/features/transport/queries";
 import { Truck } from "lucide-react";
+import { BookingInvoicePanel } from "./BookingInvoicePanel";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -205,6 +206,10 @@ export default function BookingDetailPage() {
                   <div className="mt-1 text-sm text-muted-foreground">No pets linked</div>
                 )}
               </div>
+
+              {tenantId && (
+                <BookingInvoicePanel tenantId={tenantId} bookingId={b.id} customerId={b.customer_id} />
+              )}
             </div>
           </div>
         )}

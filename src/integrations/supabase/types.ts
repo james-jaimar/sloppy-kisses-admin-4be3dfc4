@@ -2211,6 +2211,65 @@ export type Database = {
           },
         ]
       }
+      invoicing_settings: {
+        Row: {
+          address: string | null
+          banking_details: string | null
+          company_name: string | null
+          created_at: string
+          default_vat_rate: number
+          footer_notes: string | null
+          id: string
+          invoice_prefix: string
+          next_number: number
+          payment_terms_days: number
+          reminder_days: number[]
+          tenant_id: string
+          updated_at: string
+          vat_number: string | null
+        }
+        Insert: {
+          address?: string | null
+          banking_details?: string | null
+          company_name?: string | null
+          created_at?: string
+          default_vat_rate?: number
+          footer_notes?: string | null
+          id?: string
+          invoice_prefix?: string
+          next_number?: number
+          payment_terms_days?: number
+          reminder_days?: number[]
+          tenant_id: string
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Update: {
+          address?: string | null
+          banking_details?: string | null
+          company_name?: string | null
+          created_at?: string
+          default_vat_rate?: number
+          footer_notes?: string | null
+          id?: string
+          invoice_prefix?: string
+          next_number?: number
+          payment_terms_days?: number
+          reminder_days?: number[]
+          tenant_id?: string
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoicing_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_events: {
         Row: {
           booking_id: string | null
@@ -2275,6 +2334,47 @@ export type Database = {
           },
           {
             foreignKeyName: "notification_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_methods: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3257,6 +3357,10 @@ export type Database = {
         Returns: string
       }
       next_customer_number: {
+        Args: { target_tenant_id: string }
+        Returns: string
+      }
+      next_invoice_number: {
         Args: { target_tenant_id: string }
         Returns: string
       }
