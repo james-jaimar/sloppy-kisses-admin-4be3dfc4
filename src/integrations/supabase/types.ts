@@ -2135,6 +2135,7 @@ export type Database = {
           product_id: string | null
           quantity: number
           sort_order: number
+          stock_movement_id: string | null
           tenant_id: string
           unit_price: number
         }
@@ -2148,6 +2149,7 @@ export type Database = {
           product_id?: string | null
           quantity?: number
           sort_order?: number
+          stock_movement_id?: string | null
           tenant_id: string
           unit_price?: number
         }
@@ -2161,6 +2163,7 @@ export type Database = {
           product_id?: string | null
           quantity?: number
           sort_order?: number
+          stock_movement_id?: string | null
           tenant_id?: string
           unit_price?: number
         }
@@ -2184,6 +2187,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_stock_movement_id_fkey"
+            columns: ["stock_movement_id"]
+            isOneToOne: false
+            referencedRelation: "stock_movements"
             referencedColumns: ["id"]
           },
           {
@@ -2833,53 +2843,116 @@ export type Database = {
           },
         ]
       }
+      product_categories: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_categories_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           active: boolean
+          barcode: string | null
           category: string | null
+          category_id: string | null
           cost_price: number | null
           created_at: string
           description: string | null
           external_code: string | null
           id: string
           name: string
+          reorder_level: number | null
           sell_price: number | null
           sku: string | null
+          sort_order: number
           tenant_id: string
+          unit: string | null
           updated_at: string
+          vat_rate: number
           xero_item_id: string | null
         }
         Insert: {
           active?: boolean
+          barcode?: string | null
           category?: string | null
+          category_id?: string | null
           cost_price?: number | null
           created_at?: string
           description?: string | null
           external_code?: string | null
           id?: string
           name: string
+          reorder_level?: number | null
           sell_price?: number | null
           sku?: string | null
+          sort_order?: number
           tenant_id: string
+          unit?: string | null
           updated_at?: string
+          vat_rate?: number
           xero_item_id?: string | null
         }
         Update: {
           active?: boolean
+          barcode?: string | null
           category?: string | null
+          category_id?: string | null
           cost_price?: number | null
           created_at?: string
           description?: string | null
           external_code?: string | null
           id?: string
           name?: string
+          reorder_level?: number | null
           sell_price?: number | null
           sku?: string | null
+          sort_order?: number
           tenant_id?: string
+          unit?: string | null
           updated_at?: string
+          vat_rate?: number
           xero_item_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -3028,6 +3101,41 @@ export type Database = {
           },
         ]
       }
+      retail_settings: {
+        Row: {
+          allow_negative_stock: boolean
+          created_at: string
+          default_vat_rate: number
+          low_stock_notify_emails: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          allow_negative_stock?: boolean
+          created_at?: string
+          default_vat_rate?: number
+          low_stock_notify_emails?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          allow_negative_stock?: boolean
+          created_at?: string
+          default_vat_rate?: number
+          low_stock_notify_emails?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retail_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           created_at: string
@@ -3098,6 +3206,111 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "roles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_locations: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_locations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          location_id: string
+          notes: string | null
+          product_id: string
+          qty_delta: number
+          reason: Database["public"]["Enums"]["stock_movement_reason"]
+          ref_id: string | null
+          ref_type: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          location_id: string
+          notes?: string | null
+          product_id: string
+          qty_delta: number
+          reason: Database["public"]["Enums"]["stock_movement_reason"]
+          ref_id?: string | null
+          ref_type?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          location_id?: string
+          notes?: string | null
+          product_id?: string
+          qty_delta?: number
+          reason?: Database["public"]["Enums"]["stock_movement_reason"]
+          ref_id?: string | null
+          ref_type?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3568,7 +3781,38 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_stock_on_hand: {
+        Row: {
+          last_movement_at: string | null
+          location_id: string | null
+          product_id: string | null
+          qty_on_hand: number | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       _customer_notify_status: {
@@ -3696,6 +3940,12 @@ export type Database = {
         | "grooming_mobile"
         | "pickup_dropoff"
       sterilised_status: "yes" | "no" | "unknown" | "not_applicable"
+      stock_movement_reason:
+        | "receive"
+        | "sale"
+        | "adjustment"
+        | "wastage"
+        | "return"
       tenant_status: "active" | "suspended" | "archived"
       user_type: "platform" | "staff" | "customer"
     }
@@ -3917,6 +4167,13 @@ export const Constants = {
         "pickup_dropoff",
       ],
       sterilised_status: ["yes", "no", "unknown", "not_applicable"],
+      stock_movement_reason: [
+        "receive",
+        "sale",
+        "adjustment",
+        "wastage",
+        "return",
+      ],
       tenant_status: ["active", "suspended", "archived"],
       user_type: ["platform", "staff", "customer"],
     },
