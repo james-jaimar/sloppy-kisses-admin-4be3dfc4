@@ -1,58 +1,63 @@
-## Phase 6 — Daycare Enrolments & Attendance
+## Phase 7 — Invoices & Payments
 
-Phases 1–5 are live (bookings, grooming board, hotel occupancy, mobile vans, pickup/drop-off). Per the roadmap, the next phase is **Daycare** — turning the existing `daycare_plans`, `daycare_enrolments`, `daycare_day_swaps`, and `daycare_attendance` tables into a working operator workflow.
+Phases 1–6 are live (bookings, grooming, hotel, mobile vans, transport, daycare). Next up per the roadmap: turn completed services into invoices, capture payments, and give the operator a clean AR view. Sidebar already has **Invoices & Payments** at `/admin/invoices`.
 
 ### What we'll build
 
-1. **Daycare board at `/admin/daycare`**
-   - Day picker (prev / today / next) defaulting to today.
-   - Two lanes: **Expected today** (from active enrolments matching the weekday, plus one-off day-swap ins) and **Checked in** (attendance rows with `checked_in_at` set, no `checked_out_at`).
-   - Each pet card: pet + owner, plan name, arrival window, vaccination status chip, notes flag. Buttons: **Check in**, **Check out**, **No-show**.
-   - Capacity meter at the top: today's expected vs. plan capacity ceiling (from `daycare_plans.capacity` — read-only display for now).
+1. **Invoices list at `/admin/invoices`**
+   - Table of invoices with number, customer, issue date, due date, total, amount paid, status chip (`draft`, `sent`, `part_paid`, `paid`, `overdue`, `void`).
+   - Filters: status, customer, date range, "unpaid only".
+   - Top stat cards: Outstanding total (ZAR), Overdue count, Paid this month, Drafts.
+   - Row click → invoice detail.
 
-2. **Enrolments screen at `/admin/daycare/enrolments`**
-   - List of active + paused enrolments with pet, owner, plan, weekdays, start/end.
-   - Create / edit enrolment drawer: pick pet, plan, weekdays (M–Su chips), start date, optional end date, status (active/paused/cancelled).
-   - Row-level "Swap a day" action → creates a `daycare_day_swaps` row (drop one weekday, add another date), so the board picks it up automatically.
+2. **Invoice detail at `/admin/invoices/:id`**
+   - Header: number, customer, issue/due dates, status, totals.
+   - Line items table: description, qty, unit price, VAT, line total. Add/remove/edit lines while `draft`.
+   - Linked bookings section (auto-pulled + manually addable).
+   - Payments log (date, method, amount, reference) with "Record payment" action.
+   - Actions: **Save draft**, **Issue** (locks lines, sets number + issue date, queues email via `notification_events`), **Mark paid**, **Void**, **Download PDF** (deferred stub), **Send reminder**.
 
-3. **Attendance history at `/admin/daycare/attendance`**
-   - Filter by date range + pet. Shows arrival / departure times, who checked them in/out, and any incident notes.
-   - Read-only for now (edits happen from the board).
+3. **Create invoice flows**
+   - From customer detail: "New invoice" → pre-fills customer, offers list of their un-invoiced completed bookings to bulk-add as lines.
+   - From bookings page (single or multi-select on completed rows): "Invoice selected" → drawer to pick/create invoice.
+   - Standalone "New invoice" button on the list.
 
-4. **Booking-detail linkage**
-   - Existing `daycare` service bookings continue to work as one-off day passes and appear on the board alongside enrolled pets.
-   - No changes to the booking form; enrolments are their own object.
+4. **Payments**
+   - Manual "Record payment" (cash, EFT, card-manual, other) with amount, date, reference, notes; updates invoice `amount_paid` and status.
+   - Payments tab within the same page (`/admin/invoices?tab=payments`) — flat list of all payments across invoices, filterable.
+   - Provider integration (PayFast / Yoco / Stripe) is **deferred to Phase 7b**; this phase is manual capture only, but the schema supports a `provider` column.
 
-5. **Settings-first (per Core rule)**
-   - **Daycare plans** settings page (`/admin/settings/daycare-plans`), admin-gated by new permission `settings.daycare.manage`: CRUD over `daycare_plans` (name, days per week, price, capacity, active flag). Reuses the existing table.
-   - **Daycare workflow** settings page (`/admin/settings/daycare-workflow`), same permission: arrival window (start/end), late-arrival cutoff, auto-checkout time, and whether unvaccinated pets are blocked from check-in.
+5. **Booking → invoice glue**
+   - Booking detail gets an "Invoice" panel: shows linked invoice (if any) with status chip + link, or "Create invoice" button for completed bookings.
+   - When a booking is cancelled, its invoice line is flagged (not auto-removed); operator decides.
+
+6. **Settings-first (per Core rule)**
+   - **Invoice settings** page at `/admin/settings/invoicing` (permission `settings.invoicing.manage`): company details (name, VAT no., address, banking), invoice number prefix + next number, default payment terms (net days), default VAT rate, footer / notes text, reminder cadence (days after due).
+   - **Payment methods** page at `/admin/settings/payment-methods` (same permission): toggle which manual methods are available (cash/EFT/card-manual/other) and add custom labels.
 
 ### Out of scope (deferred)
 
-- Auto-billing enrolments monthly (Phase 7: Invoices/Payments).
-- Parent-facing portal check-in confirmations (Phase 8+).
-- Behaviour / incident report structured fields (later).
-- Photos and daily report cards (later).
-- Vaccination gate enforcement beyond a visible chip + optional block toggle — full vax gate lives in Phase 7 comms.
+- Online payment gateway integration (PayFast/Yoco/Stripe) — Phase 7b.
+- PDF rendering — stub button only; wire real PDF in 7b.
+- Statements, credit notes, refunds — later.
+- Recurring / subscription invoices for daycare enrolments — Phase 7c once monthly billing rules are agreed.
+- Customer portal invoice view — Phase 8 (portal).
 
 ### Files (planned)
 
-- `src/features/daycare/DaycareBoardPage.tsx` — day controls, capacity meter, lanes
-- `src/features/daycare/ExpectedLane.tsx`, `CheckedInLane.tsx`, `DaycarePetCard.tsx`
-- `src/features/daycare/EnrolmentsPage.tsx`, `EnrolmentDrawer.tsx`, `DaySwapDialog.tsx`
-- `src/features/daycare/AttendancePage.tsx`
-- `src/features/daycare/queries.ts` — expected-today resolver (enrolments ∪ swaps ∪ one-off bookings minus cancelled swaps), attendance mutations, plans + workflow settings hooks
-- `src/features/settings/DaycarePlansPage.tsx`
-- `src/features/settings/DaycareWorkflowPage.tsx`
-- Migration: `daycare_workflow_settings` table + `settings.daycare.manage` permission (grant to any role that already has `settings.vans.manage` / `settings.transport.manage`), with GRANTs + RLS. No changes to `daycare_plans` / `daycare_enrolments` / `daycare_day_swaps` / `daycare_attendance` schemas — they already exist.
-- Route wiring in `src/App.tsx` and Settings index links; sidebar already points at `/admin/daycare`.
+- `src/features/invoices/InvoicesListPage.tsx`, `InvoiceDetailPage.tsx`, `InvoiceLineEditor.tsx`, `RecordPaymentDialog.tsx`, `NewInvoiceDrawer.tsx`, `PaymentsListPage.tsx`, `queries.ts`, `status.ts`
+- `src/features/bookings/BookingInvoicePanel.tsx` (embedded in BookingDetailPage)
+- `src/features/customers/CustomerInvoicesPanel.tsx` (embedded in CustomerDetailPage)
+- `src/features/settings/InvoicingSettingsPage.tsx`, `PaymentMethodsPage.tsx`
+- Migration: `invoices`, `invoice_lines`, `invoice_payments`, `invoicing_settings`, `payment_methods` tables (all tenant-scoped, GRANTs + RLS + `updated_at` triggers). New permission `settings.invoicing.manage`, granted to roles that already have `settings.daycare.manage` / `settings.vans.manage`. New permissions `invoices.view`, `invoices.manage`, `invoices.record_payment` granted to existing operator/admin roles.
+- Route wiring in `src/App.tsx` and Settings index links; sidebar already points at `/admin/invoices`.
 
 ### Verification
 
-- Create a plan "3 days/week", enrol a pet on Mon/Wed/Fri → the pet appears in Expected on those weekdays only.
-- Add a day swap (drop Wed, add Thu) → pet appears Thu, not Wed.
-- Check-in / check-out buttons write to `daycare_attendance` and move the card between lanes.
-- Capacity meter reflects count of expected vs. plan capacity.
-- Non-admin cannot open the two new Settings pages.
+- Complete a booking → open it → "Create invoice" pre-fills a line for the service at the correct price → issue it → status becomes `sent` and a `notification_events` row is written.
+- Record a partial payment → status flips to `part_paid`; record the remainder → `paid`.
+- List filters (overdue, unpaid, by customer) return the expected rows; stat cards match.
+- Change invoice prefix in Settings → next issued invoice uses the new prefix.
+- Non-admin without `invoices.manage` sees the list but cannot issue, void, or edit lines. Non-admin without `settings.invoicing.manage` cannot open the two new Settings pages.
 
-Shall I proceed with Phase 6 as above?
+Shall I proceed with Phase 7 as above?
