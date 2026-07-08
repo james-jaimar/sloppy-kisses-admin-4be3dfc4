@@ -3,7 +3,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
-import { useVaccinationRules, useUpsertVaccinationRule, useDeleteVaccinationRule } from "@/features/comms/queries";
+import { useVaccinationRules, useUpsertVaccinationRule, useDeleteVaccinationRule, type VaccinationRule } from "@/features/comms/queries";
 
 const SERVICES = [
   { v: "daycare", l: "Daycare" },
@@ -27,7 +27,7 @@ export default function VaccinationRulesPage() {
   const [draft, setDraft] = useState({ service_type: "daycare", vaccine_type: "", species: "dog", grace_days: 0, required: true });
 
   const grouped = useMemo(() => {
-    const map = new Map<string, typeof (rulesQ.data ?? [])>();
+    const map = new Map<string, VaccinationRule[]>();
     for (const r of rulesQ.data ?? []) {
       const arr = map.get(r.service_type) ?? [];
       arr.push(r);
