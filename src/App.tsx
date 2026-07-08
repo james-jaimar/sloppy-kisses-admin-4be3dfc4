@@ -50,6 +50,16 @@ import CommsSettingsPage from "@/features/settings/CommsSettingsPage";
 import VaccinationRulesPage from "@/features/settings/VaccinationRulesPage";
 import BookingRequestQueue from "@/features/bookingRequests/BookingRequestQueue";
 import CustomerDashboard from "@/features/customerPortal/CustomerDashboard";
+import MyPetsPage from "@/features/customerPortal/pets/MyPetsPage";
+import MyPetDetailPage from "@/features/customerPortal/pets/MyPetDetailPage";
+import MyBookingsPage from "@/features/customerPortal/bookings/MyBookingsPage";
+import MyBookingDetailPage from "@/features/customerPortal/bookings/MyBookingDetailPage";
+import MyInvoicesPage from "@/features/customerPortal/invoices/MyInvoicesPage";
+import MyInvoiceDetailPage from "@/features/customerPortal/invoices/MyInvoiceDetailPage";
+import MyPaymentsPage from "@/features/customerPortal/payments/MyPaymentsPage";
+import MyDocumentsPage from "@/features/customerPortal/documents/MyDocumentsPage";
+import MyProfilePage from "@/features/customerPortal/profile/MyProfilePage";
+import NewBookingRequestPage from "@/features/customerPortal/bookings/NewBookingRequestPage";
 import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
 
 const queryClient = new QueryClient();
@@ -114,15 +124,17 @@ const App = () => (
               <Route element={<RequireCustomer />}>
               <Route element={<CustomerLayout />}>
                 <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-                <Route path="/customer/profile" element={<PlaceholderPage title="Profile" />} />
+                <Route path="/customer/profile" element={<MyProfilePage />} />
                 <Route path="/customer/profile/password" element={<ChangePasswordPage />} />
-                <Route path="/customer/pets" element={<PlaceholderPage title="My pets" />} />
-                <Route path="/customer/pets/:id" element={<PlaceholderPage title="Pet detail" />} />
-                <Route path="/customer/bookings" element={<PlaceholderPage title="My bookings" />} />
-                <Route path="/customer/bookings/:id" element={<PlaceholderPage title="Booking detail" />} />
-                <Route path="/customer/documents" element={<PlaceholderPage title="Documents" />} />
-                <Route path="/customer/invoices" element={<PlaceholderPage title="Invoices" />} />
-                <Route path="/customer/payments" element={<PlaceholderPage title="Payments" />} />
+                <Route path="/customer/pets" element={<MyPetsPage />} />
+                <Route path="/customer/pets/:id" element={<MyPetDetailPage />} />
+                <Route path="/customer/bookings" element={<MyBookingsPage />} />
+                <Route path="/customer/bookings/new" element={<NewBookingRequestPage />} />
+                <Route path="/customer/bookings/:id" element={<MyBookingDetailPage />} />
+                <Route path="/customer/documents" element={<MyDocumentsPage />} />
+                <Route path="/customer/invoices" element={<MyInvoicesPage />} />
+                <Route path="/customer/invoices/:id" element={<MyInvoiceDetailPage />} />
+                <Route path="/customer/payments" element={<MyPaymentsPage />} />
               </Route>
               </Route>
 

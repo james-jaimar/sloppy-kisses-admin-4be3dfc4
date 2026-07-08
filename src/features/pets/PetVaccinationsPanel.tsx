@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { usePetVaccinations, useUpsertPetVaccination, useDeletePetVaccination, type PetVaccination } from "@/features/comms/queries";
 
-interface Props { tenantId: string; petId: string; }
+interface Props { tenantId: string; petId: string; canManage?: boolean }
 
 function vaxStatus(v: PetVaccination): { label: string; tone: "green" | "orange" | "coral" } {
   if (!v.expiry_date) return { label: "No expiry", tone: "orange" };
@@ -16,9 +16,9 @@ function vaxStatus(v: PetVaccination): { label: string; tone: "green" | "orange"
   return { label: "Valid", tone: "green" };
 }
 
-export function PetVaccinationsPanel({ tenantId, petId }: Props) {
+export function PetVaccinationsPanel({ tenantId, petId, canManage: canManageOverride }: Props) {
   const { hasPermission } = useCurrentUser();
-  const canManage = hasPermission("pets.manage_vaccinations");
+  const canManage = canManageOverride ?? hasPermission("pets.manage_vaccinations");
   const q = usePetVaccinations(tenantId, petId);
   const upsert = useUpsertPetVaccination(tenantId, petId);
   const del = useDeletePetVaccination(tenantId);
