@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -43,6 +43,20 @@ const SECTIONS = [
     label: "Transport workflow",
     description: "Pick-up / drop-off gap warnings, working hours, default lead times.",
     icon: ArrowLeftRight,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/daycare-plans",
+    label: "Daycare plans",
+    description: "Weekly/monthly daycare packages and pricing.",
+    icon: CalendarDays,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/daycare-workflow",
+    label: "Daycare workflow",
+    description: "Arrival window, late cutoff, auto-checkout, vax gate.",
+    icon: Sun,
     ready: true,
   },
   {

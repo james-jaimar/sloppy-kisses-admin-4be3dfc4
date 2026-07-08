@@ -933,6 +933,50 @@ export type Database = {
           },
         ]
       }
+      daycare_workflow_settings: {
+        Row: {
+          arrival_window_end: string
+          arrival_window_start: string
+          auto_checkout_time: string
+          block_unvaccinated: boolean
+          created_at: string
+          id: string
+          late_arrival_cutoff: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          arrival_window_end?: string
+          arrival_window_start?: string
+          auto_checkout_time?: string
+          block_unvaccinated?: boolean
+          created_at?: string
+          id?: string
+          late_arrival_cutoff?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          arrival_window_end?: string
+          arrival_window_start?: string
+          auto_checkout_time?: string
+          block_unvaccinated?: boolean
+          created_at?: string
+          id?: string
+          late_arrival_cutoff?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daycare_workflow_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           booking_id: string | null

@@ -35,7 +35,11 @@ import PetsPage from "@/features/pets/PetsPage";
 import PetDetailPage from "@/features/pets/PetDetailPage";
 import BookingsPage from "@/features/bookings/BookingsPage";
 import BookingDetailPage from "@/features/bookings/BookingDetailPage";
-import DaycareDailyList from "@/features/daycare/DaycareDailyList";
+import DaycareBoardPage from "@/features/daycare/DaycareBoardPage";
+import EnrolmentsPage from "@/features/daycare/EnrolmentsPage";
+import AttendancePage from "@/features/daycare/AttendancePage";
+import DaycarePlansPage from "@/features/settings/DaycarePlansPage";
+import DaycareWorkflowPage from "@/features/settings/DaycareWorkflowPage";
 import BookingRequestQueue from "@/features/bookingRequests/BookingRequestQueue";
 import CustomerDashboard from "@/features/customerPortal/CustomerDashboard";
 import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
@@ -67,9 +71,9 @@ const App = () => (
                 <Route path="/admin/booking-requests" element={<BookingRequestQueue />} />
                 <Route path="/admin/bookings" element={<BookingsPage />} />
                 <Route path="/admin/bookings/:id" element={<BookingDetailPage />} />
-                <Route path="/admin/daycare" element={<Navigate to="/admin/daycare/daily-list" replace />} />
-                <Route path="/admin/daycare/daily-list" element={<DaycareDailyList />} />
-                <Route path="/admin/daycare/plans" element={<PlaceholderPage title="Daycare plans" />} />
+                <Route path="/admin/daycare" element={<DaycareBoardPage />} />
+                <Route path="/admin/daycare/enrolments" element={<EnrolmentsPage />} />
+                <Route path="/admin/daycare/attendance" element={<AttendancePage />} />
                 <Route path="/admin/hotel-cattery" element={<HotelBoardPage />} />
                 <Route path="/admin/grooming" element={<GroomingBoardPage />} />
                 <Route path="/admin/mobile-vans" element={<MobileVansPage />} />
@@ -86,6 +90,8 @@ const App = () => (
                 <Route path="/admin/settings/hotel-workflow" element={<HotelWorkflowPage />} />
                 <Route path="/admin/settings/van-workflow" element={<VanWorkflowPage />} />
                 <Route path="/admin/settings/transport-workflow" element={<TransportWorkflowPage />} />
+                <Route path="/admin/settings/daycare-plans" element={<DaycarePlansPage />} />
+                <Route path="/admin/settings/daycare-workflow" element={<DaycareWorkflowPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>
