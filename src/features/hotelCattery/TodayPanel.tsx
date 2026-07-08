@@ -1,0 +1,181 @@
+import { useMemo } from "react";
+import { toast } from "sonner";
+import { Link } from "react-router-dom";
+import { LogIn, LogOut, Hotel } from "lucide-react";
+import {
+  checkVaccinations, logVaccinationOverride, useHotelWorkflowSettings, useUpdateBookingStatus,
+  type HotelBookingRow, type HotelResourceRow,
+} from "./queries";
+
+function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
+function endOfDay(d: Date) { const c = new Date(d); c.setHours(23,59,59,999); return c; }
+function withinDay(t: string | null, day: Date) {
+  if (!t) return false;
+  const ts = new Date(t).getTime();
+  return ts >= startOfDay(day).getTime() && ts <= endOfDay(day).getTime();
+}
+function inHouse(b: HotelBookingRow, day: Date) {
+  // In-house if checked_in/in_progress and start_at <= end of today and (no end_at or end_at > start of today)
+  const startsBy = new Date(b.start_at).getTime() <= endOfDay(day).getTime();
+  const endsAfter = !b.end_at || new Date(b.end_at).getTime() > startOfDay(day).getTime();
+  return startsBy && endsAfter && (b.status === "checked_in" || b.status === "in_progress" || b.status === "grooming");
+}
+
+export function TodayPanel({
+  tenantId, bookings, resources, today,
+}: {
+  tenantId: string | null;
+  bookings: HotelBookingRow[];
+  resources: HotelResourceRow[];
+  today: Date;
+}) {
+  const updateStatus = useUpdateBookingStatus(tenantId ?? "");
+  const settingsQ = useHotelWorkflowSettings(tenantId);
+  const gateMode = settingsQ.data?.vax_gate_mode ?? "soft";
+
+  const arrivals = useMemo(
+    () => bookings.filter((b) => withinDay(b.start_at, today) && (b.status === "confirmed" || b.status === "approved" || b.status === "requested")),
+    [bookings, today],
+  );
+  const departures = useMemo(
+    () => bookings.filter((b) => withinDay(b.end_at, today) && b.status !== "checked_out" && b.status !== "cancelled" && b.status !== "completed"),
+    [bookings, today],
+  );
+  const currentlyInHouse = useMemo(() => bookings.filter((b) => inHouse(b, today)), [bookings, today]);
+
+  const totalCapacity = resources.reduce((sum, r) => sum + (r.capacity ?? 1), 0);
+  const utilisation = totalCapacity ? Math.round((currentlyInHouse.length / totalCapacity) * 100) : 0;
+
+  async function doCheckIn(b: HotelBookingRow) {
+    if (gateMode !== "off" && b.pets.length) {
+      const check = await checkVaccinations(b.pets.map((p) => p.id));
+      if (!check.ok) {
+        const parts: string[] = [];
+        if (check.missing.length) parts.push(`Missing: ${check.missing.join(", ")}`);
+        if (check.expired.length) parts.push(`Expired: ${check.expired.join(", ")}`);
+        if (gateMode === "hard") {
+          toast.error(`Cannot check in — vaccinations not up to date. ${parts.join(" · ")}`);
+          return;
+        }
+        const msg = `Vaccinations not up to date. ${parts.join(" · ")}. Continue and log override?`;
+        if (!confirm(msg)) return;
+        try {
+          await logVaccinationOverride({ tenantId: tenantId!, bookingId: b.id, note: `Hotel check-in override. ${parts.join(" · ")}` });
+        } catch (err: any) {
+          toast.error(err?.message ?? "Failed to log override");
+        }
+      }
+    }
+    try {
+      await updateStatus.mutateAsync({ bookingId: b.id, status: "checked_in" });
+      toast.success(`${b.pets[0]?.name ?? "Pet"} checked in`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to check in");
+    }
+  }
+
+  async function doCheckOut(b: HotelBookingRow) {
+    try {
+      await updateStatus.mutateAsync({ bookingId: b.id, status: "checked_out" });
+      toast.success(`${b.pets[0]?.name ?? "Pet"} checked out`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to check out");
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Utilisation card */}
+      <div className="sk-card p-5">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-sk-orange-soft text-sk-orange">
+            <Hotel className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <div className="text-2xl font-semibold tabular-nums">{currentlyInHouse.length}<span className="text-sm text-muted-foreground"> / {totalCapacity}</span></div>
+            <div className="text-xs text-muted-foreground">In-house · {utilisation}% occupied</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Arrivals */}
+      <Panel title="Arrivals today" empty="No arrivals scheduled." icon={<LogIn className="h-4 w-4" />}>
+        {arrivals.map((b) => (
+          <BookingRow
+            key={b.id}
+            b={b}
+            timeLabel={b.start_at ? new Date(b.start_at).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" }) : "—"}
+            action={
+              <button
+                onClick={() => doCheckIn(b)}
+                disabled={updateStatus.isPending}
+                className="h-8 rounded-md bg-sk-turquoise px-3 text-xs font-semibold text-white hover:bg-sk-turquoise/90 disabled:opacity-50"
+              >
+                Check in
+              </button>
+            }
+          />
+        ))}
+      </Panel>
+
+      {/* Departures */}
+      <Panel title="Departures today" empty="No departures scheduled." icon={<LogOut className="h-4 w-4" />}>
+        {departures.map((b) => (
+          <BookingRow
+            key={b.id}
+            b={b}
+            timeLabel={b.end_at ? new Date(b.end_at).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" }) : "—"}
+            action={
+              <button
+                onClick={() => doCheckOut(b)}
+                disabled={updateStatus.isPending}
+                className="h-8 rounded-md bg-sk-orange px-3 text-xs font-semibold text-white hover:bg-sk-orange/90 disabled:opacity-50"
+              >
+                Check out
+              </button>
+            }
+          />
+        ))}
+      </Panel>
+    </div>
+  );
+}
+
+function Panel({ title, empty, icon, children }: { title: string; empty: string; icon: React.ReactNode; children: React.ReactNode }) {
+  const arr = Array.isArray(children) ? children : [children];
+  const hasKids = arr.some(Boolean) && arr.length > 0 && (arr as any[]).filter((x) => x).length > 0;
+  return (
+    <div className="sk-card">
+      <div className="flex items-center gap-2 border-b border-border px-4 py-3 text-sm font-semibold">
+        {icon}
+        {title}
+      </div>
+      {hasKids ? (
+        <ul className="divide-y divide-border">{children}</ul>
+      ) : (
+        <div className="px-4 py-6 text-center text-xs text-muted-foreground">{empty}</div>
+      )}
+    </div>
+  );
+}
+
+function BookingRow({ b, timeLabel, action }: { b: HotelBookingRow; timeLabel: string; action: React.ReactNode }) {
+  const petName = b.pets[0]?.name ?? "Pet";
+  const extraPets = b.pets.length > 1 ? ` +${b.pets.length - 1}` : "";
+  return (
+    <li className="flex items-center gap-3 px-4 py-3">
+      <div className="w-14 text-sm font-semibold tabular-nums">{timeLabel}</div>
+      <div className="flex-1 min-w-0">
+        <Link
+          to={`/admin/bookings/${b.id}`}
+          state={{ from: "/admin/hotel-cattery" }}
+          className="text-sm font-medium hover:underline truncate block"
+        >
+          {petName}{extraPets} <span className="text-muted-foreground font-normal">· {b.customer?.full_name ?? "—"}</span>
+        </Link>
+        <div className="text-[11px] text-muted-foreground truncate">{b.resource?.name ?? "Unassigned"} · {b.booking_number}</div>
+      </div>
+      {action}
+    </li>
+  );
+}

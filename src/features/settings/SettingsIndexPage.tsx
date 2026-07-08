@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -22,6 +22,13 @@ const SECTIONS = [
     label: "Grooming add-ons",
     description: "Teeth, nails, ear clean, shampoo upgrades, travel fee.",
     icon: PlusCircle,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/hotel-workflow",
+    label: "Hotel & Cattery workflow",
+    description: "Vaccination gate, check-in window, late-checkout fee.",
+    icon: Hotel,
     ready: true,
   },
   {
