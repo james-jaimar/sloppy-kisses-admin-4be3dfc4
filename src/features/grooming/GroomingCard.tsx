@@ -53,6 +53,7 @@ export function GroomingCard({
   return (
     <Link
       to={`/admin/bookings/${card.id}`}
+      state={{ from: "/admin/grooming" }}
       draggable={draggable}
       onDragStart={onDragStart}
       className="sk-card block cursor-grab space-y-2 p-3 transition-shadow hover:shadow-md active:cursor-grabbing"
