@@ -2655,6 +2655,7 @@ export type Database = {
           capacity: number | null
           created_at: string
           description: string | null
+          home_suburb: string | null
           id: string
           name: string
           sort_order: number
@@ -2667,6 +2668,7 @@ export type Database = {
           capacity?: number | null
           created_at?: string
           description?: string | null
+          home_suburb?: string | null
           id?: string
           name: string
           sort_order?: number
@@ -2679,6 +2681,7 @@ export type Database = {
           capacity?: number | null
           created_at?: string
           description?: string | null
+          home_suburb?: string | null
           id?: string
           name?: string
           sort_order?: number
@@ -3044,6 +3047,47 @@ export type Database = {
             columns: ["verified_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      van_workflow_settings: {
+        Row: {
+          created_at: string
+          day_end_time: string
+          day_start_time: string
+          id: string
+          max_travel_gap_minutes: number
+          min_travel_gap_minutes: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_end_time?: string
+          day_start_time?: string
+          id?: string
+          max_travel_gap_minutes?: number
+          min_travel_gap_minutes?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_end_time?: string
+          day_start_time?: string
+          id?: string
+          max_travel_gap_minutes?: number
+          min_travel_gap_minutes?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "van_workflow_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
