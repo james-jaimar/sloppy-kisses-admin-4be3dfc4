@@ -1,61 +1,58 @@
-## Phase 5 — Pick Up / Drop Off scheduling
+## Phase 6 — Daycare Enrolments & Attendance
 
-Mobile Vans (Phase 4) is live. Next on the roadmap is **Pick Up / Drop Off** — the transport board for shuttling pets to/from daycare, hotel, and grooming appointments using the `transport_vehicle` resources and the existing `transport_details` typed row.
+Phases 1–5 are live (bookings, grooming board, hotel occupancy, mobile vans, pickup/drop-off). Per the roadmap, the next phase is **Daycare** — turning the existing `daycare_plans`, `daycare_enrolments`, `daycare_day_swaps`, and `daycare_attendance` tables into a working operator workflow.
 
 ### What we'll build
 
-1. **Transport board at `/admin/pickup-dropoff`**
-   - Day picker (prev / today / next), defaulting to today.
-   - Two columns per vehicle tab: **Pickups** (going to the salon/hotel) and **Drop-offs** (going home), ordered by scheduled time.
-   - Each card shows: pet + owner, pickup or drop-off address, suburb, linked service (e.g. "→ grooming @ 10:00"), driver notes, status chip.
-   - Click a card → Booking Detail page with `from: "/admin/pickup-dropoff"` so Back returns here.
+1. **Daycare board at `/admin/daycare`**
+   - Day picker (prev / today / next) defaulting to today.
+   - Two lanes: **Expected today** (from active enrolments matching the weekday, plus one-off day-swap ins) and **Checked in** (attendance rows with `checked_in_at` set, no `checked_out_at`).
+   - Each pet card: pet + owner, plan name, arrival window, vaccination status chip, notes flag. Buttons: **Check in**, **Check out**, **No-show**.
+   - Capacity meter at the top: today's expected vs. plan capacity ceiling (from `daycare_plans.capacity` — read-only display for now).
 
-2. **Route summary panel (right side)**
-   - Total legs, unique suburbs, first/last leg time.
-   - Gap warnings between consecutive legs on the same vehicle (reuses the same min/max thresholds pattern as vans — see settings below).
-   - Quick actions per leg: mark `in_progress` (en route), `completed` (delivered), or `no_show`.
+2. **Enrolments screen at `/admin/daycare/enrolments`**
+   - List of active + paused enrolments with pet, owner, plan, weekdays, start/end.
+   - Create / edit enrolment drawer: pick pet, plan, weekdays (M–Su chips), start date, optional end date, status (active/paused/cancelled).
+   - Row-level "Swap a day" action → creates a `daycare_day_swaps` row (drop one weekday, add another date), so the board picks it up automatically.
 
-3. **Unassigned transport strip**
-   - Bottom strip of pickup/drop-off bookings on the selected day with no `resource_id`; assign-to-vehicle dropdown (same pattern as the vans page).
+3. **Attendance history at `/admin/daycare/attendance`**
+   - Filter by date range + pet. Shows arrival / departure times, who checked them in/out, and any incident notes.
+   - Read-only for now (edits happen from the board).
 
 4. **Booking-detail linkage**
-   - Any booking (hotel, grooming, daycare) with `requires_transport = true` that has no linked pickup/drop-off leg for its date shows a small "Add transport leg" warning on the Booking Detail page.
-   - Clicking it opens the existing New Booking modal pre-filled as `pickup_dropoff` for the same customer/pets/date.
-   - (No auto-generation yet — owner wants to see and confirm each leg.)
+   - Existing `daycare` service bookings continue to work as one-off day passes and appear on the board alongside enrolled pets.
+   - No changes to the booking form; enrolments are their own object.
 
 5. **Settings-first (per Core rule)**
-   - New Settings screen **Transport workflow** (`/admin/settings/transport-workflow`), admin-gated by new permission `settings.transport.manage`:
-     - Min / max gap warnings (minutes) between legs on the same vehicle
-     - Day start / end cutoff
-     - Default lead time (minutes) before service start for pickups, and after service end for drop-offs — used only to seed the "Add transport leg" prefill
-   - Per-vehicle home suburb reuses the `resources.home_suburb` column added in Phase 4.
+   - **Daycare plans** settings page (`/admin/settings/daycare-plans`), admin-gated by new permission `settings.daycare.manage`: CRUD over `daycare_plans` (name, days per week, price, capacity, active flag). Reuses the existing table.
+   - **Daycare workflow** settings page (`/admin/settings/daycare-workflow`), same permission: arrival window (start/end), late-arrival cutoff, auto-checkout time, and whether unvaccinated pets are blocked from check-in.
 
 ### Out of scope (deferred)
 
-- Auto-creating transport legs from `requires_transport` (Phase 5b once the manual flow is validated).
-- Distance / routing / mapping (later phase).
-- Driver mobile view + proof-of-drop-off photo (Phase 7+).
-- Transport fees on invoices (Phase 6: Invoices).
+- Auto-billing enrolments monthly (Phase 7: Invoices/Payments).
+- Parent-facing portal check-in confirmations (Phase 8+).
+- Behaviour / incident report structured fields (later).
+- Photos and daily report cards (later).
+- Vaccination gate enforcement beyond a visible chip + optional block toggle — full vax gate lives in Phase 7 comms.
 
 ### Files (planned)
 
-- `src/features/transport/TransportBoardPage.tsx` — page shell, vehicle tabs, day controls
-- `src/features/transport/TransportColumns.tsx` — pickup / drop-off columns
-- `src/features/transport/TransportCard.tsx` — leg card
-- `src/features/transport/TransportSummary.tsx` — totals + gap warnings + quick status actions
-- `src/features/transport/UnassignedTransportStrip.tsx`
-- `src/features/transport/queries.ts` — vehicles, day legs, unassigned, assign/status mutations, workflow settings hooks
-- `src/features/settings/TransportWorkflowPage.tsx`
-- Minor edit to `src/features/bookings/BookingDetailPage.tsx` — surface "Add transport leg" hint when `requires_transport && no linked leg on that date`
-- Migration: `transport_workflow_settings` table + `settings.transport.manage` permission (grant to any role that already has `settings.vans.manage`), with GRANTs + RLS
-- Route wiring in `src/App.tsx`, Settings index link; sidebar already points at `/admin/pickup-dropoff`
+- `src/features/daycare/DaycareBoardPage.tsx` — day controls, capacity meter, lanes
+- `src/features/daycare/ExpectedLane.tsx`, `CheckedInLane.tsx`, `DaycarePetCard.tsx`
+- `src/features/daycare/EnrolmentsPage.tsx`, `EnrolmentDrawer.tsx`, `DaySwapDialog.tsx`
+- `src/features/daycare/AttendancePage.tsx`
+- `src/features/daycare/queries.ts` — expected-today resolver (enrolments ∪ swaps ∪ one-off bookings minus cancelled swaps), attendance mutations, plans + workflow settings hooks
+- `src/features/settings/DaycarePlansPage.tsx`
+- `src/features/settings/DaycareWorkflowPage.tsx`
+- Migration: `daycare_workflow_settings` table + `settings.daycare.manage` permission (grant to any role that already has `settings.vans.manage` / `settings.transport.manage`), with GRANTs + RLS. No changes to `daycare_plans` / `daycare_enrolments` / `daycare_day_swaps` / `daycare_attendance` schemas — they already exist.
+- Route wiring in `src/App.tsx` and Settings index links; sidebar already points at `/admin/daycare`.
 
 ### Verification
 
-- Seed a pickup_dropoff booking on a vehicle for today → appears in the correct Pickup or Drop-off column at the right time.
-- Assign a vehicle to an unassigned leg → it moves out of the strip and into the board on refetch.
-- Two legs 5 min apart trigger "gap too small"; 3 h apart trigger "gap too large".
-- A hotel booking with `requires_transport = true` and no linked leg shows the "Add transport leg" hint on its detail page; without the flag it doesn't.
-- Non-admin user cannot open `/admin/settings/transport-workflow`.
+- Create a plan "3 days/week", enrol a pet on Mon/Wed/Fri → the pet appears in Expected on those weekdays only.
+- Add a day swap (drop Wed, add Thu) → pet appears Thu, not Wed.
+- Check-in / check-out buttons write to `daycare_attendance` and move the card between lanes.
+- Capacity meter reflects count of expected vs. plan capacity.
+- Non-admin cannot open the two new Settings pages.
 
-Shall I proceed with Phase 5 as above?
+Shall I proceed with Phase 6 as above?
