@@ -7,6 +7,8 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useBookingDetail } from "./queries";
 import { BookingStatusChip } from "./statusMeta";
 import { BookingFormModal } from "./BookingFormModal";
+import { useTransportLegExistsForBooking } from "@/features/transport/queries";
+import { Truck } from "lucide-react";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -38,6 +40,18 @@ export default function BookingDetailPage() {
 
   const detailQ = useBookingDetail(id, tenantId);
   const b = detailQ.data;
+
+  const bookingDate = b?.start_at ? b.start_at.slice(0, 10) : null;
+  const needsTransportHint = Boolean(
+    b && b.requires_transport && b.service_type !== "pickup_dropoff",
+  );
+  const legExistsQ = useTransportLegExistsForBooking({
+    tenantId,
+    customerId: b?.customer_id ?? null,
+    isoDate: bookingDate,
+    enabled: needsTransportHint,
+  });
+  const showAddTransportHint = needsTransportHint && legExistsQ.data === false;
 
   return (
     <>
@@ -123,6 +137,24 @@ export default function BookingDetailPage() {
                       <p className="mt-1 whitespace-pre-wrap text-sm">{b.notes_customer}</p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {showAddTransportHint && (
+                <div className="sk-card flex items-start gap-3 border-sk-orange bg-sk-orange-soft p-4 text-sm text-sk-orange">
+                  <Truck className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="flex-1">
+                    <div className="font-semibold">Transport required — no leg scheduled</div>
+                    <div className="text-xs opacity-90">
+                      This booking is flagged as needing transport but no pick-up / drop-off leg exists for {bookingDate}.
+                    </div>
+                  </div>
+                  <Link
+                    to="/admin/pickup-dropoff"
+                    className="inline-flex h-8 items-center rounded-md bg-white px-3 text-xs font-semibold text-sk-orange hover:bg-white/80"
+                  >
+                    Open transport board
+                  </Link>
                 </div>
               )}
             </div>
