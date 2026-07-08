@@ -2935,6 +2935,53 @@ export type Database = {
           },
         ]
       }
+      transport_workflow_settings: {
+        Row: {
+          created_at: string
+          day_end_time: string
+          day_start_time: string
+          default_dropoff_trail_minutes: number
+          default_pickup_lead_minutes: number
+          id: string
+          max_leg_gap_minutes: number
+          min_leg_gap_minutes: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_end_time?: string
+          day_start_time?: string
+          default_dropoff_trail_minutes?: number
+          default_pickup_lead_minutes?: number
+          id?: string
+          max_leg_gap_minutes?: number
+          min_leg_gap_minutes?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_end_time?: string
+          day_start_time?: string
+          default_dropoff_trail_minutes?: number
+          default_pickup_lead_minutes?: number
+          id?: string
+          max_leg_gap_minutes?: number
+          min_leg_gap_minutes?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transport_workflow_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
