@@ -7,6 +7,7 @@ import { usePet } from "@/features/customers/queries";
 import { AlertCircle, ArrowLeft, ExternalLink, Mail, Phone, User } from "lucide-react";
 import { useState } from "react";
 import { PetFormModal } from "./PetFormModal";
+import { PetVaccinationsPanel } from "./PetVaccinationsPanel";
 
 export default function PetDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -158,9 +159,9 @@ export default function PetDetailPage() {
               )}
             </div>
 
-            <div className="sk-card p-6 text-center text-sm text-muted-foreground">
-              Vaccinations and documents will be wired up in a later step.
-            </div>
+            {tenant && (
+              <PetVaccinationsPanel tenantId={tenant.id} petId={pet.id} />
+            )}
           </>
         )}
       </div>

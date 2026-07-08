@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -74,6 +74,27 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/message-templates",
+    label: "Message templates",
+    description: "Customer messages for bookings, invoices and reminders.",
+    icon: MessageSquare,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/comms",
+    label: "Comms settings",
+    description: "Sender identity, quiet hours, test sends.",
+    icon: Send,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/vaccination-rules",
+    label: "Vaccination rules",
+    description: "Per-service vaccine requirements and grace periods.",
+    icon: Syringe,
+    ready: true,
+  },
+  {
     to: "/admin/users",
     label: "Users & roles",
     description: "Staff accounts, roles and permissions.",
@@ -86,13 +107,6 @@ const SECTIONS = [
     description: "Update your own password.",
     icon: KeyRound,
     ready: true,
-  },
-  {
-    to: "#",
-    label: "Email templates",
-    description: "Confirmations, reminders, marketing.",
-    icon: Mail,
-    ready: false,
   },
   {
     to: "#",
