@@ -39,7 +39,7 @@ export default function InviteUserModal({ tenantId, onClose, onSaved }: Props) {
         : await addExistingUserToTenant({ tenantId, email, roleIds });
     setSaving(false);
     if (!res.ok) {
-      toast({ title: "Couldn't add user", description: res.error, variant: "destructive" });
+      toast({ title: "Couldn't add user", description: (res as { ok: false; error: string }).error, variant: "destructive" });
       return;
     }
     toast({ title: mode === "invite" ? "Invite sent" : "User added" });
