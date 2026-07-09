@@ -29,7 +29,9 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
       .join("")
       .slice(0, 2)
       .toUpperCase() || "?";
-  const roleLabel = roles[0]?.label ?? (profile?.user_type ? profile.user_type : "");
+  const roleLabel = isPlatform
+    ? "Platform · Sys Dev"
+    : (roles[0]?.label ?? (profile?.user_type ? profile.user_type : ""));
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {

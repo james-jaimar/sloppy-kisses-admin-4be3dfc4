@@ -46,7 +46,7 @@ interface TenantContextValue extends CurrentUserState {
 const TenantContext = createContext<TenantContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "sk.currentTenantId";
-const CACHE_KEY = "sk.currentUserCache.v1";
+const CACHE_KEY = "sk.currentUserCache.v2";
 
 type CachedState = Omit<CurrentUserState, "loading" | "error"> & { authUserId: string };
 
