@@ -2,12 +2,14 @@ import { NavLink } from "react-router-dom";
 import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
 
 interface NavItem {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: number;
+  code?: string;
 }
 
 interface Props {
@@ -18,6 +20,9 @@ interface Props {
 }
 
 export function AppSidebar({ items, footerLabel, collapsed = false, onToggleCollapsed }: Props) {
+  const { hasPermission, profile } = useCurrentUser();
+  const isPlatform = profile?.user_type === "platform";
+  const visibleItems = items.filter((it) => !it.code || isPlatform || hasPermission(it.code));
   return (
     <aside
       className={cn(
@@ -50,7 +55,7 @@ export function AppSidebar({ items, footerLabel, collapsed = false, onToggleColl
       )}
       <nav className="flex-1 overflow-y-auto px-3 pb-4">
         <ul className="space-y-0.5">
-          {items.map((item) => {
+          {visibleItems.map((item) => {
             const Icon = item.icon;
             return (
               <li key={item.to}>

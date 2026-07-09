@@ -1,0 +1,131 @@
+// Invite a new user to the current tenant.
+// - Verifies the caller is signed in and has `users.manage` in the target tenant.
+// - Creates or reuses a Supabase auth user (sends invite email if new).
+// - Ensures a public.profiles row exists.
+// - Creates/reactivates a public.tenant_users row.
+// - Replaces public.user_roles with the requested role ids.
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+function json(status: number, body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") return json(405, { error: "Method not allowed" });
+
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!authHeader) return json(401, { error: "Missing Authorization header" });
+
+  const asCaller = createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+
+  const { data: userRes, error: userErr } = await asCaller.auth.getUser();
+  if (userErr || !userRes?.user) return json(401, { error: "Not authenticated" });
+
+  let payload: { tenant_id?: string; email?: string; full_name?: string; role_ids?: string[] };
+  try {
+    payload = await req.json();
+  } catch {
+    return json(400, { error: "Invalid JSON body" });
+  }
+  const tenantId = payload.tenant_id;
+  const email = (payload.email ?? "").trim().toLowerCase();
+  const fullName = (payload.full_name ?? "").trim();
+  const roleIds = payload.role_ids ?? [];
+  if (!tenantId || !email) return json(400, { error: "tenant_id and email are required" });
+
+  // Caller must have users.manage in the target tenant (checked via caller's JWT + RLS-safe SECURITY DEFINER fn).
+  const { data: canManage, error: permErr } = await asCaller.rpc("user_has_permission", {
+    target_tenant_id: tenantId,
+    permission_code: "users.manage",
+  });
+  if (permErr) return json(500, { error: permErr.message });
+  if (!canManage) return json(403, { error: "You don't have permission to manage users in this tenant." });
+
+  // 1. Find or create the auth user.
+  let authUserId: string | null = null;
+  const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+  const existing = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email);
+  if (existing) {
+    authUserId = existing.id;
+  } else {
+    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+      data: { full_name: fullName || null },
+    });
+    if (inviteErr) return json(500, { error: `Invite failed: ${inviteErr.message}` });
+    authUserId = invited.user?.id ?? null;
+  }
+  if (!authUserId) return json(500, { error: "Could not resolve auth user id" });
+
+  // 2. Ensure a profile row exists.
+  const { data: prof } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("auth_user_id", authUserId)
+    .maybeSingle();
+
+  let profileId = prof?.id as string | undefined;
+  if (!profileId) {
+    const { data: created, error: pErr } = await admin
+      .from("profiles")
+      .insert({
+        auth_user_id: authUserId,
+        email,
+        full_name: fullName || null,
+        user_type: "tenant",
+      })
+      .select("id")
+      .single();
+    if (pErr) return json(500, { error: `Profile: ${pErr.message}` });
+    profileId = created.id;
+  }
+
+  // 3. Ensure tenant_users row.
+  const { data: tu } = await admin
+    .from("tenant_users")
+    .select("id, status")
+    .eq("tenant_id", tenantId)
+    .eq("profile_id", profileId)
+    .maybeSingle();
+
+  let tenantUserId = tu?.id as string | undefined;
+  if (!tenantUserId) {
+    const { data: created, error: tuErr } = await admin
+      .from("tenant_users")
+      .insert({ tenant_id: tenantId, profile_id: profileId, status: "active" })
+      .select("id")
+      .single();
+    if (tuErr) return json(500, { error: `Tenant user: ${tuErr.message}` });
+    tenantUserId = created.id;
+  } else if (tu?.status !== "active") {
+    await admin.from("tenant_users").update({ status: "active" }).eq("id", tenantUserId);
+  }
+
+  // 4. Replace role set.
+  if (roleIds.length) {
+    await admin.from("user_roles").delete().eq("tenant_user_id", tenantUserId);
+    const { error: rErr } = await admin
+      .from("user_roles")
+      .insert(roleIds.map((role_id) => ({ tenant_user_id: tenantUserId!, role_id })));
+    if (rErr) return json(500, { error: `Roles: ${rErr.message}` });
+  }
+
+  return json(200, { ok: true, tenant_user_id: tenantUserId, profile_id: profileId, invited: !existing });
+});
