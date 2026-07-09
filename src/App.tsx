@@ -58,6 +58,15 @@ import RetailSettingsPage from "@/features/settings/RetailSettingsPage";
 import RolesPermissionsPage from "@/features/settings/RolesPermissionsPage";
 import UsersPage from "@/features/users/UsersPage";
 import { RequirePermission } from "@/components/auth/Can";
+import RequirePlatform from "@/components/auth/RequirePlatform";
+import PlatformLayout from "@/components/layout/PlatformLayout";
+import PlatformOverviewPage from "@/features/platform/PlatformOverviewPage";
+import PlatformTenantsPage from "@/features/platform/TenantsPage";
+import PlatformUsersPage from "@/features/platform/PlatformUsersPage";
+import FeatureFlagsPage from "@/features/platform/FeatureFlagsPage";
+import AuditViewerPage from "@/features/platform/AuditViewerPage";
+import ActivityPage from "@/features/platform/ActivityPage";
+import SystemPage from "@/features/platform/SystemPage";
 import BookingRequestQueue from "@/features/bookingRequests/BookingRequestQueue";
 import CustomerDashboard from "@/features/customerPortal/CustomerDashboard";
 import MyPetsPage from "@/features/customerPortal/pets/MyPetsPage";
@@ -138,6 +147,18 @@ const App = () => (
                 <Route path="/admin/settings/retail" element={<RetailSettingsPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
+              </Route>
+
+              <Route element={<RequirePlatform />}>
+                <Route element={<PlatformLayout />}>
+                  <Route path="/platform" element={<PlatformOverviewPage />} />
+                  <Route path="/platform/tenants" element={<PlatformTenantsPage />} />
+                  <Route path="/platform/users" element={<PlatformUsersPage />} />
+                  <Route path="/platform/flags" element={<FeatureFlagsPage />} />
+                  <Route path="/platform/audit" element={<AuditViewerPage />} />
+                  <Route path="/platform/activity" element={<ActivityPage />} />
+                  <Route path="/platform/system" element={<SystemPage />} />
+                </Route>
               </Route>
 
               <Route element={<RequireCustomer />}>

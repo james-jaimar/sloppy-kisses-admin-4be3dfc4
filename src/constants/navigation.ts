@@ -1,7 +1,8 @@
 import {
   LayoutDashboard, Calendar, Users, PawPrint, Inbox, CalendarCheck, Dog, Hotel,
   Scissors, Truck, ArrowLeftRight, Receipt, ShoppingBag, BarChart3, Settings,
-  FileText, CreditCard, User, MessageSquare,
+  FileText, CreditCard, User, MessageSquare, Building2, ShieldCheck, Flag,
+  History, Activity, Database,
 } from "lucide-react";
 
 export const adminNav = [
@@ -32,4 +33,15 @@ export const customerNav = [
   { to: "/customer/invoices", label: "Invoices", icon: Receipt },
   { to: "/customer/payments", label: "Payments", icon: CreditCard },
   { to: "/customer/profile", label: "Profile", icon: User },
+] as const;
+
+// Sys Dev / platform-owner-only navigation. Not shown to tenant users.
+export const platformNav = [
+  { to: "/platform", label: "Overview", icon: ShieldCheck },
+  { to: "/platform/tenants", label: "Tenants", icon: Building2 },
+  { to: "/platform/users", label: "Platform users", icon: Users },
+  { to: "/platform/flags", label: "Feature flags", icon: Flag },
+  { to: "/platform/audit", label: "Audit log", icon: History },
+  { to: "/platform/activity", label: "Activity & events", icon: Activity },
+  { to: "/platform/system", label: "System & secrets", icon: Database },
 ] as const;

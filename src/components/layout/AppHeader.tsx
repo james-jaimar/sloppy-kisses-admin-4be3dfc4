@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, KeyRound, LogOut, MessageSquare, Plus, Search } from "lucide-react";
+import { Bell, KeyRound, LogOut, MessageSquare, Plus, Search, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 
@@ -15,6 +15,8 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
   const { authUser, signOut } = useAuth();
   const { profile, roles } = useCurrentUser();
   const location = useLocation();
+  const isPlatform = profile?.user_type === "platform";
+  const inPlatform = location.pathname.startsWith("/platform");
   const passwordPath = location.pathname.startsWith("/customer")
     ? "/customer/profile/password"
     : "/admin/settings/password";
@@ -54,6 +56,16 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
           <Plus className="h-4 w-4" />
           Quick add
         </button>
+        {isPlatform && (
+          <Link
+            to={inPlatform ? "/admin/dashboard" : "/platform"}
+            title={inPlatform ? "Back to tenant admin" : "Open Sys Dev area"}
+            className="hidden sm:inline-flex h-10 items-center gap-2 rounded-xl border border-sk-coral-soft bg-sk-coral-soft/50 px-3 text-xs font-semibold text-sk-coral-dark hover:bg-sk-coral-soft"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            {inPlatform ? "Exit Sys Dev" : "Sys Dev"}
+          </Link>
+        )}
         <button className="relative grid h-10 w-10 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted">
           <MessageSquare className="h-[18px] w-[18px]" />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-sk-turquoise" />
