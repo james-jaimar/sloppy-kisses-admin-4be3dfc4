@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -120,7 +120,14 @@ const SECTIONS = [
     label: "Users & roles",
     description: "Staff accounts, roles and permissions.",
     icon: Users,
-    ready: false,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/roles-permissions",
+    label: "Roles & permissions",
+    description: "See which permissions each role has.",
+    icon: ShieldCheck,
+    ready: true,
   },
   {
     to: "/admin/settings/password",
