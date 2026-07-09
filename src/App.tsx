@@ -55,6 +55,9 @@ import QuickSalePage from "@/features/shop/QuickSalePage";
 import ProductCategoriesPage from "@/features/settings/ProductCategoriesPage";
 import StockLocationsPage from "@/features/settings/StockLocationsPage";
 import RetailSettingsPage from "@/features/settings/RetailSettingsPage";
+import RolesPermissionsPage from "@/features/settings/RolesPermissionsPage";
+import UsersPage from "@/features/users/UsersPage";
+import { RequirePermission } from "@/components/auth/Can";
 import BookingRequestQueue from "@/features/bookingRequests/BookingRequestQueue";
 import CustomerDashboard from "@/features/customerPortal/CustomerDashboard";
 import MyPetsPage from "@/features/customerPortal/pets/MyPetsPage";
@@ -112,7 +115,10 @@ const App = () => (
                 <Route path="/admin/shop-stock/stock" element={<StockPage />} />
                 <Route path="/admin/shop-stock/sale" element={<QuickSalePage />} />
                 <Route path="/admin/reports" element={<PlaceholderPage title="Reports" />} />
-                <Route path="/admin/users" element={<PlaceholderPage title="Users & roles" />} />
+                <Route element={<RequirePermission code="users.manage" />}>
+                  <Route path="/admin/users" element={<UsersPage />} />
+                  <Route path="/admin/settings/roles-permissions" element={<RolesPermissionsPage />} />
+                </Route>
                 <Route path="/admin/settings" element={<SettingsIndexPage />} />
                 <Route path="/admin/settings/resources" element={<ResourcesPage />} />
                 <Route path="/admin/settings/grooming-packages" element={<GroomingPackagesPage />} />
