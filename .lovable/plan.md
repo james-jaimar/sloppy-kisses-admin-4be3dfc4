@@ -1,77 +1,65 @@
-## Where we are
+Phase 10 (Retail / Shop & Stock) is done. Two natural next steps remain on the roadmap. My recommendation is **Phase 12 — Users & Roles first**, then Phase 11 — Reports.
 
-Phases 2–9 are scaffolded:
-- Grooming, Hotel & Cattery, Mobile Vans, Pickup/Drop-off, Daycare boards
-- Invoices & Payments
-- Comms + vaccination gate
-- Customer Portal (dashboard, pets, bookings, invoices, payments, documents, profile)
+## Why Users & Roles before Reports
 
-Roadmap items still ahead: **Retail / Shop & Stock**, **Reports**, **Users & Roles**, plus deferred pieces (real payment gateway, two-way messaging).
+You're close to real go-live. Right now every signed-in staff member effectively has full operator access — a groomer can edit invoices, a driver can change vaccination rules, reception can delete customers. Locking that down is cheap now and painful later (every new screen we add without gates is another screen we'll have to retrofit). Reports are more valuable once real data is flowing, so they naturally sit after roles.
 
-## Recommended next: Phase 10 — Retail / Shop & Stock
-
-This is the next unbuilt operator surface and the sidebar already has a "Shop & Stock" entry pointing at a placeholder. It closes the loop between grooming/daycare/hotel visits and over-the-counter product sales (food, treats, accessories, take-home meds), and it feeds directly into invoices we already built.
+## Phase 12 — Users & Roles
 
 ### What we'll build
 
-1. **Products catalogue** (`/admin/shop-stock/products`)
-   - List with search, category filter, active toggle, low-stock chip.
-   - Product form: name, SKU, category, unit, cost price, sell price, VAT flag, barcode, reorder level, active.
-2. **Stock levels & movements** (`/admin/shop-stock/stock`)
-   - Current on-hand per product per location, last movement, low-stock highlights.
-   - Manual adjustment drawer (receive stock, wastage, count correction) writing to a `stock_movements` ledger.
-3. **Point-of-sale / Quick sale** (`/admin/shop-stock/sale`)
-   - Scan or pick products → cart → attach to a customer (optional) → creates an invoice (reuses existing invoice + payment flow) → deducts stock via movement rows.
-4. **Attach products to a booking**
-   - "Add product" action on `BookingInvoicePanel` so a groomer/hotel handover can add a bag of food to today's booking invoice; deducts stock the same way.
-5. **Settings**
-   - `Product categories`, `Stock locations`, `Retail settings` (default VAT rate, low-stock email recipients, allow negative stock y/n) — per the settings-first rule.
-6. **Reports hooks (light)**
-   - Two summary tiles for later Phase 11 reports: sales-by-day and low-stock count. No dedicated report page yet.
+1. **Roles model** (owner, manager, groomer, driver, reception) stored in a dedicated `user_roles` table (never on profiles — privilege-escalation risk). Uses a `has_role()` SECURITY DEFINER function so RLS never recurses.
+2. **Permission codes** — a small, named set (e.g. `bookings.write`, `invoices.write`, `invoices.void`, `retail.sell`, `retail.manage`, `comms.send`, `settings.manage`, `users.manage`, `reports.view`). Each role maps to a set of codes in one place (`src/lib/permissions/permissions.ts`, which already exists as a stub).
+3. **Admin → Users & Roles screen** (`/admin/users`, currently a placeholder):
+   - List staff for the tenant with role chips, last sign-in, active toggle.
+   - Invite user (email → creates auth user + `tenant_members` row + default role).
+   - Edit roles (multi-select), deactivate, resend invite, reset password.
+4. **Settings → Roles & permissions** (settings-first rule): read-only matrix showing which permission codes each role has, plus a "custom overrides" table per user for the rare exception. Owner-only.
+5. **UI gating** via a `<Can code="...">` component + `usePermission()` hook:
+   - Hide/disable action buttons (New booking, Void invoice, Record payment, Send message, Adjust stock, Quick sale, Settings links).
+   - Sidebar items filtered by permission (driver sees Transport + Calendar; groomer sees Grooming + Pets; reception sees Bookings + Customers + Invoices; manager sees most; owner sees all).
+   - Route guards on sensitive pages (`RequireAdmin` extended with an optional `code` prop, or a new `RequirePermission`).
+6. **RLS tightening** — where a role shouldn't even read data (e.g. driver shouldn't see invoice totals), policies use `has_role()` alongside `user_has_tenant_access()`. Start conservative on the write side (only manager/owner can modify settings, invoices, users) and keep reads broad for now.
+7. **Audit trail (light)** — a `user_role_changes` table so we can see who granted what and when. Owner-only view on the Users page.
 
 ### Data model
 
-New tables (all tenant-scoped, with GRANTs + RLS via `user_has_tenant_access`):
-- `products` (id, tenant_id, name, sku, barcode, category_id, unit, cost_price, sell_price, vat_rate, reorder_level, active, sort_order)
-- `product_categories` (id, tenant_id, name, sort_order, active)
-- `stock_locations` (id, tenant_id, name, is_default, active) — seed one default per tenant
-- `stock_movements` (id, tenant_id, product_id, location_id, qty_delta, reason enum: `receive|sale|adjustment|wastage|return`, ref_type, ref_id, notes, created_by, created_at)
-- `retail_settings` (tenant_id PK, default_vat_rate, allow_negative_stock, low_stock_notify_emails)
-- Extend `invoice_items` (already exists) with optional `product_id` + `stock_movement_id` so retail lines link back to catalogue + ledger.
-
-Current on-hand is a view: `sum(qty_delta) group by product_id, location_id` — no denormalised counter to drift.
+- `app_role` enum: `owner | manager | groomer | driver | reception`.
+- `user_roles(id, user_id, tenant_id, role, created_at, created_by)` — unique on `(user_id, tenant_id, role)`.
+- `user_role_changes(id, tenant_id, target_user_id, actor_user_id, action, role, at)`.
+- `has_role(_user_id uuid, _tenant_id uuid, _role app_role) returns boolean` — SECURITY DEFINER, `search_path = public`.
+- `has_permission(_user_id uuid, _tenant_id uuid, _code text) returns boolean` — resolves via role→code map (map lives in a small `role_permissions` reference table so we can tweak without a migration later).
+- All new tables: full GRANTs, RLS on, owner/manager-only write, self-read for the current user.
 
 ### Files (planned)
 
-- `src/features/shop/ProductsPage.tsx`, `ProductFormModal.tsx`
-- `src/features/shop/StockPage.tsx`, `StockAdjustmentDrawer.tsx`
-- `src/features/shop/QuickSalePage.tsx`, `SaleCart.tsx`
-- `src/features/shop/queries.ts` (products, stock on-hand, movements, quick-sale mutation)
-- `src/features/settings/ProductCategoriesPage.tsx`, `StockLocationsPage.tsx`, `RetailSettingsPage.tsx` (+ index entries)
-- `src/features/bookings/BookingInvoicePanel.tsx` — add "Add product" action
-- Migration: tables above + on-hand view + RLS + GRANTs + seed default location
+- Migration: enum, `user_roles`, `role_permissions` (seeded), `user_role_changes`, `has_role`, `has_permission`, RLS + GRANTs.
+- `src/lib/permissions/permissions.ts` — extend the existing stub with codes + role→codes seed (mirrors DB).
+- `src/lib/permissions/usePermission.ts` + `<Can>` component.
+- `src/components/auth/RequirePermission.tsx`.
+- `src/features/users/UsersPage.tsx`, `InviteUserModal.tsx`, `EditUserRolesDrawer.tsx`, `queries.ts`.
+- `src/features/settings/RolesPermissionsPage.tsx` (matrix, owner-only).
+- Sidebar (`AppSidebar.tsx`) + action buttons across bookings/invoices/comms/shop — wrap in `<Can>`.
 
 ### Out of scope (deferred)
 
-- Barcode scanner hardware integration (browser camera scan can come later).
-- Purchase orders / supplier management.
-- Multi-location transfers UI (schema supports it; UI later).
-- Customer-portal shop (retail is operator-only for now).
-- Real payment gateway (still Phase 12).
+- Fully custom per-user permission editing (only role assignment + owner overrides for now).
+- SSO / SAML.
+- Per-resource permissions (e.g. "groomer X only sees their own bookings") — the schema supports it via `resources.assigned_user_id` later.
+- Activity log beyond role changes.
 
 ### Verification
 
-- Create a product, receive 10 units → stock page shows 10 on hand.
-- Quick sale of 3 units to a walk-in → invoice created, paid via existing flow, stock now 7, movement row with reason `sale`.
-- Add a bag of food to an existing grooming booking → line appears on that invoice, stock decrements.
-- Set reorder level 5 → product shows "Low stock" chip once qty ≤ 5.
-- Customer A (portal) has no access to any retail table (RLS).
+- Sign in as a `groomer` → sidebar shows Grooming + Pets + Calendar only; `/admin/invoices` redirects; "Record payment" button absent on a booking.
+- Sign in as `reception` → can create bookings and record payments but "Void invoice" and Settings are hidden.
+- Owner grants `invoices.void` override to a specific manager → that manager sees the Void button; other managers don't.
+- Deactivating a user immediately blocks their next request (RLS check on `tenant_members.active`).
+- RLS check: a `driver` querying `invoices` directly via the Supabase client returns 0 rows.
 
-## Alternatives if you'd rather jump elsewhere
+---
 
-- **Phase 11 — Reports**: dashboards for revenue, occupancy, groomer utilisation, comms delivery, aged debtors. Needs real data first, so usually goes after Retail.
-- **Phase 12 — Users & Roles**: staff accounts, per-role permission gates on the operator UI (owner/manager/groomer/driver/reception). Good to do before real go-live.
-- **Phase 8c — Two-way messaging**: inbound WhatsApp/email replies threaded onto the customer.
-- **Payment gateway**: wire PayFast/Yoco/Stripe into "Pay now" on invoices + portal.
+## Alternative: Phase 11 — Reports (if you'd rather do this first)
 
-Shall I proceed with **Phase 10 — Retail / Shop & Stock** as above, or pick one of the alternatives?
+Dashboards for revenue (by service, by day/week/month), occupancy (hotel/cattery/daycare), groomer utilisation, comms delivery rates, aged debtors, low-stock + sales-by-day (already stubbed from Phase 10). Uses recharts + a handful of read-only SQL views. Roughly the same size as Users & Roles.
+
+**Shall I proceed with Phase 12 — Users & Roles, or would you prefer Phase 11 — Reports?**
