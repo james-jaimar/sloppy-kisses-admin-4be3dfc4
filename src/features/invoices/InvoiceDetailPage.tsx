@@ -101,7 +101,13 @@ export default function InvoiceDetailPage() {
                 <Ban className="h-4 w-4" /> Void
               </button>
             )}
-            <button onClick={() => toast.info("PDF export coming in the next phase.")}
+            <button onClick={async () => {
+              if (!inv) return;
+              try {
+                const { downloadInvoicePdf } = await import("./pdf");
+                await downloadInvoicePdf(inv.id, `${inv.invoice_number}.pdf`);
+              } catch (e: any) { toast.error(e?.message ?? "PDF failed"); }
+            }}
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
               <Download className="h-4 w-4" /> PDF
             </button>
