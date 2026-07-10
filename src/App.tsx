@@ -48,6 +48,8 @@ import PaymentMethodsPage from "@/features/settings/PaymentMethodsPage";
 import CommsInboxPage from "@/features/comms/CommsInboxPage";
 import MessageTemplatesPage from "@/features/settings/MessageTemplatesPage";
 import CommsSettingsPage from "@/features/settings/CommsSettingsPage";
+import EmailServerSettingsPage from "@/features/settings/EmailServerSettingsPage";
+import BrandingSettingsPage from "@/features/settings/BrandingSettingsPage";
 import VaccinationRulesPage from "@/features/settings/VaccinationRulesPage";
 import ShopIndexPage from "@/features/shop/ShopIndexPage";
 import ProductsPage from "@/features/shop/ProductsPage";
