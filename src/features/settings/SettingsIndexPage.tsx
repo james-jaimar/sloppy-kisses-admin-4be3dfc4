@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -85,6 +85,20 @@ const SECTIONS = [
     label: "Comms settings",
     description: "Sender identity, quiet hours, test sends.",
     icon: Send,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/email",
+    label: "Email server",
+    description: "SMTP host, port, credentials and test send.",
+    icon: Server,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/branding",
+    label: "Branding",
+    description: "Logo, favicon and colour scheme.",
+    icon: Palette,
     ready: true,
   },
   {
