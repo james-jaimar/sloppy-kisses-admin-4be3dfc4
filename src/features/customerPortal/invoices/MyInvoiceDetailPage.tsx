@@ -58,7 +58,7 @@ export default function MyInvoiceDetailPage() {
             try {
               const { downloadInvoicePdf } = await import("@/features/invoices/pdf");
               await downloadInvoicePdf(inv.id, `${inv.invoice_number}.pdf`);
-            } catch (e: any) { alert(e?.message ?? "PDF failed"); }
+            } catch (e: any) { toast.error(e?.message ?? "PDF failed"); }
           }}
             className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
             Download PDF
