@@ -45,7 +45,7 @@ export default function EmailServerSettingsPage() {
     supabase.from("email_transport_settings_safe" as any)
       .select("*").eq("tenant_id", tenantId).maybeSingle()
       .then(({ data }) => {
-        const r = data as Row | null;
+        const r = (data as unknown) as Row | null;
         setRow(r);
         if (r) setForm({
           smtp_host: r.smtp_host ?? "",
@@ -74,7 +74,7 @@ export default function EmailServerSettingsPage() {
       // refresh
       const { data: fresh } = await supabase.from("email_transport_settings_safe" as any)
         .select("*").eq("tenant_id", tenantId).maybeSingle();
-      setRow(fresh as Row | null);
+      setRow((fresh as unknown) as Row | null);
       setForm((f) => ({ ...f, smtp_password: "" }));
     } catch (e: any) { toast.error(e?.message ?? "Failed to save"); }
     finally { setSaving(false); }
