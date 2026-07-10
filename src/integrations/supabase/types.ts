@@ -1329,6 +1329,68 @@ export type Database = {
           },
         ]
       }
+      email_transport_settings: {
+        Row: {
+          created_at: string
+          from_email: string | null
+          from_name: string | null
+          last_test_at: string | null
+          last_test_error: string | null
+          last_test_ok: boolean | null
+          provider: string
+          reply_to: string | null
+          smtp_host: string | null
+          smtp_password: string | null
+          smtp_port: number | null
+          smtp_secure: string
+          smtp_username: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_email?: string | null
+          from_name?: string | null
+          last_test_at?: string | null
+          last_test_error?: string | null
+          last_test_ok?: boolean | null
+          provider?: string
+          reply_to?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_secure?: string
+          smtp_username?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_email?: string | null
+          from_name?: string | null
+          last_test_at?: string | null
+          last_test_error?: string | null
+          last_test_ok?: boolean | null
+          provider?: string
+          reply_to?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_secure?: string
+          smtp_username?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_transport_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       emergency_contacts: {
         Row: {
           created_at: string
@@ -3445,10 +3507,13 @@ export type Database = {
       }
       tenants: {
         Row: {
+          accent_colour: string | null
           contact_email: string | null
           contact_phone: string | null
           created_at: string
+          favicon_url: string | null
           id: string
+          logo_dark_url: string | null
           logo_url: string | null
           name: string
           primary_colour: string | null
@@ -3460,10 +3525,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accent_colour?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
+          favicon_url?: string | null
           id?: string
+          logo_dark_url?: string | null
           logo_url?: string | null
           name: string
           primary_colour?: string | null
@@ -3475,10 +3543,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accent_colour?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
+          favicon_url?: string | null
           id?: string
+          logo_dark_url?: string | null
           logo_url?: string | null
           name?: string
           primary_colour?: string | null
@@ -3861,6 +3932,68 @@ export type Database = {
       }
     }
     Views: {
+      email_transport_settings_safe: {
+        Row: {
+          created_at: string | null
+          from_email: string | null
+          from_name: string | null
+          has_password: boolean | null
+          last_test_at: string | null
+          last_test_error: string | null
+          last_test_ok: boolean | null
+          provider: string | null
+          reply_to: string | null
+          smtp_host: string | null
+          smtp_port: number | null
+          smtp_secure: string | null
+          smtp_username: string | null
+          tenant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          has_password?: never
+          last_test_at?: string | null
+          last_test_error?: string | null
+          last_test_ok?: boolean | null
+          provider?: string | null
+          reply_to?: string | null
+          smtp_host?: string | null
+          smtp_port?: number | null
+          smtp_secure?: string | null
+          smtp_username?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          from_email?: string | null
+          from_name?: string | null
+          has_password?: never
+          last_test_at?: string | null
+          last_test_error?: string | null
+          last_test_ok?: boolean | null
+          provider?: string | null
+          reply_to?: string | null
+          smtp_host?: string | null
+          smtp_port?: number | null
+          smtp_secure?: string | null
+          smtp_username?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_transport_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       v_stock_on_hand: {
         Row: {
           last_movement_at: string | null
