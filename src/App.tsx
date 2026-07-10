@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "./pages/NotFound.tsx";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { TenantProvider } from "@/lib/tenant/TenantContext";
+import { BrandingProvider } from "@/lib/branding/BrandingProvider";
 import AdminLayout from "@/components/layout/AdminLayout";
 import CustomerLayout from "@/components/layout/CustomerLayout";
 import PublicFormLayout from "@/components/layout/PublicFormLayout";
@@ -47,6 +48,8 @@ import PaymentMethodsPage from "@/features/settings/PaymentMethodsPage";
 import CommsInboxPage from "@/features/comms/CommsInboxPage";
 import MessageTemplatesPage from "@/features/settings/MessageTemplatesPage";
 import CommsSettingsPage from "@/features/settings/CommsSettingsPage";
+import EmailServerSettingsPage from "@/features/settings/EmailServerSettingsPage";
+import BrandingSettingsPage from "@/features/settings/BrandingSettingsPage";
 import VaccinationRulesPage from "@/features/settings/VaccinationRulesPage";
 import ShopIndexPage from "@/features/shop/ShopIndexPage";
 import ProductsPage from "@/features/shop/ProductsPage";
@@ -87,6 +90,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TenantProvider>
+        <BrandingProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -141,6 +145,8 @@ const App = () => (
                 <Route path="/admin/settings/payment-methods" element={<PaymentMethodsPage />} />
                 <Route path="/admin/settings/message-templates" element={<MessageTemplatesPage />} />
                 <Route path="/admin/settings/comms" element={<CommsSettingsPage />} />
+                <Route path="/admin/settings/email" element={<EmailServerSettingsPage />} />
+                <Route path="/admin/settings/branding" element={<BrandingSettingsPage />} />
                 <Route path="/admin/settings/vaccination-rules" element={<VaccinationRulesPage />} />
                 <Route path="/admin/settings/product-categories" element={<ProductCategoriesPage />} />
                 <Route path="/admin/settings/stock-locations" element={<StockLocationsPage />} />
@@ -191,6 +197,7 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
+        </BrandingProvider>
       </TenantProvider>
     </AuthProvider>
   </QueryClientProvider>
