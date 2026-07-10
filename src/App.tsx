@@ -145,6 +145,8 @@ const App = () => (
                 <Route path="/admin/settings/payment-methods" element={<PaymentMethodsPage />} />
                 <Route path="/admin/settings/message-templates" element={<MessageTemplatesPage />} />
                 <Route path="/admin/settings/comms" element={<CommsSettingsPage />} />
+                <Route path="/admin/settings/email" element={<EmailServerSettingsPage />} />
+                <Route path="/admin/settings/branding" element={<BrandingSettingsPage />} />
                 <Route path="/admin/settings/vaccination-rules" element={<VaccinationRulesPage />} />
                 <Route path="/admin/settings/product-categories" element={<ProductCategoriesPage />} />
                 <Route path="/admin/settings/stock-locations" element={<StockLocationsPage />} />
