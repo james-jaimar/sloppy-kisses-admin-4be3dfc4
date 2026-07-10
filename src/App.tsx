@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "./pages/NotFound.tsx";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { TenantProvider } from "@/lib/tenant/TenantContext";
+import { BrandingProvider } from "@/lib/branding/BrandingProvider";
 import AdminLayout from "@/components/layout/AdminLayout";
 import CustomerLayout from "@/components/layout/CustomerLayout";
 import PublicFormLayout from "@/components/layout/PublicFormLayout";
