@@ -50,7 +50,21 @@ export default function MyInvoiceDetailPage() {
 
   return (
     <>
-      <AppHeader title={`Invoice ${inv.invoice_number}`} subtitle={`Issued ${fmtDate(inv.issue_date)}`} />
+      <AppHeader
+        title={`Invoice ${inv.invoice_number}`}
+        subtitle={`Issued ${fmtDate(inv.issue_date)}`}
+        actions={
+          <button onClick={async () => {
+            try {
+              const { downloadInvoicePdf } = await import("@/features/invoices/pdf");
+              await downloadInvoicePdf(inv.id, `${inv.invoice_number}.pdf`);
+            } catch (e: any) { alert(e?.message ?? "PDF failed"); }
+          }}
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
+            Download PDF
+          </button>
+        }
+      />
       <div className="flex-1 space-y-6 p-6">
         <Link to="/customer/invoices" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to invoices
