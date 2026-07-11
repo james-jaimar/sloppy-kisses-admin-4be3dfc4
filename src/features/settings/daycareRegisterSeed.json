@@ -1,0 +1,1900 @@
+[
+  {
+    "row": 2,
+    "dog_full_name": "Roxy Boshoff",
+    "pet_first": "Roxy",
+    "owner_surname": "Boshoff",
+    "breed": "Terrier",
+    "size": "S",
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "wed",
+      "fri"
+    ]
+  },
+  {
+    "row": 3,
+    "dog_full_name": "Abby Williams",
+    "pet_first": "Abby",
+    "owner_surname": "Williams",
+    "breed": "Collie x",
+    "size": "M",
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "wed",
+      "fri"
+    ]
+  },
+  {
+    "row": 4,
+    "dog_full_name": "Alfie Hovelmeier",
+    "pet_first": "Alfie",
+    "owner_surname": "Hovelmeier",
+    "breed": "Wire Haired Terrier",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 5,
+    "dog_full_name": "Amy van Bebber",
+    "pet_first": "Amy",
+    "owner_surname": "van Bebber",
+    "breed": "Labrador",
+    "size": "L",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "thu"
+    ]
+  },
+  {
+    "row": 6,
+    "dog_full_name": "Archie Burns",
+    "pet_first": "Archie",
+    "owner_surname": "Burns",
+    "breed": "Daschund",
+    "size": "S",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "tue"
+    ]
+  },
+  {
+    "row": 7,
+    "dog_full_name": "Archie Jaganth",
+    "pet_first": "Archie",
+    "owner_surname": "Jaganth",
+    "breed": "Pom",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 8,
+    "dog_full_name": "Arlo Harris",
+    "pet_first": "Arlo",
+    "owner_surname": "Harris",
+    "breed": "Schnauzer",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 9,
+    "dog_full_name": "Armani Temba",
+    "pet_first": "Armani",
+    "owner_surname": "Temba",
+    "breed": "Maltese",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "mon"
+    ]
+  },
+  {
+    "row": 10,
+    "dog_full_name": "Aston Larkins",
+    "pet_first": "Aston",
+    "owner_surname": "Larkins",
+    "breed": "French Bulldog",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 3,
+    "selected_days": [
+      "tue",
+      "thu",
+      "fri"
+    ]
+  },
+  {
+    "row": 11,
+    "dog_full_name": "Atreyu Topper",
+    "pet_first": "Atreyu",
+    "owner_surname": "Topper",
+    "breed": "X-breed",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 12,
+    "dog_full_name": "Avery Meecham",
+    "pet_first": "Avery",
+    "owner_surname": "Meecham",
+    "breed": "Maltese",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 5,
+    "selected_days": [
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri"
+    ]
+  },
+  {
+    "row": 13,
+    "dog_full_name": "Baymax Somla",
+    "pet_first": "Baymax",
+    "owner_surname": "Somla",
+    "breed": "Sharpei x",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 14,
+    "dog_full_name": "Bear Somla",
+    "pet_first": "Bear",
+    "owner_surname": "Somla",
+    "breed": "German Shepherd",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 15,
+    "dog_full_name": "Bella Kent",
+    "pet_first": "Bella",
+    "owner_surname": "Kent",
+    "breed": "Pitbull x",
+    "size": "M",
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "wed",
+      "thu"
+    ]
+  },
+  {
+    "row": 16,
+    "dog_full_name": "Bella Moss",
+    "pet_first": "Bella",
+    "owner_surname": "Moss",
+    "breed": "French Bulldog",
+    "size": "S",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "tue"
+    ]
+  },
+  {
+    "row": 17,
+    "dog_full_name": "Benji Bruder",
+    "pet_first": "Benji",
+    "owner_surname": "Bruder",
+    "breed": "Spaniel x",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "thu"
+    ]
+  },
+  {
+    "row": 18,
+    "dog_full_name": "Benji Pather",
+    "pet_first": "Benji",
+    "owner_surname": "Pather",
+    "breed": "JR",
+    "size": "S",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "thu"
+    ]
+  },
+  {
+    "row": 19,
+    "dog_full_name": "Benji Viljoen",
+    "pet_first": "Benji",
+    "owner_surname": "Viljoen",
+    "breed": "French Bulldog",
+    "size": "S",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "mon"
+    ]
+  },
+  {
+    "row": 20,
+    "dog_full_name": "Bianca Parkins",
+    "pet_first": "Bianca",
+    "owner_surname": "Parkins",
+    "breed": "Schnauzer x Maltese",
+    "size": "S",
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "wed"
+    ]
+  },
+  {
+    "row": 21,
+    "dog_full_name": "Blair Lemmer",
+    "pet_first": "Blair",
+    "owner_surname": "Lemmer",
+    "breed": "Australian Shepherd",
+    "size": "M",
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "thu"
+    ]
+  },
+  {
+    "row": 22,
+    "dog_full_name": "Blaze Govender",
+    "pet_first": "Blaze",
+    "owner_surname": "Govender",
+    "breed": "Yorkshire Terrier",
+    "size": "S",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 23,
+    "dog_full_name": "Boo Burger",
+    "pet_first": "Boo",
+    "owner_surname": "Burger",
+    "breed": "Daschund x",
+    "size": "M",
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "fri"
+    ]
+  },
+  {
+    "row": 24,
+    "dog_full_name": "Brian Viljoen",
+    "pet_first": "Brian",
+    "owner_surname": "Viljoen",
+    "breed": "French Bulldog",
+    "size": "S",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "mon"
+    ]
+  },
+  {
+    "row": 25,
+    "dog_full_name": "Captain Solma",
+    "pet_first": "Captain",
+    "owner_surname": "Solma",
+    "breed": "GSD",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 26,
+    "dog_full_name": "Charlie Adams",
+    "pet_first": "Charlie",
+    "owner_surname": "Adams",
+    "breed": "Jack Russell",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "tue"
+    ]
+  },
+  {
+    "row": 27,
+    "dog_full_name": "Charlie Landsberg",
+    "pet_first": "Charlie",
+    "owner_surname": "Landsberg",
+    "breed": "Boston",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 5,
+    "selected_days": [
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri"
+    ]
+  },
+  {
+    "row": 28,
+    "dog_full_name": "Chewbacca Chalton",
+    "pet_first": "Chewbacca",
+    "owner_surname": "Chalton",
+    "breed": "Labrador",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "thu"
+    ]
+  },
+  {
+    "row": 29,
+    "dog_full_name": "Cloe Schuster",
+    "pet_first": "Cloe",
+    "owner_surname": "Schuster",
+    "breed": "GSD",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 5,
+    "selected_days": [
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri"
+    ]
+  },
+  {
+    "row": 30,
+    "dog_full_name": "Coco George",
+    "pet_first": "Coco",
+    "owner_surname": "George",
+    "breed": "Pekingese",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "tue"
+    ]
+  },
+  {
+    "row": 31,
+    "dog_full_name": "Cody Ferenczy",
+    "pet_first": "Cody",
+    "owner_surname": "Ferenczy",
+    "breed": "Fox Terrier x",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "fri"
+    ]
+  },
+  {
+    "row": 32,
+    "dog_full_name": "Cooper Rees",
+    "pet_first": "Cooper",
+    "owner_surname": "Rees",
+    "breed": "Labrador",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 5,
+    "selected_days": [
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri"
+    ]
+  },
+  {
+    "row": 33,
+    "dog_full_name": "Dexter Brits",
+    "pet_first": "Dexter",
+    "owner_surname": "Brits",
+    "breed": "Jack Russell",
+    "size": "S",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "thu"
+    ]
+  },
+  {
+    "row": 34,
+    "dog_full_name": "Django Assman",
+    "pet_first": "Django",
+    "owner_surname": "Assman",
+    "breed": "Ridgeback",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "fri"
+    ]
+  },
+  {
+    "row": 35,
+    "dog_full_name": "Dusty Hunter",
+    "pet_first": "Dusty",
+    "owner_surname": "Hunter",
+    "breed": "Chow x",
+    "size": "M",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "thu"
+    ]
+  },
+  {
+    "row": 36,
+    "dog_full_name": "El Chapo Thumana",
+    "pet_first": "El",
+    "owner_surname": "Chapo Thumana",
+    "breed": "Schnauzer",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 37,
+    "dog_full_name": "Ella Ross",
+    "pet_first": "Ella",
+    "owner_surname": "Ross",
+    "breed": "King Charles Cavillier",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 38,
+    "dog_full_name": "Ellie Arnold",
+    "pet_first": "Ellie",
+    "owner_surname": "Arnold",
+    "breed": "Jack Russell",
+    "size": "S",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 39,
+    "dog_full_name": "Enzo Larkins",
+    "pet_first": "Enzo",
+    "owner_surname": "Larkins",
+    "breed": "French Bulldog",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 3,
+    "selected_days": [
+      "tue",
+      "thu",
+      "fri"
+    ]
+  },
+  {
+    "row": 40,
+    "dog_full_name": "Eric Naidoo",
+    "pet_first": "Eric",
+    "owner_surname": "Naidoo",
+    "breed": "Yorkshire Terrier",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "thu"
+    ]
+  },
+  {
+    "row": 41,
+    "dog_full_name": "Fergus Boehler",
+    "pet_first": "Fergus",
+    "owner_surname": "Boehler",
+    "breed": "Scottie",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 42,
+    "dog_full_name": "Flax Mc Dermot",
+    "pet_first": "Flax",
+    "owner_surname": "Mc Dermot",
+    "breed": "Pom",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 43,
+    "dog_full_name": "Flax Casey",
+    "pet_first": "Flax",
+    "owner_surname": "Casey",
+    "breed": "German Wire Hair Terrier",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "tue"
+    ]
+  },
+  {
+    "row": 44,
+    "dog_full_name": "Flax German",
+    "pet_first": "Flax",
+    "owner_surname": "German",
+    "breed": "Spaniel",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 45,
+    "dog_full_name": "Fred Robinson",
+    "pet_first": "Fred",
+    "owner_surname": "Robinson",
+    "breed": "Spaniel",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "fri"
+    ]
+  },
+  {
+    "row": 46,
+    "dog_full_name": "Gaia Reddy",
+    "pet_first": "Gaia",
+    "owner_surname": "Reddy",
+    "breed": "German shepherd x",
+    "size": "L",
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "fri"
+    ]
+  },
+  {
+    "row": 47,
+    "dog_full_name": "Georgie Stokes",
+    "pet_first": "Georgie",
+    "owner_surname": "Stokes",
+    "breed": "Jack Russell x Foxie",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "tue"
+    ]
+  },
+  {
+    "row": 48,
+    "dog_full_name": "Ghost Samuel",
+    "pet_first": "Ghost",
+    "owner_surname": "Samuel",
+    "breed": "Husky",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "fri"
+    ]
+  },
+  {
+    "row": 49,
+    "dog_full_name": "Gizmo Mc Carthy",
+    "pet_first": "Gizmo",
+    "owner_surname": "Mc Carthy",
+    "breed": "Pekingese",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 3,
+    "selected_days": [
+      "mon",
+      "wed",
+      "fri"
+    ]
+  },
+  {
+    "row": 50,
+    "dog_full_name": "Goose Robinson",
+    "pet_first": "Goose",
+    "owner_surname": "Robinson",
+    "breed": "Spaniel",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "thu"
+    ]
+  },
+  {
+    "row": 51,
+    "dog_full_name": "Hela Naicker",
+    "pet_first": "Hela",
+    "owner_surname": "Naicker",
+    "breed": "Shih-tzu",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "tue"
+    ]
+  },
+  {
+    "row": 52,
+    "dog_full_name": "Henry De Wet",
+    "pet_first": "Henry",
+    "owner_surname": "De Wet",
+    "breed": "Afrikanis",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "tue"
+    ]
+  },
+  {
+    "row": 53,
+    "dog_full_name": "Hudson Rothmann",
+    "pet_first": "Hudson",
+    "owner_surname": "Rothmann",
+    "breed": "Boston",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "thu"
+    ]
+  },
+  {
+    "row": 54,
+    "dog_full_name": "Hugo Mc Dermot",
+    "pet_first": "Hugo",
+    "owner_surname": "Mc Dermot",
+    "breed": "Pom",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 55,
+    "dog_full_name": "Hunter Lemmer",
+    "pet_first": "Hunter",
+    "owner_surname": "Lemmer",
+    "breed": "Australian Shepherd",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "thu"
+    ]
+  },
+  {
+    "row": 56,
+    "dog_full_name": "Hunter Pillay",
+    "pet_first": "Hunter",
+    "owner_surname": "Pillay",
+    "breed": "Retriever",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "wed"
+    ]
+  },
+  {
+    "row": 57,
+    "dog_full_name": "Jack Anderson",
+    "pet_first": "Jack",
+    "owner_surname": "Anderson",
+    "breed": "Jack Russell",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "mon"
+    ]
+  },
+  {
+    "row": 58,
+    "dog_full_name": "Jackson Williams",
+    "pet_first": "Jackson",
+    "owner_surname": "Williams",
+    "breed": "Labrador x",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "wed",
+      "fri"
+    ]
+  },
+  {
+    "row": 59,
+    "dog_full_name": "Jasmine Maroun",
+    "pet_first": "Jasmine",
+    "owner_surname": "Maroun",
+    "breed": "Fox Terrier",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 60,
+    "dog_full_name": "Jasper Maroun",
+    "pet_first": "Jasper",
+    "owner_surname": "Maroun",
+    "breed": "Fox Terrier",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 61,
+    "dog_full_name": "Jess Brits",
+    "pet_first": "Jess",
+    "owner_surname": "Brits",
+    "breed": "Jack Russell",
+    "size": "S",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "thu"
+    ]
+  },
+  {
+    "row": 62,
+    "dog_full_name": "Joey Lordan",
+    "pet_first": "Joey",
+    "owner_surname": "Lordan",
+    "breed": "Toy Poodle",
+    "size": "S",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 63,
+    "dog_full_name": "Juca Hartman",
+    "pet_first": "Juca",
+    "owner_surname": "Hartman",
+    "breed": "Italian Greyhound",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 64,
+    "dog_full_name": "Juno -Mae Momberg",
+    "pet_first": "Juno",
+    "owner_surname": "-Mae Momberg",
+    "breed": "Daschund",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "fri"
+    ]
+  },
+  {
+    "row": 65,
+    "dog_full_name": "Kaisa Ntuli",
+    "pet_first": "Kaisa",
+    "owner_surname": "Ntuli",
+    "breed": "Chow",
+    "size": "M",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 66,
+    "dog_full_name": "Kelly Wolf",
+    "pet_first": "Kelly",
+    "owner_surname": "Wolf",
+    "breed": "X-breed",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "thu"
+    ]
+  },
+  {
+    "row": 67,
+    "dog_full_name": "Khush Govender",
+    "pet_first": "Khush",
+    "owner_surname": "Govender",
+    "breed": "Dalmation",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "thu"
+    ]
+  },
+  {
+    "row": 68,
+    "dog_full_name": "Koda Cronje",
+    "pet_first": "Koda",
+    "owner_surname": "Cronje",
+    "breed": "X-breed",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "fri"
+    ]
+  },
+  {
+    "row": 69,
+    "dog_full_name": "Koba Veeran",
+    "pet_first": "Koba",
+    "owner_surname": "Veeran",
+    "breed": "Spaniel",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "fri"
+    ]
+  },
+  {
+    "row": 70,
+    "dog_full_name": "Lady Luna Naidoo",
+    "pet_first": "Lady",
+    "owner_surname": "Luna Naidoo",
+    "breed": "Beagle",
+    "size": "M",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 71,
+    "dog_full_name": "Lady Vira Ragunandan",
+    "pet_first": "Lady",
+    "owner_surname": "Vira Ragunandan",
+    "breed": "spaniel",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "thu"
+    ]
+  },
+  {
+    "row": 72,
+    "dog_full_name": "Layla Smith",
+    "pet_first": "Layla",
+    "owner_surname": "Smith",
+    "breed": "Labrador x collie",
+    "size": "L",
+    "sex": "Female",
+    "days_per_week": 3,
+    "selected_days": [
+      "mon",
+      "tue",
+      "thu"
+    ]
+  },
+  {
+    "row": 73,
+    "dog_full_name": "Levi Coetzee",
+    "pet_first": "Levi",
+    "owner_surname": "Coetzee",
+    "breed": "Labrador",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "fri"
+    ]
+  },
+  {
+    "row": 74,
+    "dog_full_name": "Lexi Bruder",
+    "pet_first": "Lexi",
+    "owner_surname": "Bruder",
+    "breed": "Daschund x",
+    "size": "S",
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "thu"
+    ]
+  },
+  {
+    "row": 75,
+    "dog_full_name": "Lilly Van Schalkwyk",
+    "pet_first": "Lilly",
+    "owner_surname": "Van Schalkwyk",
+    "breed": "Jack Russell",
+    "size": "S",
+    "sex": "Female",
+    "days_per_week": 3,
+    "selected_days": [
+      "mon",
+      "thu",
+      "fri"
+    ]
+  },
+  {
+    "row": 76,
+    "dog_full_name": "Lily Koorn",
+    "pet_first": "Lily",
+    "owner_surname": "Koorn",
+    "breed": "West Highland Terrier",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "thu"
+    ]
+  },
+  {
+    "row": 77,
+    "dog_full_name": "Loki Naicker",
+    "pet_first": "Loki",
+    "owner_surname": "Naicker",
+    "breed": "Shih-tzu",
+    "size": "S",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "thu"
+    ]
+  },
+  {
+    "row": 78,
+    "dog_full_name": "Lucy Crouch",
+    "pet_first": "Lucy",
+    "owner_surname": "Crouch",
+    "breed": "Staffordshire Terrier",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 79,
+    "dog_full_name": "Luke Roberts",
+    "pet_first": "Luke",
+    "owner_surname": "Roberts",
+    "breed": "Labrador",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 3,
+    "selected_days": [
+      "mon",
+      "tue",
+      "thu"
+    ]
+  },
+  {
+    "row": 80,
+    "dog_full_name": "Luke Van De Walt",
+    "pet_first": "Luke",
+    "owner_surname": "Van De Walt",
+    "breed": "Cavadoodle",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 3,
+    "selected_days": [
+      "mon",
+      "wed",
+      "fri"
+    ]
+  },
+  {
+    "row": 81,
+    "dog_full_name": "Luna Landsberg",
+    "pet_first": "Luna",
+    "owner_surname": "Landsberg",
+    "breed": "Boston",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 5,
+    "selected_days": [
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri"
+    ]
+  },
+  {
+    "row": 82,
+    "dog_full_name": "Luna Lordan",
+    "pet_first": "Luna",
+    "owner_surname": "Lordan",
+    "breed": "Toy Poodle",
+    "size": "S",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 83,
+    "dog_full_name": "Maddie Topper",
+    "pet_first": "Maddie",
+    "owner_surname": "Topper",
+    "breed": "X-breed",
+    "size": "M",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 84,
+    "dog_full_name": "Mali  Chunderduri",
+    "pet_first": "Mali",
+    "owner_surname": "Chunderduri",
+    "breed": "Beagle",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 85,
+    "dog_full_name": "Marsh Byamugisha",
+    "pet_first": "Marsh",
+    "owner_surname": "Byamugisha",
+    "breed": "Pomeranian",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "thu"
+    ]
+  },
+  {
+    "row": 86,
+    "dog_full_name": "Max Connolly",
+    "pet_first": "Max",
+    "owner_surname": "Connolly",
+    "breed": "Retriever",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "thu"
+    ]
+  },
+  {
+    "row": 87,
+    "dog_full_name": "Max Hunter",
+    "pet_first": "Max",
+    "owner_surname": "Hunter",
+    "breed": "French Bulldog x",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "thu"
+    ]
+  },
+  {
+    "row": 88,
+    "dog_full_name": "Max Padayichee",
+    "pet_first": "Max",
+    "owner_surname": "Padayichee",
+    "breed": "Shih-tzu",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 89,
+    "dog_full_name": "McGregor Feyt",
+    "pet_first": "McGregor",
+    "owner_surname": "Feyt",
+    "breed": "Scottish Terrier",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "thu"
+    ]
+  },
+  {
+    "row": 90,
+    "dog_full_name": "Mila Coetzee",
+    "pet_first": "Mila",
+    "owner_surname": "Coetzee",
+    "breed": "Doberman x",
+    "size": "L",
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "fri"
+    ]
+  },
+  {
+    "row": 91,
+    "dog_full_name": "Mila Ntloko",
+    "pet_first": "Mila",
+    "owner_surname": "Ntloko",
+    "breed": "Labradoodle",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "tue"
+    ]
+  },
+  {
+    "row": 92,
+    "dog_full_name": "Miley Punyadeera",
+    "pet_first": "Miley",
+    "owner_surname": "Punyadeera",
+    "breed": "Maltese",
+    "size": "S",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 93,
+    "dog_full_name": "Molly-Moo Robinson",
+    "pet_first": "Molly-Moo",
+    "owner_surname": "Robinson",
+    "breed": "Spaniel",
+    "size": "M",
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "fri"
+    ]
+  },
+  {
+    "row": 94,
+    "dog_full_name": "Mr.Darcy Lamb",
+    "pet_first": "Mr.Darcy",
+    "owner_surname": "Lamb",
+    "breed": "Biewer",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 95,
+    "dog_full_name": "Nova Ross",
+    "pet_first": "Nova",
+    "owner_surname": "Ross",
+    "breed": "King Charles Cavillier",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 96,
+    "dog_full_name": "Odin Scott",
+    "pet_first": "Odin",
+    "owner_surname": "Scott",
+    "breed": "German Shepherd",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 97,
+    "dog_full_name": "Ollie Brown",
+    "pet_first": "Ollie",
+    "owner_surname": "Brown",
+    "breed": "Corgi x",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 98,
+    "dog_full_name": "Oliver Goodwin",
+    "pet_first": "Oliver",
+    "owner_surname": "Goodwin",
+    "breed": "Schnauzer",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 3,
+    "selected_days": [
+      "mon",
+      "wed",
+      "fri"
+    ]
+  },
+  {
+    "row": 99,
+    "dog_full_name": "Pablo Thumana",
+    "pet_first": "Pablo",
+    "owner_surname": "Thumana",
+    "breed": "Schnauzer",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 100,
+    "dog_full_name": "Pegasus Reddy",
+    "pet_first": "Pegasus",
+    "owner_surname": "Reddy",
+    "breed": "Labrador x Retriever",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "fri"
+    ]
+  },
+  {
+    "row": 101,
+    "dog_full_name": "Peppa Baker",
+    "pet_first": "Peppa",
+    "owner_surname": "Baker",
+    "breed": "Labrador",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 3,
+    "selected_days": [
+      "tue",
+      "wed",
+      "thu"
+    ]
+  },
+  {
+    "row": 102,
+    "dog_full_name": "Pickle Launspach",
+    "pet_first": "Pickle",
+    "owner_surname": "Launspach",
+    "breed": "Daschund",
+    "size": "S",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "tue"
+    ]
+  },
+  {
+    "row": 103,
+    "dog_full_name": "Queen Lamb",
+    "pet_first": "Queen",
+    "owner_surname": "Lamb",
+    "breed": "X-breed",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 104,
+    "dog_full_name": "Ragnar Thornton",
+    "pet_first": "Ragnar",
+    "owner_surname": "Thornton",
+    "breed": "Ridgeback",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "fri"
+    ]
+  },
+  {
+    "row": 105,
+    "dog_full_name": "Raven Scott",
+    "pet_first": "Raven",
+    "owner_surname": "Scott",
+    "breed": "German Shepherd",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 106,
+    "dog_full_name": "Rayne Van Zyl",
+    "pet_first": "Rayne",
+    "owner_surname": "Van Zyl",
+    "breed": "Husky",
+    "size": "L",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 107,
+    "dog_full_name": "Remy de Klerk",
+    "pet_first": "Remy",
+    "owner_surname": "de Klerk",
+    "breed": "Ridgeback x",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "thu"
+    ]
+  },
+  {
+    "row": 108,
+    "dog_full_name": "Rey Harris",
+    "pet_first": "Rey",
+    "owner_surname": "Harris",
+    "breed": "Border Collie",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 109,
+    "dog_full_name": "Riley Griffiths",
+    "pet_first": "Riley",
+    "owner_surname": "Griffiths",
+    "breed": "Labrador",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 3,
+    "selected_days": [
+      "mon",
+      "wed",
+      "fri"
+    ]
+  },
+  {
+    "row": 110,
+    "dog_full_name": "Rocco Henderson",
+    "pet_first": "Rocco",
+    "owner_surname": "Henderson",
+    "breed": "Beagle",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "thu"
+    ]
+  },
+  {
+    "row": 111,
+    "dog_full_name": "Ruby Ross",
+    "pet_first": "Ruby",
+    "owner_surname": "Ross",
+    "breed": "King Charles Cavillier",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 112,
+    "dog_full_name": "Sadie Newland",
+    "pet_first": "Sadie",
+    "owner_surname": "Newland",
+    "breed": "Labrador",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "thu"
+    ]
+  },
+  {
+    "row": 113,
+    "dog_full_name": "Sally De Wet",
+    "pet_first": "Sally",
+    "owner_surname": "De Wet",
+    "breed": "Afrikanis",
+    "size": "M",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "tue"
+    ]
+  },
+  {
+    "row": 114,
+    "dog_full_name": "Sam Chaturi",
+    "pet_first": "Sam",
+    "owner_surname": "Chaturi",
+    "breed": "English Bulldog",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 115,
+    "dog_full_name": "Samantha Lamb",
+    "pet_first": "Samantha",
+    "owner_surname": "Lamb",
+    "breed": "Biewer",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 116,
+    "dog_full_name": "Sebastian Smith",
+    "pet_first": "Sebastian",
+    "owner_surname": "Smith",
+    "breed": "Ridgeback",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 117,
+    "dog_full_name": "Slipper van Zyl",
+    "pet_first": "Slipper",
+    "owner_surname": "van Zyl",
+    "breed": "Shih-tzu",
+    "size": "S",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 118,
+    "dog_full_name": "Squidy Kernes",
+    "pet_first": "Squidy",
+    "owner_surname": "Kernes",
+    "breed": "Jack Russell",
+    "size": "S",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "wed",
+      "thu"
+    ]
+  },
+  {
+    "row": 119,
+    "dog_full_name": "Stalia Samuel",
+    "pet_first": "Stalia",
+    "owner_surname": "Samuel",
+    "breed": "Husky",
+    "size": "L",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "tue"
+    ]
+  },
+  {
+    "row": 120,
+    "dog_full_name": "Stella Rothmann",
+    "pet_first": "Stella",
+    "owner_surname": "Rothmann",
+    "breed": "Boston",
+    "size": "S",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "thu"
+    ]
+  },
+  {
+    "row": 121,
+    "dog_full_name": "Suki Coetzee",
+    "pet_first": "Suki",
+    "owner_surname": "Coetzee",
+    "breed": "Schnauzer",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 122,
+    "dog_full_name": "Sunny Gombart",
+    "pet_first": "Sunny",
+    "owner_surname": "Gombart",
+    "breed": "Retriever",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "tue",
+      "thu"
+    ]
+  },
+  {
+    "row": 123,
+    "dog_full_name": "Taite Viseur",
+    "pet_first": "Taite",
+    "owner_surname": "Viseur",
+    "breed": "Great Dane",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "fri"
+    ]
+  },
+  {
+    "row": 124,
+    "dog_full_name": "Teddy Moss",
+    "pet_first": "Teddy",
+    "owner_surname": "Moss",
+    "breed": "French Bulldog",
+    "size": "S",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "tue"
+    ]
+  },
+  {
+    "row": 125,
+    "dog_full_name": "Theodore Padayichee",
+    "pet_first": "Theodore",
+    "owner_surname": "Padayichee",
+    "breed": "Shih-tzu",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 126,
+    "dog_full_name": "Titan Ntuli",
+    "pet_first": "Titan",
+    "owner_surname": "Ntuli",
+    "breed": "Chow",
+    "size": "M",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 127,
+    "dog_full_name": "Toby Ross",
+    "pet_first": "Toby",
+    "owner_surname": "Ross",
+    "breed": "King Charles Cavillier",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 128,
+    "dog_full_name": "Tokyo Koen",
+    "pet_first": "Tokyo",
+    "owner_surname": "Koen",
+    "breed": "Border Collie",
+    "size": "L",
+    "sex": "Female",
+    "days_per_week": 5,
+    "selected_days": [
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri"
+    ]
+  },
+  {
+    "row": 129,
+    "dog_full_name": "Troy Anderson",
+    "pet_first": "Troy",
+    "owner_surname": "Anderson",
+    "breed": "Jack Russell",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "mon"
+    ]
+  },
+  {
+    "row": 130,
+    "dog_full_name": "Tsala van Zyl",
+    "pet_first": "Tsala",
+    "owner_surname": "van Zyl",
+    "breed": "Afrikanis",
+    "size": "M",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 131,
+    "dog_full_name": "Willow Viseur",
+    "pet_first": "Willow",
+    "owner_surname": "Viseur",
+    "breed": "Great Dane",
+    "size": "L",
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "fri"
+    ]
+  },
+  {
+    "row": 132,
+    "dog_full_name": "Yang Pieters",
+    "pet_first": "Yang",
+    "owner_surname": "Pieters",
+    "breed": "Samoyed",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "fri"
+    ]
+  },
+  {
+    "row": 133,
+    "dog_full_name": "Yin Pieters",
+    "pet_first": "Yin",
+    "owner_surname": "Pieters",
+    "breed": "Samoyed",
+    "size": null,
+    "sex": "Female",
+    "days_per_week": 2,
+    "selected_days": [
+      "mon",
+      "fri"
+    ]
+  },
+  {
+    "row": 134,
+    "dog_full_name": "Zara Hartman",
+    "pet_first": "Zara",
+    "owner_surname": "Hartman",
+    "breed": "Italian Greyhound",
+    "size": "S",
+    "sex": "Female",
+    "days_per_week": 1,
+    "selected_days": [
+      "fri"
+    ]
+  },
+  {
+    "row": 135,
+    "dog_full_name": "Zeus Sewpal",
+    "pet_first": "Zeus",
+    "owner_surname": "Sewpal",
+    "breed": "Chow",
+    "size": "L",
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 136,
+    "dog_full_name": "Zeus Singh",
+    "pet_first": "Zeus",
+    "owner_surname": "Singh",
+    "breed": "Biewer",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "tue"
+    ]
+  },
+  {
+    "row": 137,
+    "dog_full_name": "Zoey Robinson",
+    "pet_first": "Zoey",
+    "owner_surname": "Robinson",
+    "breed": "Labrador",
+    "size": "L",
+    "sex": "Female",
+    "days_per_week": 3,
+    "selected_days": [
+      "mon",
+      "tue",
+      "thu"
+    ]
+  },
+  {
+    "row": 138,
+    "dog_full_name": "Zac Bergrant",
+    "pet_first": "Zac",
+    "owner_surname": "Bergrant",
+    "breed": "Med xBreed",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  },
+  {
+    "row": 139,
+    "dog_full_name": "Zoey Robinson",
+    "pet_first": "Zoey",
+    "owner_surname": "Robinson",
+    "breed": "Labrador",
+    "size": "L",
+    "sex": "Female",
+    "days_per_week": 3,
+    "selected_days": [
+      "mon",
+      "tue",
+      "thu"
+    ]
+  },
+  {
+    "row": 140,
+    "dog_full_name": "Zac Bergrant",
+    "pet_first": "Zac",
+    "owner_surname": "Bergrant",
+    "breed": "Med xBreed",
+    "size": null,
+    "sex": "Male",
+    "days_per_week": 1,
+    "selected_days": [
+      "wed"
+    ]
+  }
+]

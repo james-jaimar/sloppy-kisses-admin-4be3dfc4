@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server, FileUp } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -57,6 +57,13 @@ const SECTIONS = [
     label: "Daycare workflow",
     description: "Arrival window, late cutoff, auto-checkout, vax gate.",
     icon: Sun,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/daycare-import",
+    label: "Import daycare register",
+    description: "Reconcile the weekly register against customers, pets, and create July invoices.",
+    icon: FileUp,
     ready: true,
   },
   {
