@@ -178,7 +178,7 @@ export default function DaycareImportPage() {
             const { data: cn } = await supabase.rpc("next_customer_number", { target_tenant_id: tenantId });
             const first_name = r.new_first_name?.trim() || r.seed.owner_first || "";
             const last_name = r.new_last_name?.trim() || r.seed.owner_last || "";
-            const full_name = [first_name, last_name].filter(Boolean).join(" ").trim() || r.seed.owner_surname || "Unnamed";
+            const full_name = [first_name, last_name].filter(Boolean).join(" ").trim() || r.seed.owner_raw || "Unnamed";
             const { data: cust, error: cErr } = await supabase.from("customers")
               .insert({
                 tenant_id: tenantId, customer_number: cn as string, full_name,
@@ -477,13 +477,14 @@ function ReconcileRow({ idx, row, pets, onChange }: { idx: number; row: RowState
         </div>
       </td>
       <td className="px-4 py-3">
-        <div className="text-xs font-semibold tabular-nums">{row.seed.days_per_week ?? row.seed.selected_days.length}× / wk</div>
+        <div className="text-xs font-semibold tabular-nums">{row.seed.days_per_week ?? row.seed.pattern.length}× / wk</div>
         <div className="mt-1 flex flex-wrap gap-1">
-          {row.seed.selected_days.map((d) => (
+          {row.seed.pattern.map((d) => (
             <span key={d} className="rounded bg-sk-turquoise-soft px-1.5 py-0.5 text-[10px] font-semibold text-sk-turquoise-dark">
               {WEEKDAY_LABEL[d as Weekday] ?? d}
             </span>
           ))}
+          <span className="ml-1 rounded bg-sk-surface-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{row.seed.dates.length} dates</span>
         </div>
       </td>
       <td className="px-4 py-3">
@@ -492,19 +493,19 @@ function ReconcileRow({ idx, row, pets, onChange }: { idx: number; row: RowState
             <div className="text-xs font-medium text-purple-700">Will create new customer + pet</div>
             <div className="flex gap-2">
               <input
-                value={row.new_first_name ?? row.seed.pet_first}
+                value={row.new_first_name ?? row.seed.owner_first ?? ""}
                 onChange={(e) => onChange({ new_first_name: e.target.value })}
                 placeholder="Owner first name"
                 className="h-8 w-32 rounded-md border border-border bg-background px-2 text-xs"
               />
               <input
-                value={row.new_last_name ?? row.seed.owner_surname ?? ""}
+                value={row.new_last_name ?? row.seed.owner_last ?? ""}
                 onChange={(e) => onChange({ new_last_name: e.target.value })}
                 placeholder="Owner surname"
                 className="h-8 w-32 rounded-md border border-border bg-background px-2 text-xs"
               />
             </div>
-            <div className="text-[11px] text-muted-foreground">Pet: {row.seed.pet_first} ({row.seed.breed ?? "—"})</div>
+            <div className="text-[11px] text-muted-foreground">Pet: {row.seed.dog_first} ({row.seed.breed ?? "—"})</div>
           </div>
         ) : matched ? (
           <div>
@@ -556,7 +557,7 @@ function ReconcileRow({ idx, row, pets, onChange }: { idx: number; row: RowState
             className="rounded-md border border-border px-2 py-1 text-xs hover:bg-sk-surface-muted"
           >{showPicker ? "Cancel" : "Pick pet"}</button>
           <button
-            onClick={() => onChange({ status: "new", matched_pet_id: null, matched_customer_id: null, new_first_name: "", new_last_name: row.seed.owner_surname ?? "" })}
+            onClick={() => onChange({ status: "new", matched_pet_id: null, matched_customer_id: null, new_first_name: row.seed.owner_first ?? "", new_last_name: row.seed.owner_last ?? "" })}
             className="rounded-md border border-purple-400/50 bg-purple-50 px-2 py-1 text-xs text-purple-700 hover:bg-purple-100"
           >Create new</button>
           <button
