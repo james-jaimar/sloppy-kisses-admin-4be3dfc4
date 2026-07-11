@@ -11,14 +11,19 @@ import seedData from "./daycareRegisterSeed.json";
 
 type SeedRow = {
   row: number;
-  dog_full_name: string;
-  pet_first: string;
-  owner_surname: string | null;
+  owner_raw: string | null;
+  owner_first: string | null;
+  owner_last: string | null;
+  owner_mobile: string | null;
+  dog_first: string | null;
+  dog_surname: string | null;
+  dog_full_name: string | null;
   breed: string | null;
   size: string | null;
   sex: string | null;
   days_per_week: number | null;
-  selected_days: string[];
+  pattern: string[];
+  dates: string[];
 };
 
 type PetOwner = {
@@ -26,7 +31,14 @@ type PetOwner = {
   name: string | null;
   species: string | null;
   customer_id: string;
-  customer: { id: string; full_name: string | null } | null;
+  customer: {
+    id: string;
+    full_name: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    mobile: string | null;
+    phone_alt: string | null;
+  } | null;
 };
 
 type RowStatus = "auto" | "review" | "unmatched" | "confirmed" | "skip" | "new";
@@ -41,21 +53,43 @@ type RowState = {
 };
 
 const norm = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const digits = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "");
+const mobileTail = (s: string | null | undefined) => {
+  const d = digits(s);
+  if (!d) return "";
+  return d.slice(-9);
+};
 
 function scoreRow(seed: SeedRow, pets: PetOwner[]) {
-  const first = norm(seed.pet_first);
-  const sur = norm(seed.owner_surname);
+  const dogFirst = norm(seed.dog_first);
+  const ownFirst = norm(seed.owner_first);
+  const ownLast = norm(seed.owner_last);
+  const seedMobTail = mobileTail(seed.owner_mobile);
   const scored = pets.map((p) => {
     const petName = norm(p.name);
-    const owner = norm(p.customer?.full_name);
+    const ownerFull = norm(p.customer?.full_name);
+    const ownerFirst = norm(p.customer?.first_name);
+    const ownerLast = norm(p.customer?.last_name);
     let s = 0;
-    if (petName === first) s += 60;
-    else if (petName && first && (petName.startsWith(first) || first.startsWith(petName))) s += 30;
-    if (sur && owner.includes(sur)) s += 40;
-    else if (sur && owner) {
-      // fuzzy: last 4 chars
-      const tail = sur.slice(-4);
-      if (tail.length >= 3 && owner.includes(tail)) s += 15;
+    // Mobile: strongest signal
+    if (seedMobTail && seedMobTail.length >= 9) {
+      const custMob = mobileTail(p.customer?.mobile) || mobileTail(p.customer?.phone_alt);
+      if (custMob && custMob === seedMobTail) s += 80;
+    }
+    // Dog first name
+    if (petName && dogFirst) {
+      if (petName === dogFirst) s += 50;
+      else if (petName.startsWith(dogFirst) || dogFirst.startsWith(petName)) s += 20;
+    }
+    // Owner surname
+    if (ownLast) {
+      if (ownerLast && ownerLast === ownLast) s += 40;
+      else if (ownerFull.includes(ownLast)) s += 25;
+    }
+    // Owner first name
+    if (ownFirst) {
+      if (ownerFirst && ownerFirst === ownFirst) s += 25;
+      else if (ownerFull.includes(ownFirst)) s += 12;
     }
     return { pet: p, s };
   }).filter((x) => x.s > 0).sort((a, b) => b.s - a.s);
@@ -85,7 +119,7 @@ export default function DaycareImportPage() {
       if (cands.length === 0) return { seed: s, status: "unmatched" as RowStatus, matched_pet_id: null, matched_customer_id: null };
       const top = cands[0];
       const second = cands[1];
-      const isAuto = top.s >= 90 && (!second || top.s - second.s >= 30);
+      const isAuto = top.s >= 80 && (!second || top.s - second.s >= 25);
       return {
         seed: s,
         status: isAuto ? ("auto" as RowStatus) : ("review" as RowStatus),
@@ -126,6 +160,7 @@ export default function DaycareImportPage() {
       monthPlans.forEach((p) => { if (p.days_per_week != null) planByDpw.set(p.days_per_week, p); });
 
       let enrolmentsCreated = 0;
+      let attendanceCreated = 0;
       let skipped = 0;
       const errors: string[] = [];
       const invoiceLinesByCustomer = new Map<string, { pet_id: string; pet_name: string; plan_name: string; price: number }[]>();
@@ -141,11 +176,15 @@ export default function DaycareImportPage() {
         if (r.status === "new") {
           try {
             const { data: cn } = await supabase.rpc("next_customer_number", { target_tenant_id: tenantId });
-            const first_name = r.new_first_name?.trim() || "";
-            const last_name = r.new_last_name?.trim() || r.seed.owner_surname || "";
+            const first_name = r.new_first_name?.trim() || r.seed.owner_first || "";
+            const last_name = r.new_last_name?.trim() || r.seed.owner_last || "";
             const full_name = [first_name, last_name].filter(Boolean).join(" ").trim() || r.seed.owner_surname || "Unnamed";
             const { data: cust, error: cErr } = await supabase.from("customers")
-              .insert({ tenant_id: tenantId, customer_number: cn as string, full_name, first_name: first_name || null, last_name: last_name || null } as any)
+              .insert({
+                tenant_id: tenantId, customer_number: cn as string, full_name,
+                first_name: first_name || null, last_name: last_name || null,
+                mobile: r.seed.owner_mobile || null,
+              } as any)
               .select("id").single();
             if (cErr) throw cErr;
             custId = cust.id;
@@ -153,7 +192,7 @@ export default function DaycareImportPage() {
             const { data: pet, error: pErr } = await supabase.from("pets")
               .insert({
                 tenant_id: tenantId, customer_id: custId, pet_number: pn as string,
-                name: r.seed.pet_first, species: "dog",
+                name: r.seed.dog_first, species: "dog",
                 breed: r.seed.breed, size: r.seed.size,
                 sex: r.seed.sex ? r.seed.sex.toLowerCase() : null,
               } as any)
@@ -167,7 +206,7 @@ export default function DaycareImportPage() {
         }
 
         if (!petId || !custId) { skipped += 1; continue; }
-        const dpw = r.seed.days_per_week ?? r.seed.selected_days.length;
+        const dpw = r.seed.days_per_week ?? r.seed.pattern.length;
         const plan = planByDpw.get(dpw) ?? null;
 
         // Enrolment: skip if active exists
@@ -179,7 +218,7 @@ export default function DaycareImportPage() {
             pet_id: petId, customer_id: custId,
             daycare_plan_id: plan?.id ?? null,
             start_date: "2026-07-01",
-            selected_days: r.seed.selected_days,
+            selected_days: r.seed.pattern,
             active: true,
             notes: "Imported from weekly register 30 June",
           } as any);
@@ -187,12 +226,30 @@ export default function DaycareImportPage() {
           enrolmentsCreated += 1;
         }
 
+        // Attendance rows for every date in the sheet (idempotent)
+        if (r.seed.dates.length > 0) {
+          const { data: existingAtt } = await supabase.from("daycare_attendance")
+            .select("attendance_date")
+            .eq("tenant_id", tenantId).eq("pet_id", petId)
+            .in("attendance_date", r.seed.dates);
+          const have = new Set((existingAtt ?? []).map((x: any) => x.attendance_date));
+          const toInsert = r.seed.dates.filter((d) => !have.has(d)).map((d) => ({
+            tenant_id: tenantId, pet_id: petId, customer_id: custId,
+            attendance_date: d, expected: true, status: "expected",
+          }));
+          if (toInsert.length > 0) {
+            const { error: aErr } = await supabase.from("daycare_attendance").insert(toInsert as any);
+            if (aErr) errors.push(`${r.seed.dog_full_name}: attendance — ${aErr.message}`);
+            else attendanceCreated += toInsert.length;
+          }
+        }
+
         // Queue invoice line
         if (plan && plan.price) {
           const list = invoiceLinesByCustomer.get(custId) ?? [];
           list.push({
             pet_id: petId,
-            pet_name: r.seed.pet_first,
+            pet_name: r.seed.dog_first ?? r.seed.dog_full_name ?? "Dog",
             plan_name: plan.name,
             price: Number(plan.price),
           });
@@ -239,14 +296,15 @@ export default function DaycareImportPage() {
         }
       }
 
-      return { enrolments: enrolmentsCreated, invoices: invoicesCreated, skipped, errors };
+      return { enrolments: enrolmentsCreated, attendance: attendanceCreated, invoices: invoicesCreated, skipped, errors };
     },
     onSuccess: (res) => {
       setCommitResult(res);
       setCommitting(false);
       qc.invalidateQueries({ queryKey: ["daycare_enrolments"] });
+      qc.invalidateQueries({ queryKey: ["daycare_attendance"] });
       qc.invalidateQueries({ queryKey: ["invoices"] });
-      toast({ title: "Import complete", description: `${res.enrolments} enrolments, ${res.invoices} invoices, ${res.skipped} skipped.` });
+      toast({ title: "Import complete", description: `${res.enrolments} enrolments, ${res.attendance} attendance rows, ${res.invoices} invoices.` });
     },
     onError: (e: any) => {
       setCommitting(false);
