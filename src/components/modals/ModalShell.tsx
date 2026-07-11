@@ -20,7 +20,7 @@ interface Props {
 
 export function ModalShell({
   title, subtitle, onClose, headerRight, footer, children, className, wide,
-  closeOnBackdrop = true, closeOnEscape = true,
+  closeOnBackdrop = false, closeOnEscape = true,
 }: Props) {
   useEffect(() => {
     if (!onClose) return;
