@@ -968,6 +968,97 @@ export type Database = {
           },
         ]
       }
+      daycare_import_rows: {
+        Row: {
+          batch_id: string
+          breed: string | null
+          candidates: Json
+          commit_result: Json | null
+          created_at: string
+          days_per_week: number | null
+          dog_full_name: string
+          id: string
+          match_confidence: number | null
+          match_status: string
+          matched_customer_id: string | null
+          matched_pet_id: string | null
+          notes: string | null
+          owner_surname: string
+          pet_first: string
+          selected_days: string[]
+          sex: string | null
+          size: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          breed?: string | null
+          candidates?: Json
+          commit_result?: Json | null
+          created_at?: string
+          days_per_week?: number | null
+          dog_full_name: string
+          id?: string
+          match_confidence?: number | null
+          match_status?: string
+          matched_customer_id?: string | null
+          matched_pet_id?: string | null
+          notes?: string | null
+          owner_surname: string
+          pet_first: string
+          selected_days?: string[]
+          sex?: string | null
+          size?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          breed?: string | null
+          candidates?: Json
+          commit_result?: Json | null
+          created_at?: string
+          days_per_week?: number | null
+          dog_full_name?: string
+          id?: string
+          match_confidence?: number | null
+          match_status?: string
+          matched_customer_id?: string | null
+          matched_pet_id?: string | null
+          notes?: string | null
+          owner_surname?: string
+          pet_first?: string
+          selected_days?: string[]
+          sex?: string | null
+          size?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daycare_import_rows_matched_customer_id_fkey"
+            columns: ["matched_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_import_rows_matched_pet_id_fkey"
+            columns: ["matched_pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_import_rows_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daycare_plans: {
         Row: {
           active: boolean
@@ -4051,6 +4142,8 @@ export type Database = {
         Returns: string
       }
       next_pet_number: { Args: { target_tenant_id: string }; Returns: string }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       user_can_access_customer: {
         Args: { target_customer_id: string; target_tenant_id: string }
         Returns: boolean
