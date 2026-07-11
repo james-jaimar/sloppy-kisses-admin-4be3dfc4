@@ -440,7 +440,7 @@ export function useTenantPetsWithOwners(tenantId: string | null | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pets")
-        .select("id, name, species, customer_id, customer:customers(id, full_name)")
+        .select("id, name, species, customer_id, customer:customers(id, full_name, first_name, last_name, mobile, phone_alt)")
         .eq("tenant_id", tenantId as string)
         .order("name", { ascending: true });
       if (error) throw error;
