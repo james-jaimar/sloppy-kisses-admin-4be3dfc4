@@ -41,6 +41,7 @@ import EnrolmentsPage from "@/features/daycare/EnrolmentsPage";
 import AttendancePage from "@/features/daycare/AttendancePage";
 import DaycarePlansPage from "@/features/settings/DaycarePlansPage";
 import DaycareWorkflowPage from "@/features/settings/DaycareWorkflowPage";
+import DaycareImportPage from "@/features/settings/DaycareImportPage";
 import InvoicesListPage from "@/features/invoices/InvoicesListPage";
 import InvoiceDetailPage from "@/features/invoices/InvoiceDetailPage";
 import InvoicingSettingsPage from "@/features/settings/InvoicingSettingsPage";
@@ -141,6 +142,7 @@ const App = () => (
                 <Route path="/admin/settings/transport-workflow" element={<TransportWorkflowPage />} />
                 <Route path="/admin/settings/daycare-plans" element={<DaycarePlansPage />} />
                 <Route path="/admin/settings/daycare-workflow" element={<DaycareWorkflowPage />} />
+                <Route path="/admin/settings/daycare-import" element={<DaycareImportPage />} />
                 <Route path="/admin/settings/invoicing" element={<InvoicingSettingsPage />} />
                 <Route path="/admin/settings/payment-methods" element={<PaymentMethodsPage />} />
                 <Route path="/admin/settings/message-templates" element={<MessageTemplatesPage />} />
