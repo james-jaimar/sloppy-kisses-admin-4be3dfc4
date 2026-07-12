@@ -1,6 +1,6 @@
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Scissors, Truck, Dog, Hotel, ArrowLeftRight, TrendingUp, TrendingDown, MoreHorizontal, ChevronRight, Users, PawPrint } from "lucide-react";
+import { Scissors, Truck, Dog, Hotel, ArrowLeftRight, TrendingUp, TrendingDown, ChevronRight, Users, PawPrint } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import { useCustomerAndPetCounts } from "@/features/customers/queries";
@@ -29,6 +29,13 @@ const SERVICE_LABEL: Record<string, string> = {
   pickup_dropoff: "Pick-up / drop-off",
 };
 
+function activityHref(a: { booking_id: string | null; customer_id: string | null; pet_id: string | null }) {
+  if (a.booking_id) return `/admin/bookings/${a.booking_id}`;
+  if (a.pet_id) return `/admin/pets/${a.pet_id}`;
+  if (a.customer_id) return `/admin/customers/${a.customer_id}`;
+  return null;
+}
+
 export default function AdminDashboard() {
   const today = format(new Date(), "EEEE, d MMMM");
   const { profile, currentTenant } = useCurrentUser();
@@ -41,11 +48,11 @@ export default function AdminDashboard() {
   const { data: activity, isLoading: activityLoading } = useRecentActivity(tenantId);
 
   const statCards = [
-    { key: "grooming", label: "Today's Grooming", ...statsData?.grooming, icon: Scissors, tone: "coral" },
-    { key: "mobile", label: "Mobile Appointments", ...statsData?.mobile, icon: Truck, tone: "turquoise" },
-    { key: "daycare", label: "Daycare Dogs", ...statsData?.daycare, icon: Dog, tone: "green" },
-    { key: "hotel", label: "Hotel Guests", ...statsData?.hotel, icon: Hotel, tone: "orange" },
-    { key: "pickup", label: "Pick Ups / Drop Offs", ...statsData?.transport, icon: ArrowLeftRight, tone: "coral" },
+    { key: "grooming", label: "Today's Grooming", href: "/admin/grooming", ...statsData?.grooming, icon: Scissors, tone: "coral" },
+    { key: "mobile", label: "Mobile Appointments", href: "/admin/mobile-vans", ...statsData?.mobile, icon: Truck, tone: "turquoise" },
+    { key: "daycare", label: "Daycare Dogs", href: "/admin/daycare", ...statsData?.daycare, icon: Dog, tone: "green" },
+    { key: "hotel", label: "Hotel Guests", href: "/admin/hotel-cattery", ...statsData?.hotel, icon: Hotel, tone: "orange" },
+    { key: "pickup", label: "Pick Ups / Drop Offs", href: "/admin/pickup-dropoff", ...statsData?.transport, icon: ArrowLeftRight, tone: "coral" },
   ].map((s) => {
     const today = (s as any).today ?? 0;
     const yday = (s as any).yday ?? 0;
@@ -54,10 +61,10 @@ export default function AdminDashboard() {
   });
 
   const checkins = [
-    { label: "Expected", value: checkin?.expected ?? 0 },
-    { label: "Checked in", value: checkin?.checkedIn ?? 0 },
-    { label: "Not arrived", value: checkin?.notArrived ?? 0 },
-    { label: "Walk-ins", value: checkin?.walkIns ?? 0 },
+    { label: "Expected", value: checkin?.expected ?? 0, href: "/admin/daycare/attendance" },
+    { label: "Checked in", value: checkin?.checkedIn ?? 0, href: "/admin/daycare/attendance" },
+    { label: "Not arrived", value: checkin?.notArrived ?? 0, href: "/admin/daycare/attendance" },
+    { label: "Walk-ins", value: checkin?.walkIns ?? 0, href: "/admin/daycare/attendance" },
   ];
 
   return (
@@ -75,7 +82,7 @@ export default function AdminDashboard() {
       <div className="flex-1 space-y-6 p-6">
         {/* CRM totals — real data */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="sk-card p-5">
+          <Link to="/admin/customers" className="sk-card p-5 transition-colors hover:border-sk-coral">
             <div className="flex items-start justify-between">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-sk-turquoise-soft text-sk-turquoise-dark">
                 <Users className="h-5 w-5" />
@@ -85,8 +92,8 @@ export default function AdminDashboard() {
               {countsLoading ? "…" : counts?.customers.toLocaleString() ?? 0}
             </div>
             <div className="sk-stat-label mt-1">Customers</div>
-          </div>
-          <div className="sk-card p-5">
+          </Link>
+          <Link to="/admin/pets" className="sk-card p-5 transition-colors hover:border-sk-coral">
             <div className="flex items-start justify-between">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-sk-coral-soft text-sk-coral-dark">
                 <PawPrint className="h-5 w-5" />
@@ -96,7 +103,7 @@ export default function AdminDashboard() {
               {countsLoading ? "…" : counts?.pets.toLocaleString() ?? 0}
             </div>
             <div className="sk-stat-label mt-1">Pets</div>
-          </div>
+          </Link>
         </div>
 
         {/* Stat cards */}
@@ -106,14 +113,12 @@ export default function AdminDashboard() {
             const TrendIcon = s.trend === "up" ? TrendingUp : TrendingDown;
             const deltaLabel = s.delta === 0 ? "0" : (s.delta > 0 ? `+${s.delta}` : `${s.delta}`);
             return (
-              <div key={s.key} className="sk-card p-5">
+              <Link key={s.key} to={s.href} className="sk-card p-5 transition-colors hover:border-sk-coral">
                 <div className="flex items-start justify-between">
                   <div className={"grid h-10 w-10 place-items-center rounded-xl " + toneChip[s.tone]}>
                     <Icon className="h-5 w-5" />
                   </div>
-                  <button className="text-muted-foreground hover:text-foreground">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </button>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="mt-4 sk-stat-value tabular-nums">{statsLoading ? "…" : s.value}</div>
                 <div className="mt-1 flex items-center justify-between">
@@ -125,7 +130,7 @@ export default function AdminDashboard() {
                     </span>
                   )}
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -180,10 +185,10 @@ export default function AdminDashboard() {
             </div>
             <div className="grid grid-cols-2 gap-3 p-5">
               {checkins.map((c) => (
-                <div key={c.label} className="rounded-xl border border-border bg-sk-surface-muted p-4">
+                <Link key={c.label} to={c.href} className="rounded-xl border border-border bg-sk-surface-muted p-4 transition-colors hover:border-sk-coral">
                   <div className="text-2xl font-semibold tabular-nums">{checkinLoading ? "…" : c.value}</div>
                   <div className="mt-1 text-xs text-muted-foreground">{c.label}</div>
-                </div>
+                </Link>
               ))}
             </div>
             <div className="border-t border-border px-5 py-3">
@@ -198,6 +203,7 @@ export default function AdminDashboard() {
         <div className="sk-card">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <h2 className="text-base font-semibold">Recent activity</h2>
+            <Link to="/admin/comms" className="text-sm font-medium text-sk-coral-dark hover:underline">View all</Link>
           </div>
           <ul className="divide-y divide-border">
             {activityLoading && (
@@ -206,19 +212,31 @@ export default function AdminDashboard() {
             {!activityLoading && (activity?.length ?? 0) === 0 && (
               <li className="px-5 py-10 text-center text-sm text-muted-foreground">No activity yet.</li>
             )}
-            {activity?.map((a) => (
-              <li key={a.id} className="flex items-start gap-3 px-5 py-3.5 text-sm">
-                <div className="mt-1 h-2 w-2 rounded-full bg-sk-turquoise" />
-                <div className="flex-1 min-w-0">
-                  <span className="font-medium">{a.actor_name ?? "System"}</span>{" "}
-                  <span className="text-muted-foreground">{a.title ?? a.activity_type}</span>
-                  {a.description ? <span className="text-muted-foreground"> — {a.description}</span> : null}
-                </div>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
-                </span>
-              </li>
-            ))}
+            {activity?.map((a) => {
+              const href = activityHref(a);
+              const body = (
+                <>
+                  <div className="mt-1 h-2 w-2 rounded-full bg-sk-turquoise" />
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium">{a.actor_name ?? "System"}</span>{" "}
+                    <span className="text-muted-foreground">{a.title ?? a.activity_type}</span>
+                    {a.description ? <span className="text-muted-foreground"> — {a.description}</span> : null}
+                  </div>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
+                  </span>
+                </>
+              );
+              return (
+                <li key={a.id}>
+                  {href ? (
+                    <Link to={href} className="flex items-start gap-3 px-5 py-3.5 text-sm hover:bg-sk-surface-muted">{body}</Link>
+                  ) : (
+                    <div className="flex items-start gap-3 px-5 py-3.5 text-sm">{body}</div>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       </div>
