@@ -11,7 +11,7 @@ const TABS = [
   { key: "sent", label: "Sent", icon: CheckCircle2 },
   { key: "failed", label: "Failed", icon: AlertCircle },
   { key: "all", label: "All", icon: MessageSquare },
-  { key: "auth", label: "Auth emails", icon: ShieldCheck },
+  { key: "auth", label: "Email log", icon: ShieldCheck },
 ] as const;
 
 function channelIcon(ch: string | null) {
@@ -26,13 +26,14 @@ export default function CommsInboxPage() {
   const canView = hasPermission("comms.view");
   const [tab, setTab] = useState<(typeof TABS)[number]["key"]>("pending");
   const [channel, setChannel] = useState<string>("");
+  const [logKind, setLogKind] = useState<"all" | "auth" | "notify">("all");
   const [selected, setSelected] = useState<NotificationEvent | null>(null);
 
   const eventsQ = useNotificationEvents(tenantId, {
     status: tab as any,
     channel: channel || undefined,
   });
-  const authQ = useAuthEmailLog(tenantId, { limit: 100 });
+  const authQ = useAuthEmailLog(tenantId, { limit: 200, kind: logKind });
 
   const stats = useMemo(() => {
     const rows = eventsQ.data ?? [];
@@ -78,13 +79,22 @@ export default function CommsInboxPage() {
               })}
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <select value={channel} onChange={(e) => setChannel(e.target.value)}
-                className="h-9 rounded-lg border border-border bg-white px-2 text-sm">
-                <option value="">All channels</option>
-                <option value="email">Email</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="sms">SMS</option>
-              </select>
+              {tab === "auth" ? (
+                <select value={logKind} onChange={(e) => setLogKind(e.target.value as any)}
+                  className="h-9 rounded-lg border border-border bg-white px-2 text-sm">
+                  <option value="all">All emails</option>
+                  <option value="auth">Auth only</option>
+                  <option value="notify">Notifications only</option>
+                </select>
+              ) : (
+                <select value={channel} onChange={(e) => setChannel(e.target.value)}
+                  className="h-9 rounded-lg border border-border bg-white px-2 text-sm">
+                  <option value="">All channels</option>
+                  <option value="email">Email</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="sms">SMS</option>
+                </select>
+              )}
             </div>
           </div>
 
@@ -128,8 +138,8 @@ export default function CommsInboxPage() {
           {tab === "auth" && (
             <>
               <div className="border-b border-border bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
-                Supabase auth emails (invites, password resets, magic links) sent via your tenant SMTP.
-                These are separate from customer notifications above.
+                All emails sent via your tenant SMTP — auth emails (invites, password resets, magic links)
+                and customer notifications. Use the filter to narrow.
               </div>
               {authQ.isLoading && <div className="p-6 text-sm text-muted-foreground">Loading…</div>}
               {!authQ.isLoading && !(authQ.data?.length) && (
