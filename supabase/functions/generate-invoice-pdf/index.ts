@@ -3,6 +3,7 @@
 // with logo + issuer info, metadata strip, items table, totals + banking + notes.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage, type RGB } from "https://esm.sh/pdf-lib@1.17.1";
+import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +13,24 @@ const cors = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+// Font sources (SIL OFL) — fetched once per cold start, cached in module scope.
+const FONT_REG_URL = "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io@main/fonts/NotoSans/hinted/ttf/NotoSans-Regular.ttf";
+const FONT_BOLD_URL = "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io@main/fonts/NotoSans/hinted/ttf/NotoSans-Bold.ttf";
+let _fontRegBytes: Uint8Array | null = null;
+let _fontBoldBytes: Uint8Array | null = null;
+async function loadFontBytes(url: string): Promise<Uint8Array | null> {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    return new Uint8Array(await r.arrayBuffer());
+  } catch { return null; }
+}
+async function getFonts(): Promise<{ reg: Uint8Array | null; bold: Uint8Array | null }> {
+  if (!_fontRegBytes) _fontRegBytes = await loadFontBytes(FONT_REG_URL);
+  if (!_fontBoldBytes) _fontBoldBytes = await loadFontBytes(FONT_BOLD_URL);
+  return { reg: _fontRegBytes, bold: _fontBoldBytes };
+}
 
 const jerr = (s: number, msg: string) =>
   new Response(JSON.stringify({ error: msg }), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
@@ -74,8 +93,14 @@ Deno.serve(async (req) => {
   const muted = rgb(0.45, 0.45, 0.5);
 
   const pdf = await PDFDocument.create();
-  const reg = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  pdf.registerFontkit(fontkit);
+  const { reg: regBytes, bold: boldBytes } = await getFonts();
+  const reg = regBytes
+    ? await pdf.embedFont(regBytes, { subset: true })
+    : await pdf.embedFont(StandardFonts.Helvetica);
+  const bold = boldBytes
+    ? await pdf.embedFont(boldBytes, { subset: true })
+    : await pdf.embedFont(StandardFonts.HelveticaBold);
 
   // Try to embed the tenant logo (best-effort).
   let logoImg: any = null;

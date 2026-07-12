@@ -1,27 +1,46 @@
-## Fix invoice PDF: Bill To and Banking Details
+## Embed fonts in the invoice PDF
 
-### Root cause (confirmed against DB)
-The edge function `supabase/functions/generate-invoice-pdf/index.ts` selects columns that don't exist on `customers` (`phone`, `address_line1`, `address_line2`, `postal_code`, `vat_number`). PostgREST returns an error, `customer` is null, so BILL TO renders "—".
+### Problem
+The edge function uses pdf-lib's `StandardFonts.Helvetica` / `Helvetica-Bold`. These are PDF "base 14" fonts — they are referenced by name, not embedded. Some viewers substitute (e.g. ArialMT as shown in Document Properties), and printing on machines without a matching font can render inconsistently.
 
-Actual columns on `customers`: `mobile`, `phone_alt`, `address_line_1`, `address_line_2`, `suburb`, `city`, `province`, `postcode`. No `vat_number` column exists.
-
-Banking details render as one line because `drawWrapped` splits on any whitespace, collapsing user-entered line breaks from the settings textarea.
+### Fix
+Switch to a real TrueType font and embed it into the PDF so every viewer/printer renders identically.
 
 ### Changes to `supabase/functions/generate-invoice-pdf/index.ts`
 
-1. **Customer select** — fix column names:
-   `id, full_name, customer_number, email, mobile, phone_alt, address_line_1, address_line_2, suburb, city, province, postcode`
-   Remove `vat_number` reference.
+1. Register fontkit with pdf-lib (required for custom TTF embedding):
+   ```ts
+   import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
+   ...
+   pdf.registerFontkit(fontkit);
+   ```
 
-2. **BILL TO block** — use the corrected fields:
-   - Phone line uses `mobile` (fallback `phone_alt`).
-   - Address line composed from `address_line_1, address_line_2, suburb, [city, postcode] joined, province`, filtered for empties.
+2. Fetch a permissively licensed TTF at cold start and embed it (subset by default so file size stays small):
+   - Use **Inter** Regular + Bold from the rsms/inter GitHub release (SIL OFL, safe to redistribute), fetched from a stable CDN like jsDelivr:
+     - `https://cdn.jsdelivr.net/gh/rsms/inter@v4.0/docs/font-files/Inter-Regular.woff2` won't work (pdf-lib needs TTF/OTF, not woff2).
+     - Use TTF instead: `https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.16/files/inter-latin-400-normal.woff` — also woff.
+   - Safer choice: **Noto Sans** TTF from `https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io/fonts/NotoSans/hinted/ttf/NotoSans-Regular.ttf` and `NotoSans-Bold.ttf`.
+   - Cache the fetched bytes in module scope so warm invocations don't refetch.
 
-3. **Banking details** — honor hard returns:
-   - Add a `drawMultilineWrapped` helper (or split input on `/\r?\n/` and call `drawWrapped` per line, advancing y by one line-height between lines, including blank lines).
-   - Use it for the banking details box and for the notes block (so notes also respect line breaks).
+3. Replace:
+   ```ts
+   const reg = await pdf.embedFont(StandardFonts.Helvetica);
+   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+   ```
+   with:
+   ```ts
+   const reg = await pdf.embedFont(regularBytes, { subset: true });
+   const bold = await pdf.embedFont(boldBytes, { subset: true });
+   ```
+   If the font fetch fails, fall back to `StandardFonts.Helvetica` so PDFs still generate.
 
-No client-side or schema changes. After edit, redeploy the function.
+4. Remove the `StandardFonts` import if no longer needed.
+
+No layout or query changes. No client changes. Redeploy the function after edit.
+
+### Font choice
+Proposing **Noto Sans** (Regular + Bold) — SIL OFL licensed, wide glyph coverage (handles é, ç, etc. that appear in customer names/addresses), clean modern sans that reads similarly to Helvetica/Arial so the invoice look barely shifts.
 
 ### Verification
-- Reload the invoice `INV00096` PDF — BILL TO shows Mandy Bergront with address/contact populated; banking details render across multiple lines matching the settings textarea.
+- Re-download `INV00096.pdf`, open Document Properties → Fonts. Both entries should show **"Embedded Subset"** (not "Actual Font: ArialMT").
+- Visual layout unchanged.
