@@ -6,6 +6,7 @@
 // - Replaces public.user_roles with the requested role ids.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { sendAuthEmail, generateAuthActionUrl } from "../_shared/auth-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -76,30 +77,44 @@ Deno.serve(async (req) => {
   let authUserId: string | null = null;
   const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
   const existing = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email);
+
+  // Redirect target after the invite/recovery link is verified.
+  const origin = req.headers.get("origin") ?? req.headers.get("referer") ?? "";
+  const redirectBase = origin.replace(/\/+$/, "") || "";
+  const redirectTo = `${redirectBase}/reset-password`;
+
   if (mode === "resend") {
-    // Force a fresh invite email regardless of whether the user exists.
-    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: {
+    // Generate a fresh invite link (no Supabase-sent email) and deliver it via tenant SMTP.
+    try {
+      const actionUrl = await generateAuthActionUrl(admin, "invite", email, redirectTo, {
         full_name: fullName || null,
         invited_tenant_id: tenantId,
         invited_by_name: inviterName,
-      },
-    });
-    if (inviteErr) return json(500, { error: `Resend failed: ${inviteErr.message}` });
-    return json(200, { ok: true, resent: true, auth_user_id: invited.user?.id ?? existing?.id ?? null });
+      });
+      const sent = await sendAuthEmail({
+        admin, tenantId, action: "invite", recipient: email, actionUrl, inviterName,
+      });
+      if (!sent.ok) return json(500, { error: `Resend failed: ${sent.error}` });
+      return json(200, { ok: true, resent: true, auth_user_id: existing?.id ?? null });
+    } catch (e) {
+      return json(500, { error: `Resend failed: ${(e as Error).message}` });
+    }
   }
   if (existing) {
     authUserId = existing.id;
   } else {
-    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: {
+    // Create the auth user without sending Supabase's default email.
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email,
+      email_confirm: false,
+      user_metadata: {
         full_name: fullName || null,
         invited_tenant_id: tenantId,
         invited_by_name: inviterName,
       },
     });
-    if (inviteErr) return json(500, { error: `Invite failed: ${inviteErr.message}` });
-    authUserId = invited.user?.id ?? null;
+    if (createErr) return json(500, { error: `Create user failed: ${createErr.message}` });
+    authUserId = created.user?.id ?? null;
   }
   if (!authUserId) return json(500, { error: "Could not resolve auth user id" });
 
@@ -156,5 +171,33 @@ Deno.serve(async (req) => {
     if (rErr) return json(500, { error: `Roles: ${rErr.message}` });
   }
 
-  return json(200, { ok: true, tenant_user_id: tenantUserId, profile_id: profileId, invited: !existing });
+  // 5. Send the branded invite email via tenant SMTP (only for brand-new invites).
+  let emailSent = true;
+  let emailError: string | null = null;
+  if (!existing) {
+    try {
+      const actionUrl = await generateAuthActionUrl(admin, "invite", email, redirectTo, {
+        full_name: fullName || null,
+        invited_tenant_id: tenantId,
+        invited_by_name: inviterName,
+      });
+      const sent = await sendAuthEmail({
+        admin, tenantId, action: "invite", recipient: email, actionUrl, inviterName,
+      });
+      emailSent = sent.ok;
+      if (!sent.ok) emailError = sent.error;
+    } catch (e) {
+      emailSent = false;
+      emailError = (e as Error).message;
+    }
+  }
+
+  return json(200, {
+    ok: true,
+    tenant_user_id: tenantUserId,
+    profile_id: profileId,
+    invited: !existing,
+    email_sent: emailSent,
+    email_error: emailError,
+  });
 });
