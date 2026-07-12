@@ -12,6 +12,7 @@ import {
   AlertCircle,
   ArrowLeft,
   ExternalLink,
+  FileText,
   Mail,
   MapPin,
   Phone,
@@ -20,8 +21,9 @@ import {
   Users,
 } from "lucide-react";
 import type { PetRow } from "./queries";
+import { CustomerCreditPanel } from "@/features/customerCredit/CustomerCreditPanel";
 
-const TABS = ["Pets", "Bookings", "Invoices", "Notes", "Documents", "History"] as const;
+const TABS = ["Pets", "Bookings", "Invoices", "Credit", "Notes", "Documents", "History"] as const;
 type Tab = (typeof TABS)[number];
 
 function initialsOf(name: string | null | undefined) {
@@ -138,6 +140,12 @@ export default function CustomerDetailPage() {
                   >
                     <Pencil className="h-3.5 w-3.5" /> Edit customer
                   </button>
+                  <Link
+                    to={`/admin/customers/${customer.id}/statement`}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted"
+                  >
+                    <FileText className="h-3.5 w-3.5" /> Statement
+                  </Link>
                   <button className="h-9 rounded-lg bg-sk-coral px-3 text-sm font-semibold text-white hover:bg-sk-coral-dark">
                     New booking
                   </button>
@@ -287,7 +295,11 @@ export default function CustomerDetailPage() {
                   </>
                 )}
 
-                {tab !== "Pets" && (
+                {tab === "Credit" && tenant?.id && (
+                  <CustomerCreditPanel tenantId={tenant.id} customerId={customer.id} />
+                )}
+
+                {tab !== "Pets" && tab !== "Credit" && (
                   <div className="flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground">
                     <div className="font-medium text-foreground">{tab}</div>
                     <div className="max-w-sm text-xs">
