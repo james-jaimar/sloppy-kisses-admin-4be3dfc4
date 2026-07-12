@@ -1,6 +1,6 @@
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Scissors, Truck, Dog, Hotel, ArrowLeftRight, TrendingUp, TrendingDown, MoreHorizontal, ChevronRight, Users, PawPrint } from "lucide-react";
+import { Scissors, Truck, Dog, Hotel, ArrowLeftRight, TrendingUp, TrendingDown, ChevronRight, Users, PawPrint } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import { useCustomerAndPetCounts } from "@/features/customers/queries";
