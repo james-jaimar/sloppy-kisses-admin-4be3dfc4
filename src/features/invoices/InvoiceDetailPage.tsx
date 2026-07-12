@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download, Mail, Link as LinkIcon, BellOff, Bell } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download, Mail, Link as LinkIcon, BellOff, Bell, FileMinus } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -10,6 +10,9 @@ import { InvoiceStatusChip, fmtZar } from "./status";
 import { RecordPaymentDialog } from "./RecordPaymentDialog";
 import { Can } from "@/components/auth/Can";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { useCreditNotesForInvoice } from "@/features/creditNotes/queries";
+import { CreditNoteStatusChip } from "@/features/creditNotes/status";
+import { IssueCreditNoteDrawer } from "@/features/creditNotes/IssueCreditNoteDrawer";
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +35,7 @@ export default function InvoiceDetailPage() {
   const sendEmail = useSendInvoiceEmail(tenantId ?? "");
 
   const [payOpen, setPayOpen] = useState(false);
+  const [issueCnOpen, setIssueCnOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ description: string; quantity: number; unit_price: number }>({ description: "", quantity: 1, unit_price: 0 });
   const [adding, setAdding] = useState(false);
@@ -41,6 +45,8 @@ export default function InvoiceDetailPage() {
   const isDraft = inv?.status === "draft";
   const balance = Number(inv?.balance_due ?? 0);
   const hasBeenSent = Boolean((inv as any)?.sent_at);
+  const cnQ = useCreditNotesForInvoice(tenantId, inv?.id ?? null);
+  const creditsApplied = Number(cnQ.data?.totalApplied ?? 0);
 
   async function saveLine(invoice_id: string) {
     if (!draft.description.trim()) { toast.error("Description required"); return; }
