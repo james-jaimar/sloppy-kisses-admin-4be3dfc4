@@ -2277,6 +2277,64 @@ export type Database = {
         }
         Relationships: []
       }
+      invoice_events: {
+        Row: {
+          actor_label: string | null
+          actor_profile_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          invoice_id: string
+          notes: string | null
+          payload: Json
+          tenant_id: string
+        }
+        Insert: {
+          actor_label?: string | null
+          actor_profile_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          invoice_id: string
+          notes?: string | null
+          payload?: Json
+          tenant_id: string
+        }
+        Update: {
+          actor_label?: string | null
+          actor_profile_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          invoice_id?: string
+          notes?: string | null
+          payload?: Json
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_events_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_events_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_items: {
         Row: {
           booking_id: string | null
@@ -4129,6 +4187,16 @@ export type Database = {
       }
       current_profile_id: { Args: never; Returns: string }
       is_platform_owner: { Args: never; Returns: boolean }
+      log_invoice_event: {
+        Args: {
+          p_event_type: string
+          p_invoice_id: string
+          p_notes?: string
+          p_payload?: Json
+          p_tenant_id: string
+        }
+        Returns: undefined
+      }
       next_booking_number: {
         Args: { target_tenant_id: string }
         Returns: string
