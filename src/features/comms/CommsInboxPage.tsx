@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Mail, MessageSquare, Send, AlertCircle, Inbox, CheckCircle2 } from "lucide-react";
+import { Mail, MessageSquare, Send, AlertCircle, Inbox, CheckCircle2, ShieldCheck } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
-import { useNotificationEvents, type NotificationEvent } from "./queries";
+import { useNotificationEvents, useAuthEmailLog, type NotificationEvent } from "./queries";
 import { CommsEventDrawer } from "./CommsEventDrawer";
 
 const TABS = [
@@ -11,6 +11,7 @@ const TABS = [
   { key: "sent", label: "Sent", icon: CheckCircle2 },
   { key: "failed", label: "Failed", icon: AlertCircle },
   { key: "all", label: "All", icon: MessageSquare },
+  { key: "auth", label: "Auth emails", icon: ShieldCheck },
 ] as const;
 
 function channelIcon(ch: string | null) {
@@ -31,6 +32,7 @@ export default function CommsInboxPage() {
     status: tab as any,
     channel: channel || undefined,
   });
+  const authQ = useAuthEmailLog(tenantId, { limit: 100 });
 
   const stats = useMemo(() => {
     const rows = eventsQ.data ?? [];
@@ -87,10 +89,10 @@ export default function CommsInboxPage() {
           </div>
 
           {eventsQ.isLoading && <div className="p-6 text-sm text-muted-foreground">Loading…</div>}
-          {!eventsQ.isLoading && !(eventsQ.data?.length) && (
+          {tab !== "auth" && !eventsQ.isLoading && !(eventsQ.data?.length) && (
             <div className="p-10 text-center text-sm text-muted-foreground">No messages match these filters.</div>
           )}
-          {!!eventsQ.data?.length && (
+          {tab !== "auth" && !!eventsQ.data?.length && (
             <table className="w-full text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
@@ -121,6 +123,50 @@ export default function CommsInboxPage() {
                 })}
               </tbody>
             </table>
+          )}
+
+          {tab === "auth" && (
+            <>
+              <div className="border-b border-border bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+                Supabase auth emails (invites, password resets, magic links) sent via your tenant SMTP.
+                These are separate from customer notifications above.
+              </div>
+              {authQ.isLoading && <div className="p-6 text-sm text-muted-foreground">Loading…</div>}
+              {!authQ.isLoading && !(authQ.data?.length) && (
+                <div className="p-10 text-center text-sm text-muted-foreground">
+                  No auth emails logged yet. If invites aren't appearing here, the Send Email Hook
+                  in Supabase → Auth → Hooks is likely not enabled — see the note below.
+                </div>
+              )}
+              {!!authQ.data?.length && (
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-2 text-left">When</th>
+                      <th className="px-4 py-2 text-left">Type</th>
+                      <th className="px-4 py-2 text-left">Recipient</th>
+                      <th className="px-4 py-2 text-left">Subject</th>
+                      <th className="px-4 py-2 text-left">Status</th>
+                      <th className="px-4 py-2 text-left">Error</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {authQ.data.map((r) => (
+                      <tr key={r.id} className="border-t border-border">
+                        <td className="whitespace-nowrap px-4 py-2 text-xs text-muted-foreground">
+                          {format(new Date(r.created_at), "d MMM HH:mm")}
+                        </td>
+                        <td className="px-4 py-2 text-xs">{r.template_code ?? "—"}</td>
+                        <td className="px-4 py-2">{r.to_email ?? "—"}</td>
+                        <td className="px-4 py-2">{r.subject ?? "—"}</td>
+                        <td className="px-4 py-2"><StatusChip status={r.status} /></td>
+                        <td className="px-4 py-2 text-xs text-muted-foreground">{r.error_message ?? ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
           )}
         </div>
       </div>
