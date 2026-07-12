@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
 
   const [{ data: items }, { data: customer }, { data: settings }, { data: tenant }] = await Promise.all([
     admin.from("invoice_items").select("*").eq("invoice_id", invoiceId).order("sort_order"),
-    admin.from("customers").select("id, full_name, customer_number, email, phone, address_line1, address_line2, city, postal_code, vat_number").eq("id", inv.customer_id).maybeSingle(),
+    admin.from("customers").select("id, full_name, customer_number, email, mobile, phone_alt, address_line_1, address_line_2, suburb, city, province, postcode").eq("id", inv.customer_id).maybeSingle(),
     admin.from("invoicing_settings").select("*").eq("tenant_id", inv.tenant_id).maybeSingle(),
     admin.from("tenants").select("id, name, primary_colour, logo_url, contact_email, contact_phone").eq("id", inv.tenant_id).maybeSingle(),
   ]);
@@ -121,6 +121,17 @@ Deno.serve(async (req) => {
     return y;
   };
 
+  // Wraps text while honoring hard line breaks (\n) from user-entered fields.
+  const drawMultilineWrapped = (t: string, x: number, y: number, w: number, size: number, font: PDFFont, color: RGB) => {
+    const lh = size * 1.25;
+    const lines = (t ?? "").split(/\r?\n/);
+    for (const ln of lines) {
+      if (ln.trim() === "") { y -= lh; continue; }
+      y = drawWrapped(ln, x, y, w, size, font, color);
+    }
+    return y;
+  };
+
   // ── Top brand bar ─────────────────────────────────────────────────────────
   page.drawRectangle({ x: 0, y: height - 4, width, height: 4, color: brand });
 
@@ -167,11 +178,17 @@ Deno.serve(async (req) => {
   let y2 = boxTop - 30;
   drawText(customer?.full_name || "—", x2 + 10, y2, 11, bold); y2 -= 14;
   if (customer?.customer_number) { drawText(customer.customer_number, x2 + 10, y2, 9, reg, muted); y2 -= 12; }
-  if (customer?.vat_number) { drawText(`VAT ${customer.vat_number}`, x2 + 10, y2, 9, reg, muted); y2 -= 12; }
-  const addr = [customer?.address_line1, customer?.address_line2, [customer?.city, customer?.postal_code].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  const addr = [
+    customer?.address_line_1,
+    customer?.address_line_2,
+    customer?.suburb,
+    [customer?.city, customer?.postcode].filter(Boolean).join(" ").trim(),
+    customer?.province,
+  ].filter((s) => s && String(s).trim().length > 0).join(", ");
   if (addr) y2 = drawWrapped(addr, x2 + 10, y2, colW - 20, 9, reg, text) - 2;
   if (customer?.email) { drawText(customer.email, x2 + 10, y2, 9, reg, text); y2 -= 12; }
-  if (customer?.phone) { drawText(customer.phone, x2 + 10, y2, 9, reg, text); }
+  const phone = customer?.mobile || customer?.phone_alt;
+  if (phone) { drawText(phone, x2 + 10, y2, 9, reg, text); }
 
   cursorY = boxTop - boxH - 18;
 
@@ -261,7 +278,7 @@ Deno.serve(async (req) => {
     const bkW = totalsX - M - 20;
     page.drawRectangle({ x: M, y: ty, width: bkW, height: cursorY - ty, borderColor: line, borderWidth: 0.6 });
     drawText("BANKING DETAILS", M + 10, cursorY - 12, 8, bold, muted);
-    drawWrapped(settings.banking_details, M + 10, cursorY - 26, bkW - 20, 9, reg, text);
+    drawMultilineWrapped(settings.banking_details, M + 10, cursorY - 26, bkW - 20, 9, reg, text);
   }
 
   cursorY = ty - 18;
@@ -270,7 +287,7 @@ Deno.serve(async (req) => {
   if (inv.notes || settings?.footer_notes) {
     const notes = [inv.notes, settings?.footer_notes].filter(Boolean).join("\n\n");
     drawText("NOTES", M, cursorY, 8, bold, muted);
-    drawWrapped(notes, M, cursorY - 14, width - 2 * M, 9, reg, muted);
+    drawMultilineWrapped(notes, M, cursorY - 14, width - 2 * M, 9, reg, muted);
   }
 
   const bytes = await pdf.save();
