@@ -599,6 +599,200 @@ export type Database = {
           },
         ]
       }
+      credit_note_applications: {
+        Row: {
+          amount: number
+          applied_at: string
+          applied_by: string | null
+          created_at: string
+          credit_note_id: string
+          id: string
+          invoice_id: string
+          tenant_id: string
+        }
+        Insert: {
+          amount: number
+          applied_at?: string
+          applied_by?: string | null
+          created_at?: string
+          credit_note_id: string
+          id?: string
+          invoice_id: string
+          tenant_id: string
+        }
+        Update: {
+          amount?: number
+          applied_at?: string
+          applied_by?: string | null
+          created_at?: string
+          credit_note_id?: string
+          id?: string
+          invoice_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_note_applications_credit_note_id_fkey"
+            columns: ["credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "credit_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_note_applications_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_note_applications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_note_items: {
+        Row: {
+          created_at: string
+          credit_note_id: string
+          description: string
+          id: string
+          line_total: number
+          quantity: number
+          sort_order: number
+          tenant_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          credit_note_id: string
+          description: string
+          id?: string
+          line_total?: number
+          quantity?: number
+          sort_order?: number
+          tenant_id: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          credit_note_id?: string
+          description?: string
+          id?: string
+          line_total?: number
+          quantity?: number
+          sort_order?: number
+          tenant_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_note_items_credit_note_id_fkey"
+            columns: ["credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "credit_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_note_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_notes: {
+        Row: {
+          amount_applied: number
+          balance: number
+          created_at: string
+          created_by: string | null
+          credit_note_number: string
+          customer_id: string
+          id: string
+          invoice_id: string | null
+          issue_date: string | null
+          notes: string | null
+          reason: string | null
+          status: Database["public"]["Enums"]["credit_note_status"]
+          subtotal: number
+          tenant_id: string
+          total: number
+          updated_at: string
+          updated_by: string | null
+          xero_credit_note_id: string | null
+          xero_credit_note_number: string | null
+        }
+        Insert: {
+          amount_applied?: number
+          balance?: number
+          created_at?: string
+          created_by?: string | null
+          credit_note_number: string
+          customer_id: string
+          id?: string
+          invoice_id?: string | null
+          issue_date?: string | null
+          notes?: string | null
+          reason?: string | null
+          status?: Database["public"]["Enums"]["credit_note_status"]
+          subtotal?: number
+          tenant_id: string
+          total?: number
+          updated_at?: string
+          updated_by?: string | null
+          xero_credit_note_id?: string | null
+          xero_credit_note_number?: string | null
+        }
+        Update: {
+          amount_applied?: number
+          balance?: number
+          created_at?: string
+          created_by?: string | null
+          credit_note_number?: string
+          customer_id?: string
+          id?: string
+          invoice_id?: string | null
+          issue_date?: string | null
+          notes?: string | null
+          reason?: string | null
+          status?: Database["public"]["Enums"]["credit_note_status"]
+          subtotal?: number
+          tenant_id?: string
+          total?: number
+          updated_at?: string
+          updated_by?: string | null
+          xero_credit_note_id?: string | null
+          xero_credit_note_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_notes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address_line_1: string | null
@@ -2544,10 +2738,12 @@ export type Database = {
           banking_details: string | null
           company_name: string | null
           created_at: string
+          credit_note_prefix: string
           default_vat_rate: number
           footer_notes: string | null
           id: string
           invoice_prefix: string
+          next_credit_note_number: number
           next_number: number
           payment_terms_days: number
           reminder_days: number[]
@@ -2560,10 +2756,12 @@ export type Database = {
           banking_details?: string | null
           company_name?: string | null
           created_at?: string
+          credit_note_prefix?: string
           default_vat_rate?: number
           footer_notes?: string | null
           id?: string
           invoice_prefix?: string
+          next_credit_note_number?: number
           next_number?: number
           payment_terms_days?: number
           reminder_days?: number[]
@@ -2576,10 +2774,12 @@ export type Database = {
           banking_details?: string | null
           company_name?: string | null
           created_at?: string
+          credit_note_prefix?: string
           default_vat_rate?: number
           footer_notes?: string | null
           id?: string
           invoice_prefix?: string
+          next_credit_note_number?: number
           next_number?: number
           payment_terms_days?: number
           reminder_days?: number[]
@@ -4205,6 +4405,14 @@ export type Database = {
         Args: { target_customer_id: string }
         Returns: Database["public"]["Enums"]["notification_status"]
       }
+      apply_credit_note: {
+        Args: {
+          p_amount: number
+          p_credit_note_id: string
+          p_invoice_id: string
+        }
+        Returns: string
+      }
       current_customer_id: {
         Args: { target_tenant_id: string }
         Returns: string
@@ -4227,6 +4435,10 @@ export type Database = {
         Returns: undefined
       }
       next_booking_number: {
+        Args: { target_tenant_id: string }
+        Returns: string
+      }
+      next_credit_note_number: {
         Args: { target_tenant_id: string }
         Returns: string
       }
@@ -4305,6 +4517,7 @@ export type Database = {
         | "no_show"
         | "grooming"
       comms_channel: "email" | "whatsapp" | "sms"
+      credit_note_status: "draft" | "issued" | "applied" | "cancelled"
       customer_status: "active" | "inactive" | "archived"
       document_status: "pending" | "verified" | "rejected" | "expired"
       email_status: "queued" | "sent" | "failed"
@@ -4529,6 +4742,7 @@ export const Constants = {
         "grooming",
       ],
       comms_channel: ["email", "whatsapp", "sms"],
+      credit_note_status: ["draft", "issued", "applied", "cancelled"],
       customer_status: ["active", "inactive", "archived"],
       document_status: ["pending", "verified", "rejected", "expired"],
       email_status: ["queued", "sent", "failed"],
