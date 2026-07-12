@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download, Mail, Link as LinkIcon, BellOff, Bell } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download, Mail, Link as LinkIcon, BellOff, Bell, FileMinus } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -10,6 +10,9 @@ import { InvoiceStatusChip, fmtZar } from "./status";
 import { RecordPaymentDialog } from "./RecordPaymentDialog";
 import { Can } from "@/components/auth/Can";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { useCreditNotesForInvoice } from "@/features/creditNotes/queries";
+import { CreditNoteStatusChip } from "@/features/creditNotes/status";
+import { IssueCreditNoteDrawer } from "@/features/creditNotes/IssueCreditNoteDrawer";
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -32,6 +35,7 @@ export default function InvoiceDetailPage() {
   const sendEmail = useSendInvoiceEmail(tenantId ?? "");
 
   const [payOpen, setPayOpen] = useState(false);
+  const [issueCnOpen, setIssueCnOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ description: string; quantity: number; unit_price: number }>({ description: "", quantity: 1, unit_price: 0 });
   const [adding, setAdding] = useState(false);
@@ -41,6 +45,8 @@ export default function InvoiceDetailPage() {
   const isDraft = inv?.status === "draft";
   const balance = Number(inv?.balance_due ?? 0);
   const hasBeenSent = Boolean((inv as any)?.sent_at);
+  const cnQ = useCreditNotesForInvoice(tenantId, inv?.id ?? null);
+  const creditsApplied = Number(cnQ.data?.totalApplied ?? 0);
 
   async function saveLine(invoice_id: string) {
     if (!draft.description.trim()) { toast.error("Description required"); return; }
@@ -132,6 +138,14 @@ export default function InvoiceDetailPage() {
                 <button onClick={doVoid}
                   className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
                   <Ban className="h-4 w-4" /> Void
+                </button>
+              </Can>
+            )}
+            {inv && !isDraft && inv.status !== "cancelled" && (
+              <Can code="credit_notes.create">
+                <button onClick={() => setIssueCnOpen(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
+                  <FileMinus className="h-4 w-4" /> Credit note
                 </button>
               </Can>
             )}
@@ -357,11 +371,50 @@ export default function InvoiceDetailPage() {
                   <span className="text-muted-foreground">Paid</span>
                   <span className="tabular-nums">{fmtZar(inv.amount_paid)}</span>
                 </div>
+                {creditsApplied > 0 && (
+                  <div className="mt-1 flex justify-between text-sm">
+                    <span className="text-muted-foreground">Credits applied</span>
+                    <span className="tabular-nums">{fmtZar(creditsApplied)}</span>
+                  </div>
+                )}
                 <div className="mt-1 flex justify-between text-sm">
                   <span className="text-muted-foreground">Balance</span>
                   <span className="tabular-nums font-semibold">{fmtZar(inv.balance_due)}</span>
                 </div>
               </div>
+
+              {(cnQ.data?.linked?.length || cnQ.data?.applications?.length) ? (
+                <div className="sk-card p-5">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Credit notes</div>
+                  <ul className="mt-2 space-y-2 text-sm">
+                    {(cnQ.data?.linked ?? []).map((c: any) => (
+                      <li key={c.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0 last:pb-0">
+                        <div>
+                          <Link to={`/admin/credit-notes/${c.id}`} className="font-mono text-xs hover:text-sk-coral-dark">{c.credit_note_number}</Link>
+                          <div className="mt-0.5"><CreditNoteStatusChip status={c.status} /></div>
+                        </div>
+                        <div className="text-right text-xs">
+                          <div className="tabular-nums font-semibold">{fmtZar(c.total)}</div>
+                          <div className="text-muted-foreground">Bal {fmtZar(c.balance)}</div>
+                        </div>
+                      </li>
+                    ))}
+                    {(cnQ.data?.applications ?? []).map((a: any) => (
+                      <li key={a.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0 last:pb-0">
+                        <div>
+                          <Link to={`/admin/credit-notes/${a.credit_note?.id}`} className="font-mono text-xs hover:text-sk-coral-dark">
+                            {a.credit_note?.credit_note_number ?? "—"}
+                          </Link>
+                          <div className="text-xs text-muted-foreground">
+                            Applied {format(new Date(a.applied_at), "dd MMM yyyy")}
+                          </div>
+                        </div>
+                        <div className="text-sm font-semibold tabular-nums">−{fmtZar(a.amount)}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               <div className="sk-card p-5">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Activity</div>
@@ -397,6 +450,9 @@ export default function InvoiceDetailPage() {
           onClose={() => setPayOpen(false)}
           onDone={() => setPayOpen(false)} />
       )}
+      {issueCnOpen && inv && tenantId && (
+        <IssueCreditNoteDrawer tenantId={tenantId} invoiceId={inv.id} onClose={() => setIssueCnOpen(false)} />
+      )}
     </>
   );
 }
@@ -422,6 +478,10 @@ function eventLabel(ev: InvoiceEvent): string {
     case "sent": return "Emailed to customer";
     case "viewed": return "Viewed by customer";
     case "reminder_sent": return "Reminder sent";
+    case "credit_note_issued": return "Credit note issued";
+    case "credit_note_applied": return "Credit note applied";
+    case "credit_note_reversed": return "Credit note reversed";
+    case "credit_note_cancelled": return "Credit note cancelled";
     default: return ev.event_type;
   }
 }
@@ -434,6 +494,12 @@ function eventDetail(ev: InvoiceEvent): string {
     if (p.amount != null) parts.push(`R${Number(p.amount).toFixed(2)}`);
     if (p.method) parts.push(String(p.method));
     if (p.reference) parts.push(String(p.reference));
+    return parts.join(" · ");
+  }
+  if (ev.event_type.startsWith("credit_note_")) {
+    const parts: string[] = [];
+    if (p.credit_note_number) parts.push(String(p.credit_note_number));
+    if (p.amount != null) parts.push(`R${Number(p.amount).toFixed(2)}`);
     return parts.join(" · ");
   }
   return "";

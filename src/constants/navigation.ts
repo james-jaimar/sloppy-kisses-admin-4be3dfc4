@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Calendar, Users, PawPrint, Inbox, CalendarCheck, Dog, Hotel,
   Scissors, Truck, ArrowLeftRight, Receipt, ShoppingBag, BarChart3, Settings,
   FileText, CreditCard, User, MessageSquare, Building2, ShieldCheck, Flag,
-  History, Activity, Database,
+  History, Activity, Database, FileMinus,
 } from "lucide-react";
 
 export const adminNav = [
@@ -18,6 +18,7 @@ export const adminNav = [
   { to: "/admin/mobile-vans", label: "Mobile Vans", icon: Truck, code: "grooming.view" },
   { to: "/admin/pickup-dropoff", label: "Pick Up / Drop Off", icon: ArrowLeftRight, code: "transport.view" },
   { to: "/admin/invoices", label: "Invoices & Payments", icon: Receipt, code: "invoices.view" },
+  { to: "/admin/credit-notes", label: "Credit notes", icon: FileMinus, code: "credit_notes.view" },
   { to: "/admin/comms", label: "Comms", icon: MessageSquare, code: "comms.view" },
   { to: "/admin/shop-stock", label: "Shop & Stock", icon: ShoppingBag, code: "products.view" },
   { to: "/admin/reports", label: "Reports", icon: BarChart3, code: "reports.view" },
