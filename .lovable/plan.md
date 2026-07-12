@@ -1,56 +1,70 @@
 
-## Section C1 — Credit notes
+## Section C2 — Refunds against payments (PayFast-ready)
 
-Next up in the roadmap. Credit notes let you reverse part or all of a locked (issued/paid) invoice without editing the original — the correct accounting move once an invoice has been sent. This section is the prerequisite for C2 (refunds) and C4 (statements).
+Records money going back to the customer against a specific payment (or standalone). Typically triggered after a credit note is issued, but the money-out leg lives here. Wired so that when PayFast is connected later, we flip a switch — no schema churn.
 
-### What ships
+### What ships now
 
-**Database**
-- New `credit_notes` table: tenant_id, credit_note_number, customer_id, invoice_id (nullable — allows "standalone" credit for goodwill), status (`draft` / `issued` / `applied` / `cancelled`), issue_date, subtotal, total, amount_applied, balance, reason, notes, xero_* fields, created_by/updated_by, timestamps.
-- New `credit_note_items` table: credit_note_id, description, quantity, unit_price, line_total, sort_order — mirrors `invoice_items`.
-- New `credit_note_applications` table: credit_note_id, invoice_id, amount, applied_at, applied_by — records which invoices a credit was applied against (many-to-many so one CN can cover multiple invoices).
-- `invoicing_settings`: add `credit_note_prefix` (default `CN-`) and `next_credit_note_number` (default 1).
-- `next_credit_note_number(tenant_id)` RPC mirroring `next_invoice_number`.
-- Trigger to recompute CN totals on item change (mirror of invoice totals trigger).
-- Trigger on `credit_note_applications` insert/delete: bumps `credit_notes.amount_applied` + `balance`, and reduces the target invoice's `balance_due` (and flips invoice status → `paid` when balance hits zero, same as a payment).
-- Lock-after-issue trigger on `credit_notes` / `credit_note_items` (same shape as invoice lock).
-- Audit hook: log `credit_note_issued`, `credit_note_applied`, `credit_note_cancelled` into `invoice_events` against the target invoice(s).
-- RLS + GRANTs gated by new permission codes below.
+**Database — new `payment_refunds` table**
+- `tenant_id`, `payment_id` (nullable — allows off-system refunds), `invoice_id` (nullable, denormalised for reporting), `credit_note_id` (nullable — link the paperwork), `customer_id`
+- `amount` `numeric(12,2)`, `currency` (default ZAR), `refund_date`
+- `method` — reuses existing `payment_methods` list (cash, EFT, card, etc.) so refunds match the original payment channel
+- `reference` — free-text (e.g. bank txn ref, PayFast refund id echoed here)
+- `status` — enum `pending` / `processing` / `succeeded` / `failed` / `cancelled` (manual refunds jump straight to `succeeded`; gateway refunds start `pending`)
+- `notes`
+- **Gateway fields (dormant until PayFast wired):** `provider` (text: `manual` / `payfast` / `yoco` / `stripe`), `provider_refund_id`, `provider_status`, `provider_payload` (jsonb — raw callback body), `provider_error`
+- `created_by`, `updated_by`, timestamps
+
+**Database — supporting**
+- Extend `payments` with `amount_refunded numeric(12,2) default 0` and `refund_status` (`none` / `partial` / `full`) — kept in sync by trigger.
+- Trigger on `payment_refunds`: on `succeeded` insert/update, bump `payments.amount_refunded`, recompute `refund_status`, reduce the linked invoice's `amount_paid` and increase `balance_due` (mirror of payment application, atomic). Flip invoice status back to `part_paid` / `sent` as appropriate.
+- Guard: `sum(refunds.amount where succeeded) <= payments.amount` per payment.
+- Audit hook: log `refund_recorded` / `refund_failed` / `refund_voided` into `invoice_events` against the linked invoice.
+- New RPC `record_manual_refund(payment_id, amount, method, reference, credit_note_id, notes)` — atomic; used by the UI.
+- New RPC `void_refund(refund_id)` — reverses a succeeded refund (creates a compensating adjustment; only allowed for `manual` provider or platform owner).
 
 **Permissions** (added to A1's set)
-- `credit_notes.view`, `credit_notes.create`, `credit_notes.issue`, `credit_notes.apply`, `credit_notes.void`.
-- Seeded onto Owner (all) and Manager (all except `void`); Worker gets `view` only.
+- `refunds.view`, `refunds.create`, `refunds.void`
+- Seeded to Owner (all) and Manager (all); Worker gets `view` only.
 
-**Frontend**
-- New route `/admin/credit-notes` — list page (number, customer, date, total, balance, status chip).
-- New route `/admin/credit-notes/:id` — detail page: header, line-item editor (draft only), Apply-to-invoice picker (lists customer's open invoices with balance), applications list, Activity feed (reuses invoice_events reader), PDF download.
-- New drawer "Issue credit note" launched from the invoice detail page ("Issue credit note" button, gated by `credit_notes.create`) — pre-fills customer + invoice link, lets user pick full-invoice reversal or custom lines.
-- Invoice detail page: show "Credits applied" row alongside Paid/Balance, and list linked CNs.
-- Sidebar: add "Credit notes" under Invoices, gated by `credit_notes.view`.
+**Gateway abstraction (scaffolding only — no PayFast keys required today)**
+- New `payment_providers` table: `tenant_id`, `provider` (text), `enabled` (bool), `mode` (`test` / `live`), `settings` (jsonb — merchant id, passphrase-ref, etc. — never the secret itself), `webhook_secret_ref` (name of the Supabase secret to look up at runtime). One row per tenant per provider.
+- Edge function skeleton `payment-gateway-refund` — dispatches on `provider`:
+  - `manual` → immediately writes a `succeeded` refund row (used by the UI today).
+  - `payfast` → stub that returns `501 Not Implemented` with a clear message. When PayFast is signed up: fill in the ITN-verified refund call, secrets loaded from `Deno.env` via `webhook_secret_ref`. **No secrets touched now.**
+  - `yoco` / `stripe` → same stub shape.
+- Edge function skeleton `payment-gateway-webhook` — verifies signature per provider, updates `payment_refunds.status` + `provider_payload`. Stubbed today.
+- Admin → Settings → **Payment providers** page (gated by new `settings.payment_providers` permission) — lists providers with an Enable toggle, mode selector, and a "Coming soon — PayFast recommended" info banner. Editing is disabled for gateway providers until the connect flow is built; you can already toggle `manual` (which is on by default).
 
-**PDF**
-- New edge function `generate-credit-note-pdf` — reuses layout from `generate-invoice-pdf` (same header/footer/branding, "CREDIT NOTE" banner, references the original invoice number).
-- Downloadable from CN detail page; not emailed in C1 (email attach + share link comes in a later slice if you want).
+**Frontend — refunds UI**
+- Payment detail area (inline in Invoice Detail page's Payments card): each payment gets a "Refund" button (gated by `refunds.create`) opening a drawer:
+  - Amount (pre-filled with remaining refundable), method (default = original method), reference, optional link to a credit note (dropdown of open CNs for that customer), notes.
+  - On submit → calls `record_manual_refund` RPC (today) or `payment-gateway-refund` edge function (once a gateway is enabled).
+- Payments card now shows per-payment refunded amount + status pill, and a "Refunded" line in the totals block.
+- Credit Note detail page: new "Refunds" tab listing refunds linked to this CN (many-to-one), with a "Record refund" button that pre-fills the linked payment picker.
+- Invoice Detail page: activity feed picks up new `refund_*` events automatically.
+- Sidebar: no new top-level entry — refunds live inside payments/invoices/credit notes.
 
-**Out of scope for C1** (deliberate — keeps this shippable):
-- Refunds against payments (that's C2 — often triggered by issuing a CN, but the money-out leg lives there).
-- Over-payment / customer credit balance (C3).
-- Emailing CNs to customers (can bolt on later; PDF download covers the immediate need).
+### Out of scope for C2 (deliberate)
+- Actual PayFast HTTP calls / signature verification — stubs land now, real implementation is a small follow-up once Charlotte signs up (add secret + fill two functions).
+- Yoco / Stripe integrations.
+- Over-payment / customer credit balance (that's C3).
+- Bulk refund of a whole invoice (user records refunds per payment; a "refund all" convenience button can come later).
 
 ### Technical details
-
-- Numbering uses the same advisory-lock pattern as invoices to prevent race conditions.
-- Applying a CN to an invoice is a single RPC (`apply_credit_note(cn_id, invoice_id, amount)`) that: validates amount ≤ min(CN balance, invoice balance), inserts the application row, and lets the trigger cascade. Kept server-side so the balance math is atomic.
-- Voiding an issued CN with applications is blocked — user must first reverse the applications (delete rows), which the trigger will restore invoice balance for.
-- All money columns are `numeric(12,2)`; totals recomputed from items server-side (never trust client).
+- Money math and status flips live in DB triggers so a manual UI insert and a future gateway callback produce identical downstream state.
+- Provider secrets stored via Supabase secrets, referenced by name in `payment_providers.webhook_secret_ref`. Nothing sensitive in the DB.
+- Idempotency: `payment_refunds` gets a unique index on `(provider, provider_refund_id)` where provider ≠ `manual`, so PayFast webhook retries don't double-refund.
+- All money columns `numeric(12,2)`; refund sums enforced server-side.
+- Existing `payments.amount` remains immutable — refunds are additive rows, never mutations of the original payment.
 
 ### Sequenced work
+1. Migration: `payment_refunds`, `payment_providers`, `payments` columns, enums, triggers, RPCs, permissions, GRANTs.
+2. Types regen → refund query hooks (`useRefunds`, `useRecordManualRefund`, `useVoidRefund`).
+3. Refund drawer + Payments card refresh on Invoice Detail.
+4. Credit Note detail "Refunds" tab.
+5. Edge function stubs `payment-gateway-refund` + `payment-gateway-webhook` (manual path live; PayFast returns 501).
+6. Admin → Settings → Payment providers page (list + toggle for manual; PayFast row visible but disabled with "Coming soon").
+7. Tick C2 in `mem://features/invoicing-roadmap.md`; note PayFast follow-up items.
 
-1. Migration: tables + RPCs + triggers + permissions + GRANTs.
-2. Types regen, then query hooks (`useCreditNotes`, `useCreditNote`, `useIssueCreditNote`, `useApplyCreditNote`, `useVoidCreditNote`).
-3. List page + detail page + issue drawer.
-4. Invoice detail integration (button + credits-applied row).
-5. `generate-credit-note-pdf` edge function.
-6. Sidebar + roadmap memory tick.
-
-Say the word and I'll kick off with the migration.
+Give the word and I'll kick off with the migration.
