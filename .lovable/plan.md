@@ -1,34 +1,27 @@
-## Fix: Invoice PDF download failing with CORS error
+## Fix invoice PDF: Bill To and Banking Details
 
-### What's actually wrong
+### Root cause (confirmed against DB)
+The edge function `supabase/functions/generate-invoice-pdf/index.ts` selects columns that don't exist on `customers` (`phone`, `address_line1`, `address_line2`, `postal_code`, `vat_number`). PostgREST returns an error, `customer` is null, so BILL TO renders "—".
 
-The CORS error in the browser is a **symptom, not the cause**. Edge Function logs show the real crash:
+Actual columns on `customers`: `mobile`, `phone_alt`, `address_line_1`, `address_line_2`, `suburb`, `city`, `province`, `postcode`. No `vat_number` column exists.
 
-```
-TypeError: page.size is not a function
-    at index.ts:111
-```
+Banking details render as one line because `drawWrapped` splits on any whitespace, collapsing user-entered line breaks from the settings textarea.
 
-`pdf-lib`'s `PDFPage` exposes `getSize()`, not `size()`. The function throws before it can return a response, so no CORS headers are sent, so the browser reports "No 'Access-Control-Allow-Origin' header." Fix the crash and the CORS message disappears.
+### Changes to `supabase/functions/generate-invoice-pdf/index.ts`
 
-### Change
+1. **Customer select** — fix column names:
+   `id, full_name, customer_number, email, mobile, phone_alt, address_line_1, address_line_2, suburb, city, province, postcode`
+   Remove `vat_number` reference.
 
-In `supabase/functions/generate-invoice-pdf/index.ts`, line 111:
+2. **BILL TO block** — use the corrected fields:
+   - Phone line uses `mobile` (fallback `phone_alt`).
+   - Address line composed from `address_line_1, address_line_2, suburb, [city, postcode] joined, province`, filtered for empties.
 
-```ts
-- const { width, height } = page.size();
-+ const { width, height } = page.getSize();
-```
+3. **Banking details** — honor hard returns:
+   - Add a `drawMultilineWrapped` helper (or split input on `/\r?\n/` and call `drawWrapped` per line, advancing y by one line-height between lines, including blank lines).
+   - Use it for the banking details box and for the notes block (so notes also respect line breaks).
 
-That's the only code change needed. No CORS config change, no client change, no migration.
+No client-side or schema changes. After edit, redeploy the function.
 
-### Verify
-
-1. Deploy (automatic).
-2. From the invoice detail page, click **Download PDF** — the branded A4 invoice should download.
-3. Check `generate-invoice-pdf` logs — no more `TypeError`.
-
-### Not touching
-
-- The other errors in your paste (`postMessage` origin, "message channel closed") are Lovable preview/extension noise, unrelated to the PDF.
-- Daycare import, invoices list ordering — not part of this fix. Happy to do the invoice ordering as a separate small task if you want (e.g. sort by `issue_date desc, invoice_number desc`).
+### Verification
+- Reload the invoice `INV00096` PDF — BILL TO shows Mandy Bergront with address/contact populated; banking details render across multiple lines matching the settings textarea.
