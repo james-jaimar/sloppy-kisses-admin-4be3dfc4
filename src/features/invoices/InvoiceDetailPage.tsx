@@ -141,6 +141,14 @@ export default function InvoiceDetailPage() {
                 </button>
               </Can>
             )}
+            {inv && !isDraft && inv.status !== "cancelled" && (
+              <Can code="credit_notes.create">
+                <button onClick={() => setIssueCnOpen(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
+                  <FileMinus className="h-4 w-4" /> Credit note
+                </button>
+              </Can>
+            )}
             <button onClick={async () => {
               if (!inv) return;
               try {
