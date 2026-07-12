@@ -292,6 +292,37 @@ export function useAllPayments(tenantId: string | null | undefined) {
   });
 }
 
+// -------- Invoice events (audit trail) --------
+
+export interface InvoiceEvent {
+  id: string;
+  tenant_id: string;
+  invoice_id: string;
+  event_type: string;
+  actor_profile_id: string | null;
+  actor_label: string | null;
+  payload: Record<string, any>;
+  notes: string | null;
+  created_at: string;
+}
+
+export function useInvoiceEvents(tenantId: string | null | undefined, invoiceId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["invoice_events", tenantId, invoiceId],
+    enabled: Boolean(tenantId && invoiceId),
+    queryFn: async (): Promise<InvoiceEvent[]> => {
+      const { data, error } = await (supabase as any)
+        .from("invoice_events")
+        .select("*")
+        .eq("tenant_id", tenantId as string)
+        .eq("invoice_id", invoiceId as string)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as InvoiceEvent[];
+    },
+  });
+}
+
 // -------- Settings --------
 
 export function useInvoicingSettings(tenantId: string | null | undefined) {
