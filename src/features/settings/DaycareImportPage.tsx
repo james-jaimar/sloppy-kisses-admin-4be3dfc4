@@ -211,6 +211,27 @@ export default function DaycareImportPage() {
           }
         }
 
+        // Confirmed row that picked an existing customer but no specific pet:
+        // create the pet under that customer using the seed data.
+        if (!petId && custId) {
+          try {
+            const { data: pn } = await supabase.rpc("next_pet_number", { target_tenant_id: tenantId });
+            const { data: pet, error: pErr } = await supabase.from("pets")
+              .insert({
+                tenant_id: tenantId, customer_id: custId, pet_number: pn as string,
+                name: r.seed.dog_first, species: "dog",
+                breed: r.seed.breed, size: r.seed.size,
+                sex: r.seed.sex ? r.seed.sex.toLowerCase() : null,
+              } as any)
+              .select("id").single();
+            if (pErr) throw pErr;
+            petId = pet.id;
+          } catch (e: any) {
+            errors.push(`${r.seed.dog_full_name}: pet create failed — ${e.message ?? e}`);
+            continue;
+          }
+        }
+
         if (!petId || !custId) { skipped += 1; continue; }
         const dpw = r.seed.days_per_week ?? r.seed.pattern.length;
         const plan = planByDpw.get(dpw) ?? null;
