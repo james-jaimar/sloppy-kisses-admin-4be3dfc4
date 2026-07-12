@@ -549,6 +549,16 @@ export default function InvoiceDetailPage() {
           onDone={() => setRefundFor(null)}
         />
       )}
+      {allocateOpen && inv && tenantId && (
+        <AllocateCreditDialog
+          tenantId={tenantId}
+          customerId={inv.customer_id}
+          invoiceId={inv.id}
+          invoiceNumber={inv.invoice_number}
+          invoiceBalance={Number(inv.balance_due ?? 0)}
+          onClose={() => setAllocateOpen(false)}
+        />
+      )}
     </>
   );
 }
