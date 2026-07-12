@@ -1,17 +1,16 @@
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { demoTodayGrooming } from "@/constants/demoData";
 import { Scissors, Truck, Dog, Hotel, ArrowLeftRight, TrendingUp, TrendingDown, MoreHorizontal, ChevronRight, Users, PawPrint } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
+import { Link } from "react-router-dom";
 import { useCustomerAndPetCounts } from "@/features/customers/queries";
-
-const stats = [
-  { key: "grooming", label: "Today's Grooming", value: 12, delta: "+3", trend: "up",   icon: Scissors,       tone: "coral" },
-  { key: "mobile",   label: "Mobile Appointments", value: 5, delta: "+1", trend: "up",   icon: Truck,          tone: "turquoise" },
-  { key: "daycare",  label: "Daycare Dogs",     value: 24, delta: "-2", trend: "down", icon: Dog,            tone: "green" },
-  { key: "hotel",    label: "Hotel Guests",     value: 18, delta: "0",  trend: "up",   icon: Hotel,          tone: "orange" },
-  { key: "pickup",   label: "Pick Ups / Drop Offs", value: 7, delta: "+2", trend: "up", icon: ArrowLeftRight, tone: "coral" },
-] as const;
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import {
+  useDashboardTodayStats,
+  useTodaysSchedule,
+  useDaycareCheckinSummary,
+  useRecentActivity,
+} from "./queries";
 
 const toneChip: Record<string, string> = {
   coral: "bg-sk-coral-soft text-sk-coral-dark",
@@ -20,29 +19,52 @@ const toneChip: Record<string, string> = {
   orange: "bg-sk-orange-soft text-sk-orange",
 };
 
-const checkins = [
-  { label: "Expected",  value: 26, tone: "muted" },
-  { label: "Checked in", value: 18, tone: "green" },
-  { label: "Not arrived", value: 6, tone: "orange" },
-  { label: "Walk-ins",   value: 2, tone: "coral" },
-];
-
-const activity = [
-  { who: "Nomvula", what: "checked in", target: "Max (Sarah Johnson)", when: "2 min ago" },
-  { who: "Charlotte", what: "approved booking request from", target: "Amelia Roberts", when: "18 min ago" },
-  { who: "Kagiso", what: "marked", target: "Rocky's groom as in progress", when: "42 min ago" },
-  { who: "System", what: "sent invoice", target: "SK-INV-2041 to Priya Naidoo", when: "1 h ago" },
-  { who: "Sipho", what: "logged pick-up for", target: "Kiara (Rethabile Dube)", when: "1 h ago" },
-];
+const SERVICE_LABEL: Record<string, string> = {
+  grooming_inhouse: "In-house grooming",
+  grooming_mobile: "Mobile grooming",
+  daycare: "Daycare",
+  daycare_assessment: "Daycare assessment",
+  hotel_dog: "Hotel",
+  hotel_cat: "Cattery",
+  pickup_dropoff: "Pick-up / drop-off",
+};
 
 export default function AdminDashboard() {
   const today = format(new Date(), "EEEE, d MMMM");
+  const { profile, currentTenant } = useCurrentUser();
+  const tenantId = currentTenant?.id ?? null;
+  const firstName = (profile?.full_name ?? "").trim().split(/\s+/)[0] || "there";
   const { data: counts, isLoading: countsLoading } = useCustomerAndPetCounts();
+  const { data: statsData, isLoading: statsLoading } = useDashboardTodayStats(tenantId);
+  const { data: schedule, isLoading: scheduleLoading } = useTodaysSchedule(tenantId);
+  const { data: checkin, isLoading: checkinLoading } = useDaycareCheckinSummary(tenantId);
+  const { data: activity, isLoading: activityLoading } = useRecentActivity(tenantId);
+
+  const statCards = [
+    { key: "grooming", label: "Today's Grooming", ...statsData?.grooming, icon: Scissors, tone: "coral" },
+    { key: "mobile", label: "Mobile Appointments", ...statsData?.mobile, icon: Truck, tone: "turquoise" },
+    { key: "daycare", label: "Daycare Dogs", ...statsData?.daycare, icon: Dog, tone: "green" },
+    { key: "hotel", label: "Hotel Guests", ...statsData?.hotel, icon: Hotel, tone: "orange" },
+    { key: "pickup", label: "Pick Ups / Drop Offs", ...statsData?.transport, icon: ArrowLeftRight, tone: "coral" },
+  ].map((s) => {
+    const today = (s as any).today ?? 0;
+    const yday = (s as any).yday ?? 0;
+    const delta = today - yday;
+    return { ...s, value: today, delta, trend: delta >= 0 ? "up" : "down" };
+  });
+
+  const checkins = [
+    { label: "Expected", value: checkin?.expected ?? 0 },
+    { label: "Checked in", value: checkin?.checkedIn ?? 0 },
+    { label: "Not arrived", value: checkin?.notArrived ?? 0 },
+    { label: "Walk-ins", value: checkin?.walkIns ?? 0 },
+  ];
+
   return (
     <>
       <AppHeader
         title="Dashboard"
-        subtitle={`Good morning, Charlotte — here's what's happening ${today}.`}
+        subtitle={`Good morning, ${firstName} — here's what's happening ${today}.`}
         actions={
           <button className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-medium hover:bg-muted">
             Today
@@ -79,9 +101,10 @@ export default function AdminDashboard() {
 
         {/* Stat cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {stats.map((s) => {
+          {statCards.map((s) => {
             const Icon = s.icon;
             const TrendIcon = s.trend === "up" ? TrendingUp : TrendingDown;
+            const deltaLabel = s.delta === 0 ? "0" : (s.delta > 0 ? `+${s.delta}` : `${s.delta}`);
             return (
               <div key={s.key} className="sk-card p-5">
                 <div className="flex items-start justify-between">
@@ -92,13 +115,15 @@ export default function AdminDashboard() {
                     <MoreHorizontal className="h-4 w-4" />
                   </button>
                 </div>
-                <div className="mt-4 sk-stat-value">{s.value}</div>
+                <div className="mt-4 sk-stat-value tabular-nums">{statsLoading ? "…" : s.value}</div>
                 <div className="mt-1 flex items-center justify-between">
                   <span className="sk-stat-label">{s.label}</span>
-                  <span className={"inline-flex items-center gap-0.5 text-xs font-medium " + (s.trend === "up" ? "text-sk-green" : "text-sk-coral")}>
-                    <TrendIcon className="h-3 w-3" />
-                    {s.delta}
-                  </span>
+                  {!statsLoading && s.delta !== 0 && (
+                    <span className={"inline-flex items-center gap-0.5 text-xs font-medium " + (s.trend === "up" ? "text-sk-green" : "text-sk-coral")}>
+                      <TrendIcon className="h-3 w-3" />
+                      {deltaLabel}
+                    </span>
+                  )}
                 </div>
               </div>
             );
@@ -113,19 +138,35 @@ export default function AdminDashboard() {
                 <h2 className="text-base font-semibold">Today's schedule</h2>
                 <p className="text-xs text-muted-foreground">Grooming, mobile & pick-ups</p>
               </div>
-              <button className="text-sm font-medium text-sk-coral-dark hover:underline">Open calendar</button>
+              <Link to="/admin/calendar" className="text-sm font-medium text-sk-coral-dark hover:underline">Open calendar</Link>
             </div>
             <div className="divide-y divide-border">
-              {demoTodayGrooming.map((b) => (
-                <div key={b.id} className="flex items-center gap-4 px-5 py-3.5">
-                  <div className="w-16 text-sm font-semibold tabular-nums">{b.time}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{b.pet} <span className="text-muted-foreground font-normal">· {b.owner}</span></div>
-                    <div className="text-xs text-muted-foreground">{b.service} · with {b.groomer}</div>
-                  </div>
-                  <StatusBadge status={b.status} />
-                </div>
-              ))}
+              {scheduleLoading && (
+                <div className="px-5 py-6 text-sm text-muted-foreground">Loading…</div>
+              )}
+              {!scheduleLoading && (schedule?.length ?? 0) === 0 && (
+                <div className="px-5 py-10 text-center text-sm text-muted-foreground">No bookings scheduled for today.</div>
+              )}
+              {schedule?.map((b) => {
+                const time = b.start_at ? format(new Date(b.start_at), "HH:mm") : "—";
+                const pets = b.booking_pets
+                  .map((bp) => bp.pet?.name)
+                  .filter(Boolean)
+                  .join(", ") || "—";
+                const owner = b.customer?.full_name ?? "—";
+                const service = SERVICE_LABEL[b.service_type] ?? b.service_type;
+                const resource = b.resource?.name;
+                return (
+                  <Link key={b.id} to={`/admin/bookings/${b.id}`} className="flex items-center gap-4 px-5 py-3.5 hover:bg-sk-surface-muted">
+                    <div className="w-16 text-sm font-semibold tabular-nums">{time}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{pets} <span className="text-muted-foreground font-normal">· {owner}</span></div>
+                      <div className="text-xs text-muted-foreground truncate">{service}{resource ? ` · ${resource}` : ""}</div>
+                    </div>
+                    <StatusBadge status={b.status} />
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
@@ -140,15 +181,15 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-3 p-5">
               {checkins.map((c) => (
                 <div key={c.label} className="rounded-xl border border-border bg-sk-surface-muted p-4">
-                  <div className="text-2xl font-semibold">{c.value}</div>
+                  <div className="text-2xl font-semibold tabular-nums">{checkinLoading ? "…" : c.value}</div>
                   <div className="mt-1 text-xs text-muted-foreground">{c.label}</div>
                 </div>
               ))}
             </div>
             <div className="border-t border-border px-5 py-3">
-              <button className="w-full rounded-xl bg-sk-turquoise-soft py-2 text-sm font-semibold text-sk-turquoise-dark hover:bg-sk-turquoise-soft/70">
+              <Link to="/admin/daycare/attendance" className="block w-full rounded-xl bg-sk-turquoise-soft py-2 text-center text-sm font-semibold text-sk-turquoise-dark hover:bg-sk-turquoise-soft/70">
                 Open daily list
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -157,18 +198,25 @@ export default function AdminDashboard() {
         <div className="sk-card">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <h2 className="text-base font-semibold">Recent activity</h2>
-            <button className="text-sm font-medium text-muted-foreground hover:text-foreground">View all</button>
           </div>
           <ul className="divide-y divide-border">
-            {activity.map((a, i) => (
-              <li key={i} className="flex items-start gap-3 px-5 py-3.5 text-sm">
+            {activityLoading && (
+              <li className="px-5 py-6 text-sm text-muted-foreground">Loading…</li>
+            )}
+            {!activityLoading && (activity?.length ?? 0) === 0 && (
+              <li className="px-5 py-10 text-center text-sm text-muted-foreground">No activity yet.</li>
+            )}
+            {activity?.map((a) => (
+              <li key={a.id} className="flex items-start gap-3 px-5 py-3.5 text-sm">
                 <div className="mt-1 h-2 w-2 rounded-full bg-sk-turquoise" />
-                <div className="flex-1">
-                  <span className="font-medium">{a.who}</span>{" "}
-                  <span className="text-muted-foreground">{a.what}</span>{" "}
-                  <span className="font-medium">{a.target}</span>
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium">{a.actor_name ?? "System"}</span>{" "}
+                  <span className="text-muted-foreground">{a.title ?? a.activity_type}</span>
+                  {a.description ? <span className="text-muted-foreground"> — {a.description}</span> : null}
                 </div>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">{a.when}</span>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                  {formatDistanceToNow(new Date(a.created_at), { addSuffix: true })}
+                </span>
               </li>
             ))}
           </ul>
