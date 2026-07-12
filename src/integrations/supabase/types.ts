@@ -3012,9 +3012,165 @@ export type Database = {
           },
         ]
       }
+      payment_providers: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          mode: Database["public"]["Enums"]["payment_provider_mode"]
+          provider: string
+          settings: Json
+          tenant_id: string
+          updated_at: string
+          webhook_secret_ref: string | null
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          mode?: Database["public"]["Enums"]["payment_provider_mode"]
+          provider: string
+          settings?: Json
+          tenant_id: string
+          updated_at?: string
+          webhook_secret_ref?: string | null
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          mode?: Database["public"]["Enums"]["payment_provider_mode"]
+          provider?: string
+          settings?: Json
+          tenant_id?: string
+          updated_at?: string
+          webhook_secret_ref?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_providers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_refunds: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          credit_note_id: string | null
+          currency: string
+          customer_id: string | null
+          id: string
+          invoice_id: string | null
+          method: Database["public"]["Enums"]["payment_method"] | null
+          notes: string | null
+          payment_id: string | null
+          provider: string
+          provider_error: string | null
+          provider_payload: Json | null
+          provider_refund_id: string | null
+          provider_status: string | null
+          reference: string | null
+          refund_date: string
+          status: Database["public"]["Enums"]["refund_status"]
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          credit_note_id?: string | null
+          currency?: string
+          customer_id?: string | null
+          id?: string
+          invoice_id?: string | null
+          method?: Database["public"]["Enums"]["payment_method"] | null
+          notes?: string | null
+          payment_id?: string | null
+          provider?: string
+          provider_error?: string | null
+          provider_payload?: Json | null
+          provider_refund_id?: string | null
+          provider_status?: string | null
+          reference?: string | null
+          refund_date?: string
+          status?: Database["public"]["Enums"]["refund_status"]
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          credit_note_id?: string | null
+          currency?: string
+          customer_id?: string | null
+          id?: string
+          invoice_id?: string | null
+          method?: Database["public"]["Enums"]["payment_method"] | null
+          notes?: string | null
+          payment_id?: string | null
+          provider?: string
+          provider_error?: string | null
+          provider_payload?: Json | null
+          provider_refund_id?: string | null
+          provider_status?: string | null
+          reference?: string | null
+          refund_date?: string
+          status?: Database["public"]["Enums"]["refund_status"]
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_refunds_credit_note_id_fkey"
+            columns: ["credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "credit_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_refunds_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_refunds_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_refunds_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_refunds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
+          amount_refunded: number
           created_at: string
           customer_id: string
           id: string
@@ -3025,12 +3181,14 @@ export type Database = {
           payment_reference: string | null
           proof_document_id: string | null
           recorded_by: string | null
+          refund_status: Database["public"]["Enums"]["payment_refund_state"]
           status: string
           tenant_id: string
           updated_at: string
         }
         Insert: {
           amount: number
+          amount_refunded?: number
           created_at?: string
           customer_id: string
           id?: string
@@ -3041,12 +3199,14 @@ export type Database = {
           payment_reference?: string | null
           proof_document_id?: string | null
           recorded_by?: string | null
+          refund_status?: Database["public"]["Enums"]["payment_refund_state"]
           status?: string
           tenant_id: string
           updated_at?: string
         }
         Update: {
           amount?: number
+          amount_refunded?: number
           created_at?: string
           customer_id?: string
           id?: string
@@ -3057,6 +3217,7 @@ export type Database = {
           payment_reference?: string | null
           proof_document_id?: string | null
           recorded_by?: string | null
+          refund_status?: Database["public"]["Enums"]["payment_refund_state"]
           status?: string
           tenant_id?: string
           updated_at?: string
@@ -4451,6 +4612,18 @@ export type Database = {
         Returns: string
       }
       next_pet_number: { Args: { target_tenant_id: string }; Returns: string }
+      record_manual_refund: {
+        Args: {
+          p_amount: number
+          p_credit_note_id?: string
+          p_method?: Database["public"]["Enums"]["payment_method"]
+          p_notes?: string
+          p_payment_id: string
+          p_reference?: string
+          p_refund_date?: string
+        }
+        Returns: string
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       user_can_access_customer: {
@@ -4469,6 +4642,7 @@ export type Database = {
         Args: { target_tenant_id: string }
         Returns: boolean
       }
+      void_refund: { Args: { p_refund_id: string }; Returns: undefined }
     }
     Enums: {
       attendance_status:
@@ -4537,9 +4711,17 @@ export type Database = {
         | "manual_message"
       notification_status: "pending" | "sent" | "failed" | "skipped"
       payment_method: "eft" | "cash" | "card" | "yoko" | "payfast" | "other"
+      payment_provider_mode: "test" | "live"
+      payment_refund_state: "none" | "partial" | "full"
       pet_sex: "male" | "female" | "unknown"
       pet_size: "xsmall" | "small" | "medium" | "large" | "xlarge" | "xxlarge"
       pet_species: "dog" | "cat" | "other"
+      refund_status:
+        | "pending"
+        | "processing"
+        | "succeeded"
+        | "failed"
+        | "cancelled"
       resource_type:
         | "inhouse_grooming"
         | "mobile_van"
@@ -4763,9 +4945,18 @@ export const Constants = {
       ],
       notification_status: ["pending", "sent", "failed", "skipped"],
       payment_method: ["eft", "cash", "card", "yoko", "payfast", "other"],
+      payment_provider_mode: ["test", "live"],
+      payment_refund_state: ["none", "partial", "full"],
       pet_sex: ["male", "female", "unknown"],
       pet_size: ["xsmall", "small", "medium", "large", "xlarge", "xxlarge"],
       pet_species: ["dog", "cat", "other"],
+      refund_status: [
+        "pending",
+        "processing",
+        "succeeded",
+        "failed",
+        "cancelled",
+      ],
       resource_type: [
         "inhouse_grooming",
         "mobile_van",

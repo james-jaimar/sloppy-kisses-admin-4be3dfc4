@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download, Mail, Link as LinkIcon, BellOff, Bell, FileMinus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download, Mail, Link as LinkIcon, BellOff, Bell, FileMinus, RotateCcw, Undo2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -13,6 +13,8 @@ import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useCreditNotesForInvoice } from "@/features/creditNotes/queries";
 import { CreditNoteStatusChip } from "@/features/creditNotes/status";
 import { IssueCreditNoteDrawer } from "@/features/creditNotes/IssueCreditNoteDrawer";
+import { RecordRefundDialog } from "@/features/refunds/RecordRefundDialog";
+import { useRefundsForInvoice, useVoidRefund } from "@/features/refunds/queries";
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +38,7 @@ export default function InvoiceDetailPage() {
 
   const [payOpen, setPayOpen] = useState(false);
   const [issueCnOpen, setIssueCnOpen] = useState(false);
+  const [refundFor, setRefundFor] = useState<any | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ description: string; quantity: number; unit_price: number }>({ description: "", quantity: 1, unit_price: 0 });
   const [adding, setAdding] = useState(false);
@@ -47,6 +50,19 @@ export default function InvoiceDetailPage() {
   const hasBeenSent = Boolean((inv as any)?.sent_at);
   const cnQ = useCreditNotesForInvoice(tenantId, inv?.id ?? null);
   const creditsApplied = Number(cnQ.data?.totalApplied ?? 0);
+  const refundsQ = useRefundsForInvoice(tenantId, inv?.id ?? null);
+  const voidRefund = useVoidRefund(tenantId ?? "");
+  const totalRefunded = (refundsQ.data ?? [])
+    .filter((r) => r.status === "succeeded")
+    .reduce((s, r) => s + Number(r.amount), 0);
+
+  const refundsByPayment = new Map<string, typeof refundsQ.data>();
+  for (const r of refundsQ.data ?? []) {
+    if (!r.payment_id) continue;
+    const arr = refundsByPayment.get(r.payment_id) ?? [];
+    arr.push(r as any);
+    refundsByPayment.set(r.payment_id, arr as any);
+  }
 
   async function saveLine(invoice_id: string) {
     if (!draft.description.trim()) { toast.error("Description required"); return; }
@@ -353,18 +369,64 @@ export default function InvoiceDetailPage() {
                   <div className="mt-2 text-sm text-muted-foreground">No payments yet.</div>
                 ) : (
                   <ul className="mt-2 space-y-2 text-sm">
-                    {inv.payments.map((p) => (
-                      <li key={p.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0 last:pb-0">
-                        <div>
-                          <div className="font-medium capitalize">{p.payment_method}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {p.paid_at ? format(new Date(p.paid_at), "dd MMM yyyy") : ""}
-                            {p.payment_reference ? " · " + p.payment_reference : ""}
+                    {inv.payments.map((p) => {
+                      const pRefunds = refundsByPayment.get(p.id) ?? [];
+                      const refundedOnP = Number((p as any).amount_refunded ?? 0);
+                      const remaining = Math.max(0, Number(p.amount) - refundedOnP);
+                      const canRefund = can("payments.refund") && remaining > 0.001 && inv.status !== "cancelled";
+                      return (
+                        <li key={p.id} className="border-b border-border pb-2 last:border-0 last:pb-0">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium capitalize">{p.payment_method}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {p.paid_at ? format(new Date(p.paid_at), "dd MMM yyyy") : ""}
+                                {p.payment_reference ? " · " + p.payment_reference : ""}
+                                {refundedOnP > 0 && <> · <span className="text-sk-coral-dark">Refunded {fmtZar(refundedOnP)}</span></>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-semibold tabular-nums">{fmtZar(p.amount)}</div>
+                              {canRefund && (
+                                <button
+                                  onClick={() => setRefundFor(p)}
+                                  title="Record a refund against this payment"
+                                  className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-[11px] font-medium hover:bg-muted">
+                                  <RotateCcw className="h-3 w-3" /> Refund
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="text-sm font-semibold tabular-nums">{fmtZar(p.amount)}</div>
-                      </li>
-                    ))}
+                          {pRefunds.length > 0 && (
+                            <ul className="mt-2 space-y-1 pl-3 text-xs">
+                              {pRefunds.map((r) => (
+                                <li key={r.id} className="flex items-center justify-between">
+                                  <div className="text-muted-foreground">
+                                    <span className={r.status === "succeeded" ? "text-sk-coral-dark" : ""}>−{fmtZar(r.amount)}</span>
+                                    {" · "}{format(new Date(r.refund_date), "dd MMM yyyy")}
+                                    {r.reference ? ` · ${r.reference}` : ""}
+                                    {r.status !== "succeeded" && (
+                                      <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase">{r.status}</span>
+                                    )}
+                                  </div>
+                                  {r.status === "succeeded" && r.provider === "manual" && can("payments.refund.void") && (
+                                    <button
+                                      onClick={async () => {
+                                        if (!confirm(`Void this refund of ${fmtZar(r.amount)}? Invoice balance will restore.`)) return;
+                                        try { await voidRefund.mutateAsync(r.id); toast.success("Refund voided"); }
+                                        catch (e: any) { toast.error(e?.message ?? "Failed"); }
+                                      }}
+                                      className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-sk-coral-dark">
+                                      <Undo2 className="h-3 w-3" /> Void
+                                    </button>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
                 <div className="mt-3 flex justify-between border-t border-border pt-3 text-sm">
@@ -375,6 +437,12 @@ export default function InvoiceDetailPage() {
                   <div className="mt-1 flex justify-between text-sm">
                     <span className="text-muted-foreground">Credits applied</span>
                     <span className="tabular-nums">{fmtZar(creditsApplied)}</span>
+                  </div>
+                )}
+                {totalRefunded > 0 && (
+                  <div className="mt-1 flex justify-between text-sm">
+                    <span className="text-muted-foreground">Refunded</span>
+                    <span className="tabular-nums text-sk-coral-dark">−{fmtZar(totalRefunded)}</span>
                   </div>
                 )}
                 <div className="mt-1 flex justify-between text-sm">
@@ -453,6 +521,21 @@ export default function InvoiceDetailPage() {
       {issueCnOpen && inv && tenantId && (
         <IssueCreditNoteDrawer tenantId={tenantId} invoiceId={inv.id} onClose={() => setIssueCnOpen(false)} />
       )}
+      {refundFor && tenantId && (
+        <RecordRefundDialog
+          tenantId={tenantId}
+          payment={{
+            id: refundFor.id,
+            amount: Number(refundFor.amount),
+            amount_refunded: Number((refundFor as any).amount_refunded ?? 0),
+            payment_method: String(refundFor.payment_method),
+            customer_id: refundFor.customer_id,
+            invoice_id: refundFor.invoice_id,
+          }}
+          onClose={() => setRefundFor(null)}
+          onDone={() => setRefundFor(null)}
+        />
+      )}
     </>
   );
 }
@@ -482,6 +565,9 @@ function eventLabel(ev: InvoiceEvent): string {
     case "credit_note_applied": return "Credit note applied";
     case "credit_note_reversed": return "Credit note reversed";
     case "credit_note_cancelled": return "Credit note cancelled";
+    case "refund_recorded": return "Refund recorded";
+    case "refund_voided": return "Refund voided";
+    case "refund_failed": return "Refund failed";
     default: return ev.event_type;
   }
 }
@@ -500,6 +586,14 @@ function eventDetail(ev: InvoiceEvent): string {
     const parts: string[] = [];
     if (p.credit_note_number) parts.push(String(p.credit_note_number));
     if (p.amount != null) parts.push(`R${Number(p.amount).toFixed(2)}`);
+    return parts.join(" · ");
+  }
+  if (ev.event_type.startsWith("refund_")) {
+    const parts: string[] = [];
+    if (p.amount != null) parts.push(`R${Number(p.amount).toFixed(2)}`);
+    if (p.method) parts.push(String(p.method));
+    if (p.provider && p.provider !== "manual") parts.push(String(p.provider));
+    if (p.error) parts.push(String(p.error));
     return parts.join(" · ");
   }
   return "";

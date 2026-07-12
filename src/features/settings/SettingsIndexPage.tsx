@@ -81,6 +81,13 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/payment-providers",
+    label: "Payment providers",
+    description: "Manual refunds today. PayFast / Yoco / Stripe scaffolding for future connect.",
+    icon: CreditCard,
+    ready: true,
+  },
+  {
     to: "/admin/settings/message-templates",
     label: "Message templates",
     description: "Customer messages for bookings, invoices and reminders.",
