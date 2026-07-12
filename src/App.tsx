@@ -84,6 +84,7 @@ import MyDocumentsPage from "@/features/customerPortal/documents/MyDocumentsPage
 import MyProfilePage from "@/features/customerPortal/profile/MyProfilePage";
 import NewBookingRequestPage from "@/features/customerPortal/bookings/NewBookingRequestPage";
 import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
+import PublicInvoicePage from "@/features/invoices/PublicInvoicePage";
 
 const queryClient = new QueryClient();
 
@@ -101,6 +102,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/i/:token" element={<PublicInvoicePage />} />
 
               <Route element={<RequireAdmin />}>
               <Route element={<AdminLayout />}>
