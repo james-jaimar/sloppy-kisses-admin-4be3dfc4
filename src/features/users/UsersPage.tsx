@@ -31,10 +31,10 @@ export default function UsersPage() {
     setBusyId(row.id);
     const res = await resendInvite({ tenantId, email: row.profile.email, fullName: row.profile.full_name });
     setBusyId(null);
-    if (res.ok) {
+    if (res.ok === true) {
       toast({ title: "Invite resent", description: row.profile.email });
     } else {
-      toast({ title: "Couldn't resend invite", description: res.error, variant: "destructive" });
+      toast({ title: "Couldn't resend invite", description: (res as { error: string }).error, variant: "destructive" });
     }
   }
 
