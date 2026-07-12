@@ -793,6 +793,100 @@ export type Database = {
           },
         ]
       }
+      customer_credit_ledger: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          customer_id: string
+          entry_date: string
+          entry_type: Database["public"]["Enums"]["customer_credit_entry_type"]
+          id: string
+          notes: string | null
+          source_credit_note_id: string | null
+          source_invoice_id: string | null
+          source_payment_id: string | null
+          source_refund_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          customer_id: string
+          entry_date?: string
+          entry_type: Database["public"]["Enums"]["customer_credit_entry_type"]
+          id?: string
+          notes?: string | null
+          source_credit_note_id?: string | null
+          source_invoice_id?: string | null
+          source_payment_id?: string | null
+          source_refund_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          customer_id?: string
+          entry_date?: string
+          entry_type?: Database["public"]["Enums"]["customer_credit_entry_type"]
+          id?: string
+          notes?: string | null
+          source_credit_note_id?: string | null
+          source_invoice_id?: string | null
+          source_payment_id?: string | null
+          source_refund_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_credit_ledger_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_ledger_source_credit_note_id_fkey"
+            columns: ["source_credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "credit_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_ledger_source_invoice_id_fkey"
+            columns: ["source_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_ledger_source_payment_id_fkey"
+            columns: ["source_payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_ledger_source_refund_id_fkey"
+            columns: ["source_refund_id"]
+            isOneToOne: false
+            referencedRelation: "payment_refunds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_ledger_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address_line_1: string | null
@@ -4466,6 +4560,63 @@ export type Database = {
       }
     }
     Views: {
+      customer_aging: {
+        Row: {
+          credit_balance: number | null
+          current_bucket: number | null
+          customer_email: string | null
+          customer_id: string | null
+          customer_name: string | null
+          customer_number: string | null
+          days_1_30: number | null
+          days_31_60: number | null
+          days_61_90: number | null
+          days_over_90: number | null
+          net_due: number | null
+          tenant_id: string | null
+          total_due: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_credit_balances: {
+        Row: {
+          balance: number | null
+          customer_id: string | null
+          last_entry_date: string | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_credit_ledger_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_ledger_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_transport_settings_safe: {
         Row: {
           created_at: string | null
@@ -4566,6 +4717,19 @@ export type Database = {
         Args: { target_customer_id: string }
         Returns: Database["public"]["Enums"]["notification_status"]
       }
+      adjust_customer_credit: {
+        Args: { p_amount: number; p_customer_id: string; p_notes: string }
+        Returns: string
+      }
+      allocate_customer_credit: {
+        Args: {
+          p_amount: number
+          p_customer_id: string
+          p_invoice_id: string
+          p_notes?: string
+        }
+        Returns: string
+      }
       apply_credit_note: {
         Args: {
           p_amount: number
@@ -4612,6 +4776,16 @@ export type Database = {
         Returns: string
       }
       next_pet_number: { Args: { target_tenant_id: string }; Returns: string }
+      park_customer_credit: {
+        Args: {
+          p_amount: number
+          p_customer_id: string
+          p_entry_date?: string
+          p_notes?: string
+          p_source_payment_id?: string
+        }
+        Returns: string
+      }
       record_manual_refund: {
         Args: {
           p_amount: number
@@ -4692,6 +4866,12 @@ export type Database = {
         | "grooming"
       comms_channel: "email" | "whatsapp" | "sms"
       credit_note_status: "draft" | "issued" | "applied" | "cancelled"
+      customer_credit_entry_type:
+        | "overpayment"
+        | "manual_adjustment"
+        | "credit_note_unapplied"
+        | "allocation"
+        | "refund_out"
       customer_status: "active" | "inactive" | "archived"
       document_status: "pending" | "verified" | "rejected" | "expired"
       email_status: "queued" | "sent" | "failed"
@@ -4925,6 +5105,13 @@ export const Constants = {
       ],
       comms_channel: ["email", "whatsapp", "sms"],
       credit_note_status: ["draft", "issued", "applied", "cancelled"],
+      customer_credit_entry_type: [
+        "overpayment",
+        "manual_adjustment",
+        "credit_note_unapplied",
+        "allocation",
+        "refund_out",
+      ],
       customer_status: ["active", "inactive", "archived"],
       document_status: ["pending", "verified", "rejected", "expired"],
       email_status: ["queued", "sent", "failed"],
