@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, CreditCard } from "lucide-react";
+import { ArrowLeft, Loader2, CreditCard, Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { usePaymentProviders, useUpsertPaymentProvider, type PaymentProviderRow } from "@/features/refunds/queries";
+import PayFastConnectDialog from "./PayFastConnectDialog";
 
 type ProviderMeta = {
   code: string;
@@ -24,8 +25,8 @@ const PROVIDERS: ProviderMeta[] = [
   {
     code: "payfast",
     label: "PayFast",
-    description: "South Africa's most widely-integrated card & EFT gateway. Once Charlotte signs up for a PayFast merchant account, connect the API keys here to enable one-click refunds against captured payments.",
-    status: "coming-soon",
+    description: "South Africa's most widely-integrated card & EFT gateway. Enter your merchant credentials to enable online invoice payments and one-click refunds.",
+    status: "manual",
     ctaHint: "Recommended for South Africa",
   },
   {
@@ -49,11 +50,17 @@ export default function PaymentProvidersPage() {
   const canManage = profile?.user_type === "platform" || hasPermission("settings.payment_providers.manage");
   const rowsQ = usePaymentProviders(tenantId);
   const upsert = useUpsertPaymentProvider(tenantId ?? "");
+  const [payfastDialog, setPayfastDialog] = useState(false);
 
   const rowsByCode = new Map((rowsQ.data ?? []).map((r) => [r.provider, r]));
 
   async function toggleEnabled(code: string, current?: PaymentProviderRow) {
     if (!canManage) return;
+    // PayFast needs credentials before it can be enabled.
+    if (code === "payfast" && !(current?.settings as any)?.merchant_id && !current?.enabled) {
+      setPayfastDialog(true);
+      return;
+    }
     try {
       await upsert.mutateAsync({
         provider: code,
@@ -94,6 +101,8 @@ export default function PaymentProvidersPage() {
               const row = rowsByCode.get(p.code);
               const enabled = row?.enabled ?? (p.code === "manual");
               const isGateway = p.status === "coming-soon";
+              const isPayfast = p.code === "payfast";
+              const payfastConnected = isPayfast && Boolean((row?.settings as any)?.merchant_id);
               return (
                 <div key={p.code} className="sk-card p-5">
                   <div className="flex items-start justify-between gap-4">
@@ -114,15 +123,30 @@ export default function PaymentProvidersPage() {
                               Coming soon
                             </span>
                           )}
+                          {isPayfast && payfastConnected && (
+                            <span className="rounded-full bg-sk-green/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sk-green">
+                              Connected · {row?.mode === "live" ? "Live" : "Sandbox"}
+                            </span>
+                          )}
                         </div>
                         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{p.description}</p>
+                        {isPayfast && payfastConnected && (
+                          <p className="mt-1 text-xs text-muted-foreground">Merchant ID: <code>{(row?.settings as any).merchant_id}</code></p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      {isPayfast && canManage && (
+                        <button onClick={() => setPayfastDialog(true)}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-white px-3 text-xs font-semibold">
+                          <Settings2 className="h-3.5 w-3.5" />
+                          {payfastConnected ? "Edit credentials" : "Connect"}
+                        </button>
+                      )}
                       {row && (
                         <select
                           value={row.mode}
-                          disabled={!canManage || isGateway}
+                          disabled={!canManage || isGateway || (isPayfast && !payfastConnected)}
                           onChange={(e) => setMode(p.code, row, e.target.value as any)}
                           className="h-9 rounded-lg border border-border bg-white px-2 text-xs">
                           <option value="test">Test</option>
@@ -130,7 +154,7 @@ export default function PaymentProvidersPage() {
                         </select>
                       )}
                       <button
-                        disabled={!canManage || isGateway}
+                        disabled={!canManage || isGateway || (isPayfast && !payfastConnected)}
                         onClick={() => toggleEnabled(p.code, row)}
                         className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold ${
                           enabled ? "bg-sk-green text-white" : "border border-border bg-white text-muted-foreground"
@@ -151,6 +175,14 @@ export default function PaymentProvidersPage() {
           </div>
         )}
       </div>
+
+      {payfastDialog && tenantId && (
+        <PayFastConnectDialog
+          tenantId={tenantId}
+          existing={rowsByCode.get("payfast")}
+          onClose={() => setPayfastDialog(false)}
+        />
+      )}
     </>
   );
 }
