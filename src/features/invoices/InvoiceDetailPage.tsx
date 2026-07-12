@@ -15,6 +15,8 @@ import { CreditNoteStatusChip } from "@/features/creditNotes/status";
 import { IssueCreditNoteDrawer } from "@/features/creditNotes/IssueCreditNoteDrawer";
 import { RecordRefundDialog } from "@/features/refunds/RecordRefundDialog";
 import { useRefundsForInvoice, useVoidRefund } from "@/features/refunds/queries";
+import { AllocateCreditDialog } from "@/features/customerCredit/AllocateCreditDialog";
+import { useCustomerCreditBalance } from "@/features/customerCredit/queries";
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,6 +41,7 @@ export default function InvoiceDetailPage() {
   const [payOpen, setPayOpen] = useState(false);
   const [issueCnOpen, setIssueCnOpen] = useState(false);
   const [refundFor, setRefundFor] = useState<any | null>(null);
+  const [allocateOpen, setAllocateOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ description: string; quantity: number; unit_price: number }>({ description: "", quantity: 1, unit_price: 0 });
   const [adding, setAdding] = useState(false);
@@ -52,6 +55,8 @@ export default function InvoiceDetailPage() {
   const creditsApplied = Number(cnQ.data?.totalApplied ?? 0);
   const refundsQ = useRefundsForInvoice(tenantId, inv?.id ?? null);
   const voidRefund = useVoidRefund(tenantId ?? "");
+  const creditBalQ = useCustomerCreditBalance(tenantId, inv?.customer_id ?? null);
+  const creditBalance = Number(creditBalQ.data ?? 0);
   const totalRefunded = (refundsQ.data ?? [])
     .filter((r) => r.status === "succeeded")
     .reduce((s, r) => s + Number(r.amount), 0);
@@ -146,6 +151,14 @@ export default function InvoiceDetailPage() {
                 <button onClick={() => setPayOpen(true)}
                   className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-green px-4 text-sm font-semibold text-white hover:bg-sk-green/90">
                   <CreditCard className="h-4 w-4" /> Record payment
+                </button>
+              </Can>
+            )}
+            {inv && !isDraft && inv.status !== "cancelled" && balance > 0 && creditBalance > 0 && (
+              <Can code="customer_credit.allocate">
+                <button onClick={() => setAllocateOpen(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
+                  <CreditCard className="h-4 w-4" /> Apply credit ({fmtZar(creditBalance)})
                 </button>
               </Can>
             )}
