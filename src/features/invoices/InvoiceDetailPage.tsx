@@ -371,11 +371,50 @@ export default function InvoiceDetailPage() {
                   <span className="text-muted-foreground">Paid</span>
                   <span className="tabular-nums">{fmtZar(inv.amount_paid)}</span>
                 </div>
+                {creditsApplied > 0 && (
+                  <div className="mt-1 flex justify-between text-sm">
+                    <span className="text-muted-foreground">Credits applied</span>
+                    <span className="tabular-nums">{fmtZar(creditsApplied)}</span>
+                  </div>
+                )}
                 <div className="mt-1 flex justify-between text-sm">
                   <span className="text-muted-foreground">Balance</span>
                   <span className="tabular-nums font-semibold">{fmtZar(inv.balance_due)}</span>
                 </div>
               </div>
+
+              {(cnQ.data?.linked?.length || cnQ.data?.applications?.length) ? (
+                <div className="sk-card p-5">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Credit notes</div>
+                  <ul className="mt-2 space-y-2 text-sm">
+                    {(cnQ.data?.linked ?? []).map((c: any) => (
+                      <li key={c.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0 last:pb-0">
+                        <div>
+                          <Link to={`/admin/credit-notes/${c.id}`} className="font-mono text-xs hover:text-sk-coral-dark">{c.credit_note_number}</Link>
+                          <div className="mt-0.5"><CreditNoteStatusChip status={c.status} /></div>
+                        </div>
+                        <div className="text-right text-xs">
+                          <div className="tabular-nums font-semibold">{fmtZar(c.total)}</div>
+                          <div className="text-muted-foreground">Bal {fmtZar(c.balance)}</div>
+                        </div>
+                      </li>
+                    ))}
+                    {(cnQ.data?.applications ?? []).map((a: any) => (
+                      <li key={a.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0 last:pb-0">
+                        <div>
+                          <Link to={`/admin/credit-notes/${a.credit_note?.id}`} className="font-mono text-xs hover:text-sk-coral-dark">
+                            {a.credit_note?.credit_note_number ?? "—"}
+                          </Link>
+                          <div className="text-xs text-muted-foreground">
+                            Applied {format(new Date(a.applied_at), "dd MMM yyyy")}
+                          </div>
+                        </div>
+                        <div className="text-sm font-semibold tabular-nums">−{fmtZar(a.amount)}</div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               <div className="sk-card p-5">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Activity</div>
