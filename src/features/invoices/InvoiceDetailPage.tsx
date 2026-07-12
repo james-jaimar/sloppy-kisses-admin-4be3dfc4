@@ -478,6 +478,10 @@ function eventLabel(ev: InvoiceEvent): string {
     case "sent": return "Emailed to customer";
     case "viewed": return "Viewed by customer";
     case "reminder_sent": return "Reminder sent";
+    case "credit_note_issued": return "Credit note issued";
+    case "credit_note_applied": return "Credit note applied";
+    case "credit_note_reversed": return "Credit note reversed";
+    case "credit_note_cancelled": return "Credit note cancelled";
     default: return ev.event_type;
   }
 }
@@ -490,6 +494,12 @@ function eventDetail(ev: InvoiceEvent): string {
     if (p.amount != null) parts.push(`R${Number(p.amount).toFixed(2)}`);
     if (p.method) parts.push(String(p.method));
     if (p.reference) parts.push(String(p.reference));
+    return parts.join(" · ");
+  }
+  if (ev.event_type.startsWith("credit_note_")) {
+    const parts: string[] = [];
+    if (p.credit_note_number) parts.push(String(p.credit_note_number));
+    if (p.amount != null) parts.push(`R${Number(p.amount).toFixed(2)}`);
     return parts.join(" · ");
   }
   return "";
