@@ -99,6 +99,11 @@ export default function EmailServerSettingsPage() {
       <AppHeader title="Email server" subtitle="SMTP credentials used to send outbound mail." />
       <div className="flex-1 p-6">
         <div className="sk-card max-w-3xl p-6 space-y-6">
+          <div className="rounded-lg border border-sk-coral/30 bg-sk-coral-soft/40 px-4 py-3 text-xs leading-relaxed text-foreground">
+            These SMTP settings are used for <strong>every</strong> email your tenant sends — including
+            account invites, password resets, magic sign-in links and email-verification messages. Recipients
+            will never see a Supabase address; every auth email is branded and sent from the sender identity below.
+          </div>
           {!canManage && (
             <div className="rounded-lg border border-sk-orange bg-sk-orange-soft px-3 py-2 text-xs text-sk-orange">
               Read-only. You need the "Manage email server" permission to change settings.
