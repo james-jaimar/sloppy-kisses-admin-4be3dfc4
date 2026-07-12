@@ -102,19 +102,20 @@ export function usePermissionsCatalog() {
 export function useRolePermissionsMatrix() {
   return useQuery({
     queryKey: ["role_permissions_matrix"],
-    queryFn: async (): Promise<Record<string, string[]>> => {
+    queryFn: async (): Promise<{ byCode: Record<string, string[]>; byId: Set<string> }> => {
       const { data, error } = await supabase
         .from("role_permissions")
-        .select("role:roles(code), permission:permissions(code)");
+        .select("role_id, permission_id, role:roles(code), permission:permissions(code)");
       if (error) throw error;
-      const out: Record<string, string[]> = {};
+      const byCode: Record<string, string[]> = {};
+      const byId = new Set<string>();
       for (const r of (data ?? []) as any[]) {
         const roleCode = r.role?.code;
         const permCode = r.permission?.code;
-        if (!roleCode || !permCode) continue;
-        (out[roleCode] ||= []).push(permCode);
+        if (roleCode && permCode) (byCode[roleCode] ||= []).push(permCode);
+        if (r.role_id && r.permission_id) byId.add(`${r.role_id}:${r.permission_id}`);
       }
-      return out;
+      return { byCode, byId };
     },
   });
 }
@@ -148,6 +149,144 @@ export function useSetUserStatus(tenantId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tenant_members", tenantId] });
+    },
+  });
+}
+
+/** Remove a user from the current tenant (via edge function). */
+export function useRemoveTenantUser(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (tenantUserId: string) => {
+      const { data, error } = await supabase.functions.invoke("remove-tenant-user", {
+        body: { tenant_id: tenantId, tenant_user_id: tenantUserId },
+      });
+      if (error) {
+        let detail = error.message;
+        try {
+          const anyErr = error as unknown as { context?: Response };
+          if (anyErr.context?.text) {
+            const txt = await anyErr.context.text();
+            try { detail = JSON.parse(txt)?.error ?? txt; } catch { detail = txt; }
+          }
+        } catch { /* ignore */ }
+        throw new Error(detail);
+      }
+      if (data && (data as any).error) throw new Error((data as any).error);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tenant_members", tenantId] });
+    },
+  });
+}
+
+/** Resend an invite email for an existing (or new) user. */
+export async function resendInvite(params: { tenantId: string; email: string; fullName?: string | null }): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data, error } = await supabase.functions.invoke("invite-user", {
+    body: {
+      tenant_id: params.tenantId,
+      email: params.email.trim().toLowerCase(),
+      full_name: (params.fullName ?? "").trim(),
+      role_ids: [],
+      mode: "resend",
+    },
+  });
+  if (error) {
+    let detail = error.message;
+    try {
+      const anyErr = error as unknown as { context?: Response };
+      if (anyErr.context?.text) {
+        const txt = await anyErr.context.text();
+        try { detail = JSON.parse(txt)?.error ?? txt; } catch { detail = txt; }
+      }
+    } catch { /* ignore */ }
+    return { ok: false, error: detail };
+  }
+  if (data && (data as any).error) return { ok: false, error: (data as any).error };
+  return { ok: true };
+}
+
+// -------- Roles CRUD --------
+
+export function useCreateRole(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (row: { code: string; label: string; description?: string | null }) => {
+      const { data, error } = await supabase
+        .from("roles")
+        .insert({
+          tenant_id: tenantId,
+          code: row.code,
+          label: row.label,
+          description: row.description ?? null,
+          is_system_role: false,
+        } as any)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["roles_assignable"] });
+      qc.invalidateQueries({ queryKey: ["role_permissions_matrix"] });
+    },
+  });
+}
+
+export function useUpdateRole(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (row: { id: string; label?: string; description?: string | null }) => {
+      const patch: any = {};
+      if (row.label !== undefined) patch.label = row.label;
+      if (row.description !== undefined) patch.description = row.description;
+      const { error } = await supabase.from("roles").update(patch).eq("id", row.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["roles_assignable"] });
+    },
+  });
+}
+
+export function useDeleteRole(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (roleId: string) => {
+      // Clean dependent rows first (in case of no FK cascades).
+      await supabase.from("role_permissions").delete().eq("role_id", roleId);
+      await supabase.from("user_roles").delete().eq("role_id", roleId);
+      const { error } = await supabase.from("roles").delete().eq("id", roleId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["roles_assignable"] });
+      qc.invalidateQueries({ queryKey: ["role_permissions_matrix"] });
+      qc.invalidateQueries({ queryKey: ["tenant_members", tenantId] });
+    },
+  });
+}
+
+export function useToggleRolePermission() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { roleId: string; permissionId: string; enabled: boolean }) => {
+      if (args.enabled) {
+        const { error } = await supabase
+          .from("role_permissions")
+          .insert({ role_id: args.roleId, permission_id: args.permissionId } as any);
+        if (error && !String(error.message).includes("duplicate")) throw error;
+      } else {
+        const { error } = await supabase
+          .from("role_permissions")
+          .delete()
+          .eq("role_id", args.roleId)
+          .eq("permission_id", args.permissionId);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["role_permissions_matrix"] });
     },
   });
 }

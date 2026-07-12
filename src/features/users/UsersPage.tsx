@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { UserPlus, Loader2, Power } from "lucide-react";
+import { UserPlus, Loader2, Power, Mail, Trash2 } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { toast } from "@/hooks/use-toast";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
-import { useTenantMembers, useSetUserStatus, type TenantUserRow } from "./queries";
+import { useTenantMembers, useSetUserStatus, useRemoveTenantUser, resendInvite, type TenantUserRow } from "./queries";
 import InviteUserModal from "./InviteUserModal";
 import EditUserRolesDrawer from "./EditUserRolesDrawer";
 
@@ -12,8 +12,10 @@ export default function UsersPage() {
   const tenantId = currentTenant?.id ?? "";
   const q = useTenantMembers(tenantId);
   const setStatus = useSetUserStatus(tenantId);
+  const removeUser = useRemoveTenantUser(tenantId);
   const [inviting, setInviting] = useState(false);
   const [editing, setEditing] = useState<TenantUserRow | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   async function toggleActive(row: TenantUserRow) {
     const nextStatus = row.status === "active" ? "inactive" : "active";
@@ -22,6 +24,27 @@ export default function UsersPage() {
       toast({ title: nextStatus === "active" ? "User activated" : "User deactivated" });
     } catch (e: any) {
       toast({ title: "Couldn't update status", description: e.message, variant: "destructive" });
+    }
+  }
+
+  async function onResend(row: TenantUserRow) {
+    setBusyId(row.id);
+    const res = await resendInvite({ tenantId, email: row.profile.email, fullName: row.profile.full_name });
+    setBusyId(null);
+    if (res.ok === true) {
+      toast({ title: "Invite resent", description: row.profile.email });
+    } else {
+      toast({ title: "Couldn't resend invite", description: (res as { error: string }).error, variant: "destructive" });
+    }
+  }
+
+  async function onRemove(row: TenantUserRow) {
+    if (!confirm(`Remove ${row.profile.full_name ?? row.profile.email} from this tenant?`)) return;
+    try {
+      await removeUser.mutateAsync(row.id);
+      toast({ title: "User removed" });
+    } catch (e: any) {
+      toast({ title: "Couldn't remove user", description: e.message, variant: "destructive" });
     }
   }
 
@@ -115,6 +138,26 @@ export default function UsersPage() {
                           <Power className="h-3.5 w-3.5" />
                           {row.status === "active" ? "Deactivate" : "Activate"}
                         </button>
+                        <button
+                          onClick={() => onResend(row)}
+                          disabled={busyId === row.id}
+                          className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60"
+                          title="Resend invite email"
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                          Resend
+                        </button>
+                        {!row.is_primary_contact && (
+                          <button
+                            onClick={() => onRemove(row)}
+                            disabled={removeUser.isPending}
+                            className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
+                            title="Remove from tenant"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Remove
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

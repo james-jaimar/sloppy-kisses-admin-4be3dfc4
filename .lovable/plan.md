@@ -1,50 +1,71 @@
-# What's actually going on
 
-Three separate issues are compounding into "nothing works and Comms looks weird":
+## What this delivers
 
-## 1. Comms ≠ auth emails (this is the biggest confusion)
-The **Comms** page you're looking at (`/admin/comms`) reads from the `notification_events` table. That table only receives **customer-facing app messages** — booking confirmations, reminders, invoice notices, etc. It has never received, and by design does not receive, Supabase **auth emails** (invites, password resets, magic links). So your invite to `hello@document-centre.com` was never going to show up there. That's not a bug, it's just two different pipelines.
+Three related fixes on top of the auth-email work that's already in place:
 
-The rows you see stuck as `pending` / `skipped` in Comms are old booking-reschedule events that were never dispatched because `send-notifications` needs a `RESEND_API_KEY` and message templates set up — separate problem, addressed below.
+1. **Full CRUD on users** — remove a user from the tenant, and resend their invite email.
+2. **Full CRUD on roles & role permissions** — create/rename/delete custom roles and tick permissions on/off from the matrix (system roles stay locked).
+3. **Customer comms use tenant SMTP** — the `send-notifications` dispatcher stops using Resend and sends via the same `email_transport_settings` (mail.jaimar.dev) that auth emails already use.
 
-## 2. The `auth-email-hook` was built but never wired up in Supabase
-Edge function logs confirm `auth-email-hook` has **zero invocations** — Supabase has never called it. That means the "Send Email Hook" in **Supabase → Authentication → Hooks** is still disabled (or pointing elsewhere). Result: your invite email either went out via Supabase's default template from `noreply@mail.app.supabase.io`, or wasn't sent at all if no auth SMTP is configured on that side. Either way, it never touched your branded template and never used your tenant SMTP (`mail.jaimar.dev`).
+---
 
-I cannot enable that hook for you — it's a manual toggle in the Supabase dashboard. I'll give you the exact URL and settings.
+## 1. Users page — Resend invite + Remove
 
-## 3. `auth-email-hook` has a bug that would break logging once enabled
-The hook inserts into `email_log` with a `template` column, but that table's column is actually `template_code`. So even after you enable the hook, every send would fail to log (silently — it's in a try/catch). Same insert also passes `tenant_id: null` in the failure branch, which likely violates NOT NULL.
+**UI (`src/features/users/UsersPage.tsx`)**
+- Add two extra buttons per row: **Resend invite** (only when the user has never signed in, i.e. no `auth_user_id` linkage / status `invited`) and **Remove** (with confirm dialog).
+- Wire toasts + optimistic refetch.
 
-# Plan
+**Edge functions**
+- Extend `invite-user` to accept `mode: "resend"`: skips profile/tenant_user creation and calls `admin.auth.admin.inviteUserByEmail` again with the same metadata. Uses the same permission gate (`users.manage`).
+- New `remove-tenant-user` edge function:
+  - Checks caller `users.manage`.
+  - Deletes `user_roles` for the tenant_user, then the `tenant_users` row.
+  - Leaves the auth user + profile intact (they may belong to other tenants). Returns `{ok:true}`.
 
-## A. Fix the `auth-email-hook` code
-- Change the `logEmail` insert to use the real `email_log` columns: `template_code` (not `template`), keep `to_email`, `subject`, `status`, `error_message`, `sent_at`.
-- Skip the insert entirely when `tenant_id` is null (avoid NOT NULL crashes); log to console only in that case.
+**Client (`src/features/users/queries.ts`)**
+- Add `resendInvite({tenantId,email})` and `useRemoveTenantUser(tenantId)` wrappers.
 
-## B. Make auth emails visible in the app
-Right now auth sends are logged to `email_log`, which has no UI. Add a small **"Auth emails"** panel on the Comms page (or a tab) that reads `email_log` rows for the current tenant so you can see invites/resets/magic links, their status, and any error — the same view you expected in Comms.
+## 2. Roles & permissions — writable
 
-## C. Give you clear instructions to enable the hook
-Once A is deployed, you need to do this one-time step in Supabase:
-1. Open **Auth → Hooks → Send Email Hook**
-2. Enable it
-3. URL: `https://jsmsyezkfxtgmxvgfuxx.supabase.co/functions/v1/auth-email-hook`
-4. Secret: the `AUTH_EMAIL_HOOK_SECRET` value you already saved
-5. Save, then re-invite `hello@document-centre.com` as a test.
+**UI (`src/features/settings/RolesPermissionsPage.tsx`)**
+- Header gains **New role** button (only when caller has `roles.manage`).
+- Each column header for a **non-system** role becomes editable: rename, delete (with confirm), and each checkmark cell becomes a toggle.
+- System roles (`is_system_role = true`, e.g. `owner`, `admin`, `customer`, `platform_owner`) stay read-only with a lock icon and a tooltip.
 
-I'll surface a button in the reply so you can jump straight there.
+**Client queries**
+- Add mutations in `src/features/users/queries.ts`:
+  - `useCreateRole(tenantId)` → insert into `roles` with `tenant_id` = current tenant, `is_system_role=false`.
+  - `useUpdateRole` → update label/description.
+  - `useDeleteRole` → delete role (cascade drops `role_permissions` + `user_roles`).
+  - `useToggleRolePermission` → insert/delete `role_permissions` row.
 
-## D. (Optional, ask before doing) Fix the Comms pipeline itself
-The old booking-reschedule events sit as `pending` because `send-notifications` needs (a) a provider and (b) message templates. Two options — I won't do this unless you confirm:
-- **Option 1:** Route `send-notifications` through your tenant SMTP (same `email_transport_settings` the auth hook uses) instead of Resend. Cleanest — one email pipeline for everything.
-- **Option 2:** Keep Resend, and I'll walk you through adding the API key + a couple of default templates.
+**DB migration**
+- Add `roles.manage` and `roles.view` permission rows if missing; grant to `owner` + `admin` in `role_permissions`.
+- Add RLS policies on `roles` and `role_permissions` so users with `users.manage` (or new `roles.manage`) in the tenant can INSERT/UPDATE/DELETE non-system rows. System roles remain locked via a `WITH CHECK (is_system_role = false)` guard. Confirm existing `GRANT`s on both tables cover `authenticated`; add them if not.
 
-# What I will NOT touch
-- The Supabase dashboard hook toggle (you have to click it).
-- The `notification_events` rows that are currently `skipped` — those are historical, cancelled by an operator.
-- The invite-user function itself — it's working (returned 200, created the user).
+## 3. Customer comms → tenant SMTP
 
-# Technical notes
-- `email_log` real columns: `id, tenant_id, customer_id, booking_id, booking_request_id, estimate_id, invoice_id, template_code, to_email, cc_email, subject, status, provider_message_id, error_message, sent_at, created_by, created_at`.
-- Tenant SMTP is configured: `mail.jaimar.dev:465` SSL, from `Sloppy Kisses <hello@jaimar.dev>`. The hook will use this correctly once wired.
-- `config.toml` already has `[functions.auth-email-hook] verify_jwt = false` — correct for a Supabase webhook.
+**`supabase/functions/send-notifications/index.ts`**
+- Drop the Resend branch. Load the tenant's row from `email_transport_settings` (same shape used by `auth-email-hook`).
+- Send via `denomailer` `SMTPClient` with the tenant's host/port/secure/username/password and `from_name`/`from_email`.
+- On success write `status='sent'`, `provider_message_id=null` (SMTP has no id), keep the existing `body_rendered`/`recipient_email` fields.
+- On missing transport → mark event `failed` with a clear error ("SMTP not configured — Settings → Email Server"). Don't silently skip.
+- Also insert a row into `email_log` (template_code = `notify.<event_type>`) so the new **Auth emails** tab work extends naturally: rename that tab **Email log** and show both `auth.*` and `notify.*` prefixes, filtered by type chip.
+
+**Comms page (`src/features/comms/CommsInboxPage.tsx` + `queries.ts`)**
+- Rename the tab I added last turn from "Auth emails" to **Email log**.
+- Broaden `useAuthEmailLog` to `useEmailLog` (no `template_code` prefix filter), with a small filter dropdown: All / Auth / Notifications.
+
+---
+
+## Technical notes
+
+- No changes to `notification_events` schema — only the dispatcher swaps transport.
+- Removing a tenant_user does NOT delete `auth.users`; that stays platform-owner territory.
+- Resend invite is safe to call repeatedly (Supabase generates a fresh token each time).
+- Roles CRUD respects `is_system_role`; system roles cannot be renamed or deleted from the UI or the RLS policies.
+- `RESEND_API_KEY` becomes unused after this change — I'll leave the secret alone (harmless) and note it in the response.
+
+## Out of scope
+- Deleting the underlying auth user (that would break other tenants they might belong to). If you want a "hard delete across platform", say so and I'll add it under Platform → Users.
+- WhatsApp/SMS provider — still stubbed. Ping me when you pick one (Twilio, Meta Cloud API, etc.) and I'll wire it.

@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
   const email = (payload.email ?? "").trim().toLowerCase();
   const fullName = (payload.full_name ?? "").trim();
   const roleIds = payload.role_ids ?? [];
+  const mode = (payload as any).mode as string | undefined;
   if (!tenantId || !email) return json(400, { error: "tenant_id and email are required" });
 
   // Caller must have users.manage in the target tenant (checked via caller's JWT + RLS-safe SECURITY DEFINER fn).
@@ -75,6 +76,18 @@ Deno.serve(async (req) => {
   let authUserId: string | null = null;
   const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
   const existing = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email);
+  if (mode === "resend") {
+    // Force a fresh invite email regardless of whether the user exists.
+    const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
+      data: {
+        full_name: fullName || null,
+        invited_tenant_id: tenantId,
+        invited_by_name: inviterName,
+      },
+    });
+    if (inviteErr) return json(500, { error: `Resend failed: ${inviteErr.message}` });
+    return json(200, { ok: true, resent: true, auth_user_id: invited.user?.id ?? existing?.id ?? null });
+  }
   if (existing) {
     authUserId = existing.id;
   } else {
