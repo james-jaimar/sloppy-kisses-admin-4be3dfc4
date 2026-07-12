@@ -83,18 +83,21 @@ export function useCancelNotification(tenantId: string) {
 // -------- Auth email log (Supabase auth emails routed via auth-email-hook) --------
 export type EmailLogRow = Database["public"]["Tables"]["email_log"]["Row"];
 
-export function useAuthEmailLog(tenantId: string | null | undefined, opts?: { limit?: number }) {
+export function useAuthEmailLog(tenantId: string | null | undefined, opts?: { limit?: number; kind?: "all" | "auth" | "notify" }) {
+  const kind = opts?.kind ?? "all";
   return useQuery({
-    queryKey: ["email_log", "auth", tenantId, opts],
+    queryKey: ["email_log", kind, tenantId, opts],
     enabled: Boolean(tenantId),
     queryFn: async (): Promise<EmailLogRow[]> => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("email_log")
         .select("*")
         .eq("tenant_id", tenantId as string)
-        .like("template_code", "auth.%")
         .order("created_at", { ascending: false })
         .limit(opts?.limit ?? 100);
+      if (kind === "auth") q = q.like("template_code", "auth.%");
+      else if (kind === "notify") q = q.like("template_code", "notify.%");
+      const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as EmailLogRow[];
     },
