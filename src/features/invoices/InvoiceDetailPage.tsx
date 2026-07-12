@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
-import { useInvoice, useIssueInvoice, useVoidInvoice, useUpsertInvoiceItem, useDeleteInvoiceItem, useInvoicingSettings, useUpdateInvoice } from "./queries";
+import { useInvoice, useIssueInvoice, useVoidInvoice, useUpsertInvoiceItem, useDeleteInvoiceItem, useInvoicingSettings, useUpdateInvoice, useInvoiceEvents, type InvoiceEvent } from "./queries";
 import { InvoiceStatusChip, fmtZar } from "./status";
 import { RecordPaymentDialog } from "./RecordPaymentDialog";
 import { Can } from "@/components/auth/Can";
@@ -22,6 +22,7 @@ export default function InvoiceDetailPage() {
   const canUpdate = can("invoices.update");
 
   const invQ = useInvoice(id, tenantId);
+  const eventsQ = useInvoiceEvents(tenantId, id);
   const settingsQ = useInvoicingSettings(tenantId);
   const issue = useIssueInvoice(tenantId ?? "");
   const voidInv = useVoidInvoice(tenantId ?? "");
@@ -288,6 +289,30 @@ export default function InvoiceDetailPage() {
                   <span className="tabular-nums font-semibold">{fmtZar(inv.balance_due)}</span>
                 </div>
               </div>
+
+              <div className="sk-card p-5">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Activity</div>
+                {eventsQ.isLoading ? (
+                  <div className="mt-2 text-sm text-muted-foreground">Loading…</div>
+                ) : (eventsQ.data?.length ?? 0) === 0 ? (
+                  <div className="mt-2 text-sm text-muted-foreground">No activity yet.</div>
+                ) : (
+                  <ul className="mt-3 space-y-3 text-sm">
+                    {eventsQ.data!.map((ev) => (
+                      <li key={ev.id} className="border-l-2 border-sk-coral/40 pl-3">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="font-medium">{eventLabel(ev)}</span>
+                          <span className="text-xs text-muted-foreground">{format(new Date(ev.created_at), "dd MMM yyyy HH:mm")}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {ev.actor_label ?? "System"}
+                          {eventDetail(ev) ? ` · ${eventDetail(ev)}` : ""}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -310,6 +335,35 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <div className="mt-1 text-sm">{children}</div>
     </div>
   );
+}
+
+function eventLabel(ev: InvoiceEvent): string {
+  switch (ev.event_type) {
+    case "created": return "Invoice created";
+    case "issued": return "Invoice issued";
+    case "voided": return "Invoice voided";
+    case "marked_paid": return "Marked as paid";
+    case "status_changed": return `Status changed`;
+    case "payment_recorded": return "Payment recorded";
+    case "payment_removed": return "Payment removed";
+    case "sent": return "Emailed to customer";
+    case "viewed": return "Viewed by customer";
+    case "reminder_sent": return "Reminder sent";
+    default: return ev.event_type;
+  }
+}
+
+function eventDetail(ev: InvoiceEvent): string {
+  const p = ev.payload ?? {};
+  if (ev.event_type === "status_changed") return `${p.from ?? "?"} → ${p.to ?? "?"}`;
+  if (ev.event_type === "payment_recorded" || ev.event_type === "payment_removed") {
+    const parts: string[] = [];
+    if (p.amount != null) parts.push(`R${Number(p.amount).toFixed(2)}`);
+    if (p.method) parts.push(String(p.method));
+    if (p.reference) parts.push(String(p.reference));
+    return parts.join(" · ");
+  }
+  return "";
 }
 
 function LineEditor({ draft, setDraft, onCancel, onSave, pending }: {
