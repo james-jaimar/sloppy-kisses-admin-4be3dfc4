@@ -400,6 +400,7 @@ export default function DaycareImportPage() {
                 <tr>
                   <th className="px-4 py-2">Status</th>
                   <th className="px-4 py-2">Dog (sheet)</th>
+                  <th className="px-4 py-2">Owner (sheet)</th>
                   <th className="px-4 py-2">Days</th>
                   <th className="px-4 py-2">Match</th>
                   <th className="px-4 py-2 text-right">Actions</th>
@@ -411,7 +412,7 @@ export default function DaycareImportPage() {
                   return <ReconcileRow key={r.seed.row} idx={idx} row={r} pets={pets} onChange={(patch) => updateRow(idx, patch)} />;
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={5} className="px-5 py-10 text-center text-muted-foreground">Nothing in this bucket.</td></tr>
+                  <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">Nothing in this bucket.</td></tr>
                 )}
               </tbody>
             </table>
