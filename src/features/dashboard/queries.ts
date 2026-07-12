@@ -157,6 +157,9 @@ export interface ActivityRow {
   description: string | null;
   created_at: string;
   actor_profile_id: string | null;
+  booking_id: string | null;
+  customer_id: string | null;
+  pet_id: string | null;
   actor_name?: string | null;
 }
 
@@ -167,7 +170,7 @@ export function useRecentActivity(tenantId: string | null | undefined, limit = 8
     queryFn: async (): Promise<ActivityRow[]> => {
       const { data, error } = await supabase
         .from("activity_log")
-        .select("id, activity_type, title, description, created_at, actor_profile_id")
+        .select("id, activity_type, title, description, created_at, actor_profile_id, booking_id, customer_id, pet_id")
         .eq("tenant_id", tenantId as string)
         .order("created_at", { ascending: false })
         .limit(limit);
