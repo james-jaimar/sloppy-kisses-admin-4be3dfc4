@@ -4800,6 +4800,10 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      tenant_gateway_enabled: {
+        Args: { target_provider: string; target_tenant_id: string }
+        Returns: boolean
+      }
       user_can_access_customer: {
         Args: { target_customer_id: string; target_tenant_id: string }
         Returns: boolean
