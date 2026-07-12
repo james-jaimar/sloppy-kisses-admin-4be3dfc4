@@ -608,10 +608,9 @@ function ReconcileRow({ idx, row, pets, onChange }: { idx: number; row: RowState
       {showDbSearch && (
         <CustomerDatabaseSearchModal
           seed={row.seed}
-          pets={pets}
           onClose={() => setShowDbSearch(false)}
-          onPick={(pet) => {
-            onChange({ matched_pet_id: pet.id, matched_customer_id: pet.customer_id, status: "confirmed" });
+          onPick={({ customerId, petId }) => {
+            onChange({ matched_pet_id: petId, matched_customer_id: customerId, status: "confirmed" });
             setShowDbSearch(false);
           }}
         />
