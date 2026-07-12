@@ -8,12 +8,18 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useInvoice, useIssueInvoice, useVoidInvoice, useUpsertInvoiceItem, useDeleteInvoiceItem, useInvoicingSettings, useUpdateInvoice } from "./queries";
 import { InvoiceStatusChip, fmtZar } from "./status";
 import { RecordPaymentDialog } from "./RecordPaymentDialog";
+import { Can } from "@/components/auth/Can";
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const navigate = useNavigate();
+  const { hasPermission, profile } = useCurrentUser();
+  const isPlatform = profile?.user_type === "platform";
+  const can = (code: string) => isPlatform || hasPermission(code);
+  const canUpdate = can("invoices.update");
 
   const invQ = useInvoice(id, tenantId);
   const settingsQ = useInvoicingSettings(tenantId);
@@ -84,22 +90,28 @@ export default function InvoiceDetailPage() {
               <ArrowLeft className="h-4 w-4" /> Back
             </button>
             {inv && isDraft && (
-              <button onClick={doIssue} disabled={issue.isPending}
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
-                <Send className="h-4 w-4" /> Issue
-              </button>
+              <Can code="invoices.send">
+                <button onClick={doIssue} disabled={issue.isPending}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
+                  <Send className="h-4 w-4" /> Issue
+                </button>
+              </Can>
             )}
             {inv && !isDraft && inv.status !== "cancelled" && balance > 0 && (
-              <button onClick={() => setPayOpen(true)}
-                className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-green px-4 text-sm font-semibold text-white hover:bg-sk-green/90">
-                <CreditCard className="h-4 w-4" /> Record payment
-              </button>
+              <Can code="payments.create">
+                <button onClick={() => setPayOpen(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-green px-4 text-sm font-semibold text-white hover:bg-sk-green/90">
+                  <CreditCard className="h-4 w-4" /> Record payment
+                </button>
+              </Can>
             )}
             {inv && inv.status !== "cancelled" && (
-              <button onClick={doVoid}
-                className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
-                <Ban className="h-4 w-4" /> Void
-              </button>
+              <Can code="invoices.void">
+                <button onClick={doVoid}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
+                  <Ban className="h-4 w-4" /> Void
+                </button>
+              </Can>
             )}
             <button onClick={async () => {
               if (!inv) return;
@@ -145,7 +157,7 @@ export default function InvoiceDetailPage() {
               <div className="sk-card overflow-hidden">
                 <div className="flex items-center justify-between border-b border-border px-5 py-3">
                   <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Line items</div>
-                  {isDraft && !adding && !editingId && (
+                  {isDraft && canUpdate && !adding && !editingId && (
                     <button onClick={() => { setAdding(true); setDraft({ description: "", quantity: 1, unit_price: 0 }); }}
                       className="inline-flex items-center gap-1 rounded-lg bg-sk-coral px-2.5 py-1 text-xs font-semibold text-white hover:bg-sk-coral-dark">
                       <Plus className="h-3.5 w-3.5" /> Add line
@@ -173,7 +185,7 @@ export default function InvoiceDetailPage() {
                         <td className="px-5 py-3 text-right tabular-nums">{fmtZar(it.unit_price)}</td>
                         <td className="px-5 py-3 text-right tabular-nums font-semibold">{fmtZar(it.line_total)}</td>
                         <td className="px-5 py-3 text-right">
-                          {isDraft && (
+                          {isDraft && canUpdate && (
                             <div className="inline-flex gap-1">
                               <button onClick={() => { setEditingId(it.id); setDraft({ description: it.description, quantity: Number(it.quantity), unit_price: Number(it.unit_price) }); }}
                                 className="rounded border border-border px-2 py-0.5 text-xs">Edit</button>
@@ -209,10 +221,10 @@ export default function InvoiceDetailPage() {
               <div className="sk-card p-5">
                 <div className="flex items-center justify-between">
                   <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Notes</div>
-                  {notesEdit === null ? (
+                  {notesEdit === null ? canUpdate ? (
                     <button onClick={() => setNotesEdit(inv.notes ?? "")}
                       className="text-xs text-sk-coral-dark hover:underline">Edit</button>
-                  ) : (
+                  ) : null : (
                     <div className="flex gap-2">
                       <button onClick={saveNotes} className="inline-flex items-center gap-1 rounded bg-sk-coral px-2 py-1 text-xs font-semibold text-white">
                         <Save className="h-3 w-3" /> Save
