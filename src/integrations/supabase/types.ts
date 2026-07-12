@@ -3273,7 +3273,11 @@ export type Database = {
           paid_at: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           payment_reference: string | null
+          pf_payment_id: string | null
           proof_document_id: string | null
+          provider: string
+          provider_mode: string | null
+          provider_payload: Json | null
           recorded_by: string | null
           refund_status: Database["public"]["Enums"]["payment_refund_state"]
           status: string
@@ -3291,7 +3295,11 @@ export type Database = {
           paid_at?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           payment_reference?: string | null
+          pf_payment_id?: string | null
           proof_document_id?: string | null
+          provider?: string
+          provider_mode?: string | null
+          provider_payload?: Json | null
           recorded_by?: string | null
           refund_status?: Database["public"]["Enums"]["payment_refund_state"]
           status?: string
@@ -3309,7 +3317,11 @@ export type Database = {
           paid_at?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           payment_reference?: string | null
+          pf_payment_id?: string | null
           proof_document_id?: string | null
+          provider?: string
+          provider_mode?: string | null
+          provider_payload?: Json | null
           recorded_by?: string | null
           refund_status?: Database["public"]["Enums"]["payment_refund_state"]
           status?: string
