@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download, Mail, Link as LinkIcon } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download, Mail, Link as LinkIcon, BellOff, Bell } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -297,6 +297,39 @@ export default function InvoiceDetailPage() {
                     className="mt-2 inline-flex items-center gap-1 text-xs text-sk-coral-dark hover:underline">
                     <LinkIcon className="h-3 w-3" /> Copy public link
                   </button>
+                </div>
+              )}
+
+              {!isDraft && inv.status !== "cancelled" && balance > 0 && (
+                <div className="sk-card p-5">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Reminders</div>
+                    {canUpdate && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await updateInv.mutateAsync({ id: inv.id, patch: { reminders_paused: !(inv as any).reminders_paused } as any });
+                            toast.success((inv as any).reminders_paused ? "Reminders resumed" : "Reminders paused");
+                          } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+                        }}
+                        className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-muted">
+                        {(inv as any).reminders_paused
+                          ? (<><Bell className="h-3 w-3" /> Resume</>)
+                          : (<><BellOff className="h-3 w-3" /> Pause</>)}
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {(inv as any).reminders_paused
+                      ? "Automatic reminders are paused for this invoice."
+                      : "Sent daily at 08:00 SAST on the offsets configured in Settings → Invoicing."}
+                  </div>
+                  {(inv as any).last_reminder_at && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      Last reminder: {format(new Date((inv as any).last_reminder_at), "dd MMM yyyy HH:mm")}
+                      {typeof (inv as any).last_reminder_offset === "number" && <> · day {(inv as any).last_reminder_offset}</>}
+                    </div>
+                  )}
                 </div>
               )}
 
