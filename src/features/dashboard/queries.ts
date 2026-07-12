@@ -156,7 +156,8 @@ export interface ActivityRow {
   title: string | null;
   description: string | null;
   created_at: string;
-  actor: { full_name: string | null; email: string | null } | null;
+  actor_profile_id: string | null;
+  actor_name?: string | null;
 }
 
 export function useRecentActivity(tenantId: string | null | undefined, limit = 8) {
@@ -166,12 +167,27 @@ export function useRecentActivity(tenantId: string | null | undefined, limit = 8
     queryFn: async (): Promise<ActivityRow[]> => {
       const { data, error } = await supabase
         .from("activity_log")
-        .select("id, activity_type, title, description, created_at, actor:profiles!activity_log_actor_profile_id_fkey(full_name, email)")
+        .select("id, activity_type, title, description, created_at, actor_profile_id")
         .eq("tenant_id", tenantId as string)
         .order("created_at", { ascending: false })
         .limit(limit);
       if (error) throw error;
-      return (data ?? []) as unknown as ActivityRow[];
+      const rows = (data ?? []) as ActivityRow[];
+      const ids = Array.from(new Set(rows.map((r) => r.actor_profile_id).filter(Boolean))) as string[];
+      if (ids.length) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", ids);
+        const byId = new Map((profs ?? []).map((p: any) => [p.id, p.full_name || p.email || null]));
+        rows.forEach((r) => {
+          r.actor_name = r.actor_profile_id ? byId.get(r.actor_profile_id) ?? null : null;
+        });
+      }
+      return rows;
+    },
+  });
+}
     },
   });
 }
