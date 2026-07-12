@@ -565,6 +565,9 @@ function eventLabel(ev: InvoiceEvent): string {
     case "credit_note_applied": return "Credit note applied";
     case "credit_note_reversed": return "Credit note reversed";
     case "credit_note_cancelled": return "Credit note cancelled";
+    case "refund_recorded": return "Refund recorded";
+    case "refund_voided": return "Refund voided";
+    case "refund_failed": return "Refund failed";
     default: return ev.event_type;
   }
 }
@@ -583,6 +586,14 @@ function eventDetail(ev: InvoiceEvent): string {
     const parts: string[] = [];
     if (p.credit_note_number) parts.push(String(p.credit_note_number));
     if (p.amount != null) parts.push(`R${Number(p.amount).toFixed(2)}`);
+    return parts.join(" · ");
+  }
+  if (ev.event_type.startsWith("refund_")) {
+    const parts: string[] = [];
+    if (p.amount != null) parts.push(`R${Number(p.amount).toFixed(2)}`);
+    if (p.method) parts.push(String(p.method));
+    if (p.provider && p.provider !== "manual") parts.push(String(p.provider));
+    if (p.error) parts.push(String(p.error));
     return parts.join(" · ");
   }
   return "";
