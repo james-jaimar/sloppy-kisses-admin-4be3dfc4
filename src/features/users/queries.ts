@@ -212,7 +212,26 @@ export async function inviteNewUser(params: {
       role_ids: params.roleIds,
     },
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    // Supabase's FunctionsHttpError swallows the real message as a generic
+    // "non-2xx status". Read the response body so we surface the actual error.
+    let detail = error.message;
+    try {
+      const anyErr = error as unknown as { context?: Response };
+      if (anyErr.context && typeof anyErr.context.text === "function") {
+        const txt = await anyErr.context.text();
+        if (txt) {
+          try {
+            const parsed = JSON.parse(txt);
+            detail = parsed?.error ?? parsed?.message ?? txt;
+          } catch {
+            detail = txt;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+    return { ok: false, error: detail };
+  }
   if (data && (data as any).error) return { ok: false, error: (data as any).error };
   return { ok: true };
 }
