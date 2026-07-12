@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download, Mail, Link as LinkIcon, BellOff, Bell, FileMinus } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download, Mail, Link as LinkIcon, BellOff, Bell, FileMinus, RotateCcw, Undo2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -13,6 +13,8 @@ import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useCreditNotesForInvoice } from "@/features/creditNotes/queries";
 import { CreditNoteStatusChip } from "@/features/creditNotes/status";
 import { IssueCreditNoteDrawer } from "@/features/creditNotes/IssueCreditNoteDrawer";
+import { RecordRefundDialog } from "@/features/refunds/RecordRefundDialog";
+import { useRefundsForInvoice, useVoidRefund } from "@/features/refunds/queries";
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -36,6 +38,7 @@ export default function InvoiceDetailPage() {
 
   const [payOpen, setPayOpen] = useState(false);
   const [issueCnOpen, setIssueCnOpen] = useState(false);
+  const [refundFor, setRefundFor] = useState<any | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<{ description: string; quantity: number; unit_price: number }>({ description: "", quantity: 1, unit_price: 0 });
   const [adding, setAdding] = useState(false);
@@ -47,6 +50,19 @@ export default function InvoiceDetailPage() {
   const hasBeenSent = Boolean((inv as any)?.sent_at);
   const cnQ = useCreditNotesForInvoice(tenantId, inv?.id ?? null);
   const creditsApplied = Number(cnQ.data?.totalApplied ?? 0);
+  const refundsQ = useRefundsForInvoice(tenantId, inv?.id ?? null);
+  const voidRefund = useVoidRefund(tenantId ?? "");
+  const totalRefunded = (refundsQ.data ?? [])
+    .filter((r) => r.status === "succeeded")
+    .reduce((s, r) => s + Number(r.amount), 0);
+
+  const refundsByPayment = new Map<string, typeof refundsQ.data>();
+  for (const r of refundsQ.data ?? []) {
+    if (!r.payment_id) continue;
+    const arr = refundsByPayment.get(r.payment_id) ?? [];
+    arr.push(r as any);
+    refundsByPayment.set(r.payment_id, arr as any);
+  }
 
   async function saveLine(invoice_id: string) {
     if (!draft.description.trim()) { toast.error("Description required"); return; }
