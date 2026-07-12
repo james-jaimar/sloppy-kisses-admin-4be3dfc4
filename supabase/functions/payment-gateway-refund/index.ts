@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
   const admin = createClient(url, service);
   const { data: payment, error: payErr } = await admin
     .from("payments")
-    .select("id, tenant_id, amount, amount_refunded, payment_method, invoice_id, customer_id")
+    .select("id, tenant_id, amount, amount_refunded, payment_method, invoice_id, customer_id, provider, pf_payment_id")
     .eq("id", body.payment_id)
     .maybeSingle();
   if (payErr) return json({ error: payErr.message }, 500);
@@ -53,11 +53,12 @@ Deno.serve(async (req) => {
 
   const { data: providers } = await admin
     .from("payment_providers")
-    .select("provider, enabled, mode")
+    .select("provider, enabled, mode, settings")
     .eq("tenant_id", payment.tenant_id)
     .eq("enabled", true);
-  const gateway = (providers ?? []).find((p: any) => p.provider !== "manual");
-  const provider = gateway?.provider ?? "manual";
+  // If the payment was captured via a gateway, refund through THAT gateway.
+  // Otherwise fall back to manual (cash/EFT refund).
+  const provider = payment.provider && payment.provider !== "manual" ? payment.provider : "manual";
 
   if (provider === "manual") {
     const { data: refundId, error } = await userClient.rpc("record_manual_refund", {
@@ -74,6 +75,11 @@ Deno.serve(async (req) => {
   }
 
   if (provider === "payfast") {
+    const { data: allowed } = await userClient.rpc("user_has_permission", {
+      target_tenant_id: payment.tenant_id, permission_code: "payments.refund",
+    });
+    if (!allowed) return json({ error: "forbidden", message: "You don't have permission to issue refunds." }, 403);
+
     const pfRow = (providers ?? []).find((p: any) => p.provider === "payfast");
     const settings = (pfRow?.settings ?? {}) as PayFastSettings;
     const mode = (pfRow?.mode ?? "test") as PayFastMode;
