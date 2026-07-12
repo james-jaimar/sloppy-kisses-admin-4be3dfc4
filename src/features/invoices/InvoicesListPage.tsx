@@ -7,6 +7,7 @@ import { useInvoices, useAllPayments } from "./queries";
 import { InvoiceStatusChip, fmtZar } from "./status";
 import { NewInvoiceDrawer } from "./NewInvoiceDrawer";
 import { format } from "date-fns";
+import { Can } from "@/components/auth/Can";
 
 export default function InvoicesListPage() {
   const { tenant } = useCurrentTenant();
@@ -62,12 +63,14 @@ export default function InvoicesListPage() {
         ]}
         actions={
           tab === "invoices" && (
-            <button
-              onClick={() => setNewOpen(true)}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-sk-coral px-3 text-sm font-semibold text-white hover:bg-sk-coral-dark"
-            >
-              <Plus className="h-4 w-4" /> New invoice
-            </button>
+            <Can code="invoices.create">
+              <button
+                onClick={() => setNewOpen(true)}
+                className="inline-flex h-10 items-center gap-2 rounded-lg bg-sk-coral px-3 text-sm font-semibold text-white hover:bg-sk-coral-dark"
+              >
+                <Plus className="h-4 w-4" /> New invoice
+              </button>
+            </Can>
           )
         }
       />
