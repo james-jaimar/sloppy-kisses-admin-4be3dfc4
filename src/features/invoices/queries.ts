@@ -292,6 +292,31 @@ export function useAllPayments(tenantId: string | null | undefined) {
   });
 }
 
+// -------- Send email --------
+
+export function useSendInvoiceEmail(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ invoice_id, to, kind }: { invoice_id: string; to?: string; kind?: "send" | "reminder" }) => {
+      const { data, error } = await supabase.functions.invoke("send-invoice-email", {
+        body: { invoice_id, to, kind: kind ?? "send" },
+      });
+      if (error) {
+        // Try to surface the edge function's error body
+        const detail = (error as any)?.context ? await (error as any).context.text?.().catch(() => null) : null;
+        throw new Error(detail || error.message);
+      }
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data;
+    },
+    onSuccess: (_r, v) => {
+      qc.invalidateQueries({ queryKey: ["invoice", tenantId, v.invoice_id] });
+      qc.invalidateQueries({ queryKey: ["invoice_events", tenantId, v.invoice_id] });
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+    },
+  });
+}
+
 // -------- Invoice events (audit trail) --------
 
 export interface InvoiceEvent {
