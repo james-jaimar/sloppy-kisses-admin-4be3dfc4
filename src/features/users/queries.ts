@@ -102,19 +102,20 @@ export function usePermissionsCatalog() {
 export function useRolePermissionsMatrix() {
   return useQuery({
     queryKey: ["role_permissions_matrix"],
-    queryFn: async (): Promise<Record<string, string[]>> => {
+    queryFn: async (): Promise<{ byCode: Record<string, string[]>; byId: Set<string> }> => {
       const { data, error } = await supabase
         .from("role_permissions")
-        .select("role:roles(code), permission:permissions(code)");
+        .select("role_id, permission_id, role:roles(code), permission:permissions(code)");
       if (error) throw error;
-      const out: Record<string, string[]> = {};
+      const byCode: Record<string, string[]> = {};
+      const byId = new Set<string>();
       for (const r of (data ?? []) as any[]) {
         const roleCode = r.role?.code;
         const permCode = r.permission?.code;
-        if (!roleCode || !permCode) continue;
-        (out[roleCode] ||= []).push(permCode);
+        if (roleCode && permCode) (byCode[roleCode] ||= []).push(permCode);
+        if (r.role_id && r.permission_id) byId.add(`${r.role_id}:${r.permission_id}`);
       }
-      return out;
+      return { byCode, byId };
     },
   });
 }
