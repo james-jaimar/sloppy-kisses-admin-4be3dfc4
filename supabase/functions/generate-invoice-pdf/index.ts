@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
   }
 
   const page: PDFPage = pdf.addPage([595, 842]); // A4
-  const { width, height } = page.size();
+  const { width, height } = page.getSize();
   const M = 40;
 
   const drawText = (t: string, x: number, y: number, size = 9, font: PDFFont = reg, color: RGB = text) =>
