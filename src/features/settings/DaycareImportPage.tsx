@@ -7,6 +7,7 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { supabase } from "@/lib/supabase/client";
 import { useDaycarePlans, useTenantPetsWithOwners, WEEKDAY_LABEL, type Weekday } from "@/features/daycare/queries";
 import { toast } from "@/hooks/use-toast";
+import { ModalShell } from "@/components/modals/ModalShell";
 import seedData from "./daycareRegisterSeed.json";
 
 type SeedRow = {
@@ -67,31 +68,33 @@ function scoreRow(seed: SeedRow, pets: PetOwner[]) {
   const seedMobTail = mobileTail(seed.owner_mobile);
   const scored = pets.map((p) => {
     const petName = norm(p.name);
-    const ownerFull = norm(p.customer?.full_name);
     const ownerFirst = norm(p.customer?.first_name);
     const ownerLast = norm(p.customer?.last_name);
     let s = 0;
+    let mobileHit = false;
+    let lastHit = false;
+    let firstHit = false;
+    let dogHit: "exact" | "prefix" | false = false;
     // Mobile: strongest signal
     if (seedMobTail && seedMobTail.length >= 9) {
       const custMob = mobileTail(p.customer?.mobile) || mobileTail(p.customer?.phone_alt);
-      if (custMob && custMob === seedMobTail) s += 80;
+      if (custMob && custMob === seedMobTail) { s += 80; mobileHit = true; }
     }
     // Dog first name
     if (petName && dogFirst) {
-      if (petName === dogFirst) s += 50;
-      else if (petName.startsWith(dogFirst) || dogFirst.startsWith(petName)) s += 20;
+      if (petName === dogFirst) { s += 50; dogHit = "exact"; }
+      else if (petName.startsWith(dogFirst) || dogFirst.startsWith(petName)) { s += 20; dogHit = "prefix"; }
     }
-    // Owner surname
+    // Owner surname (exact only — Charlotte's sheet had dog names in owner col, so
+    // substring matches produce false positives).
     if (ownLast) {
-      if (ownerLast && ownerLast === ownLast) s += 40;
-      else if (ownerFull.includes(ownLast)) s += 25;
+      if (ownerLast && ownerLast === ownLast) { s += 40; lastHit = true; }
     }
-    // Owner first name
+    // Owner first name (exact only)
     if (ownFirst) {
-      if (ownerFirst && ownerFirst === ownFirst) s += 25;
-      else if (ownerFull.includes(ownFirst)) s += 12;
+      if (ownerFirst && ownerFirst === ownFirst) { s += 25; firstHit = true; }
     }
-    return { pet: p, s };
+    return { pet: p, s, mobileHit, lastHit, firstHit, dogHit };
   }).filter((x) => x.s > 0).sort((a, b) => b.s - a.s);
   return scored;
 }
@@ -118,8 +121,10 @@ export default function DaycareImportPage() {
       const cands = scoreRow(s, pets);
       if (cands.length === 0) return { seed: s, status: "unmatched" as RowStatus, matched_pet_id: null, matched_customer_id: null };
       const top = cands[0];
-      const second = cands[1];
-      const isAuto = top.s >= 80 && (!second || top.s - second.s >= 25);
+      // Strict auto-match: mobile match, OR owner first+last both exact plus dog name match.
+      const isAuto =
+        top.mobileHit ||
+        (top.firstHit && top.lastHit && (top.dogHit === "exact" || top.dogHit === "prefix"));
       return {
         seed: s,
         status: isAuto ? ("auto" as RowStatus) : ("review" as RowStatus),
