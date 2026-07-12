@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, AlertCircle, XCircle, Search, UserPlus, Loader2, PlayCircle, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -687,7 +687,7 @@ function CustomerDatabaseSearchModal({
                 <li key={c.id} className="p-3">
                   <div className="flex items-baseline justify-between gap-3">
                     <div>
-                      <span className="font-medium">{c.full_name ?? [c.first_name, c.last_name].filter(Boolean).join(" ") || "Unnamed customer"}</span>
+                      <span className="font-medium">{c.full_name ?? ([c.first_name, c.last_name].filter(Boolean).join(" ") || "Unnamed customer")}</span>
                       {c.customer_number && (
                         <span className="ml-2 text-[11px] tabular-nums text-muted-foreground">{c.customer_number}</span>
                       )}
