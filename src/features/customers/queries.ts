@@ -358,3 +358,60 @@ export function useCustomerAndPetCounts() {
     },
   });
 }
+
+// ---------- Live customer+pet search (server-side) ----------
+
+export interface CustomerPetSearchRow {
+  id: string;
+  customer_number: string | null;
+  full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  mobile: string | null;
+  phone_alt: string | null;
+  pets: { id: string; name: string | null; species: string | null; breed: string | null }[];
+}
+
+/**
+ * Debounced server-side search across the tenant's customers, returning each
+ * customer with their pets. Used by pickers that need to reach the full
+ * database rather than a locally-cached slice.
+ */
+export function useCustomerPetSearch(tenantId: string | null | undefined, rawQuery: string) {
+  const q = rawQuery.trim();
+  return useQuery({
+    queryKey: ["customerPetSearch", tenantId, q],
+    enabled: Boolean(tenantId) && q.length >= 2,
+    // Small debounce so we don't hammer the DB on every keystroke.
+    staleTime: 15_000,
+    queryFn: async (): Promise<CustomerPetSearchRow[]> => {
+      const tokens = q.split(/\s+/).filter(Boolean);
+      let query = supabase
+        .from("customers")
+        .select(
+          "id, customer_number, full_name, first_name, last_name, mobile, phone_alt, pets(id, name, species, breed)",
+        )
+        .eq("tenant_id", tenantId as string)
+        .order("full_name", { ascending: true, nullsFirst: false })
+        .limit(50);
+      for (const tok of tokens) {
+        const like = `%${tok}%`;
+        query = query.or(
+          `full_name.ilike.${like},first_name.ilike.${like},last_name.ilike.${like},email.ilike.${like},mobile.ilike.${like},phone_alt.ilike.${like},customer_number.ilike.${like}`,
+        );
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data ?? []).map((c: any) => ({
+        id: c.id,
+        customer_number: c.customer_number,
+        full_name: c.full_name,
+        first_name: c.first_name,
+        last_name: c.last_name,
+        mobile: c.mobile,
+        phone_alt: c.phone_alt,
+        pets: Array.isArray(c.pets) ? c.pets : [],
+      }));
+    },
+  });
+}
