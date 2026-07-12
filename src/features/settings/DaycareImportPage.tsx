@@ -7,6 +7,7 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { supabase } from "@/lib/supabase/client";
 import { useDaycarePlans, useTenantPetsWithOwners, WEEKDAY_LABEL, type Weekday } from "@/features/daycare/queries";
 import { toast } from "@/hooks/use-toast";
+import { ModalShell } from "@/components/modals/ModalShell";
 import seedData from "./daycareRegisterSeed.json";
 
 type SeedRow = {
@@ -67,31 +68,33 @@ function scoreRow(seed: SeedRow, pets: PetOwner[]) {
   const seedMobTail = mobileTail(seed.owner_mobile);
   const scored = pets.map((p) => {
     const petName = norm(p.name);
-    const ownerFull = norm(p.customer?.full_name);
     const ownerFirst = norm(p.customer?.first_name);
     const ownerLast = norm(p.customer?.last_name);
     let s = 0;
+    let mobileHit = false;
+    let lastHit = false;
+    let firstHit = false;
+    let dogHit: "exact" | "prefix" | false = false;
     // Mobile: strongest signal
     if (seedMobTail && seedMobTail.length >= 9) {
       const custMob = mobileTail(p.customer?.mobile) || mobileTail(p.customer?.phone_alt);
-      if (custMob && custMob === seedMobTail) s += 80;
+      if (custMob && custMob === seedMobTail) { s += 80; mobileHit = true; }
     }
     // Dog first name
     if (petName && dogFirst) {
-      if (petName === dogFirst) s += 50;
-      else if (petName.startsWith(dogFirst) || dogFirst.startsWith(petName)) s += 20;
+      if (petName === dogFirst) { s += 50; dogHit = "exact"; }
+      else if (petName.startsWith(dogFirst) || dogFirst.startsWith(petName)) { s += 20; dogHit = "prefix"; }
     }
-    // Owner surname
+    // Owner surname (exact only — Charlotte's sheet had dog names in owner col, so
+    // substring matches produce false positives).
     if (ownLast) {
-      if (ownerLast && ownerLast === ownLast) s += 40;
-      else if (ownerFull.includes(ownLast)) s += 25;
+      if (ownerLast && ownerLast === ownLast) { s += 40; lastHit = true; }
     }
-    // Owner first name
+    // Owner first name (exact only)
     if (ownFirst) {
-      if (ownerFirst && ownerFirst === ownFirst) s += 25;
-      else if (ownerFull.includes(ownFirst)) s += 12;
+      if (ownerFirst && ownerFirst === ownFirst) { s += 25; firstHit = true; }
     }
-    return { pet: p, s };
+    return { pet: p, s, mobileHit, lastHit, firstHit, dogHit };
   }).filter((x) => x.s > 0).sort((a, b) => b.s - a.s);
   return scored;
 }
@@ -118,8 +121,10 @@ export default function DaycareImportPage() {
       const cands = scoreRow(s, pets);
       if (cands.length === 0) return { seed: s, status: "unmatched" as RowStatus, matched_pet_id: null, matched_customer_id: null };
       const top = cands[0];
-      const second = cands[1];
-      const isAuto = top.s >= 80 && (!second || top.s - second.s >= 25);
+      // Strict auto-match: mobile match, OR owner first+last both exact plus dog name match.
+      const isAuto =
+        top.mobileHit ||
+        (top.firstHit && top.lastHit && (top.dogHit === "exact" || top.dogHit === "prefix"));
       return {
         seed: s,
         status: isAuto ? ("auto" as RowStatus) : ("review" as RowStatus),
@@ -395,6 +400,7 @@ export default function DaycareImportPage() {
                 <tr>
                   <th className="px-4 py-2">Status</th>
                   <th className="px-4 py-2">Dog (sheet)</th>
+                  <th className="px-4 py-2">Owner (sheet)</th>
                   <th className="px-4 py-2">Days</th>
                   <th className="px-4 py-2">Match</th>
                   <th className="px-4 py-2 text-right">Actions</th>
@@ -406,7 +412,7 @@ export default function DaycareImportPage() {
                   return <ReconcileRow key={r.seed.row} idx={idx} row={r} pets={pets} onChange={(patch) => updateRow(idx, patch)} />;
                 })}
                 {filtered.length === 0 && (
-                  <tr><td colSpan={5} className="px-5 py-10 text-center text-muted-foreground">Nothing in this bucket.</td></tr>
+                  <tr><td colSpan={6} className="px-5 py-10 text-center text-muted-foreground">Nothing in this bucket.</td></tr>
                 )}
               </tbody>
             </table>
@@ -440,6 +446,7 @@ function StatCard({ label, value, tone, onClick, active }: { label: string; valu
 function ReconcileRow({ idx, row, pets, onChange }: { idx: number; row: RowState; pets: PetOwner[]; onChange: (patch: Partial<RowState>) => void }) {
   const [search, setSearch] = useState("");
   const [showPicker, setShowPicker] = useState(false);
+  const [showDbSearch, setShowDbSearch] = useState(false);
 
   const matched = row.matched_pet_id ? pets.find((p) => p.id === row.matched_pet_id) : null;
 
@@ -475,6 +482,12 @@ function ReconcileRow({ idx, row, pets, onChange }: { idx: number; row: RowState
         <div className="text-xs text-muted-foreground">
           {[row.seed.breed, row.seed.size, row.seed.sex].filter(Boolean).join(" · ") || "—"}
         </div>
+      </td>
+      <td className="px-4 py-3">
+        <div className="font-medium">
+          {[row.seed.owner_first, row.seed.owner_last].filter(Boolean).join(" ") || row.seed.owner_raw || "—"}
+        </div>
+        <div className="text-xs text-muted-foreground tabular-nums">{row.seed.owner_mobile || "no mobile"}</div>
       </td>
       <td className="px-4 py-3">
         <div className="text-xs font-semibold tabular-nums">{row.seed.days_per_week ?? row.seed.pattern.length}× / wk</div>
@@ -553,9 +566,13 @@ function ReconcileRow({ idx, row, pets, onChange }: { idx: number; row: RowState
             >Confirm</button>
           )}
           <button
+            onClick={() => setShowDbSearch(true)}
+            className="rounded-md border border-sk-turquoise/40 bg-sk-turquoise/10 px-2 py-1 text-xs text-sk-turquoise-dark hover:bg-sk-turquoise/20"
+          >Search database</button>
+          <button
             onClick={() => setShowPicker((v) => !v)}
             className="rounded-md border border-border px-2 py-1 text-xs hover:bg-sk-surface-muted"
-          >{showPicker ? "Cancel" : "Pick pet"}</button>
+          >{showPicker ? "Cancel" : "Quick pick"}</button>
           <button
             onClick={() => onChange({ status: "new", matched_pet_id: null, matched_customer_id: null, new_first_name: row.seed.owner_first ?? "", new_last_name: row.seed.owner_last ?? "" })}
             className="rounded-md border border-purple-400/50 bg-purple-50 px-2 py-1 text-xs text-purple-700 hover:bg-purple-100"
@@ -566,6 +583,114 @@ function ReconcileRow({ idx, row, pets, onChange }: { idx: number; row: RowState
           >Skip</button>
         </div>
       </td>
+      {showDbSearch && (
+        <CustomerDatabaseSearchModal
+          seed={row.seed}
+          pets={pets}
+          onClose={() => setShowDbSearch(false)}
+          onPick={(pet) => {
+            onChange({ matched_pet_id: pet.id, matched_customer_id: pet.customer_id, status: "confirmed" });
+            setShowDbSearch(false);
+          }}
+        />
+      )}
     </tr>
+  );
+}
+
+function CustomerDatabaseSearchModal({
+  seed, pets, onClose, onPick,
+}: {
+  seed: SeedRow;
+  pets: PetOwner[];
+  onClose: () => void;
+  onPick: (pet: PetOwner) => void;
+}) {
+  const initial = [seed.owner_last, seed.owner_first].filter(Boolean).join(" ").trim() || seed.dog_first || "";
+  const [q, setQ] = useState(initial);
+
+  // Group by customer for a cleaner list.
+  const grouped = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const filtered = pets.filter((p) => {
+      if (!needle) return true;
+      const petName = (p.name ?? "").toLowerCase();
+      const owner = (p.customer?.full_name ?? "").toLowerCase();
+      const first = (p.customer?.first_name ?? "").toLowerCase();
+      const last = (p.customer?.last_name ?? "").toLowerCase();
+      const mob = digits(p.customer?.mobile) + " " + digits(p.customer?.phone_alt);
+      return (
+        petName.includes(needle) ||
+        owner.includes(needle) ||
+        first.includes(needle) ||
+        last.includes(needle) ||
+        (digits(needle) && mob.includes(digits(needle)))
+      );
+    });
+    const map = new Map<string, { customer: PetOwner["customer"]; pets: PetOwner[] }>();
+    for (const p of filtered) {
+      const key = p.customer_id;
+      if (!map.has(key)) map.set(key, { customer: p.customer, pets: [] });
+      map.get(key)!.pets.push(p);
+    }
+    return Array.from(map.entries()).slice(0, 40);
+  }, [q, pets]);
+
+  return (
+    <ModalShell
+      title="Choose existing customer"
+      subtitle={`Sheet row: ${seed.dog_full_name ?? seed.dog_first ?? "—"} · owner ${seed.owner_raw ?? "—"}`}
+      onClose={onClose}
+      wide
+      footer={
+        <div className="flex justify-end">
+          <button onClick={onClose} className="h-9 rounded-lg border border-border px-3 text-sm hover:bg-sk-surface-muted">Cancel</button>
+        </div>
+      }
+    >
+      <div className="space-y-3 p-6">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search by owner name, pet name, or mobile…"
+            className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm"
+          />
+        </div>
+        <div className="text-xs text-muted-foreground">{grouped.length} customer{grouped.length === 1 ? "" : "s"} — click a pet to link it.</div>
+        <div className="max-h-[55vh] overflow-auto rounded-md border border-border">
+          {grouped.length === 0 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">No customers match “{q}”.</div>
+          ) : (
+            <ul className="divide-y divide-border">
+              {grouped.map(([cid, group]) => (
+                <li key={cid} className="p-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <div className="font-medium">{group.customer?.full_name ?? "Unnamed customer"}</div>
+                    <div className="text-xs tabular-nums text-muted-foreground">
+                      {group.customer?.mobile || group.customer?.phone_alt || "no mobile"}
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {group.pets.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => onPick(p)}
+                        className="rounded-md border border-sk-turquoise/40 bg-sk-turquoise/5 px-2.5 py-1 text-xs font-medium text-sk-turquoise-dark hover:bg-sk-turquoise/15"
+                      >
+                        {p.name ?? "Unnamed pet"}
+                        {p.species ? <span className="ml-1 text-[10px] text-muted-foreground">· {p.species}</span> : null}
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </ModalShell>
   );
 }

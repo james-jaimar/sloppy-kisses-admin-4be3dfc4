@@ -1,41 +1,47 @@
-## What the Detailed Sheet gives us
+## Problem
 
-I parsed the tab. Every row now has:
-
-- **Owner full name** in col B (e.g. `Tracy Williams - Abby (Collie X) & Jackson (Lab X)`) — Charlotte has cleaned these up, so the owner name is real, not just the dog surname.
-- **Mobile number** in col C — a second, very strong identity key.
-- **Dog name + surname**, **breed**, **size**, **sex**, **days per week**, and the **weekly pattern** (Mon–Fri "x" marks).
-- **Per-date attendance** for every weekday from **1 Jul 2026 through 3 Jan 2027** (135 date columns). Each cell holds the dog's first name on days they're due in.
-
-141 rows total (I'll drop the "Teest Charlotte" test row); 139 with real July bookings.
+Auto-matching is too loose — some rows land in the green "auto" bucket with the wrong customer, and today the only ways to correct a row are **Create new** or **Pick a pet** (a narrow scoped picker). You want a third option: **search the full customer database** and pick any customer/pet manually.
 
 ## Plan
 
-### 1. Replace the seed (`daycareRegisterSeed.json`)
-Rebuild it from the Detailed Sheet with these fields per row:
-- `owner_raw`, `owner_first`, `owner_last` (parsed from col B, stripping the `" - ..."` and parenthetical dog notes)
-- `owner_mobile` (normalised, keep last 9 digits for matching)
-- `dog_first`, `dog_surname`, `breed`, `size`, `sex`
-- `days_per_week`, `pattern` (weekday codes)
-- `dates`: array of ISO dates the dog is due in (the whole horizon, not just July)
+All changes in `src/features/settings/DaycareImportPage.tsx` (plus a small helper). No schema changes, no touching commit logic.
 
-### 2. Sharpen the reconciler matching
-Extend the scorer in `DaycareImportPage.tsx` to weight, in order:
-1. **Mobile match** (last 9 digits vs `customers.phone`) — near-certain, big score.
-2. **Owner surname AND first name** — much stronger than the previous "surname substring" heuristic.
-3. Dog first-name match (as today).
+### 1. Tighten auto-match
 
-That should push the vast majority into the green "Auto" bucket. The Review/Unmatched/Create-new/Pick-pet UI stays as-is.
+Raise the bar so weak matches drop into **Review** instead of **Auto**:
 
-### 3. Commit step — bring the bookings in for real
-For each confirmed / new row:
+- **Auto** requires either:
+  - a **mobile match** (last 9 digits equal) — near-certain, OR
+  - **owner surname + owner first name both exact** AND dog first name equal/prefix match.
+- Everything else with any score → **Review** (yellow).
+- Kill the current substring-based owner scoring (`ownerFull.includes(ownLast)`) — that's the main source of Charlotte's noisy matches, because her original sheet stuffed dog names and breeds into the owner field.
+- Keep the ranked candidate list for the Review picker.
 
-- **Enrolment**: unchanged — one active `daycare_enrolments` row per pet, plan matched by `days_per_week`, `selected_days` = pattern, `start_date` = 2026-07-01.
-- **Attendance rows**: NEW — for every date in the row's `dates` array, insert a `daycare_attendance` row (`expected = true`, `status = 'expected'`). This is what makes the daycare board actually populated from day one. Idempotent: skip dates that already have a row for the pet.
-- **July invoice**: unchanged — one draft invoice per customer for July 2026, one line per enrolled dog at the plan's monthly price.
+### 2. New "Choose from customer database" action per row
 
-### 4. No schema changes
-Everything targets existing tables (`customers`, `pets`, `daycare_enrolments`, `daycare_attendance`, `invoices`, `invoice_items`). No migration needed.
+Add a third button on every row, next to **Create new** and **Pick pet**:
+
+**Search customer database** — opens a modal with:
+- A search box (debounced) that filters ALL tenant pets+owners by owner name, mobile, or pet name (uses the already-loaded `useTenantPetsWithOwners` list — no new query).
+- Pre-seeded with the seed row's owner name so results appear immediately.
+- Results show: owner full name, mobile, and each of their pets (dog name + breed).
+- Clicking a pet sets `matched_pet_id` + `matched_customer_id` on the row and marks it **confirmed** (green).
+- Cancel leaves the row unchanged.
+
+The modal uses the existing `ModalShell` (Escape / Cancel / pick-to-confirm; no backdrop close — per your earlier rule).
+
+### 3. Row UI cleanup
+
+- Show the seed row's owner + mobile + dog clearly on the left so you can eyeball the match.
+- Show the currently matched customer + pet on the right, with a small "wrong?" hint when status is `auto` but score was borderline.
+- Buttons on every row: **Confirm**, **Search customer database**, **Pick pet** (existing narrow list), **Create new**, **Skip**.
+
+### 4. No changes to
+
+- The commit step (enrolments, attendance, July invoices) — unchanged.
+- The seed file — unchanged.
+- Any DB schema, RLS, or edge functions.
 
 ## Result
-After you hit **Commit import**, the daycare board will show real expected attendance every weekday from July onwards, drawn from Charlotte's sheet, plus enrolments and July invoices — the daycare system goes live.
+
+After re-opening the importer, most rows will move from green to yellow (Review), and every row — including the ones the matcher got confidently wrong — will have a "Search customer database" button so you can pick the correct customer/pet from the full list before committing.
