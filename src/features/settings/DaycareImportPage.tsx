@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { supabase } from "@/lib/supabase/client";
 import { useDaycarePlans, useTenantPetsWithOwners, WEEKDAY_LABEL, type Weekday } from "@/features/daycare/queries";
+import { useCustomerPetSearch, type CustomerPetSearchRow } from "@/features/customers/queries";
 import { toast } from "@/hooks/use-toast";
 import { ModalShell } from "@/components/modals/ModalShell";
 import seedData from "./daycareRegisterSeed.json";
