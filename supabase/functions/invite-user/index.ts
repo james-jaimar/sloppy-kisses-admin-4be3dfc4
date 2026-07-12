@@ -39,6 +39,18 @@ Deno.serve(async (req) => {
   const { data: userRes, error: userErr } = await asCaller.auth.getUser();
   if (userErr || !userRes?.user) return json(401, { error: "Not authenticated" });
 
+  // Look up inviter display name (best-effort) so the branded email can say
+  // "James invited you to Sloppy Kisses".
+  let inviterName: string | null = null;
+  try {
+    const { data: inviter } = await admin
+      .from("profiles")
+      .select("full_name,email")
+      .eq("auth_user_id", userRes.user.id)
+      .maybeSingle();
+    inviterName = (inviter?.full_name as string | null) ?? (inviter?.email as string | null) ?? null;
+  } catch { /* ignore */ }
+
   let payload: { tenant_id?: string; email?: string; full_name?: string; role_ids?: string[] };
   try {
     payload = await req.json();
@@ -67,7 +79,11 @@ Deno.serve(async (req) => {
     authUserId = existing.id;
   } else {
     const { data: invited, error: inviteErr } = await admin.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: fullName || null },
+      data: {
+        full_name: fullName || null,
+        invited_tenant_id: tenantId,
+        invited_by_name: inviterName,
+      },
     });
     if (inviteErr) return json(500, { error: `Invite failed: ${inviteErr.message}` });
     authUserId = invited.user?.id ?? null;
