@@ -198,6 +198,10 @@ async function logEmail(
   error: string | null,
   action: string,
 ) {
+  if (!tenantId) {
+    console.warn("logEmail skipped — no tenant_id resolved:", { to, subject, status, error, action });
+    return;
+  }
   try {
     await admin.from("email_log").insert({
       tenant_id: tenantId,
@@ -205,7 +209,8 @@ async function logEmail(
       subject,
       status,
       error_message: error,
-      template: `auth.${action}`,
+      template_code: `auth.${action}`,
+      sent_at: status === "sent" ? new Date().toISOString() : null,
     });
   } catch (e) {
     console.error("email_log insert failed:", (e as Error).message);
