@@ -88,6 +88,9 @@ import MyProfilePage from "@/features/customerPortal/profile/MyProfilePage";
 import NewBookingRequestPage from "@/features/customerPortal/bookings/NewBookingRequestPage";
 import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
 import PublicInvoicePage from "@/features/invoices/PublicInvoicePage";
+import ReportsIndexPage from "@/features/reports/ReportsIndexPage";
+import AgingReportPage from "@/features/reports/AgingReportPage";
+import CustomerStatementPage from "@/features/reports/CustomerStatementPage";
 
 const queryClient = new QueryClient();
 
@@ -113,6 +116,7 @@ const App = () => (
                 <Route path="/admin/calendar" element={<CalendarWeekView />} />
                 <Route path="/admin/customers" element={<CustomersPage />} />
                 <Route path="/admin/customers/:id" element={<CustomerDetailPage />} />
+                <Route path="/admin/customers/:id/statement" element={<CustomerStatementPage />} />
                 <Route path="/admin/pets" element={<PetsPage />} />
                 <Route path="/admin/pets/:id" element={<PetDetailPage />} />
                 <Route path="/admin/booking-requests" element={<BookingRequestQueue />} />
@@ -139,7 +143,10 @@ const App = () => (
                 <Route path="/admin/shop-stock/products" element={<ProductsPage />} />
                 <Route path="/admin/shop-stock/stock" element={<StockPage />} />
                 <Route path="/admin/shop-stock/sale" element={<QuickSalePage />} />
-                <Route path="/admin/reports" element={<PlaceholderPage title="Reports" />} />
+                <Route element={<RequirePermission code="reports.view" />}>
+                  <Route path="/admin/reports" element={<ReportsIndexPage />} />
+                  <Route path="/admin/reports/aging" element={<AgingReportPage />} />
+                </Route>
                 <Route element={<RequirePermission code="users.manage" />}>
                   <Route path="/admin/users" element={<UsersPage />} />
                   <Route path="/admin/settings/roles-permissions" element={<RolesPermissionsPage />} />
