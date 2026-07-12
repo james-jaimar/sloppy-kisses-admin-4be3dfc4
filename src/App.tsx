@@ -88,6 +88,7 @@ import MyProfilePage from "@/features/customerPortal/profile/MyProfilePage";
 import NewBookingRequestPage from "@/features/customerPortal/bookings/NewBookingRequestPage";
 import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
 import PublicInvoicePage from "@/features/invoices/PublicInvoicePage";
+import { PaySuccessPage, PayCancelPage } from "@/features/invoices/PayResultPages";
 import ReportsIndexPage from "@/features/reports/ReportsIndexPage";
 import AgingReportPage from "@/features/reports/AgingReportPage";
 import CustomerStatementPage from "@/features/reports/CustomerStatementPage";
@@ -109,6 +110,8 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/i/:token" element={<PublicInvoicePage />} />
+              <Route path="/pay/success" element={<PaySuccessPage />} />
+              <Route path="/pay/cancel" element={<PayCancelPage />} />
 
               <Route element={<RequireAdmin />}>
               <Route element={<AdminLayout />}>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, Download } from "lucide-react";
+import { Loader2, Download, CreditCard } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase/client";
 import { fmtZar } from "./status";
@@ -11,6 +11,7 @@ type Data = {
   items: any[];
   tenant: any;
   settings: any;
+  payfast_enabled?: boolean;
 };
 
 export default function PublicInvoicePage() {
@@ -19,6 +20,7 @@ export default function PublicInvoicePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -52,6 +54,25 @@ export default function PublicInvoicePage() {
     } catch (e) {
       // Best-effort — public PDF endpoint isn't required for this slice.
     } finally { setDownloading(false); }
+  }
+
+  async function payOnline() {
+    if (!token) return;
+    setPaying(true);
+    try {
+      const url = `${(import.meta as any).env.VITE_SUPABASE_URL}/functions/v1/payment-gateway-checkout`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body?.redirect_url) throw new Error(body?.error ?? "Could not start payment");
+      window.location.href = body.redirect_url as string;
+    } catch (e: any) {
+      setError(e?.message ?? "Could not start payment");
+      setPaying(false);
+    }
   }
 
   if (loading) return (
@@ -141,6 +162,17 @@ export default function PublicInvoicePage() {
                 <div className="mt-2 rounded-lg px-3 py-2" style={{ background: `${brand}20` }}>
                   <Row label="Balance due" value={fmtZar(invoice.balance_due)} bold />
                 </div>
+                {data.payfast_enabled && Number(invoice.balance_due) > 0 && (
+                  <button
+                    onClick={payOnline}
+                    disabled={paying}
+                    className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white disabled:opacity-60"
+                    style={{ background: brand }}
+                  >
+                    {paying ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                    Pay {fmtZar(invoice.balance_due)} online
+                  </button>
+                )}
               </div>
             </div>
 

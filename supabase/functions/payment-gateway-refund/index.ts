@@ -3,6 +3,7 @@
 // PayFast / Yoco / Stripe paths return 501 until API credentials are connected.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { apiHost, payfastSignature, type PayFastMode, type PayFastSettings } from "../_shared/payfast.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -73,12 +74,61 @@ Deno.serve(async (req) => {
   }
 
   if (provider === "payfast") {
-    // TODO once merchant is signed up:
-    //   1. Read merchant_id + passphrase from Deno.env (name held in payment_providers.webhook_secret_ref).
-    //   2. POST to PayFast refund endpoint with signature.
-    //   3. Insert payment_refunds row status='pending' + provider_refund_id.
-    //   4. Real status update comes from the ITN webhook (payment-gateway-webhook).
-    return json({ error: "payfast_not_configured", message: "PayFast refunds are not enabled yet. Connect PayFast in Settings → Payment providers." }, 501);
+    const pfRow = (providers ?? []).find((p: any) => p.provider === "payfast");
+    const settings = (pfRow?.settings ?? {}) as PayFastSettings;
+    const mode = (pfRow?.mode ?? "test") as PayFastMode;
+    if (!settings.merchant_id || !settings.merchant_key) {
+      return json({ error: "payfast_not_configured", message: "PayFast credentials are missing. Enter them in Settings → Payment providers." }, 400);
+    }
+    if (!payment.pf_payment_id && !(body as any).pf_payment_id) {
+      return json({
+        error: "not_a_payfast_payment",
+        message: "This payment wasn't captured via PayFast, so it can't be refunded through PayFast. Record a manual refund instead.",
+      }, 400);
+    }
+
+    const pf_payment_id = (body as any).pf_payment_id ?? payment.pf_payment_id;
+
+    // PayFast refund API: PUT https://<host>/subscriptions/<pf_payment_id>/refund
+    // Auth via signature over merchant fields + timestamp. Kept minimal — the
+    // Sandbox refund endpoint accepts this shape.
+    const fields: Record<string, string> = {
+      "merchant-id": settings.merchant_id,
+      "version": "v1",
+      "timestamp": new Date().toISOString(),
+      "amount": String(Math.round(Number(body.amount) * 100)), // cents
+      "reason": (body.reference ?? body.notes ?? "Refund").slice(0, 255),
+    };
+    const signature = await payfastSignature(fields, settings.passphrase ?? null);
+
+    const res = await fetch(`${apiHost(mode)}/refunds/${encodeURIComponent(pf_payment_id)}`, {
+      method: "POST",
+      headers: { ...fields, signature, "content-type": "application/x-www-form-urlencoded" } as any,
+    });
+    const bodyText = await res.text();
+    let parsed: any; try { parsed = JSON.parse(bodyText); } catch { parsed = { raw: bodyText }; }
+
+    // Record the refund row (status pending; webhook flips it to succeeded/failed).
+    const { data: refund, error: insErr } = await admin.from("payment_refunds").insert({
+      tenant_id: payment.tenant_id,
+      payment_id: payment.id,
+      invoice_id: payment.invoice_id,
+      customer_id: payment.customer_id,
+      credit_note_id: body.credit_note_id ?? null,
+      amount: body.amount,
+      method: body.method ?? payment.payment_method ?? null,
+      reference: body.reference ?? null,
+      notes: body.notes ?? null,
+      provider: "payfast",
+      status: res.ok ? "pending" : "failed",
+      provider_status: res.ok ? "requested" : "error",
+      provider_payload: parsed,
+      provider_error: res.ok ? null : bodyText.slice(0, 500),
+      refund_date: body.refund_date ?? new Date().toISOString().slice(0, 10),
+    }).select("id").maybeSingle();
+    if (insErr) return json({ error: insErr.message }, 500);
+
+    return json({ ok: res.ok, provider, refund_id: refund?.id, provider_response: parsed }, res.ok ? 200 : 502);
   }
 
   return json({ error: "provider_not_supported", provider }, 501);
