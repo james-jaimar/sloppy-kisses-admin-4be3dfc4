@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
         auth_user_id: authUserId,
         email,
         full_name: fullName || null,
-        user_type: "tenant",
+        user_type: "staff",
       })
       .select("id")
       .single();
