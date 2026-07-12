@@ -2427,11 +2427,14 @@ export type Database = {
           id: string
           invoice_number: string
           issue_date: string | null
+          last_reminder_at: string | null
+          last_reminder_offset: number | null
           last_sent_at: string | null
           notes: string | null
           payment_reference: string | null
           pdf_path: string | null
           public_view_token: string
+          reminders_paused: boolean
           send_count: number
           sent_at: string | null
           status: Database["public"]["Enums"]["billing_status"]
@@ -2454,11 +2457,14 @@ export type Database = {
           id?: string
           invoice_number: string
           issue_date?: string | null
+          last_reminder_at?: string | null
+          last_reminder_offset?: number | null
           last_sent_at?: string | null
           notes?: string | null
           payment_reference?: string | null
           pdf_path?: string | null
           public_view_token?: string
+          reminders_paused?: boolean
           send_count?: number
           sent_at?: string | null
           status?: Database["public"]["Enums"]["billing_status"]
@@ -2481,11 +2487,14 @@ export type Database = {
           id?: string
           invoice_number?: string
           issue_date?: string | null
+          last_reminder_at?: string | null
+          last_reminder_offset?: number | null
           last_sent_at?: string | null
           notes?: string | null
           payment_reference?: string | null
           pdf_path?: string | null
           public_view_token?: string
+          reminders_paused?: boolean
           send_count?: number
           sent_at?: string | null
           status?: Database["public"]["Enums"]["billing_status"]
