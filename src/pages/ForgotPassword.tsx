@@ -14,8 +14,8 @@ export default function ForgotPassword() {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
-    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reset-password`,
+    const { error: err } = await supabase.functions.invoke("request-password-reset", {
+      body: { email: email.trim(), redirect_to: window.location.origin },
     });
     setSubmitting(false);
     // Show generic success regardless of whether the email exists (avoid account enumeration).

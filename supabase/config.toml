@@ -3,5 +3,5 @@ project_id = "jsmsyezkfxtgmxvgfuxx"
 [functions.invite-user]
 verify_jwt = true
 
-[functions.auth-email-hook]
+[functions.request-password-reset]
 verify_jwt = false
