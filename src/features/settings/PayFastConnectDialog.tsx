@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Copy, Loader2, X } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Copy, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { useUpsertPaymentProvider, type PaymentProviderRow } from "@/features/refunds/queries";
@@ -64,21 +64,28 @@ export default function PayFastConnectDialog({ tenantId, existing, onClose }: Pr
   }
 
   return (
-    <ModalShell onClose={onClose}>
-      <div className="w-full max-w-2xl">
-        <div className="flex items-start justify-between border-b border-border p-5">
-          <div>
-            <div className="text-lg font-semibold">
-              {existing?.settings?.merchant_id ? "Edit PayFast connection" : "Connect PayFast"}
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              Credentials are stored per-tenant and never leave this environment. Find them in your PayFast dashboard → Settings → Integration.
-            </div>
+    <ModalShell
+      title={existing?.settings?.merchant_id ? "Edit PayFast connection" : "Connect PayFast"}
+      subtitle="Credentials are stored per-tenant. Find them in your PayFast dashboard → Settings → Integration."
+      onClose={onClose}
+      footer={
+        <div className="flex items-center justify-between gap-2">
+          <button onClick={onClose} className="h-9 rounded-lg border border-border bg-white px-4 text-xs font-semibold">Cancel</button>
+          <div className="flex gap-2">
+            <button disabled={saving} onClick={() => save(false)}
+              className="h-9 rounded-lg border border-border bg-white px-4 text-xs font-semibold disabled:opacity-50">
+              Save (leave disabled)
+            </button>
+            <button disabled={saving} onClick={() => save(true)}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-sk-green px-4 text-xs font-semibold text-white disabled:opacity-50">
+              {saving && <Loader2 className="h-3 w-3 animate-spin" />}
+              Save & enable
+            </button>
           </div>
-          <button onClick={onClose} className="rounded-lg p-1 hover:bg-muted"><X className="h-4 w-4" /></button>
         </div>
-
-        <div className="grid gap-4 p-5">
+      }
+    >
+      <div className="grid gap-4 p-5">
           <div>
             <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Environment</label>
             <div className="mt-2 flex gap-2">
@@ -123,22 +130,6 @@ export default function PayFastConnectDialog({ tenantId, existing, onClose }: Pr
             <UrlRow label="Return URL" value={returnUrl} />
             <UrlRow label="Cancel URL" value={cancelUrl} />
           </div>
-        </div>
-
-        <div className="flex items-center justify-between gap-2 border-t border-border p-4">
-          <button onClick={onClose} className="h-9 rounded-lg border border-border bg-white px-4 text-xs font-semibold">Cancel</button>
-          <div className="flex gap-2">
-            <button disabled={saving} onClick={() => save(false)}
-              className="h-9 rounded-lg border border-border bg-white px-4 text-xs font-semibold disabled:opacity-50">
-              Save (leave disabled)
-            </button>
-            <button disabled={saving} onClick={() => save(true)}
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-sk-green px-4 text-xs font-semibold text-white disabled:opacity-50">
-              {saving && <Loader2 className="h-3 w-3 animate-spin" />}
-              Save & enable
-            </button>
-          </div>
-        </div>
       </div>
     </ModalShell>
   );
