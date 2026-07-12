@@ -369,18 +369,64 @@ export default function InvoiceDetailPage() {
                   <div className="mt-2 text-sm text-muted-foreground">No payments yet.</div>
                 ) : (
                   <ul className="mt-2 space-y-2 text-sm">
-                    {inv.payments.map((p) => (
-                      <li key={p.id} className="flex items-center justify-between border-b border-border pb-2 last:border-0 last:pb-0">
-                        <div>
-                          <div className="font-medium capitalize">{p.payment_method}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {p.paid_at ? format(new Date(p.paid_at), "dd MMM yyyy") : ""}
-                            {p.payment_reference ? " · " + p.payment_reference : ""}
+                    {inv.payments.map((p) => {
+                      const pRefunds = refundsByPayment.get(p.id) ?? [];
+                      const refundedOnP = Number((p as any).amount_refunded ?? 0);
+                      const remaining = Math.max(0, Number(p.amount) - refundedOnP);
+                      const canRefund = can("payments.refund") && remaining > 0.001 && inv.status !== "cancelled";
+                      return (
+                        <li key={p.id} className="border-b border-border pb-2 last:border-0 last:pb-0">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-medium capitalize">{p.payment_method}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {p.paid_at ? format(new Date(p.paid_at), "dd MMM yyyy") : ""}
+                                {p.payment_reference ? " · " + p.payment_reference : ""}
+                                {refundedOnP > 0 && <> · <span className="text-sk-coral-dark">Refunded {fmtZar(refundedOnP)}</span></>}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm font-semibold tabular-nums">{fmtZar(p.amount)}</div>
+                              {canRefund && (
+                                <button
+                                  onClick={() => setRefundFor(p)}
+                                  title="Record a refund against this payment"
+                                  className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-[11px] font-medium hover:bg-muted">
+                                  <RotateCcw className="h-3 w-3" /> Refund
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="text-sm font-semibold tabular-nums">{fmtZar(p.amount)}</div>
-                      </li>
-                    ))}
+                          {pRefunds.length > 0 && (
+                            <ul className="mt-2 space-y-1 pl-3 text-xs">
+                              {pRefunds.map((r) => (
+                                <li key={r.id} className="flex items-center justify-between">
+                                  <div className="text-muted-foreground">
+                                    <span className={r.status === "succeeded" ? "text-sk-coral-dark" : ""}>−{fmtZar(r.amount)}</span>
+                                    {" · "}{format(new Date(r.refund_date), "dd MMM yyyy")}
+                                    {r.reference ? ` · ${r.reference}` : ""}
+                                    {r.status !== "succeeded" && (
+                                      <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase">{r.status}</span>
+                                    )}
+                                  </div>
+                                  {r.status === "succeeded" && r.provider === "manual" && can("payments.refund.void") && (
+                                    <button
+                                      onClick={async () => {
+                                        if (!confirm(`Void this refund of ${fmtZar(r.amount)}? Invoice balance will restore.`)) return;
+                                        try { await voidRefund.mutateAsync(r.id); toast.success("Refund voided"); }
+                                        catch (e: any) { toast.error(e?.message ?? "Failed"); }
+                                      }}
+                                      className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-sk-coral-dark">
+                                      <Undo2 className="h-3 w-3" /> Void
+                                    </button>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
                 <div className="mt-3 flex justify-between border-t border-border pt-3 text-sm">
@@ -391,6 +437,12 @@ export default function InvoiceDetailPage() {
                   <div className="mt-1 flex justify-between text-sm">
                     <span className="text-muted-foreground">Credits applied</span>
                     <span className="tabular-nums">{fmtZar(creditsApplied)}</span>
+                  </div>
+                )}
+                {totalRefunded > 0 && (
+                  <div className="mt-1 flex justify-between text-sm">
+                    <span className="text-muted-foreground">Refunded</span>
+                    <span className="tabular-nums text-sk-coral-dark">−{fmtZar(totalRefunded)}</span>
                   </div>
                 )}
                 <div className="mt-1 flex justify-between text-sm">
@@ -468,6 +520,21 @@ export default function InvoiceDetailPage() {
       )}
       {issueCnOpen && inv && tenantId && (
         <IssueCreditNoteDrawer tenantId={tenantId} invoiceId={inv.id} onClose={() => setIssueCnOpen(false)} />
+      )}
+      {refundFor && tenantId && (
+        <RecordRefundDialog
+          tenantId={tenantId}
+          payment={{
+            id: refundFor.id,
+            amount: Number(refundFor.amount),
+            amount_refunded: Number((refundFor as any).amount_refunded ?? 0),
+            payment_method: String(refundFor.payment_method),
+            customer_id: refundFor.customer_id,
+            invoice_id: refundFor.invoice_id,
+          }}
+          onClose={() => setRefundFor(null)}
+          onDone={() => setRefundFor(null)}
+        />
       )}
     </>
   );
