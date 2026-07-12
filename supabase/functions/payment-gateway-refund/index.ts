@@ -75,6 +75,11 @@ Deno.serve(async (req) => {
   }
 
   if (provider === "payfast") {
+    const { data: allowed } = await userClient.rpc("user_has_permission", {
+      target_tenant_id: payment.tenant_id, permission_code: "payments.refund",
+    });
+    if (!allowed) return json({ error: "forbidden", message: "You don't have permission to issue refunds." }, 403);
+
     const pfRow = (providers ?? []).find((p: any) => p.provider === "payfast");
     const settings = (pfRow?.settings ?? {}) as PayFastSettings;
     const mode = (pfRow?.mode ?? "test") as PayFastMode;
