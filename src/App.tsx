@@ -120,9 +120,11 @@ const App = () => (
                 <Route path="/admin/grooming" element={<GroomingBoardPage />} />
                 <Route path="/admin/mobile-vans" element={<MobileVansPage />} />
                 <Route path="/admin/pickup-dropoff" element={<TransportBoardPage />} />
-                <Route path="/admin/invoices" element={<InvoicesListPage />} />
-                <Route path="/admin/invoices/:id" element={<InvoiceDetailPage />} />
-                <Route path="/admin/payments" element={<InvoicesListPage />} />
+                <Route element={<RequirePermission code="invoices.view" />}>
+                  <Route path="/admin/invoices" element={<InvoicesListPage />} />
+                  <Route path="/admin/invoices/:id" element={<InvoiceDetailPage />} />
+                  <Route path="/admin/payments" element={<InvoicesListPage />} />
+                </Route>
                 <Route path="/admin/comms" element={<CommsInboxPage />} />
                 <Route path="/admin/shop-stock" element={<ShopIndexPage />} />
                 <Route path="/admin/shop-stock/products" element={<ProductsPage />} />
