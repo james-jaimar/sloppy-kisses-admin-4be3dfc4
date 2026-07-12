@@ -1,10 +1,11 @@
 // Notification dispatcher — resolves message templates, renders the body,
-// sends via provider (Resend for email; WhatsApp/SMS stubbed), and marks
-// the notification_events row sent/failed.
+// sends via the tenant's SMTP settings (same transport as auth emails),
+// and marks the notification_events row sent/failed. WhatsApp/SMS stubbed.
 //
 // Trigger with `supabase.functions.invoke("send-notifications")` or via cron.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,7 +14,6 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
 
 function render(tpl: string, ctx: Record<string, any>): string {
   return tpl.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, path) => {
@@ -33,18 +33,78 @@ function isQuietHours(nowUtc: Date, quietStart: string, quietEnd: string): boole
   return s <= e ? h >= s && h < e : h >= s || h < e;
 }
 
-async function sendEmail(from: string, to: string, subject: string, text: string) {
-  if (!RESEND_API_KEY) {
-    return { ok: false, error: "RESEND_API_KEY not configured", id: null };
-  }
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
-    body: JSON.stringify({ from, to: [to], subject, text }),
+interface Transport {
+  smtp_host: string;
+  smtp_port: number;
+  smtp_secure: string;
+  smtp_username: string;
+  smtp_password: string;
+  from_name: string | null;
+  from_email: string;
+  reply_to: string | null;
+}
+
+const transportCache = new Map<string, Transport | null>();
+
+async function loadTransport(sb: ReturnType<typeof createClient>, tenantId: string): Promise<Transport | null> {
+  if (transportCache.has(tenantId)) return transportCache.get(tenantId)!;
+  const { data } = await sb
+    .from("email_transport_settings")
+    .select("smtp_host,smtp_port,smtp_secure,smtp_username,smtp_password,from_name,from_email,reply_to")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+  const t = (data && data.smtp_host && data.smtp_password && data.from_email ? data : null) as Transport | null;
+  transportCache.set(tenantId, t);
+  return t;
+}
+
+async function sendViaSmtp(t: Transport, to: string, subject: string, text: string) {
+  const client = new SMTPClient({
+    connection: {
+      hostname: t.smtp_host,
+      port: t.smtp_port,
+      tls: t.smtp_secure === "ssl",
+      auth: { username: t.smtp_username, password: t.smtp_password },
+    },
   });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) return { ok: false, error: body?.message ?? `HTTP ${res.status}`, id: null };
-  return { ok: true, error: null, id: body?.id ?? null };
+  try {
+    await client.send({
+      from: t.from_name ? `${t.from_name} <${t.from_email}>` : t.from_email,
+      to,
+      replyTo: t.reply_to ?? undefined,
+      subject,
+      content: text,
+    });
+    return { ok: true, error: null as string | null };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  } finally {
+    try { await client.close(); } catch { /* ignore */ }
+  }
+}
+
+async function logEmail(
+  sb: ReturnType<typeof createClient>,
+  tenantId: string,
+  to: string,
+  subject: string,
+  status: "sent" | "failed",
+  error: string | null,
+  templateCode: string,
+) {
+  try {
+    await sb.from("email_log").insert({
+      tenant_id: tenantId,
+      to_email: to,
+      subject,
+      status,
+      error_message: error,
+      template_code: templateCode,
+      sent_at: status === "sent" ? new Date().toISOString() : null,
+    });
+  } catch (e) {
+    console.error("email_log insert failed:", (e as Error).message);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -119,21 +179,33 @@ Deno.serve(async (req) => {
       const body = render(tpl.body, ctx);
 
       if (ev.channel === "email") {
-        const from = `${settings?.from_name ?? "Sloppy Kisses"} <${settings?.from_email ?? "onboarding@resend.dev"}>`;
-        const result = await sendEmail(from, recipient, subject ?? "(no subject)", body);
+        const transport = await loadTransport(sb, ev.tenant_id);
+        if (!transport) {
+          failed++;
+          const errMsg = "SMTP not configured — Settings → Email Server";
+          await sb.from("notification_events").update({
+            status: "failed", error: errMsg, subject, body_rendered: body,
+            recipient_email: recipient, attempts: (ev.attempts ?? 0) + 1,
+          }).eq("id", ev.id);
+          await logEmail(sb, ev.tenant_id, recipient, subject ?? "(no subject)", "failed", errMsg, `notify.${ev.event_type}`);
+          continue;
+        }
+        const result = await sendViaSmtp(transport, recipient, subject ?? "(no subject)", body);
         if (result.ok) {
           sent++;
           await sb.from("notification_events").update({
             status: "sent", sent_at: new Date().toISOString(), subject, body_rendered: body,
             recipient_email: recipient, template_key: `${tpl.event_code}:${tpl.channel}`,
-            provider_message_id: result.id, attempts: (ev.attempts ?? 0) + 1,
+            provider_message_id: null, attempts: (ev.attempts ?? 0) + 1,
           }).eq("id", ev.id);
+          await logEmail(sb, ev.tenant_id, recipient, subject ?? "(no subject)", "sent", null, `notify.${ev.event_type}`);
         } else {
           failed++;
           await sb.from("notification_events").update({
             status: "failed", error: result.error, subject, body_rendered: body,
             recipient_email: recipient, attempts: (ev.attempts ?? 0) + 1,
           }).eq("id", ev.id);
+          await logEmail(sb, ev.tenant_id, recipient, subject ?? "(no subject)", "failed", result.error, `notify.${ev.event_type}`);
         }
       } else {
         // whatsapp/sms — provider not wired yet
