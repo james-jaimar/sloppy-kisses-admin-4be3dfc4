@@ -2427,15 +2427,20 @@ export type Database = {
           id: string
           invoice_number: string
           issue_date: string | null
+          last_sent_at: string | null
           notes: string | null
           payment_reference: string | null
           pdf_path: string | null
+          public_view_token: string
+          send_count: number
+          sent_at: string | null
           status: Database["public"]["Enums"]["billing_status"]
           subtotal: number
           tenant_id: string
           total: number
           updated_at: string
           updated_by: string | null
+          viewed_at: string | null
           xero_invoice_id: string | null
           xero_invoice_number: string | null
         }
@@ -2449,15 +2454,20 @@ export type Database = {
           id?: string
           invoice_number: string
           issue_date?: string | null
+          last_sent_at?: string | null
           notes?: string | null
           payment_reference?: string | null
           pdf_path?: string | null
+          public_view_token?: string
+          send_count?: number
+          sent_at?: string | null
           status?: Database["public"]["Enums"]["billing_status"]
           subtotal?: number
           tenant_id: string
           total?: number
           updated_at?: string
           updated_by?: string | null
+          viewed_at?: string | null
           xero_invoice_id?: string | null
           xero_invoice_number?: string | null
         }
@@ -2471,15 +2481,20 @@ export type Database = {
           id?: string
           invoice_number?: string
           issue_date?: string | null
+          last_sent_at?: string | null
           notes?: string | null
           payment_reference?: string | null
           pdf_path?: string | null
+          public_view_token?: string
+          send_count?: number
+          sent_at?: string | null
           status?: Database["public"]["Enums"]["billing_status"]
           subtotal?: number
           tenant_id?: string
           total?: number
           updated_at?: string
           updated_by?: string | null
+          viewed_at?: string | null
           xero_invoice_id?: string | null
           xero_invoice_number?: string | null
         }
@@ -4186,6 +4201,7 @@ export type Database = {
         Returns: string
       }
       current_profile_id: { Args: never; Returns: string }
+      get_public_invoice: { Args: { p_token: string }; Returns: Json }
       is_platform_owner: { Args: never; Returns: boolean }
       log_invoice_event: {
         Args: {
@@ -4195,6 +4211,10 @@ export type Database = {
           p_payload?: Json
           p_tenant_id: string
         }
+        Returns: undefined
+      }
+      mark_invoice_sent: {
+        Args: { p_invoice_id: string; p_kind?: string; p_recipient: string }
         Returns: undefined
       }
       next_booking_number: {

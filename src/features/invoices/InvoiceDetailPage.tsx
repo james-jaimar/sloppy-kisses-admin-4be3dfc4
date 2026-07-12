@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download, Mail, Link as LinkIcon } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
-import { useInvoice, useIssueInvoice, useVoidInvoice, useUpsertInvoiceItem, useDeleteInvoiceItem, useInvoicingSettings, useUpdateInvoice, useInvoiceEvents, type InvoiceEvent } from "./queries";
+import { useInvoice, useIssueInvoice, useVoidInvoice, useUpsertInvoiceItem, useDeleteInvoiceItem, useInvoicingSettings, useUpdateInvoice, useInvoiceEvents, useSendInvoiceEmail, type InvoiceEvent } from "./queries";
 import { InvoiceStatusChip, fmtZar } from "./status";
 import { RecordPaymentDialog } from "./RecordPaymentDialog";
 import { Can } from "@/components/auth/Can";
@@ -29,6 +29,7 @@ export default function InvoiceDetailPage() {
   const upsert = useUpsertInvoiceItem(tenantId ?? "");
   const del = useDeleteInvoiceItem(tenantId ?? "");
   const updateInv = useUpdateInvoice(tenantId ?? "");
+  const sendEmail = useSendInvoiceEmail(tenantId ?? "");
 
   const [payOpen, setPayOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,6 +40,7 @@ export default function InvoiceDetailPage() {
   const inv = invQ.data;
   const isDraft = inv?.status === "draft";
   const balance = Number(inv?.balance_due ?? 0);
+  const hasBeenSent = Boolean((inv as any)?.sent_at);
 
   async function saveLine(invoice_id: string) {
     if (!draft.description.trim()) { toast.error("Description required"); return; }
@@ -70,6 +72,17 @@ export default function InvoiceDetailPage() {
     catch (err: any) { toast.error(err?.message ?? "Failed"); }
   }
 
+  async function doSend() {
+    if (!inv) return;
+    const to = inv.customer?.email ?? "";
+    if (!to) { toast.error("Customer has no email on file."); return; }
+    if (!confirm(`Email invoice ${inv.invoice_number} to ${to}?`)) return;
+    try {
+      await sendEmail.mutateAsync({ invoice_id: inv.id, kind: "send" });
+      toast.success(`Invoice emailed to ${to}`);
+    } catch (err: any) { toast.error(err?.message ?? "Failed to send"); }
+  }
+
   async function saveNotes() {
     if (!inv || notesEdit === null) return;
     try {
@@ -95,6 +108,14 @@ export default function InvoiceDetailPage() {
                 <button onClick={doIssue} disabled={issue.isPending}
                   className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
                   <Send className="h-4 w-4" /> Issue
+                </button>
+              </Can>
+            )}
+            {inv && !isDraft && inv.status !== "cancelled" && (
+              <Can code="invoices.send">
+                <button onClick={doSend} disabled={sendEmail.isPending}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted disabled:opacity-50">
+                  <Mail className="h-4 w-4" /> {hasBeenSent ? "Resend" : "Send"}
                 </button>
               </Can>
             )}
@@ -259,6 +280,25 @@ export default function InvoiceDetailPage() {
                   </div>
                 ) : <div className="mt-1 text-sm text-muted-foreground">—</div>}
               </div>
+
+              {!isDraft && inv.status !== "cancelled" && (inv as any).public_view_token && (
+                <div className="sk-card p-5">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Share link</div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Send: <span className="tabular-nums">{(inv as any).send_count ?? 0}×</span>
+                    {(inv as any).last_sent_at && <> · Last: {format(new Date((inv as any).last_sent_at), "dd MMM yyyy HH:mm")}</>}
+                    {(inv as any).viewed_at && <> · Viewed: {format(new Date((inv as any).viewed_at), "dd MMM yyyy HH:mm")}</>}
+                  </div>
+                  <button
+                    onClick={() => {
+                      const url = `${window.location.origin}/i/${(inv as any).public_view_token}`;
+                      navigator.clipboard.writeText(url).then(() => toast.success("Link copied"));
+                    }}
+                    className="mt-2 inline-flex items-center gap-1 text-xs text-sk-coral-dark hover:underline">
+                    <LinkIcon className="h-3 w-3" /> Copy public link
+                  </button>
+                </div>
+              )}
 
               <div className="sk-card p-5">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payments</div>
