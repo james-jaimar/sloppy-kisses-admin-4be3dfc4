@@ -450,6 +450,9 @@ export default function InvoiceDetailPage() {
           onClose={() => setPayOpen(false)}
           onDone={() => setPayOpen(false)} />
       )}
+      {issueCnOpen && inv && tenantId && (
+        <IssueCreditNoteDrawer tenantId={tenantId} invoiceId={inv.id} onClose={() => setIssueCnOpen(false)} />
+      )}
     </>
   );
 }
