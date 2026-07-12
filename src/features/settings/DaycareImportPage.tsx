@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, AlertCircle, XCircle, Search, UserPlus, Loader2, PlayCircle, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { supabase } from "@/lib/supabase/client";
 import { useDaycarePlans, useTenantPetsWithOwners, WEEKDAY_LABEL, type Weekday } from "@/features/daycare/queries";
+import { useCustomerPetSearch, type CustomerPetSearchRow } from "@/features/customers/queries";
 import { toast } from "@/hooks/use-toast";
 import { ModalShell } from "@/components/modals/ModalShell";
 import seedData from "./daycareRegisterSeed.json";
@@ -206,6 +207,27 @@ export default function DaycareImportPage() {
             petId = pet.id;
           } catch (e: any) {
             errors.push(`${r.seed.dog_full_name}: create failed — ${e.message ?? e}`);
+            continue;
+          }
+        }
+
+        // Confirmed row that picked an existing customer but no specific pet:
+        // create the pet under that customer using the seed data.
+        if (!petId && custId) {
+          try {
+            const { data: pn } = await supabase.rpc("next_pet_number", { target_tenant_id: tenantId });
+            const { data: pet, error: pErr } = await supabase.from("pets")
+              .insert({
+                tenant_id: tenantId, customer_id: custId, pet_number: pn as string,
+                name: r.seed.dog_first, species: "dog",
+                breed: r.seed.breed, size: r.seed.size,
+                sex: r.seed.sex ? r.seed.sex.toLowerCase() : null,
+              } as any)
+              .select("id").single();
+            if (pErr) throw pErr;
+            petId = pet.id;
+          } catch (e: any) {
+            errors.push(`${r.seed.dog_full_name}: pet create failed — ${e.message ?? e}`);
             continue;
           }
         }
@@ -586,10 +608,9 @@ function ReconcileRow({ idx, row, pets, onChange }: { idx: number; row: RowState
       {showDbSearch && (
         <CustomerDatabaseSearchModal
           seed={row.seed}
-          pets={pets}
           onClose={() => setShowDbSearch(false)}
-          onPick={(pet) => {
-            onChange({ matched_pet_id: pet.id, matched_customer_id: pet.customer_id, status: "confirmed" });
+          onPick={({ customerId, petId }) => {
+            onChange({ matched_pet_id: petId, matched_customer_id: customerId, status: "confirmed" });
             setShowDbSearch(false);
           }}
         />
@@ -599,42 +620,27 @@ function ReconcileRow({ idx, row, pets, onChange }: { idx: number; row: RowState
 }
 
 function CustomerDatabaseSearchModal({
-  seed, pets, onClose, onPick,
+  seed, onClose, onPick,
 }: {
   seed: SeedRow;
-  pets: PetOwner[];
   onClose: () => void;
-  onPick: (pet: PetOwner) => void;
+  onPick: (v: { customerId: string; petId: string | null }) => void;
 }) {
-  const initial = [seed.owner_last, seed.owner_first].filter(Boolean).join(" ").trim() || seed.dog_first || "";
+  const { tenant } = useCurrentTenant();
+  const tenantId = tenant?.id ?? null;
+  const initial = [seed.owner_first, seed.owner_last].filter(Boolean).join(" ").trim() || seed.owner_raw || seed.dog_first || "";
+  const [input, setInput] = useState(initial);
   const [q, setQ] = useState(initial);
 
-  // Group by customer for a cleaner list.
-  const grouped = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    const filtered = pets.filter((p) => {
-      if (!needle) return true;
-      const petName = (p.name ?? "").toLowerCase();
-      const owner = (p.customer?.full_name ?? "").toLowerCase();
-      const first = (p.customer?.first_name ?? "").toLowerCase();
-      const last = (p.customer?.last_name ?? "").toLowerCase();
-      const mob = digits(p.customer?.mobile) + " " + digits(p.customer?.phone_alt);
-      return (
-        petName.includes(needle) ||
-        owner.includes(needle) ||
-        first.includes(needle) ||
-        last.includes(needle) ||
-        (digits(needle) && mob.includes(digits(needle)))
-      );
-    });
-    const map = new Map<string, { customer: PetOwner["customer"]; pets: PetOwner[] }>();
-    for (const p of filtered) {
-      const key = p.customer_id;
-      if (!map.has(key)) map.set(key, { customer: p.customer, pets: [] });
-      map.get(key)!.pets.push(p);
-    }
-    return Array.from(map.entries()).slice(0, 40);
-  }, [q, pets]);
+  // Debounce keystrokes → query key.
+  useEffect(() => {
+    const t = setTimeout(() => setQ(input), 300);
+    return () => clearTimeout(t);
+  }, [input]);
+
+  const searchQ = useCustomerPetSearch(tenantId, q);
+  const results: CustomerPetSearchRow[] = searchQ.data ?? [];
+  const capped = results.length >= 50;
 
   return (
     <ModalShell
@@ -653,37 +659,61 @@ function CustomerDatabaseSearchModal({
           <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
             autoFocus
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by owner name, pet name, or mobile…"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Search by owner name, mobile, or customer number…"
             className="h-10 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm"
           />
         </div>
-        <div className="text-xs text-muted-foreground">{grouped.length} customer{grouped.length === 1 ? "" : "s"} — click a pet to link it.</div>
+        <div className="text-xs text-muted-foreground">
+          {q.trim().length < 2
+            ? "Type at least 2 characters to search the customer database."
+            : searchQ.isFetching
+              ? "Searching…"
+              : capped
+                ? "Showing top 50 matches — refine your search to narrow down."
+                : `${results.length} customer${results.length === 1 ? "" : "s"} — click a pet to link it, or link the owner directly.`}
+        </div>
         <div className="max-h-[55vh] overflow-auto rounded-md border border-border">
-          {grouped.length === 0 ? (
+          {q.trim().length < 2 ? (
+            <div className="p-6 text-center text-sm text-muted-foreground">Start typing to search…</div>
+          ) : searchQ.isLoading ? (
+            <div className="p-6 text-center text-sm text-muted-foreground"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />Loading…</div>
+          ) : results.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">No customers match “{q}”.</div>
           ) : (
             <ul className="divide-y divide-border">
-              {grouped.map(([cid, group]) => (
-                <li key={cid} className="p-3">
+              {results.map((c) => (
+                <li key={c.id} className="p-3">
                   <div className="flex items-baseline justify-between gap-3">
-                    <div className="font-medium">{group.customer?.full_name ?? "Unnamed customer"}</div>
+                    <div>
+                      <span className="font-medium">{c.full_name ?? ([c.first_name, c.last_name].filter(Boolean).join(" ") || "Unnamed customer")}</span>
+                      {c.customer_number && (
+                        <span className="ml-2 text-[11px] tabular-nums text-muted-foreground">{c.customer_number}</span>
+                      )}
+                    </div>
                     <div className="text-xs tabular-nums text-muted-foreground">
-                      {group.customer?.mobile || group.customer?.phone_alt || "no mobile"}
+                      {c.mobile || c.phone_alt || "no mobile"}
                     </div>
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {group.pets.map((p) => (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    {c.pets.map((p) => (
                       <button
                         key={p.id}
-                        onClick={() => onPick(p)}
+                        onClick={() => onPick({ customerId: c.id, petId: p.id })}
                         className="rounded-md border border-sk-turquoise/40 bg-sk-turquoise/5 px-2.5 py-1 text-xs font-medium text-sk-turquoise-dark hover:bg-sk-turquoise/15"
                       >
                         {p.name ?? "Unnamed pet"}
-                        {p.species ? <span className="ml-1 text-[10px] text-muted-foreground">· {p.species}</span> : null}
+                        {p.breed ? <span className="ml-1 text-[10px] text-muted-foreground">· {p.breed}</span> : p.species ? <span className="ml-1 text-[10px] text-muted-foreground">· {p.species}</span> : null}
                       </button>
                     ))}
+                    <button
+                      onClick={() => onPick({ customerId: c.id, petId: null })}
+                      className="rounded-md border border-purple-400/50 bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-700 hover:bg-purple-100"
+                      title="Link this seed row to this owner and create the pet on commit"
+                    >
+                      {c.pets.length === 0 ? "Link owner (no pets yet — will create)" : "Link owner + create new pet"}
+                    </button>
                   </div>
                 </li>
               ))}
