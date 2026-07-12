@@ -188,6 +188,3 @@ export function useRecentActivity(tenantId: string | null | undefined, limit = 8
     },
   });
 }
-    },
-  });
-}
