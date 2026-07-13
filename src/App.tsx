@@ -110,6 +110,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/auth/accept" element={<AuthAccept />} />
               <Route path="/i/:token" element={<PublicInvoicePage />} />
               <Route path="/pay/success" element={<PaySuccessPage />} />
               <Route path="/pay/cancel" element={<PayCancelPage />} />
