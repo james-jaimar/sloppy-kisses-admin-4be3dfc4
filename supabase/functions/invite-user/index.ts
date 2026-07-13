@@ -6,7 +6,7 @@
 // - Replaces public.user_roles with the requested role ids.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { sendAuthEmail, generateAuthActionUrl } from "../_shared/auth-email.ts";
+import { sendAuthEmail, generateTenantActionUrl, resolveTenantAppUrl } from "../_shared/auth-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -78,15 +78,20 @@ Deno.serve(async (req) => {
   const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
   const existing = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email);
 
-  // Redirect target after the invite/recovery link is verified.
+  // Resolve the tenant's own public URL for the invite link.
   const origin = req.headers.get("origin") ?? req.headers.get("referer") ?? "";
-  const redirectBase = origin.replace(/\/+$/, "") || "";
-  const redirectTo = `${redirectBase}/reset-password`;
+  let appUrl: string;
+  try {
+    appUrl = await resolveTenantAppUrl(admin, tenantId, origin || null);
+  } catch (e) {
+    return json(500, { error: (e as Error).message });
+  }
+  const next = "/reset-password";
 
   if (mode === "resend") {
     // Generate a fresh invite link (no Supabase-sent email) and deliver it via tenant SMTP.
     try {
-      const actionUrl = await generateAuthActionUrl(admin, "invite", email, redirectTo, {
+      const actionUrl = await generateTenantActionUrl(admin, "invite", email, appUrl, next, {
         full_name: fullName || null,
         invited_tenant_id: tenantId,
         invited_by_name: inviterName,
@@ -176,7 +181,7 @@ Deno.serve(async (req) => {
   let emailError: string | null = null;
   if (!existing) {
     try {
-      const actionUrl = await generateAuthActionUrl(admin, "invite", email, redirectTo, {
+      const actionUrl = await generateTenantActionUrl(admin, "invite", email, appUrl, next, {
         full_name: fullName || null,
         invited_tenant_id: tenantId,
         invited_by_name: inviterName,

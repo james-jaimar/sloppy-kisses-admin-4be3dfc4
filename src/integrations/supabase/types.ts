@@ -4148,6 +4148,7 @@ export type Database = {
       tenants: {
         Row: {
           accent_colour: string | null
+          app_url: string | null
           contact_email: string | null
           contact_phone: string | null
           created_at: string
@@ -4166,6 +4167,7 @@ export type Database = {
         }
         Insert: {
           accent_colour?: string | null
+          app_url?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -4184,6 +4186,7 @@ export type Database = {
         }
         Update: {
           accent_colour?: string | null
+          app_url?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string

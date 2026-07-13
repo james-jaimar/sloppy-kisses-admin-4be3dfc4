@@ -16,6 +16,7 @@ import RequireCustomer from "@/components/auth/RequireCustomer";
 import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
+import AuthAccept from "@/pages/AuthAccept";
 import ChangePasswordPage from "@/features/settings/ChangePasswordPage";
 import SettingsIndexPage from "@/features/settings/SettingsIndexPage";
 import ResourcesPage from "@/features/settings/ResourcesPage";
@@ -109,6 +110,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/auth/accept" element={<AuthAccept />} />
               <Route path="/i/:token" element={<PublicInvoicePage />} />
               <Route path="/pay/success" element={<PaySuccessPage />} />
               <Route path="/pay/cancel" element={<PayCancelPage />} />
