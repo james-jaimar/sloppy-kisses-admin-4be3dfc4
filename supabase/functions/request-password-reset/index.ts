@@ -2,7 +2,7 @@
 // Always returns 200 to avoid account enumeration.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { sendAuthEmail, generateAuthActionUrl } from "../_shared/auth-email.ts";
+import { sendAuthEmail, generateTenantActionUrl, resolveTenantAppUrl } from "../_shared/auth-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,8 +30,6 @@ Deno.serve(async (req) => {
   if (!email) return json(400, { error: "email is required" });
 
   const origin = req.headers.get("origin") ?? req.headers.get("referer") ?? "";
-  const redirectBase = (payload.redirect_to ?? origin ?? "").replace(/\/+$/, "");
-  const redirectTo = redirectBase ? `${redirectBase}/reset-password` : "/reset-password";
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
@@ -67,7 +65,8 @@ Deno.serve(async (req) => {
   if (!tenantId) return json(200, { ok: true }); // silently succeed, nothing to send
 
   try {
-    const actionUrl = await generateAuthActionUrl(admin, "recovery", email, redirectTo);
+    const appUrl = await resolveTenantAppUrl(admin, tenantId, origin || payload.redirect_to || null);
+    const actionUrl = await generateTenantActionUrl(admin, "recovery", email, appUrl, "/reset-password");
     await sendAuthEmail({ admin, tenantId, action: "recovery", recipient: email, actionUrl });
   } catch (e) {
     // Log but don't leak — keep response uniform.
