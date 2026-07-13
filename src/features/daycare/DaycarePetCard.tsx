@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { CheckCircle2, LogOut, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AttendanceRow, AttendanceStatus, useUpsertAttendance } from "./queries";
@@ -46,9 +47,21 @@ export function DaycarePetCard(p: Props) {
   return (
     <div className="sk-card flex flex-col gap-3 p-4">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="text-sm font-semibold">{p.pet_name}</div>
-          <div className="text-xs text-muted-foreground">{p.customer_name}</div>
+        <div className="min-w-0">
+          <Link
+            to={`/admin/pets/${p.pet_id}`}
+            className="text-sm font-semibold text-foreground hover:text-sk-coral-dark hover:underline underline-offset-2"
+          >
+            {p.pet_name}
+          </Link>
+          <div className="text-xs text-muted-foreground">
+            <Link
+              to={`/admin/customers/${p.customer_id}`}
+              className="hover:text-sk-coral-dark hover:underline underline-offset-2"
+            >
+              {p.customer_name}
+            </Link>
+          </div>
         </div>
         {p.badge && (
           <span className="rounded-full bg-sk-turquoise-soft px-2 py-0.5 text-[10px] font-medium text-sk-turquoise-dark">
