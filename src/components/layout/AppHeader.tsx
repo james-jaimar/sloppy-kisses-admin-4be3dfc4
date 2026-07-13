@@ -45,16 +45,16 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-sk-surface/85 backdrop-blur">
-      <div className="flex h-16 items-center gap-3 px-6">
-        <div className="relative flex-1 max-w-xl">
+      <div className="flex h-16 items-center gap-2 px-3 sm:gap-3 sm:px-6">
+        <div className="relative flex-1 max-w-xl min-w-0">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search customers, pets, bookings..."
+            placeholder="Search…"
             className="h-10 w-full rounded-xl border border-border bg-sk-surface-muted pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sk-coral/40"
           />
         </div>
-        <button className="hidden sm:inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark transition-colors">
+        <button className="hidden md:inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark transition-colors">
           <Plus className="h-4 w-4" />
           Quick add
         </button>
@@ -62,21 +62,21 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
           <Link
             to={inPlatform ? "/admin/dashboard" : "/platform"}
             title={inPlatform ? "Back to tenant admin" : "Open Sys Dev area"}
-            className="hidden sm:inline-flex h-10 items-center gap-2 rounded-xl border border-sk-coral-soft bg-sk-coral-soft/50 px-3 text-xs font-semibold text-sk-coral-dark hover:bg-sk-coral-soft"
+            className="hidden lg:inline-flex h-10 items-center gap-2 rounded-xl border border-sk-coral-soft bg-sk-coral-soft/50 px-3 text-xs font-semibold text-sk-coral-dark hover:bg-sk-coral-soft"
           >
             <ShieldCheck className="h-4 w-4" />
             {inPlatform ? "Exit Sys Dev" : "Sys Dev"}
           </Link>
         )}
-        <button className="relative grid h-10 w-10 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted">
+        <button className="relative hidden sm:grid h-10 w-10 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted">
           <MessageSquare className="h-[18px] w-[18px]" />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-sk-turquoise" />
         </button>
-        <button className="relative grid h-10 w-10 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted">
+        <button className="relative grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border text-muted-foreground hover:text-foreground hover:bg-muted">
           <Bell className="h-[18px] w-[18px]" />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-sk-coral" />
         </button>
-        <div className="relative flex items-center gap-2 pl-2" ref={menuRef}>
+        <div className="relative flex items-center gap-2 pl-1 sm:pl-2 shrink-0" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
             className="flex items-center gap-2 rounded-xl px-1 py-1 hover:bg-muted"
@@ -84,7 +84,7 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
             <div className="grid h-10 w-10 place-items-center rounded-full bg-sk-turquoise-soft text-sk-turquoise-dark text-sm font-semibold">
               {initials}
             </div>
-            <div className="hidden sm:block leading-tight text-left">
+            <div className="hidden xl:block leading-tight text-left">
               <div className="text-sm font-medium">{displayName || "\u2014"}</div>
               <div className="text-[11px] text-muted-foreground capitalize">{roleLabel || ""}</div>
             </div>
@@ -117,9 +117,9 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
         </div>
       </div>
       {(title || tabs || actions) && (
-        <div className="flex flex-col gap-3 border-t border-border px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            {title && <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>}
+        <div className="flex flex-col gap-3 border-t border-border px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0">
+            {title && <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">{title}</h1>}
             {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
             {tabs && (
               <div className="mt-3 flex flex-wrap gap-1">
