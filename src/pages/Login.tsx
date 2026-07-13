@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { Logo } from "@/components/layout/Logo";
 import { Loader2 } from "lucide-react";
+import loginBg from "@/assets/login-dogs.jpg.asset.json";
 
 export default function Login() {
   const { authUser, loading, signIn } = useAuth();
@@ -41,8 +42,12 @@ export default function Login() {
   if (authUser) return <Navigate to={from} replace />;
 
   return (
-    <div className="grid min-h-screen place-items-center bg-sk-bg px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-white p-8 shadow-sm">
+    <div
+      className="relative grid min-h-screen place-items-center px-4 bg-sk-bg bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${loginBg.url})` }}
+    >
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/40" aria-hidden />
+      <div className="relative w-full max-w-sm rounded-2xl border border-border bg-white/95 backdrop-blur p-8 shadow-xl">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <Logo />
           <div>
