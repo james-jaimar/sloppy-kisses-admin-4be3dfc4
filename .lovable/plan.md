@@ -1,54 +1,58 @@
-# Rip out the Send Email Hook — send auth emails ourselves via SMTP
+## Goal
 
-## Why
+Fix two things in the branded invite/recovery emails:
 
-You're right — this got over-engineered. The current setup asks Supabase Auth to POST a signed webhook to `auth-email-hook`, which then renders + sends via SMTP. That's why you're seeing:
+1. The action link exposes `jsmsyezkfxtgmxvgfuxx.supabase.co` and lands on `sloppykisses.lovable.app`. It should stay on the tenant's own domain (e.g. `document-centre.com`).
+2. The logo doesn't render — the `<img>` src is a bare storage path, not a URL Outlook can fetch.
 
-- `500: Hook requires authorization token` on `/invite`
-- `signature verification failed: Base64Coder: incorrect characters for decoding` in the hook logs
+## What to change
 
-Supabase's Send Email Hook is a niche feature. Standard practice (and what you already do elsewhere) is: the app owns the email. Call an edge function, generate the action link, send SMTP, log it. No webhook, no signing secret, no hook toggle in the Supabase dashboard.
+### 1. Route the action link through our own domain
 
-## What changes
+Supabase's `generateLink` returns two things:
+- `action_link` → `https://<project>.supabase.co/auth/v1/verify?token=…&redirect_to=…` (what we currently email)
+- `hashed_token` → the raw one-time token
 
-### 1. `invite-user` edge function — send the invite ourselves
-- Stop calling `admin.auth.admin.inviteUserByEmail(...)` (that's what triggers Supabase → hook).
-- Instead:
-  1. `admin.auth.admin.createUser({ email, email_confirm: false, user_metadata: {...} })` if new, else reuse existing auth user.
-  2. `admin.auth.admin.generateLink({ type: "invite", email, options: { redirectTo } })` → returns `action_link` without sending anything.
-  3. Load tenant SMTP from `email_transport_settings`, render the branded invite HTML, send via `denomailer`.
-  4. Insert into `email_log` with `template_code = 'auth.invite'`, status `sent`/`failed`.
-- `mode: "resend"` does the same thing minus profile/tenant_users work: fresh `generateLink` + SMTP send.
+Instead of emailing `action_link`, we'll build our own URL:
 
-### 2. New `send-auth-email` edge function (shared helper)
-Small internal function called by `invite-user` (and later by password reset / magic link flows) that takes `{ tenant_id, recipient, action: 'invite'|'recovery'|'magiclink', action_url, context }`, loads SMTP, renders, sends, logs. Keeps template code in one place.
+```
+https://<tenant-app-url>/auth/accept?token_hash=<hashed_token>&type=invite&next=/reset-password
+```
 
-### 3. Password reset & magic link (frontend)
-- New `request-password-reset` edge function: takes `{ email }`, resolves tenant, calls `generateLink({ type: 'recovery' })`, sends via `send-auth-email`.
-- Frontend "Forgot password" calls this instead of `supabase.auth.resetPasswordForEmail` (which would go through Supabase's own mailer / hook).
-- Magic link: same pattern if/when we enable it. Not urgent — flag only.
+Then add a small public route `/auth/accept` that calls `supabase.auth.verifyOtp({ token_hash, type })` and, on success, navigates to `next`. That call still hits Supabase under the hood but only from JS — the visible URL in the email is the tenant's domain, and after verification the user stays on that same domain (no `lovable.app` bounce).
 
-### 4. Retire `auth-email-hook`
-- Delete `supabase/functions/auth-email-hook/`.
-- Tell you to **turn OFF** the Send Email Hook in Supabase dashboard (Auth → Hooks). No secret needed anymore.
-- Delete the `AUTH_EMAIL_HOOK_SECRET` project secret.
+Apply the same swap to the password-reset email.
 
-### 5. Comms → "Email log" tab
-No change needed. It already reads `email_log` filtered by `template_code` prefix (`auth.*` / `notify.*`). Once invites go through the new path, they'll show up there with the real subject, recipient, status, and error text.
+### 2. Resolve the tenant app URL
 
-## What you'll need to do after I ship this
+Add an `app_url` column to `public.tenants` (nullable text) and expose it in Branding Settings so the owner sets `https://document-centre.com` (or whatever their live domain is).
 
-1. Supabase dashboard → **Auth → Hooks → Send Email Hook → disable**.
-2. That's it. No secrets to manage, no template config in Supabase.
+Resolution order inside `_shared/auth-email.ts`:
+1. `tenant.app_url` if set
+2. `AUTH_EMAIL_APP_URL_FALLBACK` edge-function secret (optional global fallback)
+3. The request `origin` header (dev convenience only)
 
-## Out of scope
+If none resolve, the invite fails with a clear "Set your app URL in Settings → Branding" error rather than silently emailing a lovable.app link.
 
-- Supabase's own signup confirmation emails: only relevant if you enable email/password self-signup. Right now users only arrive via invite, so this doesn't matter. If you turn on public signup later, we add a `confirm-signup` flow the same way.
-- Email change confirmations: rare, same pattern when needed.
+### 3. Fix the logo
 
-## Technical notes
+`tenant.logo_url` is a storage path in the private `tenant-branding` bucket, so email clients can't load it. In `_shared/auth-email.ts`:
 
-- `generateLink` returns `properties.action_link` — that's the URL we drop into the button.
-- Redirect target: existing `${SITE_URL}/auth/callback` (or `/accept-invite` if you have one — I'll check `src/features/auth/` before wiring).
-- Existing `email_log` schema and `useAuthEmailLog` query stay as-is.
-- `send-notifications` (customer notifications) already uses this exact SMTP pattern — we're just aligning auth onto the same rails.
+- If `logo_url` looks like a full `http(s)://` URL, use it as-is.
+- Otherwise create a **long-lived signed URL** (e.g. 30 days) against `tenant-branding` and embed that.
+- If signing fails, fall back to the text wordmark we already render.
+
+Also add `alt` sizing so Outlook's "picture not downloaded" placeholder looks less broken.
+
+### Files touched
+
+- `supabase/migrations/…` — add `tenants.app_url text`
+- `supabase/functions/_shared/auth-email.ts` — resolve app URL, sign logo URL, build custom action link
+- `supabase/functions/invite-user/index.ts` and `supabase/functions/request-password-reset/index.ts` — pass through the tenant app URL / build the tenant-hosted link
+- `src/pages/AuthAccept.tsx` (new) + route wiring in `src/App.tsx` — verifies `token_hash` then redirects
+- `src/features/settings/BrandingSettingsPage.tsx` — add "Public app URL" field
+
+### Out of scope
+
+- Changing Supabase's Site URL / redirect allow-list (owner already has `document-centre.com` added, otherwise the verify call would fail — we'll flag this in the settings help text).
+- Touching customer notification emails; those already go through the same helper and will pick up the logo fix automatically.
