@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, Users } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
@@ -9,6 +9,7 @@ import {
   useExpectedForDay,
 } from "./queries";
 import { DaycarePetCard } from "./DaycarePetCard";
+import { DaycareListView } from "./DaycareListView";
 
 function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
 function addDays(d: Date, n: number) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
@@ -26,6 +27,17 @@ export default function DaycareBoardPage() {
   const expected = useExpectedForDay(tenantId, day);
   const attendanceQ = useAttendanceForDay(tenantId, day);
   const attendance = attendanceQ.data ?? [];
+
+  // View mode: default to list on tablet-and-under, board on wide screens.
+  const [view, setView] = useState<"board" | "list">(() => {
+    if (typeof window === "undefined") return "board";
+    const stored = window.localStorage.getItem("sk.daycare.view");
+    if (stored === "board" || stored === "list") return stored;
+    return window.innerWidth < 1280 ? "list" : "board";
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem("sk.daycare.view", view); } catch { /* noop */ }
+  }, [view]);
 
   const attendanceByPet = useMemo(() => {
     const m = new Map<string, typeof attendance[0]>();
@@ -54,18 +66,41 @@ export default function DaycareBoardPage() {
           { label: "Attendance", onClick: () => navigate("/admin/daycare/attendance") },
         ]}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex overflow-hidden rounded-lg border border-border bg-white">
+              <button
+                onClick={() => setView("board")}
+                title="Board view"
+                className={
+                  "inline-flex h-9 items-center gap-1.5 px-3 text-xs font-medium " +
+                  (view === "board" ? "bg-sk-coral-soft text-sk-coral-dark" : "hover:bg-sk-surface-muted")
+                }
+              >
+                <LayoutGrid className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Board</span>
+              </button>
+              <button
+                onClick={() => setView("list")}
+                title="List view"
+                className={
+                  "inline-flex h-9 items-center gap-1.5 border-l border-border px-3 text-xs font-medium " +
+                  (view === "list" ? "bg-sk-coral-soft text-sk-coral-dark" : "hover:bg-sk-surface-muted")
+                }
+              >
+                <List className="h-3.5 w-3.5" /> <span className="hidden sm:inline">List</span>
+              </button>
+            </div>
             <button
               onClick={() => setDay(startOfDay(new Date()))}
-              className="h-9 rounded-lg border border-border bg-white px-3 text-sm font-medium hover:bg-sk-surface-muted"
+              title="Today"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-white px-3 text-sm font-medium hover:bg-sk-surface-muted"
             >
-              Today
+              <CalendarDays className="h-4 w-4" /> <span className="hidden sm:inline">Today</span>
             </button>
             <div className="inline-flex overflow-hidden rounded-lg border border-border bg-white">
               <button onClick={() => setDay((d) => addDays(d, -1))} className="grid h-9 w-9 place-items-center hover:bg-sk-surface-muted">
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <div className="grid h-9 min-w-[220px] place-items-center border-x border-border px-3 text-sm font-semibold">
+              <div className="grid h-9 min-w-[160px] md:min-w-[220px] place-items-center border-x border-border px-3 text-xs md:text-sm font-semibold whitespace-nowrap">
                 {fmtDay(day)}
               </div>
               <button onClick={() => setDay((d) => addDays(d, 1))} className="grid h-9 w-9 place-items-center hover:bg-sk-surface-muted">
@@ -75,7 +110,7 @@ export default function DaycareBoardPage() {
           </div>
         }
       />
-      <div className="flex-1 space-y-6 p-6">
+      <div className="flex-1 space-y-6 p-4 sm:p-6">
         {/* Counters */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat label="Expected" value={totalExpected} tone="text-foreground" />
@@ -97,8 +132,17 @@ export default function DaycareBoardPage() {
           </div>
         )}
 
-        {(expected.items.length > 0 || attendance.length > 0) && (
-          <div className="grid gap-6 lg:grid-cols-2">
+        {(expected.items.length > 0 || attendance.length > 0) && view === "list" && (
+          <DaycareListView
+            tenantId={tenantId as string}
+            attendanceDate={dateIso}
+            expectedItems={expected.items}
+            attendance={attendance}
+          />
+        )}
+
+        {(expected.items.length > 0 || attendance.length > 0) && view === "board" && (
+          <div className="grid gap-6 xl:grid-cols-2">
             {/* Expected */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -111,7 +155,7 @@ export default function DaycareBoardPage() {
                   Everyone on the list has arrived or been marked no-show.
                 </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
                   {expectedItems.map((it) => (
                     <DaycarePetCard
                       key={it.key}
@@ -143,7 +187,7 @@ export default function DaycareBoardPage() {
                   No pets checked in yet.
                 </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
                   {checkedIn.map((a) => (
                     <DaycarePetCard
                       key={a.id}
