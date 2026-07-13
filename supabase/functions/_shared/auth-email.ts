@@ -43,10 +43,11 @@ export async function sendAuthEmail(args: SendAuthEmailArgs): Promise<{ ok: true
     if (!transport) {
       throw new Error(`SMTP is not configured for ${tenant.name}. Set it up in Settings → Email Server.`);
     }
+    const logoUrl = await resolveLogoPublicUrl(admin, tenant.logo_url);
     const { subject, html, text } = renderTemplate(action, {
       tenantName: tenant.name,
       primaryColour: tenant.primary_colour ?? "#F26D6D",
-      logoUrl: tenant.logo_url,
+      logoUrl,
       actionUrl,
       inviterName: inviterName ?? null,
     });
@@ -82,6 +83,60 @@ export async function generateAuthActionUrl(
   const url = link?.properties?.action_link;
   if (!url) throw new Error(`generateLink(${action}) returned no action_link`);
   return url;
+}
+
+// Generate a tenant-hosted action URL that does NOT expose Supabase.
+// Returns something like: https://<tenant-app-url>/auth/accept?token_hash=...&type=invite&next=/reset-password
+export async function generateTenantActionUrl(
+  admin: SupabaseClient,
+  action: AuthEmailAction,
+  email: string,
+  appUrl: string,
+  next: string,
+  data?: Record<string, unknown>,
+): Promise<string> {
+  const type = action === "magiclink" ? "magiclink" : action;
+  const { data: link, error } = await admin.auth.admin.generateLink({
+    type: type as "invite" | "recovery" | "magiclink",
+    email,
+    // redirectTo is required by generateLink but we never use the returned action_link.
+    options: { redirectTo: `${appUrl.replace(/\/+$/, "")}${next}`, data },
+  });
+  if (error) throw new Error(`generateLink(${action}) failed: ${error.message}`);
+  const tokenHash = link?.properties?.hashed_token;
+  if (!tokenHash) throw new Error(`generateLink(${action}) returned no hashed_token`);
+  const base = appUrl.replace(/\/+$/, "");
+  const qs = new URLSearchParams({ token_hash: tokenHash, type, next });
+  return `${base}/auth/accept?${qs.toString()}`;
+}
+
+// Resolve the tenant's public app URL. Order: tenant.app_url → AUTH_EMAIL_APP_URL_FALLBACK → request origin.
+export async function resolveTenantAppUrl(
+  admin: SupabaseClient,
+  tenantId: string,
+  requestOrigin: string | null,
+): Promise<string> {
+  const { data } = await admin.from("tenants").select("app_url").eq("id", tenantId).maybeSingle();
+  const fromTenant = (data as { app_url?: string | null } | null)?.app_url?.trim();
+  if (fromTenant) return fromTenant.replace(/\/+$/, "");
+  const fallback = Deno.env.get("AUTH_EMAIL_APP_URL_FALLBACK")?.trim();
+  if (fallback) return fallback.replace(/\/+$/, "");
+  if (requestOrigin) return requestOrigin.replace(/\/+$/, "");
+  throw new Error("No app URL configured. Set your public app URL in Settings → Branding.");
+}
+
+async function resolveLogoPublicUrl(admin: SupabaseClient, raw: string | null): Promise<string | null> {
+  if (!raw) return null;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  try {
+    // Long-lived signed URL — 30 days is enough for the recipient to open the email.
+    const { data, error } = await admin.storage.from("tenant-branding").createSignedUrl(raw, 60 * 60 * 24 * 30);
+    if (error) throw error;
+    return data?.signedUrl ?? null;
+  } catch (e) {
+    console.warn("resolveLogoPublicUrl failed:", (e as Error).message);
+    return null;
+  }
 }
 
 async function fetchTenant(admin: SupabaseClient, id: string): Promise<TenantBrand | null> {
