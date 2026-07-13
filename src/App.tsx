@@ -16,6 +16,7 @@ import RequireCustomer from "@/components/auth/RequireCustomer";
 import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
+import AuthAccept from "@/pages/AuthAccept";
 import ChangePasswordPage from "@/features/settings/ChangePasswordPage";
 import SettingsIndexPage from "@/features/settings/SettingsIndexPage";
 import ResourcesPage from "@/features/settings/ResourcesPage";
