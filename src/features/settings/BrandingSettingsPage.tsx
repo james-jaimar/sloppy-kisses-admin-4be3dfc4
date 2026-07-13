@@ -20,6 +20,7 @@ export default function BrandingSettingsPage() {
     accent_colour: DEFAULTS.accent,
     logo_url: null as string | null,
     favicon_url: null as string | null,
+    app_url: "" as string,
   });
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export default function BrandingSettingsPage() {
       accent_colour: (tenant as any).accent_colour ?? DEFAULTS.accent,
       logo_url: tenant.logo_url,
       favicon_url: (tenant as any).favicon_url ?? null,
+      app_url: (tenant as any).app_url ?? "",
     });
     resolveLogoUrl(tenant.logo_url).then(setLogoPreview);
     resolveLogoUrl((tenant as any).favicon_url).then(setFaviconPreview);
@@ -67,6 +69,7 @@ export default function BrandingSettingsPage() {
         accent_colour: form.accent_colour,
         logo_url: form.logo_url,
         favicon_url: form.favicon_url,
+        app_url: form.app_url ? form.app_url.trim().replace(/\/+$/, "") : null,
       } as any).eq("id", tenant.id);
       if (error) throw error;
       toast.success("Branding saved");
@@ -139,6 +142,21 @@ export default function BrandingSettingsPage() {
               className="mt-3 inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
               <RotateCcw className="h-3.5 w-3.5" /> Reset to Sloppy Kisses defaults
             </button>
+          </Section>
+
+          <Section title="Public app URL">
+            <div className="space-y-2">
+              <input
+                disabled={!canManage}
+                value={form.app_url}
+                onChange={(e) => setForm({ ...form, app_url: e.target.value })}
+                placeholder="https://document-centre.com"
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Used in invite and password-reset emails so links stay on your own domain instead of exposing Supabase or the Lovable preview URL. Include the scheme (https://) and no trailing slash. Make sure this exact URL is also listed in your Supabase project's Auth → URL Configuration allow-list.
+              </p>
+            </div>
           </Section>
 
           <div className="flex justify-end">
