@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
+import { MobileTopBar } from "./MobileTopBar";
 import { adminNav } from "@/constants/navigation";
 
 const STORAGE_KEY = "sk.sidebar.collapsed";
@@ -23,6 +24,7 @@ export default function AdminLayout() {
         onToggleCollapsed={() => setCollapsed((c) => !c)}
       />
       <div className="flex-1 min-w-0 flex flex-col">
+        <MobileTopBar items={adminNav} footerLabel="Sloppy Kisses · Bryanston" />
         <Outlet />
       </div>
     </div>
