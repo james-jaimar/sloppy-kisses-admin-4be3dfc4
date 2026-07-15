@@ -2,13 +2,14 @@ import {
   LayoutDashboard, Calendar, Users, PawPrint, Inbox, CalendarCheck, Dog, Hotel,
   Scissors, Truck, ArrowLeftRight, Receipt, ShoppingBag, BarChart3, Settings,
   FileText, CreditCard, User, MessageSquare, Building2, ShieldCheck, Flag,
-  History, Activity, Database, FileMinus,
+  History, Activity, Database, FileMinus, UserPlus,
 } from "lucide-react";
 
 export const adminNav = [
   { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/admin/calendar", label: "Calendar", icon: Calendar, code: "calendar.view" },
   { to: "/admin/customers", label: "Customers", icon: Users, code: "customers.view" },
+  { to: "/admin/customer-signups", label: "Customer signups", icon: UserPlus, code: "customers.view" },
   { to: "/admin/pets", label: "Pets", icon: PawPrint, code: "pets.view" },
   { to: "/admin/booking-requests", label: "Booking Requests", icon: Inbox, badge: 6, code: "booking_requests.view" },
   { to: "/admin/bookings", label: "Bookings", icon: CalendarCheck, code: "bookings.view" },
