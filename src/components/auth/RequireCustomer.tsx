@@ -20,5 +20,9 @@ export default function RequireCustomer() {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
+  if (profile && profile.user_type !== "customer") {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
   return <Outlet />;
 }
