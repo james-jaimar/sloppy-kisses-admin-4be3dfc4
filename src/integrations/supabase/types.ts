@@ -911,11 +911,14 @@ export type Database = {
           mobile: string | null
           notes_internal: string | null
           notify_email: boolean
+          notify_sms: boolean
+          notify_whatsapp: boolean
           occupation: string | null
           phone_alt: string | null
           portal_access_enabled: boolean
           postcode: string | null
           province: string | null
+          signup_status: string
           status: Database["public"]["Enums"]["customer_status"]
           suburb: string | null
           tenant_id: string
@@ -947,11 +950,14 @@ export type Database = {
           mobile?: string | null
           notes_internal?: string | null
           notify_email?: boolean
+          notify_sms?: boolean
+          notify_whatsapp?: boolean
           occupation?: string | null
           phone_alt?: string | null
           portal_access_enabled?: boolean
           postcode?: string | null
           province?: string | null
+          signup_status?: string
           status?: Database["public"]["Enums"]["customer_status"]
           suburb?: string | null
           tenant_id: string
@@ -983,11 +989,14 @@ export type Database = {
           mobile?: string | null
           notes_internal?: string | null
           notify_email?: boolean
+          notify_sms?: boolean
+          notify_whatsapp?: boolean
           occupation?: string | null
           phone_alt?: string | null
           portal_access_enabled?: boolean
           postcode?: string | null
           province?: string | null
+          signup_status?: string
           status?: Database["public"]["Enums"]["customer_status"]
           suburb?: string | null
           tenant_id?: string
@@ -4908,6 +4917,10 @@ export type Database = {
         | "vax_expiring_7d"
         | "vax_expired"
         | "manual_message"
+        | "customer_signup_pending"
+        | "portal_invited"
+        | "password_reset_requested"
+        | "booking_cancellation_requested"
       notification_status: "pending" | "sent" | "failed" | "skipped"
       payment_method: "eft" | "cash" | "card" | "yoko" | "payfast" | "other"
       payment_provider_mode: "test" | "live"
@@ -5148,6 +5161,10 @@ export const Constants = {
         "vax_expiring_7d",
         "vax_expired",
         "manual_message",
+        "customer_signup_pending",
+        "portal_invited",
+        "password_reset_requested",
+        "booking_cancellation_requested",
       ],
       notification_status: ["pending", "sent", "failed", "skipped"],
       payment_method: ["eft", "cash", "card", "yoko", "payfast", "other"],
