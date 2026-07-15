@@ -12,7 +12,6 @@ export default function CustomerSignup() {
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "", mobile: "", password: "" });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState(false);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -22,8 +21,8 @@ export default function CustomerSignup() {
     const { data, error: err } = await supabase.functions.invoke("customer-signup", {
       body: { ...form, tenant_slug: tenantSlug || undefined },
     });
-    setSubmitting(false);
     if (err || (data as any)?.error) {
+      setSubmitting(false);
       const msg = (data as any)?.error ?? err?.message ?? "Signup failed";
       const friendly = msg === "email_already_registered" ? "That email is already registered — try signing in instead."
         : msg === "tenant_not_found" ? "We couldn't find the business you're signing up to."
@@ -34,8 +33,18 @@ export default function CustomerSignup() {
       setError(friendly);
       return;
     }
-    setDone(true);
-    setTimeout(() => navigate("/login", { replace: true, state: { justSignedUp: true } }), 3500);
+
+    // Auto sign-in and land on the dashboard.
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email: form.email.trim().toLowerCase(),
+      password: form.password,
+    });
+    setSubmitting(false);
+    if (signInErr) {
+      navigate("/login", { replace: true, state: { justSignedUp: true } });
+      return;
+    }
+    navigate("/customer/dashboard", { replace: true });
   }
 
   return (
@@ -53,15 +62,7 @@ export default function CustomerSignup() {
           </div>
         </div>
 
-        {done ? (
-          <div className="space-y-3 text-center text-sm">
-            <div className="rounded-lg bg-sk-turquoise-soft/60 px-3 py-3 text-sk-turquoise-dark">
-              Thanks — your account has been created and is awaiting review by our team. You can sign in now, and we'll be in touch shortly.
-            </div>
-            <Link to="/login" className="inline-block text-xs font-medium text-sk-coral-dark hover:underline">Go to sign in →</Link>
-          </div>
-        ) : (
-          <form onSubmit={onSubmit} className="space-y-3">
+        <form onSubmit={onSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <Field label="First name" value={form.first_name} onChange={(v) => setForm({ ...form, first_name: v })} required />
               <Field label="Last name" value={form.last_name} onChange={(v) => setForm({ ...form, last_name: v })} required />
@@ -83,8 +84,7 @@ export default function CustomerSignup() {
             <Link to="/login" className="block pt-2 text-center text-xs font-medium text-muted-foreground hover:text-foreground">
               Already have an account? Sign in
             </Link>
-          </form>
-        )}
+        </form>
       </div>
     </div>
   );
