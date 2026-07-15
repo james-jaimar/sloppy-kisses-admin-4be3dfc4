@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
       mobile: mobile || null,
       linked_profile_id: profile.id,
       portal_access_enabled: true,
-      signup_status: "pending_review",
+      signup_status: "active",
     } as any)
     .select("id")
     .maybeSingle();
@@ -107,15 +107,6 @@ Deno.serve(async (req) => {
     await admin.auth.admin.deleteUser(authUserId).catch(() => {});
     return json({ error: cErr?.message ?? "customer_failed" }, 500);
   }
-
-  // Staff notification
-  await admin.from("notification_events").insert({
-    tenant_id: tenant.id,
-    event_type: "customer_signup_pending",
-    customer_id: cust.id,
-    payload: { full_name: fullName, email, mobile },
-    status: "pending",
-  } as any);
 
   return json({ ok: true });
 });
