@@ -18,6 +18,8 @@ export interface PortalCustomer {
   province: string | null;
   postcode: string | null;
   notify_email: boolean | null;
+  notify_sms: boolean | null;
+  notify_whatsapp: boolean | null;
 }
 
 /** Resolves the current signed-in user's customer row (portal-enabled). */
@@ -29,7 +31,7 @@ export function useCurrentCustomer() {
     queryFn: async (): Promise<PortalCustomer | null> => {
       const { data, error } = await supabase
         .from("customers")
-        .select("id, tenant_id, first_name, last_name, full_name, email, mobile, phone_alt, address_line_1, address_line_2, suburb, city, province, postcode, notify_email")
+        .select("id, tenant_id, first_name, last_name, full_name, email, mobile, phone_alt, address_line_1, address_line_2, suburb, city, province, postcode, notify_email, notify_sms, notify_whatsapp")
         .eq("linked_profile_id", profile!.id)
         .eq("portal_access_enabled", true)
         .order("created_at", { ascending: true })
