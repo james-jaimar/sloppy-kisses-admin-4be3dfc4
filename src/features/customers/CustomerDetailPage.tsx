@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import type { PetRow } from "./queries";
 import { CustomerCreditPanel } from "@/features/customerCredit/CustomerCreditPanel";
+import PortalAccessPanel from "./PortalAccessPanel";
 
 const TABS = ["Pets", "Bookings", "Invoices", "Credit", "Notes", "Documents", "History"] as const;
 type Tab = (typeof TABS)[number];
@@ -195,6 +196,8 @@ export default function CustomerDetailPage() {
                 </div>
               )}
             </div>
+
+            <PortalAccessPanel customer={customer} />
 
             {/* Tabs */}
             <div className="sk-card overflow-hidden">
