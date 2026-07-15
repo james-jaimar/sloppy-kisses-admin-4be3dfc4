@@ -46,7 +46,6 @@ import AdminDashboard from "@/features/dashboard/AdminDashboard";
 import CalendarWeekView from "@/features/calendar/CalendarWeekView";
 import CustomersPage from "@/features/customers/CustomersPage";
 import CustomerDetailPage from "@/features/customers/CustomerDetailPage";
-import CustomerSignupsPage from "@/features/customers/CustomerSignupsPage";
 import PetsPage from "@/features/pets/PetsPage";
 import PetDetailPage from "@/features/pets/PetDetailPage";
 import BookingsPage from "@/features/bookings/BookingsPage";
@@ -135,7 +134,6 @@ const App = () => (
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="/admin/calendar" element={<CalendarWeekView />} />
                 <Route path="/admin/customers" element={<CustomersPage />} />
-                <Route path="/admin/customer-signups" element={<CustomerSignupsPage />} />
                 <Route path="/admin/customers/:id" element={<CustomerDetailPage />} />
                 <Route path="/admin/customers/:id/statement" element={<CustomerStatementPage />} />
                 <Route path="/admin/pets" element={<PetsPage />} />
