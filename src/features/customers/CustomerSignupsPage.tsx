@@ -19,7 +19,8 @@ type PendingCustomer = {
 };
 
 export default function CustomerSignupsPage() {
-  const { activeTenantId } = useCurrentUser();
+  const { currentTenant } = useCurrentUser();
+  const activeTenantId = currentTenant?.id ?? null;
   const canManage = useHasPermission("customers.portal.manage");
   const qc = useQueryClient();
 
