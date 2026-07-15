@@ -116,6 +116,12 @@ export default function Login() {
           >
             Forgot your password?
           </Link>
+          <Link
+            to="/customer/signup"
+            className="block text-center text-xs font-medium text-sk-coral-dark hover:underline"
+          >
+            New customer? Create an account
+          </Link>
         </form>
       </div>
     </div>

@@ -26,6 +26,7 @@ function HomeRedirect() {
   return <Navigate to="/admin/dashboard" replace />;
 }
 import Login from "@/pages/Login";
+import CustomerSignup from "@/pages/CustomerSignup";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import AuthAccept from "@/pages/AuthAccept";
@@ -120,6 +121,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<HomeRedirect />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/customer/signup" element={<CustomerSignup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/auth/accept" element={<AuthAccept />} />
