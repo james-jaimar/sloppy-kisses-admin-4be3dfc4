@@ -11,6 +11,7 @@ import { fmtDate } from "../portalCommon";
 export default function MyInvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [payOpen, setPayOpen] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   const q = useQuery({
     queryKey: ["portal_invoice", id],
@@ -40,6 +41,37 @@ export default function MyInvoiceDetailPage() {
       return data ?? [];
     },
   });
+
+  const payfast = useQuery({
+    queryKey: ["portal_payfast_enabled", q.data?.tenant_id],
+    enabled: !!q.data?.tenant_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("payment_providers")
+        .select("enabled")
+        .eq("tenant_id", (q.data as any).tenant_id)
+        .eq("provider", "payfast")
+        .maybeSingle();
+      return !!data?.enabled;
+    },
+  });
+
+  async function payWithPayfast() {
+    if (!q.data?.id) return;
+    setRedirecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("portal-invoice-checkout", {
+        body: { invoice_id: q.data.id },
+      });
+      if (error) throw error;
+      const url = (data as any)?.redirect_url;
+      if (!url) throw new Error("No redirect URL returned");
+      window.location.href = url;
+    } catch (e: any) {
+      setRedirecting(false);
+      toast.error(e?.message ?? "Could not start PayFast checkout");
+    }
+  }
 
   if (q.isLoading) return <div className="grid flex-1 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
   if (!q.data) return <div className="p-6 text-sm text-muted-foreground">Invoice not found.</div>;
@@ -113,16 +145,30 @@ export default function MyInvoiceDetailPage() {
               <h3 className="text-lg font-semibold">Pay invoice</h3>
               <button onClick={() => setPayOpen(false)} className="rounded-lg p-1 text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
             </div>
-            <p className="text-sm text-muted-foreground">Online payment is coming soon. In the meantime, please use one of the following methods and the team will mark your invoice as paid:</p>
-            <ul className="mt-3 space-y-2">
-              {(methods.data ?? []).map((m: any) => (
-                <li key={m.id} className="rounded-lg border border-border px-3 py-2 text-sm font-medium">{m.label}</li>
-              ))}
-              {(methods.data ?? []).length === 0 && (
-                <li className="text-sm text-muted-foreground">Contact Sloppy Kisses for payment instructions.</li>
-              )}
-            </ul>
-            <button onClick={() => { toast.success("We'll be in touch shortly"); setPayOpen(false); }} className="mt-4 w-full rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark">Notify us I'll pay</button>
+            {payfast.data ? (
+              <>
+                <p className="text-sm text-muted-foreground">Pay securely online via PayFast. You'll be redirected to complete your card or EFT payment of <span className="font-semibold text-foreground">{fmtZar(balance)}</span>.</p>
+                <button
+                  onClick={payWithPayfast}
+                  disabled={redirecting}
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-60"
+                >
+                  {redirecting ? <><Loader2 className="h-4 w-4 animate-spin" /> Redirecting…</> : <><CreditCard className="h-4 w-4" /> Continue to PayFast</>}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">Online payment isn't enabled yet. Please use one of the following methods and the team will mark your invoice as paid:</p>
+                <ul className="mt-3 space-y-2">
+                  {(methods.data ?? []).map((m: any) => (
+                    <li key={m.id} className="rounded-lg border border-border px-3 py-2 text-sm font-medium">{m.label}</li>
+                  ))}
+                  {(methods.data ?? []).length === 0 && (
+                    <li className="text-sm text-muted-foreground">Contact Sloppy Kisses for payment instructions.</li>
+                  )}
+                </ul>
+              </>
+            )}
           </div>
         </div>
       )}
