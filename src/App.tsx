@@ -13,6 +13,18 @@ import PublicFormLayout from "@/components/layout/PublicFormLayout";
 import PlaceholderPage from "@/components/layout/PlaceholderPage";
 import RequireAdmin from "@/components/auth/RequireAdmin";
 import RequireCustomer from "@/components/auth/RequireCustomer";
+import { useAuth } from "@/lib/auth/AuthContext";
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
+
+function HomeRedirect() {
+  const { authUser, loading: authLoading } = useAuth();
+  const { profile, loading } = useCurrentUser();
+  if (authLoading || (loading && !profile)) return null;
+  if (!authUser) return <Navigate to="/login" replace />;
+  if (profile?.user_type === "customer") return <Navigate to="/customer/dashboard" replace />;
+  if (profile?.user_type === "platform") return <Navigate to="/platform" replace />;
+  return <Navigate to="/admin/dashboard" replace />;
+}
 import Login from "@/pages/Login";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
