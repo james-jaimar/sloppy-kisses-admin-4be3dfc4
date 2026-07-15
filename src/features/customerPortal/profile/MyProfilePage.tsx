@@ -14,6 +14,8 @@ export default function MyProfilePage() {
     first_name: "", last_name: "", email: "", mobile: "", phone_alt: "",
     address_line_1: "", address_line_2: "", suburb: "", city: "", province: "", postcode: "",
     notify_email: true,
+    notify_sms: true,
+    notify_whatsapp: false,
   });
 
   useEffect(() => {
@@ -31,6 +33,8 @@ export default function MyProfilePage() {
         province: cust.data.province ?? "",
         postcode: cust.data.postcode ?? "",
         notify_email: cust.data.notify_email ?? true,
+        notify_sms: cust.data.notify_sms ?? true,
+        notify_whatsapp: cust.data.notify_whatsapp ?? false,
       });
     }
   }, [cust.data]);
@@ -74,10 +78,21 @@ export default function MyProfilePage() {
           </div>
           <div className="rounded-xl border border-border p-4">
             <div className="text-xs font-semibold uppercase text-muted-foreground">Notifications</div>
-            <label className="mt-2 flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={form.notify_email} onChange={(e) => setForm({ ...form, notify_email: e.target.checked })} />
-              Email me booking, invoice and vaccination reminders
-            </label>
+            <p className="mt-1 text-xs text-muted-foreground">Choose the channels we can use to reach you about bookings, invoices and vaccination reminders.</p>
+            <div className="mt-3 space-y-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={form.notify_email} onChange={(e) => setForm({ ...form, notify_email: e.target.checked })} />
+                Email {form.email ? <span className="text-xs text-muted-foreground">({form.email})</span> : null}
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={form.notify_sms} onChange={(e) => setForm({ ...form, notify_sms: e.target.checked })} />
+                SMS {form.mobile ? <span className="text-xs text-muted-foreground">({form.mobile})</span> : null}
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={form.notify_whatsapp} onChange={(e) => setForm({ ...form, notify_whatsapp: e.target.checked })} />
+                WhatsApp {form.mobile ? <span className="text-xs text-muted-foreground">({form.mobile})</span> : null}
+              </label>
+            </div>
           </div>
           <div className="flex justify-end">
             <button onClick={() => save.mutate()} disabled={save.isPending} className="rounded-lg bg-sk-coral px-5 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
