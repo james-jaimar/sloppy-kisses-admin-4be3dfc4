@@ -68,6 +68,9 @@ export default function RequireAdmin() {
   }
 
   const isPlatform = profile.user_type === "platform";
+  if (profile.user_type === "customer") {
+    return <Navigate to="/customer/dashboard" replace />;
+  }
   if (!isPlatform && (memberships.length === 0 || !currentTenant)) {
     return (
       <FullScreen>
