@@ -14,7 +14,6 @@ export function useNavBadges(): Record<string, number> {
   const isPlatform = profile?.user_type === "platform";
 
   const canSeeRequests = isPlatform || hasPermission("booking_requests.view");
-  const canSeeBookings = isPlatform || hasPermission("bookings.view");
   const canSeeComms = isPlatform || hasPermission("comms.view");
 
   const requests = useQuery({
@@ -29,23 +28,6 @@ export function useNavBadges(): Record<string, number> {
         .eq("tenant_id", tenantId as string)
         .in("status", ["pending_review", "needs_info"]);
       if (error) throw error;
-      return count ?? 0;
-    },
-  });
-
-  const cancellations = useQuery({
-    queryKey: ["nav-badges", "bookings_cancellations", tenantId],
-    enabled: Boolean(tenantId) && canSeeBookings,
-    staleTime: 30_000,
-    refetchOnWindowFocus: true,
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("bookings")
-        .select("id", { count: "exact", head: true })
-        .eq("tenant_id", tenantId as string)
-        .eq("cancellation_status", "requested");
-      // cancellation_status column may not exist yet — treat error as zero.
-      if (error) return 0;
       return count ?? 0;
     },
   });
@@ -70,7 +52,6 @@ export function useNavBadges(): Record<string, number> {
 
   return {
     "booking_requests.view": requests.data ?? 0,
-    "bookings.view": cancellations.data ?? 0,
     "comms.view": commsFailures.data ?? 0,
   };
 }
