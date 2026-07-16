@@ -3,6 +3,7 @@ import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { useNavBadges } from "./useNavBadges";
 
 interface NavItem {
   to: string;
@@ -30,7 +31,13 @@ export function SidebarNavList({
 }) {
   const { hasPermission, profile } = useCurrentUser();
   const isPlatform = profile?.user_type === "platform";
-  const visibleItems = items.filter((it) => !it.code || isPlatform || hasPermission(it.code));
+  const badges = useNavBadges();
+  const visibleItems = items
+    .filter((it) => !it.code || isPlatform || hasPermission(it.code))
+    .map((it) => {
+      const dynamic = it.code ? badges[it.code] : undefined;
+      return dynamic && dynamic > 0 ? { ...it, badge: dynamic } : it;
+    });
   return (
     <ul className="space-y-0.5">
       {visibleItems.map((item) => {

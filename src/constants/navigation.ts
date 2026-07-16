@@ -10,7 +10,7 @@ export const adminNav = [
   { to: "/admin/calendar", label: "Calendar", icon: Calendar, code: "calendar.view" },
   { to: "/admin/customers", label: "Customers", icon: Users, code: "customers.view" },
   { to: "/admin/pets", label: "Pets", icon: PawPrint, code: "pets.view" },
-  { to: "/admin/booking-requests", label: "Booking Requests", icon: Inbox, badge: 6, code: "booking_requests.view" },
+  { to: "/admin/booking-requests", label: "Booking Requests", icon: Inbox, code: "booking_requests.view" },
   { to: "/admin/bookings", label: "Bookings", icon: CalendarCheck, code: "bookings.view" },
   { to: "/admin/daycare", label: "Daycare", icon: Dog, code: "daycare.view" },
   { to: "/admin/hotel-cattery", label: "Hotel & Cattery", icon: Hotel, code: "hotel.view" },
