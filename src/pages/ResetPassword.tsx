@@ -4,6 +4,12 @@ import { Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { Logo } from "@/components/layout/Logo";
 
+function homeFor(userType: string | null | undefined): string {
+  if (userType === "customer") return "/customer/dashboard";
+  if (userType === "platform") return "/platform";
+  return "/admin/dashboard";
+}
+
 export default function ResetPassword() {
   const navigate = useNavigate();
   const [ready, setReady] = useState(false);
@@ -41,8 +47,20 @@ export default function ResetPassword() {
       setError(err.message);
       return;
     }
-    await supabase.auth.signOut();
-    navigate("/login", { replace: true, state: { justReset: true } });
+    // Keep the session — the user is already authenticated via the invite/
+    // recovery link and forcing sign-out here bounces invitees back to /login
+    // and makes the flow feel broken. Route them straight to their area.
+    const { data: userRes } = await supabase.auth.getUser();
+    let userType: string | null = null;
+    if (userRes?.user?.id) {
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("auth_user_id", userRes.user.id)
+        .maybeSingle();
+      userType = (prof?.user_type as string | null) ?? null;
+    }
+    navigate(homeFor(userType), { replace: true });
   }
 
   return (
