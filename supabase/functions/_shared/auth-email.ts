@@ -218,7 +218,7 @@ function renderTemplate(action: AuthEmailAction, ctx: RenderCtx) {
     invite: {
       subject: `You've been invited to ${ctx.tenantName}`,
       heading: `Welcome to ${ctx.tenantName}`,
-      body: `${ctx.inviterName ? `${ctx.inviterName} has invited you` : "You've been invited"} to join <strong>${ctx.tenantName}</strong>. Click the button below to accept and set your password.`,
+      body: `${ctx.inviterName ? `${ctx.inviterName} has invited you` : "You've been invited"} to join <strong>${ctx.tenantName}</strong>. Click the button below to accept and set your password.<br/><br/><span style="color:#8a8d97;font-size:13px;">This link can only be used once. If it stops working, ask your admin to resend the invite.</span>`,
       cta: "Accept invitation",
     },
     recovery: {
