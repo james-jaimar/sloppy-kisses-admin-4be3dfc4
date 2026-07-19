@@ -435,6 +435,31 @@ export function useExpectedForDay(tenantId: string | null | undefined, day: Date
 
 const PET_SELECT = "id, name, species, breed, customer_id, customer:customers!inner(id, full_name, first_name, last_name, customer_number, email, mobile, phone_alt)";
 
+/** Fetch every pet+owner in the tenant, paging past PostgREST's 1000-row cap. */
+export function useTenantPetsWithOwners(tenantId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["daycare_pets_with_owners", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: async () => {
+      const pageSize = 1000;
+      const all: any[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from("pets")
+          .select(PET_SELECT)
+          .eq("tenant_id", tenantId as string)
+          .order("name", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const batch = data ?? [];
+        all.push(...batch);
+        if (batch.length < pageSize) break;
+      }
+      return all;
+    },
+  });
+}
+
 function escapeOr(v: string) {
   // PostgREST .or() uses comma/parentheses as separators
   return v.replace(/[,()]/g, " ");
