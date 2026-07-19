@@ -4767,6 +4767,16 @@ export type Database = {
         Returns: string
       }
       current_profile_id: { Args: never; Returns: string }
+      find_customer_email_duplicates: {
+        Args: { target_customer_id: string }
+        Returns: {
+          customer_number: string
+          email: string
+          full_name: string
+          id: string
+          status: string
+        }[]
+      }
       get_public_invoice: { Args: { p_token: string }; Returns: Json }
       is_platform_owner: { Args: never; Returns: boolean }
       log_invoice_event: {
