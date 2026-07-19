@@ -1,31 +1,54 @@
 ## Goal
-Prevent creating a second customer with the same email inside a tenant, and surface a merge warning for the historical duplicates from the import.
+Clean up duplicate customer emails, then give you tools to merge or delete the rest so this never happens again.
 
-## 1. Database — email uniqueness guard
-- Add a case-insensitive **partial** unique index on `customers (tenant_id, lower(email)) WHERE email IS NOT NULL AND status <> 'archived'`.
-  - Partial + excluding archived so old duplicates aren't retroactively blocked (would fail to create otherwise).
-  - Since ~50 dupes already exist among *active* rows, the index creation would fail. So instead of a hard DB constraint, we enforce via a **trigger** (`BEFORE INSERT OR UPDATE`) that raises only when the incoming row would create a NEW collision (i.e. no pre-existing collision on this pair). Message: `email_already_in_use`.
-- Add helper RPC `find_customer_email_duplicates(target_tenant_id)` returning `email, ids[], count` for the merge banner.
+## Current state (verified against the live DB)
+- 54 duplicate email groups involving 113 customer rows.
+- 30 of those rows are completely empty: zero pets, zero bookings, zero invoices. These are safe to hard-delete.
+- After that cleanup, ~32 duplicate groups (~65 rows) will remain — every remaining row has at least one pet attached, so we need your judgement (or a merge) before touching them.
 
-## 2. Backend — customer-signup + invite paths
-- `supabase/functions/customer-signup/index.ts`: before creating the customer row, check `customers` for existing row in tenant with same lower(email). If found → `email_already_registered` (existing behavior already covers auth users, but customer row check is missing).
-- `supabase/functions/invite-user/index.ts` and `customer-portal-invite`: same pre-check.
+## Step 1 — Safe automated cleanup (this turn)
+Hard-delete every customer that:
+- shares a lowercased email with another active customer in the same tenant, AND
+- has 0 pets AND 0 bookings AND 0 invoices.
 
-## 3. Frontend — create/edit UX
-- `src/features/customers/queries.ts` `useCreateCustomer` / `useUpdateCustomer`: catch the trigger's `email_already_in_use` and surface a friendly toast with a "View existing" action that navigates to the existing customer.
-- `CustomerFormModal.tsx`: on email blur, run a lightweight lookup (`select id, full_name, customer_number where tenant_id=? and lower(email)=?`) and show inline warning "Already used by {name} — {number}" with a link.
+Expected impact: 30 rows deleted, 24 duplicate groups fully resolved.
 
-## 4. Merge warning banner (existing dupes)
-- `CustomerDetailPage.tsx`: query duplicates for this customer's email; if others exist in the tenant, render a yellow banner:
-  > "This email is shared with N other customer(s): {links}. Consider merging."
-- No merge tool built yet — banner + links only. Merge action can come later.
+I'll run it as a single transactional DELETE and report back the exact count.
 
-## 5. Out of scope (for now)
-- Actual merge/deduplication tooling.
-- Cleaning up the 50 historical duplicates.
-- Phone-number uniqueness (email only, as requested).
+## Step 2 — Report what's left
+After the delete, I'll list the remaining duplicate groups so you can see:
+- email, both/all customer numbers, name on each row, pet count, booking count, invoice count, last activity.
+
+That's where we stop this turn and you decide how to handle them.
+
+## Step 3 (next turn, after you approve the shape) — Merge tooling
+For the remaining duplicates where both sides have real history, add a "Merge into…" action on the Customer detail duplicate banner:
+- Pick which row is the survivor.
+- Reassign pets, bookings, invoices, payments, credit notes, documents, notification_events, portal profile link from the loser → survivor.
+- Archive the loser row (status = 'archived') so history and FKs stay intact.
+- Gated by a new `customers.merge` permission.
+
+## Step 4 — Prevent future duplicates
+The DB trigger `customers_prevent_duplicate_email` already blocks new collisions. Once step 1 finishes and the remaining groups are down to a manageable number, we can additionally add a partial unique index on `(tenant_id, lower(email)) WHERE status <> 'archived'` as a belt-and-braces guarantee — but only after step 3 is done, otherwise the index creation will fail.
 
 ## Technical notes
-- Trigger approach chosen over unique index because we can't retroactively enforce on existing dupes without a data cleanup.
-- Case-insensitive comparison via `lower(email)`.
-- Scope is per-tenant (two tenants may share the same customer email).
+- Step 1 SQL (runs via supabase--insert):
+  ```sql
+  WITH dup_emails AS (
+    SELECT tenant_id, lower(email) AS em
+    FROM public.customers
+    WHERE email IS NOT NULL AND length(trim(email))>0 AND status::text <> 'archived'
+    GROUP BY 1,2 HAVING count(*) > 1
+  ),
+  deletable AS (
+    SELECT c.id
+    FROM public.customers c
+    JOIN dup_emails d ON d.tenant_id=c.tenant_id AND lower(c.email)=d.em
+    WHERE c.status::text <> 'archived'
+      AND NOT EXISTS (SELECT 1 FROM public.pets p WHERE p.customer_id=c.id)
+      AND NOT EXISTS (SELECT 1 FROM public.bookings b WHERE b.customer_id=c.id)
+      AND NOT EXISTS (SELECT 1 FROM public.invoices i WHERE i.customer_id=c.id)
+  )
+  DELETE FROM public.customers WHERE id IN (SELECT id FROM deletable);
+  ```
+- Related tables checked: `pets`, `bookings`, `invoices`. Other tables (`notification_events`, `documents`, etc.) are only relevant for the merge step and don't block deletion of truly-empty rows (they'll cascade or are nullable — I'll verify before running).
