@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Check, ChevronsUpDown, Search } from "lucide-react";
 import {
   Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   useCreateEnrolment, useDaycarePlans, useTenantPetsWithOwners, useUpdateEnrolment,
   WEEKDAYS, WEEKDAY_LABEL, type DaycareEnrolment, type Weekday,
@@ -22,6 +24,8 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
   const update = useUpdateEnrolment(tenantId);
 
   const [petId, setPetId] = useState("");
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [planId, setPlanId] = useState<string>("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -42,6 +46,8 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
       setPetId(""); setPlanId(""); setStartDate(""); setEndDate("");
       setDays([]); setNotes(""); setActive(true);
     }
+    setQuery("");
+    setPickerOpen(false);
   }, [editing, open]);
 
   function toggleDay(d: Weekday) {
@@ -94,14 +100,84 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
           <SheetTitle>{editing ? "Edit enrolment" : "New enrolment"}</SheetTitle>
         </SheetHeader>
         <div className="mt-4 space-y-4">
-          <Field label="Pet">
-            <select disabled={!!editing} value={petId} onChange={(e) => setPetId(e.target.value)}
-              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm">
-              <option value="">Select pet...</option>
-              {(petsQ.data ?? []).map((p) => (
-                <option key={p.id} value={p.id}>{p.name} - {p.customer?.full_name ?? "no owner"}</option>
-              ))}
-            </select>
+          <Field label="Customer & pet">
+            {(() => {
+              const pets = (petsQ.data ?? []) as any[];
+              const selected = pets.find((p) => p.id === petId);
+              const q = query.trim().toLowerCase();
+              const filtered = q
+                ? pets.filter((p) => {
+                    const c = p.customer ?? {};
+                    return [
+                      p.name, p.breed, p.species,
+                      c.full_name, c.first_name, c.last_name,
+                      c.customer_number, c.email,
+                    ].filter(Boolean).some((v: string) => String(v).toLowerCase().includes(q));
+                  })
+                : pets;
+              // Group by customer
+              const groups = new Map<string, { customer: any; pets: any[] }>();
+              for (const p of filtered) {
+                const key = p.customer_id ?? "_none";
+                if (!groups.has(key)) groups.set(key, { customer: p.customer ?? null, pets: [] });
+                groups.get(key)!.pets.push(p);
+              }
+              const groupList = Array.from(groups.values()).sort((a, b) => {
+                const an = a.customer?.full_name ?? "";
+                const bn = b.customer?.full_name ?? "";
+                return an.localeCompare(bn);
+              });
+              return (
+                <Popover open={pickerOpen && !editing} onOpenChange={(v) => !editing && setPickerOpen(v)}>
+                  <PopoverTrigger asChild>
+                    <button type="button" disabled={!!editing}
+                      className="flex h-10 w-full items-center justify-between rounded-lg border border-border bg-white px-3 text-left text-sm disabled:opacity-60">
+                      <span className={selected ? "" : "text-muted-foreground"}>
+                        {selected
+                          ? `${selected.name} — ${selected.customer?.full_name ?? "no owner"}${selected.customer?.customer_number ? ` (${selected.customer.customer_number})` : ""}`
+                          : "Search customer or pet..."}
+                      </span>
+                      <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+                      <Search className="h-4 w-4 text-muted-foreground" />
+                      <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Name, SK number, email, pet..."
+                        className="h-8 w-full bg-transparent text-sm focus:outline-none" />
+                    </div>
+                    <div className="max-h-72 overflow-y-auto py-1">
+                      {groupList.length === 0 && (
+                        <div className="px-3 py-6 text-center text-xs text-muted-foreground">No matching customer or pet</div>
+                      )}
+                      {groupList.map((g) => (
+                        <div key={g.customer?.id ?? "_none"} className="py-1">
+                          <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            {g.customer?.full_name ?? "No owner"}
+                            {g.customer?.customer_number ? ` — ${g.customer.customer_number}` : ""}
+                          </div>
+                          {g.pets.map((p) => {
+                            const isSel = p.id === petId;
+                            return (
+                              <button key={p.id} type="button"
+                                onClick={() => { setPetId(p.id); setPickerOpen(false); setQuery(""); }}
+                                className={"flex w-full items-center justify-between px-3 py-1.5 text-left text-sm hover:bg-sk-surface-muted " + (isSel ? "bg-sk-coral-soft/40" : "")}>
+                                <span>
+                                  {p.name}
+                                  {p.breed ? <span className="text-muted-foreground"> · {p.breed}</span> : p.species ? <span className="text-muted-foreground"> · {p.species}</span> : null}
+                                </span>
+                                {isSel && <Check className="h-4 w-4 text-sk-coral" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              );
+            })()}
           </Field>
           <Field label="Plan">
             <select value={planId} onChange={(e) => setPlanId(e.target.value)}
