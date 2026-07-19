@@ -374,6 +374,29 @@ export default function BookingRequestQueue() {
                     </div>
                   )}
 
+                  {selected.request_payload && Object.keys(selected.request_payload).length > 0 && (
+                    <div>
+                      <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Request details
+                      </div>
+                      <div className="rounded-xl border border-border bg-sk-surface-muted p-3 text-xs">
+                        <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
+                          {Object.entries(selected.request_payload).map(([k, v]) => {
+                            if (v === null || v === undefined || v === "" || (Array.isArray(v) && v.length === 0)) return null;
+                            const label = k.replace(/_/g, " ");
+                            const val = typeof v === "object" ? JSON.stringify(v) : String(v);
+                            return (
+                              <div key={k} className="contents">
+                                <dt className="font-semibold capitalize text-muted-foreground">{label}</dt>
+                                <dd className="break-words">{val}</dd>
+                              </div>
+                            );
+                          })}
+                        </dl>
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Internal notes
