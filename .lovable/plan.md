@@ -1,54 +1,21 @@
-## Goal
-Clean up duplicate customer emails, then give you tools to merge or delete the rest so this never happens again.
+## Improve New Enrolment pet picker
 
-## Current state (verified against the live DB)
-- 54 duplicate email groups involving 113 customer rows.
-- 30 of those rows are completely empty: zero pets, zero bookings, zero invoices. These are safe to hard-delete.
-- After that cleanup, ~32 duplicate groups (~65 rows) will remain — every remaining row has at least one pet attached, so we need your judgement (or a merge) before touching them.
+Replace the single native `<select>` for Pet in `src/features/daycare/EnrolmentDrawer.tsx` with a searchable Customer + Pet combobox.
 
-## Step 1 — Safe automated cleanup (this turn)
-Hard-delete every customer that:
-- shares a lowercased email with another active customer in the same tenant, AND
-- has 0 pets AND 0 bookings AND 0 invoices.
+### UX
+- Two-step combobox in a popover (shadcn `Command`):
+  1. **Search field** — one input that matches against customer name, customer number (SK####), customer email, and pet name.
+  2. **Results list** grouped by customer:
+     - Header row: `Tracy Williams — SK04292` (muted, non-selectable)
+     - Under it, one selectable row per pet: `Jackson · Staffie` / `Abby · Poodle`
+- Selecting a pet row sets `petId` (and internally we already resolve `customer_id` from the pet). Selected state shows as `Jackson — Tracy Williams (SK04292)` in the trigger button.
+- Empty state: "No matching customer or pet".
+- Keep the field disabled when editing an existing enrolment (same as today).
 
-Expected impact: 30 rows deleted, 24 duplicate groups fully resolved.
+### Data
+- Reuse the existing `useTenantPetsWithOwners(tenantId)` query — it already returns pets with `customer { full_name, customer_number, email }`. No new query needed.
+- Client-side filter (list is bounded per tenant); no debounce required.
 
-I'll run it as a single transactional DELETE and report back the exact count.
-
-## Step 2 — Report what's left
-After the delete, I'll list the remaining duplicate groups so you can see:
-- email, both/all customer numbers, name on each row, pet count, booking count, invoice count, last activity.
-
-That's where we stop this turn and you decide how to handle them.
-
-## Step 3 (next turn, after you approve the shape) — Merge tooling
-For the remaining duplicates where both sides have real history, add a "Merge into…" action on the Customer detail duplicate banner:
-- Pick which row is the survivor.
-- Reassign pets, bookings, invoices, payments, credit notes, documents, notification_events, portal profile link from the loser → survivor.
-- Archive the loser row (status = 'archived') so history and FKs stay intact.
-- Gated by a new `customers.merge` permission.
-
-## Step 4 — Prevent future duplicates
-The DB trigger `customers_prevent_duplicate_email` already blocks new collisions. Once step 1 finishes and the remaining groups are down to a manageable number, we can additionally add a partial unique index on `(tenant_id, lower(email)) WHERE status <> 'archived'` as a belt-and-braces guarantee — but only after step 3 is done, otherwise the index creation will fail.
-
-## Technical notes
-- Step 1 SQL (runs via supabase--insert):
-  ```sql
-  WITH dup_emails AS (
-    SELECT tenant_id, lower(email) AS em
-    FROM public.customers
-    WHERE email IS NOT NULL AND length(trim(email))>0 AND status::text <> 'archived'
-    GROUP BY 1,2 HAVING count(*) > 1
-  ),
-  deletable AS (
-    SELECT c.id
-    FROM public.customers c
-    JOIN dup_emails d ON d.tenant_id=c.tenant_id AND lower(c.email)=d.em
-    WHERE c.status::text <> 'archived'
-      AND NOT EXISTS (SELECT 1 FROM public.pets p WHERE p.customer_id=c.id)
-      AND NOT EXISTS (SELECT 1 FROM public.bookings b WHERE b.customer_id=c.id)
-      AND NOT EXISTS (SELECT 1 FROM public.invoices i WHERE i.customer_id=c.id)
-  )
-  DELETE FROM public.customers WHERE id IN (SELECT id FROM deletable);
-  ```
-- Related tables checked: `pets`, `bookings`, `invoices`. Other tables (`notification_events`, `documents`, etc.) are only relevant for the merge step and don't block deletion of truly-empty rows (they'll cascade or are nullable — I'll verify before running).
+### Scope
+- Only `EnrolmentDrawer.tsx` changes. Plan, dates, weekdays, notes, Active toggle, and save logic stay identical.
+- No schema, no backend, no other screens touched.
