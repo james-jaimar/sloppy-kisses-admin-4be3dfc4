@@ -58,6 +58,17 @@ Deno.serve(async (req) => {
   }
   if (!tenant) return json({ error: "tenant_not_found" }, 400);
 
+  // Reject if a customer row already exists with this email in the tenant.
+  const { data: existingCustomer } = await admin
+    .from("customers")
+    .select("id")
+    .eq("tenant_id", tenant.id)
+    .ilike("email", email)
+    .neq("status", "archived")
+    .limit(1)
+    .maybeSingle();
+  if (existingCustomer) return json({ error: "email_already_registered" }, 409);
+
   // Refuse if email already has an auth user (avoid hijack)
   const { data: existingUsers } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
   const found = existingUsers?.users?.find((u) => (u.email ?? "").toLowerCase() === email);

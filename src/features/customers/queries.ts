@@ -242,6 +242,62 @@ export function usePet(petId: string | null | undefined, tenantId?: string | nul
 
 // ---------- Mutations ----------
 
+function friendlyEmailError(err: any): Error {
+  const msg = err?.message ?? "";
+  if (typeof msg === "string" && msg.includes("email_already_in_use")) {
+    return new Error("A customer with this email already exists in this tenant.");
+  }
+  return err instanceof Error ? err : new Error(msg || "Save failed");
+}
+
+/** Look up other customers in the tenant that share this email (case-insensitive). */
+export function useCustomerEmailLookup(
+  tenantId: string | null | undefined,
+  email: string,
+  excludeId?: string,
+) {
+  const clean = email.trim().toLowerCase();
+  return useQuery({
+    queryKey: ["customerEmailLookup", tenantId, clean, excludeId ?? null],
+    enabled: Boolean(tenantId) && clean.length > 3 && clean.includes("@"),
+    staleTime: 10_000,
+    queryFn: async () => {
+      let q = supabase
+        .from("customers")
+        .select("id, full_name, customer_number, email, status")
+        .eq("tenant_id", tenantId as string)
+        .ilike("email", clean)
+        .neq("status", "archived")
+        .limit(5);
+      if (excludeId) q = q.neq("id", excludeId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []).filter((c: any) => (c.email ?? "").toLowerCase() === clean);
+    },
+  });
+}
+
+/** Duplicates for the merge banner on the customer detail page. */
+export function useCustomerEmailDuplicates(customerId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["customerEmailDuplicates", customerId],
+    enabled: Boolean(customerId),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("find_customer_email_duplicates", {
+        target_customer_id: customerId as string,
+      });
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        id: string;
+        full_name: string | null;
+        customer_number: string | null;
+        email: string | null;
+        status: string | null;
+      }>;
+    },
+  });
+}
+
 export function useCreateCustomer(tenantId: string | null | undefined) {
   const qc = useQueryClient();
   return useMutation({
@@ -261,7 +317,7 @@ export function useCreateCustomer(tenantId: string | null | undefined) {
         .insert({ ...input, full_name, customer_number, tenant_id: tenantId } as CustomerInsert)
         .select("*")
         .single();
-      if (error) throw error;
+      if (error) throw friendlyEmailError(error);
       return data;
     },
     onSuccess: () => {
@@ -285,7 +341,7 @@ export function useUpdateCustomer(tenantId: string | null | undefined) {
         .eq("tenant_id", tenantId)
         .select("*")
         .single();
-      if (error) throw error;
+      if (error) throw friendlyEmailError(error);
       return data;
     },
     onSuccess: (_data, vars) => {
