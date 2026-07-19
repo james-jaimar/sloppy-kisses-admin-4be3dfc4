@@ -6,12 +6,10 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { useCurrentCustomer } from "../hooks";
 import { SERVICE_LABEL, fmtDateTime, statusTone } from "../portalCommon";
-import { NewBookingRequestModal } from "./NewBookingRequestModal";
 
 export default function MyBookingsPage() {
   const cust = useCurrentCustomer();
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
-  const [newOpen, setNewOpen] = useState(false);
   const customerId = cust.data?.id ?? null;
 
   const q = useQuery({
@@ -43,9 +41,9 @@ export default function MyBookingsPage() {
           { label: "Past",     active: tab === "past",     onClick: () => setTab("past") },
         ]}
         actions={
-          <button onClick={() => setNewOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark">
+          <Link to="/customer/bookings/new" className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark">
             <CalendarPlus className="h-4 w-4" /> Request booking
-          </button>
+          </Link>
         }
       />
       <div className="flex-1 p-6">
@@ -74,13 +72,6 @@ export default function MyBookingsPage() {
           </div>
         )}
       </div>
-      {newOpen && cust.data && (
-        <NewBookingRequestModal
-          customerId={cust.data.id}
-          tenantId={cust.data.tenant_id}
-          onClose={() => setNewOpen(false)}
-        />
-      )}
     </>
   );
 }
