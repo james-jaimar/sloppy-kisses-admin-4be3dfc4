@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Check, ChevronsUpDown, Search } from "lucide-react";
 import {
@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  useCreateEnrolment, useDaycarePlans, useTenantPetsWithOwners, useUpdateEnrolment,
+  useCreateEnrolment, useDaycarePlans, useTenantPetsWithOwnersSearch, usePetWithOwner, useUpdateEnrolment,
   WEEKDAYS, WEEKDAY_LABEL, type DaycareEnrolment, type Weekday,
 } from "./queries";
 
@@ -18,7 +18,6 @@ interface Props {
 }
 
 export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props) {
-  const petsQ = useTenantPetsWithOwners(tenantId);
   const plansQ = useDaycarePlans(tenantId, { activeOnly: true });
   const create = useCreateEnrolment(tenantId);
   const update = useUpdateEnrolment(tenantId);
@@ -26,6 +25,13 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
   const [petId, setPetId] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query), 200);
+    return () => clearTimeout(t);
+  }, [query]);
+  const petsQ = useTenantPetsWithOwnersSearch(tenantId, debouncedQuery);
+  const selectedPetQ = usePetWithOwner(tenantId, petId || null);
   const [planId, setPlanId] = useState<string>("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -59,7 +65,9 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
       toast.error("Pet, start date, and at least one weekday are required");
       return;
     }
-    const pet = (petsQ.data ?? []).find((p) => p.id === petId);
+    const pet =
+      (petsQ.data ?? []).find((p: any) => p.id === petId) ??
+      selectedPetQ.data;
     if (!pet?.customer_id) { toast.error("Selected pet has no owner"); return; }
     try {
       if (editing) {
@@ -103,21 +111,11 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
           <Field label="Customer & pet">
             {(() => {
               const pets = (petsQ.data ?? []) as any[];
-              const selected = pets.find((p) => p.id === petId);
-              const q = query.trim().toLowerCase();
-              const filtered = q
-                ? pets.filter((p) => {
-                    const c = p.customer ?? {};
-                    return [
-                      p.name, p.breed, p.species,
-                      c.full_name, c.first_name, c.last_name,
-                      c.customer_number, c.email,
-                    ].filter(Boolean).some((v: string) => String(v).toLowerCase().includes(q));
-                  })
-                : pets;
-              // Group by customer
+              const selected =
+                pets.find((p) => p.id === petId) ?? (selectedPetQ.data as any) ?? null;
+              // Group by customer (server already filtered)
               const groups = new Map<string, { customer: any; pets: any[] }>();
-              for (const p of filtered) {
+              for (const p of pets) {
                 const key = p.customer_id ?? "_none";
                 if (!groups.has(key)) groups.set(key, { customer: p.customer ?? null, pets: [] });
                 groups.get(key)!.pets.push(p);
