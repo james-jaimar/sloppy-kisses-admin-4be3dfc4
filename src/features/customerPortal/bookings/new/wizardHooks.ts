@@ -18,7 +18,15 @@ export function usePortalPets(customerId: string | null | undefined) {
   });
 }
 
-export function useResources(tenantId: string | null | undefined, types: string[]) {
+export type ResourceType =
+  | "cattery_area"
+  | "daycare_area"
+  | "hotel_area"
+  | "inhouse_grooming"
+  | "mobile_van"
+  | "transport_vehicle";
+
+export function useResources(tenantId: string | null | undefined, types: ResourceType[]) {
   return useQuery({
     queryKey: ["portal_resources", tenantId, types.join(",")],
     enabled: !!tenantId,
