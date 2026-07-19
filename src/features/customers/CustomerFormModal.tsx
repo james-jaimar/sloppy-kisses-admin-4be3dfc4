@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { ModalShell } from "@/components/modals/ModalShell";
-import { useCreateCustomer, useUpdateCustomer, type CustomerRow } from "./queries";
+import { useCreateCustomer, useUpdateCustomer, useCustomerEmailLookup, type CustomerRow } from "./queries";
+import { Link } from "react-router-dom";
+import { AlertTriangle } from "lucide-react";
 
 type Status = "active" | "inactive" | "archived";
 
@@ -56,6 +58,7 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
   const [fullNameTouched, setFullNameTouched] = useState(Boolean(customer?.full_name));
   const create = useCreateCustomer(tenantId);
   const update = useUpdateCustomer(tenantId);
+  const emailDupes = useCustomerEmailLookup(tenantId, form.email, customer?.id);
 
   // Auto-generate full_name from first/last if the user hasn't touched it
   useEffect(() => {
@@ -157,6 +160,28 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Email">
             <Input type="email" value={form.email} onChange={(v) => set("email", v)} />
+            {emailDupes.data && emailDupes.data.length > 0 && (
+              <div className="mt-1 flex items-start gap-1.5 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-900">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-none" />
+                <div>
+                  Already used by{" "}
+                  {emailDupes.data.map((d, i) => (
+                    <span key={d.id}>
+                      {i > 0 && ", "}
+                      <Link
+                        to={`/admin/customers/${d.id}`}
+                        className="font-medium underline"
+                        onClick={onClose}
+                      >
+                        {d.full_name ?? "customer"}
+                        {d.customer_number ? ` (${d.customer_number})` : ""}
+                      </Link>
+                    </span>
+                  ))}
+                  .
+                </div>
+              </div>
+            )}
           </Field>
           <Field label="Mobile">
             <Input value={form.mobile} onChange={(v) => set("mobile", v)} />
