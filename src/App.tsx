@@ -99,7 +99,11 @@ import MyInvoiceDetailPage from "@/features/customerPortal/invoices/MyInvoiceDet
 import MyPaymentsPage from "@/features/customerPortal/payments/MyPaymentsPage";
 import MyDocumentsPage from "@/features/customerPortal/documents/MyDocumentsPage";
 import MyProfilePage from "@/features/customerPortal/profile/MyProfilePage";
-import NewBookingRequestPage from "@/features/customerPortal/bookings/NewBookingRequestPage";
+import ServicePickerPage from "@/features/customerPortal/bookings/new/ServicePickerPage";
+import HotelRequestWizard from "@/features/customerPortal/bookings/new/HotelRequestWizard";
+import DaycareRequestWizard from "@/features/customerPortal/bookings/new/DaycareRequestWizard";
+import GroomingRequestWizard from "@/features/customerPortal/bookings/new/GroomingRequestWizard";
+import TransportRequestWizard from "@/features/customerPortal/bookings/new/TransportRequestWizard";
 import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
 import PublicInvoicePage from "@/features/invoices/PublicInvoicePage";
 import { PaySuccessPage, PayCancelPage } from "@/features/invoices/PayResultPages";
@@ -215,7 +219,12 @@ const App = () => (
                 <Route path="/customer/pets" element={<MyPetsPage />} />
                 <Route path="/customer/pets/:id" element={<MyPetDetailPage />} />
                 <Route path="/customer/bookings" element={<MyBookingsPage />} />
-                <Route path="/customer/bookings/new" element={<NewBookingRequestPage />} />
+                <Route path="/customer/bookings/new" element={<ServicePickerPage />} />
+                <Route path="/customer/bookings/new/hotel" element={<HotelRequestWizard />} />
+                <Route path="/customer/bookings/new/daycare" element={<DaycareRequestWizard />} />
+                <Route path="/customer/bookings/new/grooming-inhouse" element={<GroomingRequestWizard mode="inhouse" />} />
+                <Route path="/customer/bookings/new/grooming-mobile" element={<GroomingRequestWizard mode="mobile" />} />
+                <Route path="/customer/bookings/new/transport" element={<TransportRequestWizard />} />
                 <Route path="/customer/bookings/:id" element={<MyBookingDetailPage />} />
                 <Route path="/customer/documents" element={<MyDocumentsPage />} />
                 <Route path="/customer/invoices" element={<MyInvoicesPage />} />
