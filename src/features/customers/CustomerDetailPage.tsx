@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
-import { useCustomer, useCustomerPets } from "./queries";
+import { useCustomer, useCustomerPets, useCustomerEmailDuplicates } from "./queries";
 import { CustomerFormModal } from "./CustomerFormModal";
 import { PetFormModal } from "@/features/pets/PetFormModal";
 import { format } from "date-fns";
@@ -19,6 +19,7 @@ import {
   Plus,
   Pencil,
   Users,
+  AlertTriangle,
 } from "lucide-react";
 import type { PetRow } from "./queries";
 import { CustomerCreditPanel } from "@/features/customerCredit/CustomerCreditPanel";
@@ -48,6 +49,7 @@ export default function CustomerDetailPage() {
   const [editingPet, setEditingPet] = useState<PetRow | null>(null);
 
   const { data: customer, isLoading, isError, error } = useCustomer(id, tenant?.id);
+  const { data: emailDupes } = useCustomerEmailDuplicates(id);
   const {
     data: pets,
     isLoading: petsLoading,
@@ -109,6 +111,25 @@ export default function CustomerDetailPage() {
 
         {customer && (
           <>
+            {emailDupes && emailDupes.length > 0 && (
+              <div className="sk-card flex items-start gap-3 border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
+                <div>
+                  This email <span className="font-medium">{customer.email}</span> is shared with{" "}
+                  {emailDupes.length} other customer{emailDupes.length === 1 ? "" : "s"}:{" "}
+                  {emailDupes.map((d, i) => (
+                    <span key={d.id}>
+                      {i > 0 && ", "}
+                      <Link to={`/admin/customers/${d.id}`} className="font-medium underline">
+                        {d.full_name ?? "customer"}
+                        {d.customer_number ? ` (${d.customer_number})` : ""}
+                      </Link>
+                    </span>
+                  ))}
+                  . Consider merging or archiving duplicates.
+                </div>
+              </div>
+            )}
             {/* Header card */}
             <div className="sk-card p-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
