@@ -433,18 +433,105 @@ export function useExpectedForDay(tenantId: string | null | undefined, day: Date
 
 // -------------------- Pets/customers pickers --------------------
 
+const PET_SELECT = "id, name, species, breed, customer_id, customer:customers!inner(id, full_name, first_name, last_name, customer_number, email, mobile, phone_alt)";
+
+/** Fetch every pet+owner in the tenant, paging past PostgREST's 1000-row cap. */
 export function useTenantPetsWithOwners(tenantId: string | null | undefined) {
   return useQuery({
     queryKey: ["daycare_pets_with_owners", tenantId],
     enabled: Boolean(tenantId),
     queryFn: async () => {
+      const pageSize = 1000;
+      const all: any[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from("pets")
+          .select(PET_SELECT)
+          .eq("tenant_id", tenantId as string)
+          .order("name", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const batch = data ?? [];
+        all.push(...batch);
+        if (batch.length < pageSize) break;
+      }
+      return all;
+    },
+  });
+}
+
+function escapeOr(v: string) {
+  // PostgREST .or() uses comma/parentheses as separators
+  return v.replace(/[,()]/g, " ");
+}
+
+/** Server-side searchable pets+owners picker. Returns up to 50 matches. */
+export function useTenantPetsWithOwnersSearch(tenantId: string | null | undefined, query: string) {
+  const q = query.trim();
+  return useQuery({
+    queryKey: ["daycare_pets_with_owners_search", tenantId, q.toLowerCase()],
+    enabled: Boolean(tenantId),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const base = supabase
+        .from("pets")
+        .select(PET_SELECT)
+        .eq("tenant_id", tenantId as string)
+        .order("name", { ascending: true })
+        .limit(50);
+
+      if (!q) {
+        const { data, error } = await base;
+        if (error) throw error;
+        return (data ?? []) as any[];
+      }
+
+      const like = `%${escapeOr(q)}%`;
+      // Fetch in parallel: pet-field matches and owner-field matches, then merge.
+      const [petMatch, ownerMatch] = await Promise.all([
+        supabase
+          .from("pets")
+          .select(PET_SELECT)
+          .eq("tenant_id", tenantId as string)
+          .or(`name.ilike.${like},breed.ilike.${like}`)
+          .order("name", { ascending: true })
+          .limit(50),
+        supabase
+          .from("pets")
+          .select(PET_SELECT)
+          .eq("tenant_id", tenantId as string)
+          .or(
+            `full_name.ilike.${like},first_name.ilike.${like},last_name.ilike.${like},customer_number.ilike.${like},email.ilike.${like}`,
+            { foreignTable: "customer" },
+          )
+          .order("name", { ascending: true })
+          .limit(50),
+      ]);
+      if (petMatch.error) throw petMatch.error;
+      if (ownerMatch.error) throw ownerMatch.error;
+      const byId = new Map<string, any>();
+      for (const p of petMatch.data ?? []) byId.set(p.id, p);
+      for (const p of ownerMatch.data ?? []) byId.set(p.id, p);
+      return Array.from(byId.values()).sort((a, b) => String(a.name ?? "").localeCompare(String(b.name ?? "")));
+    },
+  });
+}
+
+/** Fetch a single pet with owner details — used to render the picker trigger when editing. */
+export function usePetWithOwner(tenantId: string | null | undefined, petId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["pet_with_owner", tenantId, petId],
+    enabled: Boolean(tenantId && petId),
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("pets")
-        .select("id, name, species, breed, customer_id, customer:customers(id, full_name, first_name, last_name, customer_number, email, mobile, phone_alt)")
+        .select(PET_SELECT)
         .eq("tenant_id", tenantId as string)
-        .order("name", { ascending: true });
+        .eq("id", petId as string)
+        .maybeSingle();
       if (error) throw error;
-      return (data ?? []) as any[];
+      return data as any;
     },
   });
 }
