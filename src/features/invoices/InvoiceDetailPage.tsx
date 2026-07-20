@@ -204,7 +204,14 @@ export default function InvoiceDetailPage() {
               <div className="sk-card p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">{inv.invoice_number}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground">{inv.invoice_number}</div>
+                      {(inv as any).billing_period_start && (
+                        <span className="rounded-full bg-sk-teal/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sk-teal">
+                          {format(new Date((inv as any).billing_period_start), "MMM yyyy")}
+                        </span>
+                      )}
+                    </div>
                     <div className="mt-1"><InvoiceStatusChip status={inv.status} /></div>
                   </div>
                   <div className="text-right">
