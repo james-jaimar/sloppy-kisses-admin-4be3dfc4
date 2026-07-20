@@ -1,54 +1,33 @@
-## Root cause (confirmed)
+## Problem
+Actions like "Email invoice" and dozens of destructive/confirm actions use the browser's native `window.confirm()` popup. It's ugly, shows the raw Lovable preview hostname, and doesn't match the app's design.
 
-Issuing INV00097 fails with Postgres error:
+## Plan
 
-> `record "new" has no field "currency"`
+### 1. Add a shared confirm primitive
+Create `src/components/ui/confirm-dialog.tsx` built on the existing shadcn `AlertDialog`:
+- Component: `<ConfirmDialog open onOpenChange title description confirmLabel cancelLabel tone={"default"|"destructive"|"primary"} onConfirm loading />`
+- Imperative helper: `const confirm = useConfirm();` returning `await confirm({ title, description, ... }) : boolean`, backed by a single provider mounted once in `App.tsx`. This lets us convert existing `if (!confirm(...)) return;` call sites with a one-line change (`if (!(await confirm({...}))) return;`) instead of restructuring every handler into JSX state.
+- Styled with app tokens (coral primary, destructive variant for deletes/voids), rounded, matches modals used elsewhere.
 
-The BEFORE UPDATE trigger `invoices_lock_after_send` references `NEW.currency` / `OLD.currency`, but the `invoices` table has no `currency` column. The trigger works on the initial draft→sent transition (guard `OLD.status = ANY(v_locked)` is false), but the client mutation then calls `recomputeInvoiceTotals()` a second time — now `OLD.status='sent'`, the guard passes, and Postgres evaluates the `NEW.currency` reference and blows up. That's why INV00097 shows `status='sent'` in the DB yet the UI still reports an error (the second update failed and threw).
+### 2. Mount the provider
+Wrap the app tree in `src/App.tsx` with `<ConfirmProvider>` so `useConfirm()` is available everywhere.
 
-## Fix
+### 3. Replace every native call site
+Convert all 30 `confirm()` / `window.confirm()` usages found across:
+- Invoices: `InvoiceDetailPage` (email send, void, remove line, void refund) — this is the one in the screenshot
+- Credit notes: `CreditNoteDetailPage` (issue, void, remove line, reverse application)
+- Bookings: `BookingDetailPage`, `BookingDetailPanel`, `BookingFormModal`
+- Customers/Pets: `CustomerDetailPage`, `PetDetailPage`, `PetVaccinationsPanel`, `NotesTab`
+- Daycare/Hotel/Grooming: `EnrolmentsPage`, `TodayPanel`, `GroomingBoard`
+- Settings: `MessageTemplatesPage`, `VaccinationRulesPage`, `StockLocationsPage`, `GroomingPackagesPage`, `GroomingAddonsPage`, `DaycarePlansPage`, `PaymentMethodsPage`, `ProductCategoriesPage`, `ResourcesPage`, `RolesPermissionsPage`
+- Users/Platform: `UsersPage`, `FeatureFlagsPage`
 
-Migration to redefine `public.invoices_lock_after_send()` and drop the `currency` field comparison (there's no currency column and no plan to add one — ZAR only per project memory). Keep all other lock behavior identical.
+Each call becomes an `await confirm({...})` with appropriate title/description/tone. Destructive actions (delete, void, remove) get `tone="destructive"` (red confirm button); neutral actions (email invoice, issue) get `tone="primary"` (coral).
 
-```sql
-CREATE OR REPLACE FUNCTION public.invoices_lock_after_send()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  v_locked billing_status[] := ARRAY['sent','part_paid','paid','overdue','cancelled']::billing_status[];
-BEGIN
-  IF TG_OP = 'UPDATE' AND OLD.status = ANY(v_locked) THEN
-    IF NEW.customer_id   IS DISTINCT FROM OLD.customer_id
-       OR NEW.invoice_number IS DISTINCT FROM OLD.invoice_number
-       OR NEW.subtotal   IS DISTINCT FROM OLD.subtotal
-       OR NEW.total      IS DISTINCT FROM OLD.total
-       OR NEW.tenant_id  IS DISTINCT FROM OLD.tenant_id
-    THEN
-      IF public.is_platform_owner() THEN
-        NULL;
-      ELSIF NEW.total IS DISTINCT FROM OLD.total
-            OR NEW.subtotal IS DISTINCT FROM OLD.subtotal THEN
-        RAISE EXCEPTION 'Invoice %/% is locked (status=%). Line-item and total changes are not allowed. Issue a credit note instead.',
-          OLD.tenant_id, OLD.invoice_number, OLD.status
-          USING ERRCODE = 'P0001';
-      ELSE
-        RAISE EXCEPTION 'Invoice %/% is locked (status=%). Only status/notes/xero/payment fields may change.',
-          OLD.tenant_id, OLD.invoice_number, OLD.status
-          USING ERRCODE = 'P0001';
-      END IF;
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-```
-
-No frontend changes needed.
+### 4. Not in scope
+No changes to business logic, mutations, or backend — purely the confirmation UI layer.
 
 ## Verification
-
-- Re-issue an existing draft invoice → succeeds, status flips to `sent`, no Postgres error.
-- INV00097 is already `sent`; totals will be recomputed on next line change to confirm the lock still fires correctly for real edits.
+- Build passes
+- Manually trigger the "Send" button on an invoice — branded dialog appears instead of the native popup
+- Spot-check one destructive action (e.g. delete enrolment) shows the red variant
