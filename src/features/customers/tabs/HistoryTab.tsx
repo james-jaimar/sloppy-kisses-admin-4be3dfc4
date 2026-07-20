@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import {
   ArrowRight,
   CheckCircle2,
@@ -149,9 +150,12 @@ export function HistoryTab({ tenantId, customerId }: { tenantId: string; custome
             ) : (
               <>
                 <div className="flex items-center gap-1.5 text-sm">
-                  <span className="font-medium">
+                  <Link
+                    to={`/admin/bookings/${it.booking_id}`}
+                    className="font-medium text-sk-coral-dark hover:underline"
+                  >
                     {it.booking_number ? `#${it.booking_number}` : "Booking"}
-                  </span>
+                  </Link>
                   <span className="text-muted-foreground">{it.from_status ?? "—"}</span>
                   <ArrowRight className="h-3 w-3 text-muted-foreground" />
                   <span className="font-medium">{it.to_status ?? it.event_kind ?? "updated"}</span>

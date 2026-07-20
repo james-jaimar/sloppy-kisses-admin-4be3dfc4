@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Plus, ArrowLeftRight, Pencil, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
@@ -80,8 +80,24 @@ export default function EnrolmentsPage() {
                 )}
                 {rows.map((r) => (
                   <tr key={r.id} className="hover:bg-sk-surface-muted/40">
-                    <td className="px-5 py-3 font-medium">{r.pet?.name ?? "-"}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{r.customer?.full_name ?? ""}</td>
+                    <td className="px-5 py-3 font-medium">
+                      {r.pet?.id ? (
+                        <Link to={`/admin/pets/${r.pet.id}`} className="hover:text-sk-coral-dark hover:underline">
+                          {r.pet.name ?? "-"}
+                        </Link>
+                      ) : (
+                        r.pet?.name ?? "-"
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {r.customer?.id ? (
+                        <Link to={`/admin/customers/${r.customer.id}`} className="hover:text-sk-coral-dark hover:underline">
+                          {r.customer.full_name ?? ""}
+                        </Link>
+                      ) : (
+                        r.customer?.full_name ?? ""
+                      )}
+                    </td>
                     <td className="px-5 py-3">{r.plan?.name ?? "-"}</td>
                     <td className="px-5 py-3">
                       <div className="flex flex-wrap gap-1">
