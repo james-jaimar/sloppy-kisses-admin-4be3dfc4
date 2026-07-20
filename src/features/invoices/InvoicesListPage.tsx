@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, FileText, Search, ArrowUpDown, ArrowUp, ArrowDown, Download, Send, CheckCircle2, Ban, X } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -506,7 +506,7 @@ export default function InvoicesListPage() {
                       </td></tr>
                     )}
                     {grouped.map((g) => (
-                      <>
+                      <Fragment key={"g-" + g.key}>
                         {groupBy !== "flat" && g.rows.length > 0 && (
                           <tr key={"h-" + g.key} className="bg-sk-surface-muted/60">
                             <td colSpan={9} className="px-5 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -541,7 +541,7 @@ export default function InvoicesListPage() {
                             <td className="px-5 py-3"><InvoiceStatusChip status={r.status} /></td>
                           </tr>
                         ))}
-                      </>
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
