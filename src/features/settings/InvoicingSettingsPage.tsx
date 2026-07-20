@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { Save, Play } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useInvoicingSettings, useUpdateInvoicingSettings } from "@/features/invoices/queries";
+import { supabase } from "@/integrations/supabase/client";
 
 const PERMISSION = "settings.invoicing.manage";
+const RUN_PERMISSION = "invoicing.run_monthly";
 
 export default function InvoicingSettingsPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const { hasPermission } = useCurrentUser();
   const canManage = hasPermission(PERMISSION);
+  const canRun = hasPermission(RUN_PERMISSION);
 
   const settingsQ = useInvoicingSettings(tenantId);
   const update = useUpdateInvoicingSettings(tenantId ?? "");
@@ -22,7 +25,11 @@ export default function InvoicingSettingsPage() {
     default_vat_rate: 15, footer_notes: "", reminder_days: "3,7,14",
     auto_invoice_daycare: true, auto_invoice_hotel: true,
     auto_invoice_grooming: true, auto_invoice_transport: true,
+    billing_cycle: "monthly_prepaid", billing_run_day: 22, billing_due_day: 1,
   });
+  const nextMonth = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1); return d.toISOString().slice(0, 10); })();
+  const [runPeriod, setRunPeriod] = useState<string>(nextMonth);
+  const [running, setRunning] = useState(false);
 
   useEffect(() => {
     const d = settingsQ.data;
@@ -42,6 +49,9 @@ export default function InvoicingSettingsPage() {
         auto_invoice_hotel:     (d as any).auto_invoice_hotel     ?? true,
         auto_invoice_grooming:  (d as any).auto_invoice_grooming  ?? true,
         auto_invoice_transport: (d as any).auto_invoice_transport ?? true,
+        billing_cycle: (d as any).billing_cycle ?? "monthly_prepaid",
+        billing_run_day: Number((d as any).billing_run_day ?? 22),
+        billing_due_day: Number((d as any).billing_due_day ?? 1),
       });
     }
   }, [settingsQ.data]);
@@ -65,9 +75,29 @@ export default function InvoicingSettingsPage() {
         auto_invoice_hotel: form.auto_invoice_hotel,
         auto_invoice_grooming: form.auto_invoice_grooming,
         auto_invoice_transport: form.auto_invoice_transport,
+        billing_cycle: form.billing_cycle,
+        billing_run_day: form.billing_run_day,
+        billing_due_day: form.billing_due_day,
       } as any);
       toast.success("Invoicing settings saved");
     } catch (err: any) { toast.error(err?.message ?? "Failed"); }
+  }
+
+  async function runMonthly() {
+    if (!tenantId) return;
+    setRunning(true);
+    try {
+      const { data, error } = await supabase.rpc("generate_monthly_daycare_invoices" as any, {
+        p_tenant_id: tenantId, p_period_start: runPeriod,
+      });
+      if (error) throw error;
+      const r: any = data ?? {};
+      toast.success(`Monthly run complete — ${r.created_invoices ?? 0} new draft invoice(s), ${r.added_lines ?? 0} line(s) added.`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Monthly run failed");
+    } finally {
+      setRunning(false);
+    }
   }
 
   return (
