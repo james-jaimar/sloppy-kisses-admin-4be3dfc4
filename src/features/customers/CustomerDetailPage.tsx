@@ -186,7 +186,7 @@ export default function CustomerDetailPage() {
                   </button>
                   <button
                     onClick={async () => {
-                      if (!window.confirm(`Delete customer ${name}? This removes their pets, draft invoices, and cannot be undone. Blocked if they have finalised invoices.`)) return;
+                      if (!(await confirm({ title: `Delete customer ${name}?`, description: "This removes their pets, draft invoices, and cannot be undone. Blocked if they have finalised invoices.", confirmLabel: "Delete", tone: "destructive" }))) return;
                       try {
                         await del.mutateAsync(customer.id);
                         toast.success("Customer deleted");

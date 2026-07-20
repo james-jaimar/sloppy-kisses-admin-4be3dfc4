@@ -69,7 +69,7 @@ export default function DaycarePlansPage() {
   }
 
   async function onDelete(r: DaycarePlan) {
-    if (!window.confirm(`Delete plan "${r.name}"? Enrolments using it will keep referencing the deleted plan id.`)) return;
+    if (!(await confirm({ title: `Delete plan "${r.name}"?`, description: "Enrolments using it will keep referencing the deleted plan id.", confirmLabel: "Delete", tone: "destructive" }))) return;
     try { await del.mutateAsync(r.id); toast.success("Plan deleted"); }
     catch (err: any) { toast.error(err?.message ?? "Failed to delete (plan may be in use)"); }
   }

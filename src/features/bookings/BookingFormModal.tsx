@@ -152,6 +152,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const filteredResources = (resourcesQ.data ?? []).filter(
     (r) => !resourceType || r.type === resourceType,
   );
+  const confirm = useConfirm();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -163,11 +164,12 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     }
 
     if (conflicts.length > 0) {
-      const proceed = confirm(
-        `Resource is already booked in this window (${conflicts
-          .map((c: any) => c.booking_number)
-          .join(", ")}). Save anyway?`,
-      );
+      const proceed = await confirm({
+        title: "Resource already booked in this window",
+        description: `Overlaps with ${conflicts.map((c: any) => c.booking_number).join(", ")}. Save anyway?`,
+        confirmLabel: "Save anyway",
+        tone: "destructive",
+      });
       if (!proceed) return;
     }
 

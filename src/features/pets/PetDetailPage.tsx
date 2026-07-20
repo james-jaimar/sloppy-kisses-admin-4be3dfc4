@@ -40,7 +40,7 @@ export default function PetDetailPage() {
               </button>
               <button
                 onClick={async () => {
-                  if (!window.confirm(`Delete pet ${pet.name}? Enrolments, vaccinations and attendance for this pet will be removed. Blocked if linked to finalised invoices.`)) return;
+                  if (!(await confirm({ title: `Delete pet ${pet.name}?`, description: "Enrolments, vaccinations and attendance for this pet will be removed. Blocked if linked to finalised invoices.", confirmLabel: "Delete", tone: "destructive" }))) return;
                   try {
                     await del.mutateAsync(pet.id);
                     toast.success("Pet deleted");

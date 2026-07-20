@@ -148,8 +148,8 @@ function NoteRow({
           </button>
           <button
             title="Delete"
-            onClick={() => {
-              if (window.confirm("Delete this note?")) del.mutate(note.id);
+            onClick={async () => {
+              if (await confirmDialog({ title: "Delete this note?", confirmLabel: "Delete", tone: "destructive" })) del.mutate(note.id);
             }}
             className="rounded p-1 text-sk-coral-dark hover:bg-muted"
           >

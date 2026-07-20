@@ -192,7 +192,7 @@ export default function GroomingAddonsPage() {
                             <button onClick={() => { setEditingId(r.id); setDraft({ ...r }); setCreating(false); }} className="rounded-lg px-3 py-1 text-xs font-medium text-sk-coral-dark hover:bg-sk-coral-soft">Edit</button>
                             <button
                               onClick={async () => {
-                                if (!window.confirm(`Delete add-on "${r.name}"?`)) return;
+                                if (!(await confirm({ title: `Delete add-on "${r.name}"?`, confirmLabel: "Delete", tone: "destructive" }))) return;
                                 try { await del.mutateAsync(r.id); toast.success("Deleted"); }
                                 catch (err: any) { toast.error(err?.message ?? "Failed to delete (in use?)"); }
                               }}
