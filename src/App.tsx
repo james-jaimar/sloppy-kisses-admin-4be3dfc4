@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ConfirmProvider } from "@/components/ui/confirm-dialog";
 import NotFound from "./pages/NotFound.tsx";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { TenantProvider } from "@/lib/tenant/TenantContext";
@@ -119,6 +120,7 @@ const App = () => (
       <TenantProvider>
         <BrandingProvider>
         <TooltipProvider>
+          <ConfirmProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -245,6 +247,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          </ConfirmProvider>
         </TooltipProvider>
         </BrandingProvider>
       </TenantProvider>
