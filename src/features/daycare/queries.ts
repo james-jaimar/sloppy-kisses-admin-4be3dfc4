@@ -165,13 +165,13 @@ export function useUpdateEnrolment(tenantId: string) {
   });
 }
 
-export function useDeleteEnrolment(tenantId: string) {
+export function useDeleteEnrolment(_tenantId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.rpc("delete_daycare_enrolment", {
+      const { error } = await (supabase as any).rpc("delete_daycare_enrolment", {
         p_enrolment_id: id,
-      } as any);
+      });
       if (error) throw error;
     },
     onSuccess: () => {
