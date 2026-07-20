@@ -33,6 +33,7 @@ import { InvoicesTab } from "./tabs/InvoicesTab";
 import { NotesTab } from "./tabs/NotesTab";
 import { DocumentsTab } from "./tabs/DocumentsTab";
 import { HistoryTab } from "./tabs/HistoryTab";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const TABS = ["Pets", "Bookings", "Invoices", "Credit", "Notes", "Documents", "History"] as const;
 type Tab = (typeof TABS)[number];
@@ -53,6 +54,7 @@ export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { tenant } = useCurrentTenant();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [tab, setTab] = useState<Tab>("Pets");
   const [editing, setEditing] = useState(false);
   const [addingPet, setAddingPet] = useState(false);
@@ -185,7 +187,7 @@ export default function CustomerDetailPage() {
                   </button>
                   <button
                     onClick={async () => {
-                      if (!window.confirm(`Delete customer ${name}? This removes their pets, draft invoices, and cannot be undone. Blocked if they have finalised invoices.`)) return;
+                      if (!(await confirm({ title: `Delete customer ${name}?`, description: "This removes their pets, draft invoices, and cannot be undone. Blocked if they have finalised invoices.", confirmLabel: "Delete", tone: "destructive" }))) return;
                       try {
                         await del.mutateAsync(customer.id);
                         toast.success("Customer deleted");

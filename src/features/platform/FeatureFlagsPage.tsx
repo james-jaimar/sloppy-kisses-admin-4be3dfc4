@@ -2,11 +2,13 @@ import { useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useDeleteFlag, useFlags, useUpsertFlag } from "./queries";
 import { Flag, Plus, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function FeatureFlagsPage() {
   const flags = useFlags();
   const upsert = useUpsertFlag();
   const del = useDeleteFlag();
+  const confirm = useConfirm();
   const [newKey, setNewKey] = useState("");
   const [newDesc, setNewDesc] = useState("");
 
@@ -80,7 +82,7 @@ export default function FeatureFlagsPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
-                        onClick={() => { if (confirm(`Delete flag "${f.key}"?`)) del.mutate(f.key); }}
+                        onClick={async () => { if (await confirm({ title: `Delete flag "${f.key}"?`, confirmLabel: "Delete", tone: "destructive" })) del.mutate(f.key); }}
                         className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                       >
                         <Trash2 className="h-3.5 w-3.5" />

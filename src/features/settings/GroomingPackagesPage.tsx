@@ -15,6 +15,7 @@ import {
   type GroomingSizeBand,
   type GroomingSpecies,
 } from "./groomingRateCardQueries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const PERMISSION = "settings.grooming.manage";
 
@@ -27,6 +28,7 @@ function emptyRow(): Draft {
 export default function GroomingPackagesPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const { hasPermission } = useCurrentUser();
   const canManage = hasPermission(PERMISSION);
   const del = useDeleteGroomingPackage(tenantId ?? "");
@@ -228,7 +230,7 @@ export default function GroomingPackagesPage() {
                             <button onClick={() => beginEdit(r)} className="rounded-lg px-3 py-1 text-xs font-medium text-sk-coral-dark hover:bg-sk-coral-soft">Edit</button>
                             <button
                               onClick={async () => {
-                                if (!window.confirm(`Delete package "${r.name}"?`)) return;
+                                if (!(await confirm({ title: `Delete package "${r.name}"?`, confirmLabel: "Delete", tone: "destructive" }))) return;
                                 try { await del.mutateAsync(r.id); toast.success("Deleted"); }
                                 catch (err: any) { toast.error(err?.message ?? "Failed to delete (in use?)"); }
                               }}

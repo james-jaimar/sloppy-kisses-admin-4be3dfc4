@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useDeletePaymentMethod, usePaymentMethods, useUpsertPaymentMethod } from "@/features/invoices/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const PERMISSION = "settings.invoicing.manage";
 
@@ -12,6 +13,7 @@ type Draft = { id?: string; code: string; label: string; is_active: boolean; sor
 export default function PaymentMethodsPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const { hasPermission } = useCurrentUser();
   const canManage = hasPermission(PERMISSION);
 
@@ -83,7 +85,7 @@ export default function PaymentMethodsPage() {
                         <button onClick={() => { setEditingId(r.id); setDraft({ id: r.id, code: r.code, label: r.label, is_active: r.is_active, sort_order: r.sort_order }); setCreating(false); }}
                           className="rounded-lg border border-border px-3 py-1 text-xs">Edit</button>
                         <button onClick={async () => {
-                          if (!confirm("Delete method?")) return;
+                          if (!(await confirm({ title: "Delete payment method?", confirmLabel: "Delete", tone: "destructive" }))) return;
                           try { await del.mutateAsync(r.id); toast.success("Deleted"); }
                           catch (err: any) { toast.error(err?.message ?? "Failed"); }
                         }} className="rounded-lg border border-border px-3 py-1 text-xs text-sk-coral-dark">Delete</button>

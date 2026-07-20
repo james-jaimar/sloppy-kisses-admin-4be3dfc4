@@ -4,12 +4,14 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useDeleteStockLocation, useStockLocations, useUpsertStockLocation } from "@/features/shop/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Draft = { id?: string; name: string; is_default: boolean; active: boolean; sort_order: number };
 
 export default function StockLocationsPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const listQ = useStockLocations(tenantId);
   const upsert = useUpsertStockLocation(tenantId ?? "");
   const del = useDeleteStockLocation(tenantId ?? "");
@@ -67,7 +69,7 @@ export default function StockLocationsPage() {
                       <button onClick={() => { setEditingId(r.id); setCreating(false); setDraft({ id: r.id, name: r.name, is_default: r.is_default, active: r.active, sort_order: r.sort_order }); }}
                         className="rounded-lg border border-border px-3 py-1 text-xs">Edit</button>
                       <button onClick={async () => {
-                        if (!confirm("Delete location?")) return;
+                        if (!(await confirm({ title: "Delete location?", confirmLabel: "Delete", tone: "destructive" }))) return;
                         try { await del.mutateAsync(r.id); toast.success("Deleted"); }
                         catch (err: any) { toast.error(err?.message ?? "Failed"); }
                       }} className="rounded-lg border border-border px-3 py-1 text-xs text-sk-coral-dark">Delete</button>

@@ -12,12 +12,14 @@ import {
 } from "./queries";
 import { CreditNoteStatusChip, fmtZar } from "./status";
 import { ApplyCreditDialog } from "./ApplyCreditDialog";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function CreditNoteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { hasPermission, profile } = useCurrentUser();
   const isPlatform = profile?.user_type === "platform";
   const can = (code: string) => isPlatform || hasPermission(code);
@@ -57,7 +59,7 @@ export default function CreditNoteDetailPage() {
   async function doIssue() {
     if (!cn) return;
     if (cn.items.length === 0) { toast.error("Add at least one line first"); return; }
-    if (!confirm(`Issue credit note ${cn.credit_note_number}? Once issued, line items are locked.`)) return;
+    if (!(await confirm({ title: `Issue credit note ${cn.credit_note_number}?`, description: "Once issued, line items are locked.", confirmLabel: "Issue" }))) return;
     try { await issue.mutateAsync(cn.id); toast.success("Credit note issued"); }
     catch (e: any) { toast.error(e?.message ?? "Failed"); }
   }
@@ -65,7 +67,7 @@ export default function CreditNoteDetailPage() {
   async function doVoid() {
     if (!cn) return;
     if (cn.applications.length > 0) { toast.error("Reverse all applications before voiding"); return; }
-    if (!confirm("Void this credit note?")) return;
+    if (!(await confirm({ title: "Void this credit note?", confirmLabel: "Void", tone: "destructive" }))) return;
     try { await voidCn.mutateAsync(cn.id); toast.success("Credit note voided"); }
     catch (e: any) { toast.error(e?.message ?? "Failed"); }
   }
@@ -195,7 +197,7 @@ export default function CreditNoteDetailPage() {
                               <button onClick={() => { setEditingId(it.id); setDraft({ description: it.description, quantity: Number(it.quantity), unit_price: Number(it.unit_price) }); }}
                                 className="rounded border border-border px-2 py-0.5 text-xs">Edit</button>
                               <button onClick={async () => {
-                                if (!confirm("Remove line?")) return;
+                                if (!(await confirm({ title: "Remove line?", confirmLabel: "Remove", tone: "destructive" }))) return;
                                 await del.mutateAsync({ id: it.id, credit_note_id: cn.id });
                               }} className="rounded border border-border px-2 py-0.5 text-xs text-sk-coral-dark">
                                 <Trash2 className="h-3 w-3" />
@@ -271,7 +273,7 @@ export default function CreditNoteDetailPage() {
                           {can("credit_notes.apply") && (
                             <button title="Reverse application"
                               onClick={async () => {
-                                if (!confirm("Reverse this application? The invoice balance will be restored.")) return;
+                                if (!(await confirm({ title: "Reverse application?", description: "The invoice balance will be restored.", confirmLabel: "Reverse", tone: "destructive" }))) return;
                                 try {
                                   await reverse.mutateAsync({ id: a.id, credit_note_id: cn.id, invoice_id: a.invoice_id });
                                   toast.success("Application reversed");

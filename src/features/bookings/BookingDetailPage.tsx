@@ -13,6 +13,7 @@ import { Truck } from "lucide-react";
 import { BookingInvoicePanel } from "./BookingInvoicePanel";
 import { BookingCommsPanel } from "./BookingCommsPanel";
 import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -41,6 +42,7 @@ export default function BookingDetailPage() {
   const location = useLocation();
   const backTo = (location.state as { from?: string } | null)?.from ?? "/admin/bookings";
   const [editOpen, setEditOpen] = useState(false);
+  const confirm = useConfirm();
 
   const detailQ = useBookingDetail(id, tenantId);
   const b = detailQ.data;
@@ -85,7 +87,7 @@ export default function BookingDetailPage() {
             {b && (
               <button
                 onClick={async () => {
-                  if (!window.confirm(`Delete booking ${b.booking_number}? Any auto-created draft invoice lines will be removed.`)) return;
+                  if (!(await confirm({ title: `Delete booking ${b.booking_number}?`, description: "Any auto-created draft invoice lines will be removed.", confirmLabel: "Delete", tone: "destructive" }))) return;
                   try {
                     await del.mutateAsync(b.id);
                     toast.success("Booking deleted");

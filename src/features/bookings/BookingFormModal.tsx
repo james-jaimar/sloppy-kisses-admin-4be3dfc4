@@ -24,6 +24,7 @@ import {
 import { GroomingFields, HotelFields, TransportFields } from "./BookingDetailsFields";
 import { RecurrenceFields, DEFAULT_RECURRENCE, toRule, type RecurrenceValue } from "./RecurrenceFields";
 import { useCreateRecurringBooking } from "./recurringQueries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: ResourceType }[] = [
   { value: "daycare", label: "Daycare", resourceType: "daycare_area" },
@@ -151,6 +152,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const filteredResources = (resourcesQ.data ?? []).filter(
     (r) => !resourceType || r.type === resourceType,
   );
+  const confirm = useConfirm();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -162,11 +164,12 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     }
 
     if (conflicts.length > 0) {
-      const proceed = confirm(
-        `Resource is already booked in this window (${conflicts
-          .map((c: any) => c.booking_number)
-          .join(", ")}). Save anyway?`,
-      );
+      const proceed = await confirm({
+        title: "Resource already booked in this window",
+        description: `Overlaps with ${conflicts.map((c: any) => c.booking_number).join(", ")}. Save anyway?`,
+        confirmLabel: "Save anyway",
+        tone: "destructive",
+      });
       if (!proceed) return;
     }
 

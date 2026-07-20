@@ -13,10 +13,12 @@ import {
   useToggleRolePermission,
   type RoleRow,
 } from "@/features/users/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function RolesPermissionsPage() {
   const { currentTenant, hasPermission } = useCurrentUser();
   const tenantId = currentTenant?.id ?? "";
+  const confirm = useConfirm();
   const rolesQ = useAssignableRoles(tenantId);
   const permsQ = usePermissionsCatalog();
   const matrixQ = useRolePermissionsMatrix();
@@ -61,7 +63,7 @@ export default function RolesPermissionsPage() {
   }
 
   async function onDelete(role: RoleRow) {
-    if (!confirm(`Delete role "${role.label}"? Users assigned this role will lose it.`)) return;
+    if (!(await confirm({ title: `Delete role "${role.label}"?`, description: "Users assigned this role will lose it.", confirmLabel: "Delete", tone: "destructive" }))) return;
     try {
       await deleteRole.mutateAsync(role.id);
       toast({ title: "Role deleted" });

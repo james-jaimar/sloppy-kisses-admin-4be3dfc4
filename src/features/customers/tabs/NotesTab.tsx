@@ -9,6 +9,7 @@ import {
   useDeleteCustomerNote,
   type CustomerNote,
 } from "../notesQueries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export function NotesTab({ tenantId, customerId }: { tenantId: string; customerId: string }) {
   const { data, isLoading, isError, error } = useCustomerNotes(customerId, tenantId);
@@ -99,6 +100,7 @@ function NoteRow({
 }) {
   const upd = useUpdateCustomerNote(tenantId, customerId);
   const del = useDeleteCustomerNote(tenantId, customerId);
+  const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.body);
 
@@ -147,8 +149,8 @@ function NoteRow({
           </button>
           <button
             title="Delete"
-            onClick={() => {
-              if (window.confirm("Delete this note?")) del.mutate(note.id);
+            onClick={async () => {
+              if (await confirm({ title: "Delete this note?", confirmLabel: "Delete", tone: "destructive" })) del.mutate(note.id);
             }}
             className="rounded p-1 text-sk-coral-dark hover:bg-muted"
           >

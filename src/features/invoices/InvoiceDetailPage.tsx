@@ -17,12 +17,14 @@ import { RecordRefundDialog } from "@/features/refunds/RecordRefundDialog";
 import { useRefundsForInvoice, useVoidRefund } from "@/features/refunds/queries";
 import { AllocateCreditDialog } from "@/features/customerCredit/AllocateCreditDialog";
 import { useCustomerCreditBalance } from "@/features/customerCredit/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { hasPermission, profile } = useCurrentUser();
   const isPlatform = profile?.user_type === "platform";
   const can = (code: string) => isPlatform || hasPermission(code);
@@ -94,7 +96,7 @@ export default function InvoiceDetailPage() {
 
   async function doVoid() {
     if (!inv) return;
-    if (!confirm("Void this invoice? It will be marked as cancelled.")) return;
+    if (!(await confirm({ title: "Void invoice?", description: "It will be marked as cancelled.", confirmLabel: "Void", tone: "destructive" }))) return;
     try { await voidInv.mutateAsync(inv.id); toast.success("Invoice voided"); }
     catch (err: any) { toast.error(err?.message ?? "Failed"); }
   }
@@ -103,7 +105,7 @@ export default function InvoiceDetailPage() {
     if (!inv) return;
     const to = inv.customer?.email ?? "";
     if (!to) { toast.error("Customer has no email on file."); return; }
-    if (!confirm(`Email invoice ${inv.invoice_number} to ${to}?`)) return;
+    if (!(await confirm({ title: `Email invoice ${inv.invoice_number}?`, description: `We'll send it to ${to}.`, confirmLabel: "Send email" }))) return;
     try {
       await sendEmail.mutateAsync({ invoice_id: inv.id, kind: "send" });
       toast.success(`Invoice emailed to ${to}`);
@@ -262,7 +264,7 @@ export default function InvoiceDetailPage() {
                               <button onClick={() => { setEditingId(it.id); setDraft({ description: it.description, quantity: Number(it.quantity), unit_price: Number(it.unit_price) }); }}
                                 className="rounded border border-border px-2 py-0.5 text-xs">Edit</button>
                               <button onClick={async () => {
-                                if (!confirm("Remove line?")) return;
+                                if (!(await confirm({ title: "Remove line?", confirmLabel: "Remove", tone: "destructive" }))) return;
                                 await del.mutateAsync({ id: it.id, invoice_id: inv.id });
                               }} className="rounded border border-border px-2 py-0.5 text-xs text-sk-coral-dark">
                                 <Trash2 className="h-3 w-3" />
@@ -432,7 +434,7 @@ export default function InvoiceDetailPage() {
                                   {r.status === "succeeded" && r.provider === "manual" && can("payments.refund.void") && (
                                     <button
                                       onClick={async () => {
-                                        if (!confirm(`Void this refund of ${fmtZar(r.amount)}? Invoice balance will restore.`)) return;
+                                        if (!(await confirm({ title: "Void refund?", description: `This refund of ${fmtZar(r.amount)} will be voided and the invoice balance restored.`, confirmLabel: "Void refund", tone: "destructive" }))) return;
                                         try { await voidRefund.mutateAsync(r.id); toast.success("Refund voided"); }
                                         catch (e: any) { toast.error(e?.message ?? "Failed"); }
                                       }}

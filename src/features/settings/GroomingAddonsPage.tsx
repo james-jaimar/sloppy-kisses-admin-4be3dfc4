@@ -11,6 +11,7 @@ import {
   type GroomingAddon,
   type GroomingAddonKind,
 } from "./groomingRateCardQueries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const PERMISSION = "settings.grooming.manage";
 const KINDS: { value: GroomingAddonKind; label: string }[] = [
@@ -32,6 +33,7 @@ function emptyRow(): Draft {
 export default function GroomingAddonsPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const { hasPermission } = useCurrentUser();
   const canManage = hasPermission(PERMISSION);
 
@@ -190,7 +192,7 @@ export default function GroomingAddonsPage() {
                             <button onClick={() => { setEditingId(r.id); setDraft({ ...r }); setCreating(false); }} className="rounded-lg px-3 py-1 text-xs font-medium text-sk-coral-dark hover:bg-sk-coral-soft">Edit</button>
                             <button
                               onClick={async () => {
-                                if (!window.confirm(`Delete add-on "${r.name}"?`)) return;
+                                if (!(await confirm({ title: `Delete add-on "${r.name}"?`, confirmLabel: "Delete", tone: "destructive" }))) return;
                                 try { await del.mutateAsync(r.id); toast.success("Deleted"); }
                                 catch (err: any) { toast.error(err?.message ?? "Failed to delete (in use?)"); }
                               }}

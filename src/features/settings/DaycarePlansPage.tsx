@@ -6,6 +6,7 @@ import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import {
   useCreateDaycarePlan, useDaycarePlans, useUpdateDaycarePlan, useDeleteDaycarePlan, type DaycarePlan,
 } from "@/features/daycare/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const PERMISSION = "settings.daycare.manage";
 
@@ -18,6 +19,7 @@ function emptyRow(): Draft {
 export default function DaycarePlansPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const { hasPermission } = useCurrentUser();
   const canManage = hasPermission(PERMISSION);
 
@@ -67,7 +69,7 @@ export default function DaycarePlansPage() {
   }
 
   async function onDelete(r: DaycarePlan) {
-    if (!window.confirm(`Delete plan "${r.name}"? Enrolments using it will keep referencing the deleted plan id.`)) return;
+    if (!(await confirm({ title: `Delete plan "${r.name}"?`, description: "Enrolments using it will keep referencing the deleted plan id.", confirmLabel: "Delete", tone: "destructive" }))) return;
     try { await del.mutateAsync(r.id); toast.success("Plan deleted"); }
     catch (err: any) { toast.error(err?.message ?? "Failed to delete (plan may be in use)"); }
   }

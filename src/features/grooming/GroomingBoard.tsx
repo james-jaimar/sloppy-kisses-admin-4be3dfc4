@@ -13,10 +13,12 @@ import {
   type GroomingBoardCard,
   type GroomingColumn,
 } from "./queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export function GroomingBoard({ day }: { day: Date }) {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
 
   const bookingsQ = useGroomingBoardBookings({ tenantId, day });
   const packagesQ = useGroomingPackages(tenantId, { activeOnly: true });
@@ -53,8 +55,7 @@ export function GroomingBoard({ day }: { day: Date }) {
         const parts: string[] = [];
         if (check.missing.length) parts.push(`Missing: ${check.missing.join(", ")}`);
         if (check.expired.length) parts.push(`Expired: ${check.expired.join(", ")}`);
-        const msg = `Vaccinations not up to date. ${parts.join(" · ")}. Continue and log override?`;
-        if (!confirm(msg)) return;
+        if (!(await confirm({ title: "Vaccinations not up to date", description: `${parts.join(" · ")}. Continue and log override?`, confirmLabel: "Continue & override" }))) return;
         try {
           await logVaccinationOverride({
             tenantId: tenantId!,

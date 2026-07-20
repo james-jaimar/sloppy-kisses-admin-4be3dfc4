@@ -6,6 +6,7 @@ import {
   checkVaccinations, logVaccinationOverride, useHotelWorkflowSettings, useUpdateBookingStatus,
   type HotelBookingRow, type HotelResourceRow,
 } from "./queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
 function endOfDay(d: Date) { const c = new Date(d); c.setHours(23,59,59,999); return c; }
@@ -29,6 +30,7 @@ export function TodayPanel({
   resources: HotelResourceRow[];
   today: Date;
 }) {
+  const confirm = useConfirm();
   const updateStatus = useUpdateBookingStatus(tenantId ?? "");
   const settingsQ = useHotelWorkflowSettings(tenantId);
   const gateMode = settingsQ.data?.vax_gate_mode ?? "soft";
@@ -57,8 +59,7 @@ export function TodayPanel({
           toast.error(`Cannot check in — vaccinations not up to date. ${parts.join(" · ")}`);
           return;
         }
-        const msg = `Vaccinations not up to date. ${parts.join(" · ")}. Continue and log override?`;
-        if (!confirm(msg)) return;
+        if (!(await confirm({ title: "Vaccinations not up to date", description: `${parts.join(" · ")}. Continue and log override?`, confirmLabel: "Continue & override" }))) return;
         try {
           await logVaccinationOverride({ tenantId: tenantId!, bookingId: b.id, note: `Hotel check-in override. ${parts.join(" · ")}` });
         } catch (err: any) {
