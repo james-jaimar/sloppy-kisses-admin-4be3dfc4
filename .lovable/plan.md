@@ -1,31 +1,61 @@
-## Bug
-The daycare enrolment "Customer & pet" picker only shows Abby, not Jackson, for Tracy Williams (SK04292).
+## Goal
 
-## Root cause (verified)
-`useTenantPetsWithOwners` in `src/features/daycare/queries.ts` does `select("...").eq("tenant_id", …).order("name", { ascending: true })` with no range. This tenant has **4,970 pets**, but PostgREST caps results at **1,000 rows** by default. Ordered alphabetically by pet name, "Abby" is in the first 1,000; "Jackson" is well past the cap and never reaches the client. Same picker is reused elsewhere and would silently truncate for any pet whose name sorts past ~row 1000.
+When a new daycare enrolment or a new hotel / grooming / transport booking is created (from anywhere — admin UI, portal wizard, or API), the system automatically creates a **draft invoice** for that customer, pre-filled with the correct line items where price data exists. Staff review and click Issue.
 
-## Fix
-Replace the "load every pet up front" pattern with a server-side search picker.
+Nothing currently does this — no trigger, no client-side call — so the "auto trigger" for Tracy's new enrolment simply doesn't exist yet. This plan builds it.
 
-1. **`src/features/daycare/queries.ts`**
-   - Replace `useTenantPetsWithOwners(tenantId)` with `useTenantPetsWithOwnersSearch(tenantId, query)`:
-     - `enabled` only when tenantId is set (empty query still runs, returning the first ~50 for the initial dropdown).
-     - Build the query with `.or(...)` across `name`, `breed` on pets and use `customers!inner(...)` with a nested `.or()` on `full_name`, `first_name`, `last_name`, `customer_number`, `email` when the query is non-empty. If a single combined `.or` across the joined table is awkward, do two parallel fetches (pets-match and customer-match) and merge/dedupe by pet id.
-     - Always `.limit(50)` and keep `.order("name")` so the list stays predictable.
-     - Keep `staleTime` short and add `keepPreviousData` for smooth typing.
+## Why draft, not issued
 
-2. **`src/features/daycare/EnrolmentDrawer.tsx`**
-   - Switch from the current in-memory filter to the new server-side hook: pass the debounced `query` string into `useTenantPetsWithOwnersSearch(tenantId, query)`.
-   - Remove the local `.filter(...)` block; render whatever the server returns, still grouped by customer.
-   - When editing an existing enrolment, fetch just the selected pet by id (small helper `usePetById`) so the trigger label shows correctly even if that pet isn't in the current search page.
-   - Debounce the query (~200 ms) with a small `useEffect` + `setTimeout`, or `useDeferredValue`.
+- Once an invoice moves to `sent` it's locked (existing `invoices_lock_after_send` trigger). Auto-issuing removes the staff's chance to tweak add-ons, tip a surcharge, waive a fee, etc.
+- Hotel and transport currently have no per-night / per-trip price on the details row, so their auto-line will be a $0 placeholder that a human must price before issuing.
 
-3. **Audit other pickers that share the same pattern** and fix them the same way if present (search for `.from("pets").select(` used to feed customer/pet dropdowns — likely candidates in `NewBookingModal`, `BookingFormModal`, `BookingRequestFormModal`, `PetsPage` filters). Only convert the ones used as dropdowns (not full-page lists that already paginate).
+## Trigger design (DB-side, one function per service)
 
-## Verification
-- Load `/admin/daycare/enrolments`, open **New enrolment**, type "tracy" → both Abby and Jackson appear under Tracy Willaims (SK04292).
-- Type "jackson" → Jackson appears.
-- Blank search shows the first 50 pets alphabetically with no truncation warning.
+All triggers run `SECURITY DEFINER` with `search_path=public`, mirror the pattern of `bookings_notify_changes`, and short-circuit if an invoice is already linked (idempotent — safe for re-runs / booking updates).
 
-## Out of scope
-Fixing the "Willaims" typo on Tracy's customer record — user can edit that in the customer detail page.
+Common helper: `public.ensure_draft_invoice(tenant_id, customer_id) → invoice_id`
+- Reuses the customer's existing open draft for that tenant if one exists (so multiple same-day enrolments roll into one draft), otherwise creates a new draft via `next_invoice_number`.
+
+### 1. Daycare — `daycare_enrolments AFTER INSERT`
+- Look up `daycare_plans` (name, price, billing_period, days_per_week).
+- Call `ensure_draft_invoice`.
+- Insert one `invoice_items` line: description `"Daycare — {plan.name} ({pet.name})"`, qty 1, unit_price `plan.price`.
+- Leave `bookings.invoice_id` untouched (enrolments aren't bookings). Store the invoice link back on the enrolment via a new nullable `invoice_id` column on `daycare_enrolments`.
+
+### 2. Grooming — `grooming_booking_details AFTER INSERT`
+- Look up parent booking + `grooming_packages` for `price_zar`.
+- Create draft invoice, insert package line + surcharge lines (`travel_fee`, `matted_surcharge_zar`, `sedation_surcharge_zar`) where > 0.
+- Set `bookings.invoice_id`.
+- Separate `grooming_booking_addons AFTER INSERT` trigger appends add-on lines to the same invoice (looks up the booking's `invoice_id`, appends via `invoice_items` — the existing `recompute` trigger keeps totals in sync).
+
+### 3. Hotel — `hotel_booking_details AFTER INSERT`
+- Create draft, insert one placeholder line: description `"Hotel stay — {nights} nights ({pet.name})"`, qty = nights, unit_price 0.
+- Set `bookings.invoice_id`. Staff prices before Issue.
+
+### 4. Transport — `transport_details AFTER INSERT`
+- Create draft, insert placeholder `"Transport — {direction}"` line at 0.
+- Set `bookings.invoice_id`.
+
+### 5. Settings toggle (settings-first rule)
+- Add columns to `invoicing_settings`: `auto_invoice_daycare bool default true`, `auto_invoice_hotel bool default true`, `auto_invoice_grooming bool default true`, `auto_invoice_transport bool default true`.
+- Each trigger reads the flag and no-ops if disabled.
+- New card in `InvoicingSettingsPage.tsx` with 4 switches so Charlotte can turn any of them off without a developer.
+
+## Frontend touches
+
+- `EnrolmentDrawer.tsx` — after successful save, toast now says "Enrolment created. Draft invoice #INVxxxxx" and links to it (reads the new `enrolment.invoice_id`).
+- `BookingInvoicePanel.tsx` — already shows the linked invoice, so hotel / grooming / transport bookings will just work.
+- `InvoicingSettingsPage.tsx` — add the 4-toggle "Auto-invoicing" card.
+
+## Explicitly out of scope
+
+- Back-filling the invoice for Tracy's new enrolment (user said no).
+- Auto-issuing (staff still clicks Issue).
+- Recurring / monthly billing rollups — that's a separate feature.
+- Any change to booking-request → booking approval flow (invoice will fire at the booking-created step downstream).
+
+## Files / migrations
+
+1. Migration: add `daycare_enrolments.invoice_id uuid`, add 4 `auto_invoice_*` flags to `invoicing_settings`, create `ensure_draft_invoice`, create 5 triggers.
+2. `src/features/invoices/queries.ts` + `InvoicingSettingsPage.tsx` — surface the toggles.
+3. `src/features/daycare/queries.ts` + `EnrolmentDrawer.tsx` — read/show the new `invoice_id` and link to the invoice from the success toast.
