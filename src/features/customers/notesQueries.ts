@@ -98,7 +98,7 @@ export function useUpdateCustomerNote(tenantId: string | null | undefined, custo
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: { id: string; body?: string; pinned?: boolean; alert?: boolean }) => {
-      const patch: Record<string, unknown> = {};
+      const patch: { body?: string; pinned?: boolean; alert?: boolean } = {};
       if (input.body !== undefined) patch.body = input.body.trim();
       if (input.pinned !== undefined) patch.pinned = input.pinned;
       if (input.alert !== undefined) patch.alert = input.alert;
