@@ -196,6 +196,53 @@ export default function InvoicingSettingsPage() {
             </div>
           </Section>
 
+          <Section title="Billing cycle">
+            <p className="mb-3 text-xs text-muted-foreground">
+              Controls how recurring services (daycare) are billed. In monthly prepaid mode, invoices are raised on the run day and cover the following month, with payment due by the due day of the covered month.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Cycle mode">
+                <select disabled={!canManage} value={form.billing_cycle}
+                  onChange={(e) => setForm({ ...form, billing_cycle: e.target.value })}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm">
+                  <option value="monthly_prepaid">Monthly prepaid</option>
+                  <option value="ad_hoc">Ad-hoc only</option>
+                </select>
+              </Field>
+              <Field label="Run day (of previous month)" hint="Day of month invoices are raised.">
+                <input type="number" min={1} max={28} disabled={!canManage} value={form.billing_run_day}
+                  onChange={(e) => setForm({ ...form, billing_run_day: Number(e.target.value) })}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+              </Field>
+              <Field label="Due day (of covered month)" hint="Day of the covered month the payment is due.">
+                <input type="number" min={1} max={28} disabled={!canManage} value={form.billing_due_day}
+                  onChange={(e) => setForm({ ...form, billing_due_day: Number(e.target.value) })}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+              </Field>
+            </div>
+
+            <div className="mt-5 rounded-lg border border-dashed border-border bg-sk-surface-muted/30 p-4">
+              <div className="mb-2 text-sm font-semibold">Run monthly daycare billing</div>
+              <p className="mb-3 text-xs text-muted-foreground">
+                Adds a draft line per active daycare enrolment for the chosen month. Safe to click twice — duplicate lines are skipped.
+              </p>
+              <div className="flex flex-wrap items-end gap-3">
+                <Field label="Billing period start" className="min-w-[180px]">
+                  <input type="date" value={runPeriod}
+                    onChange={(e) => setRunPeriod(e.target.value)}
+                    className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                </Field>
+                <button disabled={!canRun || running || !runPeriod} onClick={runMonthly}
+                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-sk-teal px-4 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                  <Play className="h-4 w-4" /> {running ? "Running…" : "Run for this month"}
+                </button>
+                {!canRun && (
+                  <span className="text-xs text-muted-foreground">Requires the "Run monthly billing" permission.</span>
+                )}
+              </div>
+            </div>
+          </Section>
+
           <div className="flex justify-end">
             <button disabled={!canManage || update.isPending} onClick={save}
               className="inline-flex h-10 items-center gap-2 rounded-lg bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
