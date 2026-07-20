@@ -20,6 +20,8 @@ export default function InvoicingSettingsPage() {
     company_name: "", vat_number: "", address: "", banking_details: "",
     invoice_prefix: "INV", next_number: 1, payment_terms_days: 14,
     default_vat_rate: 15, footer_notes: "", reminder_days: "3,7,14",
+    auto_invoice_daycare: true, auto_invoice_hotel: true,
+    auto_invoice_grooming: true, auto_invoice_transport: true,
   });
 
   useEffect(() => {
@@ -36,6 +38,10 @@ export default function InvoicingSettingsPage() {
         default_vat_rate: Number(d.default_vat_rate ?? 15),
         footer_notes: d.footer_notes ?? "",
         reminder_days: (d.reminder_days ?? [3, 7, 14]).join(","),
+        auto_invoice_daycare:   (d as any).auto_invoice_daycare   ?? true,
+        auto_invoice_hotel:     (d as any).auto_invoice_hotel     ?? true,
+        auto_invoice_grooming:  (d as any).auto_invoice_grooming  ?? true,
+        auto_invoice_transport: (d as any).auto_invoice_transport ?? true,
       });
     }
   }, [settingsQ.data]);
@@ -55,6 +61,10 @@ export default function InvoicingSettingsPage() {
         default_vat_rate: form.default_vat_rate,
         footer_notes: form.footer_notes || null,
         reminder_days,
+        auto_invoice_daycare: form.auto_invoice_daycare,
+        auto_invoice_hotel: form.auto_invoice_hotel,
+        auto_invoice_grooming: form.auto_invoice_grooming,
+        auto_invoice_transport: form.auto_invoice_transport,
       } as any);
       toast.success("Invoicing settings saved");
     } catch (err: any) { toast.error(err?.message ?? "Failed"); }
@@ -132,6 +142,28 @@ export default function InvoicingSettingsPage() {
                 onChange={(e) => setForm({ ...form, footer_notes: e.target.value })}
                 className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" />
             </Field>
+          </Section>
+
+          <Section title="Auto-invoicing">
+            <p className="mb-3 text-xs text-muted-foreground">
+              When on, a draft invoice is created automatically the moment a new enrolment or booking is added.
+              Staff still review line items and click Issue before anything is sent to the customer.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {([
+                ["auto_invoice_daycare",   "Daycare enrolments"],
+                ["auto_invoice_hotel",     "Hotel bookings"],
+                ["auto_invoice_grooming",  "Grooming bookings"],
+                ["auto_invoice_transport", "Transport bookings"],
+              ] as const).map(([key, label]) => (
+                <label key={key} className="flex items-center justify-between rounded-lg border border-border bg-white px-3 py-2 text-sm">
+                  <span>{label}</span>
+                  <input type="checkbox" disabled={!canManage}
+                    checked={(form as any)[key]}
+                    onChange={(e) => setForm({ ...form, [key]: e.target.checked } as any)} />
+                </label>
+              ))}
+            </div>
           </Section>
 
           <div className="flex justify-end">
