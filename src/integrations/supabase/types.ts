@@ -2733,6 +2733,8 @@ export type Database = {
         Row: {
           amount_paid: number
           balance_due: number
+          billing_period_end: string | null
+          billing_period_start: string | null
           created_at: string
           created_by: string | null
           customer_id: string
@@ -2763,6 +2765,8 @@ export type Database = {
         Insert: {
           amount_paid?: number
           balance_due?: number
+          billing_period_end?: string | null
+          billing_period_start?: string | null
           created_at?: string
           created_by?: string | null
           customer_id: string
@@ -2793,6 +2797,8 @@ export type Database = {
         Update: {
           amount_paid?: number
           balance_due?: number
+          billing_period_end?: string | null
+          billing_period_start?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string
@@ -2859,6 +2865,9 @@ export type Database = {
           auto_invoice_hotel: boolean
           auto_invoice_transport: boolean
           banking_details: string | null
+          billing_cycle: string
+          billing_due_day: number
+          billing_run_day: number
           company_name: string | null
           created_at: string
           credit_note_prefix: string
@@ -2881,6 +2890,9 @@ export type Database = {
           auto_invoice_hotel?: boolean
           auto_invoice_transport?: boolean
           banking_details?: string | null
+          billing_cycle?: string
+          billing_due_day?: number
+          billing_run_day?: number
           company_name?: string | null
           created_at?: string
           credit_note_prefix?: string
@@ -2903,6 +2915,9 @@ export type Database = {
           auto_invoice_hotel?: boolean
           auto_invoice_transport?: boolean
           banking_details?: string | null
+          billing_cycle?: string
+          billing_due_day?: number
+          billing_run_day?: number
           company_name?: string | null
           created_at?: string
           credit_note_prefix?: string
@@ -4773,6 +4788,13 @@ export type Database = {
         Args: { target_customer_id: string }
         Returns: Database["public"]["Enums"]["notification_status"]
       }
+      _period_bounds: {
+        Args: { p_anchor: string }
+        Returns: {
+          period_end: string
+          period_start: string
+        }[]
+      }
       _strip_auto_invoice_lines: {
         Args: { p_source_id: string; p_source_type: string }
         Returns: undefined
@@ -4811,7 +4833,13 @@ export type Database = {
       }
       delete_pet: { Args: { p_pet_id: string }; Returns: undefined }
       ensure_draft_invoice: {
-        Args: { p_customer_id: string; p_tenant_id: string }
+        Args: {
+          p_customer_id: string
+          p_notes_label?: string
+          p_period_end?: string
+          p_period_start?: string
+          p_tenant_id: string
+        }
         Returns: string
       }
       find_customer_email_duplicates: {
@@ -4823,6 +4851,10 @@ export type Database = {
           id: string
           status: string
         }[]
+      }
+      generate_monthly_daycare_invoices: {
+        Args: { p_period_start: string; p_tenant_id: string }
+        Returns: Json
       }
       get_public_invoice: { Args: { p_token: string }; Returns: Json }
       is_platform_owner: { Args: never; Returns: boolean }
