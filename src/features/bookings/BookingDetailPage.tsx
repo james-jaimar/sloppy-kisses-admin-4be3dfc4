@@ -12,6 +12,7 @@ import { useTransportLegExistsForBooking } from "@/features/transport/queries";
 import { Truck } from "lucide-react";
 import { BookingInvoicePanel } from "./BookingInvoicePanel";
 import { BookingCommsPanel } from "./BookingCommsPanel";
+import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -116,6 +117,7 @@ export default function BookingDetailPage() {
         ) : (
           <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-6">
+              <PinnedNotesBanner customerId={b.customer_id} tenantId={tenantId} />
               <div className="sk-card p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
