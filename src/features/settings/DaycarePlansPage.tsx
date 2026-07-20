@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
-import { Plus, Save, X } from "lucide-react";
+import { Plus, Save, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import {
-  useCreateDaycarePlan, useDaycarePlans, useUpdateDaycarePlan, type DaycarePlan,
+  useCreateDaycarePlan, useDaycarePlans, useUpdateDaycarePlan, useDeleteDaycarePlan, type DaycarePlan,
 } from "@/features/daycare/queries";
 
 const PERMISSION = "settings.daycare.manage";
@@ -24,6 +24,7 @@ export default function DaycarePlansPage() {
   const listQ = useDaycarePlans(tenantId);
   const create = useCreateDaycarePlan(tenantId ?? "");
   const update = useUpdateDaycarePlan(tenantId ?? "");
+  const del = useDeleteDaycarePlan(tenantId ?? "");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>({});
@@ -63,6 +64,12 @@ export default function DaycarePlansPage() {
       toast.success("Plan created");
       setCreating(false); setDraft({});
     } catch (err: any) { toast.error(err?.message ?? "Failed to create"); }
+  }
+
+  async function onDelete(r: DaycarePlan) {
+    if (!window.confirm(`Delete plan "${r.name}"? Enrolments using it will keep referencing the deleted plan id.`)) return;
+    try { await del.mutateAsync(r.id); toast.success("Plan deleted"); }
+    catch (err: any) { toast.error(err?.message ?? "Failed to delete (plan may be in use)"); }
   }
 
   return (
@@ -123,8 +130,14 @@ export default function DaycarePlansPage() {
                     <td className="px-5 py-3">{r.active ? "Yes" : "No"}</td>
                     <td className="px-5 py-3 text-right">
                       {canManage && (
-                        <button onClick={() => beginEdit(r)}
-                          className="rounded-lg border border-border px-3 py-1 text-xs hover:bg-sk-surface-muted">Edit</button>
+                        <div className="inline-flex gap-2">
+                          <button onClick={() => beginEdit(r)}
+                            className="rounded-lg border border-border px-3 py-1 text-xs hover:bg-sk-surface-muted">Edit</button>
+                          <button onClick={() => onDelete(r)} disabled={del.isPending}
+                            className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1 text-xs text-sk-coral-dark hover:bg-sk-coral-soft disabled:opacity-50">
+                            <Trash2 className="h-3.5 w-3.5" /> Delete
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
