@@ -59,8 +59,7 @@ export function TodayPanel({
           toast.error(`Cannot check in — vaccinations not up to date. ${parts.join(" · ")}`);
           return;
         }
-        const msg = `Vaccinations not up to date. ${parts.join(" · ")}. Continue and log override?`;
-        if (!confirm(msg)) return;
+        if (!(await confirm({ title: "Vaccinations not up to date", description: `${parts.join(" · ")}. Continue and log override?`, confirmLabel: "Continue & override" }))) return;
         try {
           await logVaccinationOverride({ tenantId: tenantId!, bookingId: b.id, note: `Hotel check-in override. ${parts.join(" · ")}` });
         } catch (err: any) {

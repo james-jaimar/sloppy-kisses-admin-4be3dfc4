@@ -69,7 +69,7 @@ export default function StockLocationsPage() {
                       <button onClick={() => { setEditingId(r.id); setCreating(false); setDraft({ id: r.id, name: r.name, is_default: r.is_default, active: r.active, sort_order: r.sort_order }); }}
                         className="rounded-lg border border-border px-3 py-1 text-xs">Edit</button>
                       <button onClick={async () => {
-                        if (!confirm("Delete location?")) return;
+                        if (!(await confirm({ title: "Delete location?", confirmLabel: "Delete", tone: "destructive" }))) return;
                         try { await del.mutateAsync(r.id); toast.success("Deleted"); }
                         catch (err: any) { toast.error(err?.message ?? "Failed"); }
                       }} className="rounded-lg border border-border px-3 py-1 text-xs text-sk-coral-dark">Delete</button>

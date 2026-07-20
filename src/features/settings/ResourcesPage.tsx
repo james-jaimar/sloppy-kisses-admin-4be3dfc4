@@ -42,7 +42,7 @@ export default function ResourcesPage() {
   }, [resourcesQ.data, search, typeFilter, showInactive]);
 
   async function handleDeactivate(r: ResourceRow) {
-    if (!confirm(`Deactivate "${r.name}"? Existing bookings keep their assignment.`)) return;
+    if (!(await confirm({ title: `Deactivate "${r.name}"?`, description: "Existing bookings keep their assignment.", confirmLabel: "Deactivate", tone: "destructive" }))) return;
     try {
       await deactivate.mutateAsync(r.id);
       toast.success("Resource deactivated");

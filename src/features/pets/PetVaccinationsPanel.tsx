@@ -76,7 +76,7 @@ export function PetVaccinationsPanel({ tenantId, petId, canManage: canManageOver
                     {canManage && (
                       <>
                         <button onClick={() => setEditing(v)} className="rounded px-2 py-0.5 text-xs hover:bg-muted">Edit</button>
-                        <button onClick={() => { if (confirm("Delete?")) del.mutate(v.id); }} className="rounded px-2 py-0.5 text-xs text-sk-coral-dark hover:bg-sk-coral-soft"><Trash2 className="inline h-3 w-3" /></button>
+                        <button onClick={async () => { if (await confirm({ title: "Delete vaccination record?", confirmLabel: "Delete", tone: "destructive" })) del.mutate(v.id); }} className="rounded px-2 py-0.5 text-xs text-sk-coral-dark hover:bg-sk-coral-soft"><Trash2 className="inline h-3 w-3" /></button>
                       </>
                     )}
                   </td>

@@ -85,7 +85,7 @@ export default function PaymentMethodsPage() {
                         <button onClick={() => { setEditingId(r.id); setDraft({ id: r.id, code: r.code, label: r.label, is_active: r.is_active, sort_order: r.sort_order }); setCreating(false); }}
                           className="rounded-lg border border-border px-3 py-1 text-xs">Edit</button>
                         <button onClick={async () => {
-                          if (!confirm("Delete method?")) return;
+                          if (!(await confirm({ title: "Delete payment method?", confirmLabel: "Delete", tone: "destructive" }))) return;
                           try { await del.mutateAsync(r.id); toast.success("Deleted"); }
                           catch (err: any) { toast.error(err?.message ?? "Failed"); }
                         }} className="rounded-lg border border-border px-3 py-1 text-xs text-sk-coral-dark">Delete</button>

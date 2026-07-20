@@ -102,7 +102,7 @@ export default function VaccinationRulesPage() {
                       <td className="px-4 py-2">{r.required ? "Yes" : "No"}</td>
                       <td className="px-4 py-2 text-right">
                         {canManage && (
-                          <button onClick={() => { if (confirm("Delete rule?")) del.mutate(r.id); }}
+                          <button onClick={async () => { if (await confirm({ title: "Delete rule?", confirmLabel: "Delete", tone: "destructive" })) del.mutate(r.id); }}
                             className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-sk-coral-dark hover:bg-sk-coral-soft">
                             <Trash2 className="h-3.5 w-3.5" /> Remove
                           </button>

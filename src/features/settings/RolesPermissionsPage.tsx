@@ -63,7 +63,7 @@ export default function RolesPermissionsPage() {
   }
 
   async function onDelete(role: RoleRow) {
-    if (!confirm(`Delete role "${role.label}"? Users assigned this role will lose it.`)) return;
+    if (!(await confirm({ title: `Delete role "${role.label}"?`, description: "Users assigned this role will lose it.", confirmLabel: "Delete", tone: "destructive" }))) return;
     try {
       await deleteRole.mutateAsync(role.id);
       toast({ title: "Role deleted" });

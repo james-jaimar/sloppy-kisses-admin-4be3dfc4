@@ -67,7 +67,7 @@ export default function ProductCategoriesPage() {
                       <button onClick={() => { setEditingId(r.id); setCreating(false); setDraft({ id: r.id, name: r.name, sort_order: r.sort_order, active: r.active }); }}
                         className="rounded-lg border border-border px-3 py-1 text-xs">Edit</button>
                       <button onClick={async () => {
-                        if (!confirm("Delete category?")) return;
+                        if (!(await confirm({ title: "Delete category?", confirmLabel: "Delete", tone: "destructive" }))) return;
                         try { await del.mutateAsync(r.id); toast.success("Deleted"); }
                         catch (err: any) { toast.error(err?.message ?? "Failed"); }
                       }} className="rounded-lg border border-border px-3 py-1 text-xs text-sk-coral-dark">Delete</button>
