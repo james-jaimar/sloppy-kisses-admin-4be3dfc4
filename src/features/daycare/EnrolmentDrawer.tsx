@@ -83,7 +83,7 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
           } as any,
         });
       } else {
-        await create.mutateAsync({
+        const created = await create.mutateAsync({
           pet_id: petId,
           customer_id: pet.customer_id,
           daycare_plan_id: planId || null,
@@ -93,6 +93,15 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
           notes: notes || null,
           active,
         });
+        const invNum = created?.invoice?.invoice_number;
+        const invId = created?.invoice_id;
+        if (invNum && invId) {
+          toast.success(`Enrolment created · Draft invoice ${invNum}`, {
+            action: { label: "Open", onClick: () => window.location.assign(`/admin/invoices/${invId}`) },
+          });
+          onOpenChange(false);
+          return;
+        }
       }
       toast.success(editing ? "Enrolment updated" : "Enrolment created");
       onOpenChange(false);
