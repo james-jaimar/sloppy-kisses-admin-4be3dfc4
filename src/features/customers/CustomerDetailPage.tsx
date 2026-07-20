@@ -54,6 +54,7 @@ export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { tenant } = useCurrentTenant();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [tab, setTab] = useState<Tab>("Pets");
   const [editing, setEditing] = useState(false);
   const [addingPet, setAddingPet] = useState(false);

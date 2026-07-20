@@ -42,6 +42,7 @@ export default function BookingDetailPage() {
   const location = useLocation();
   const backTo = (location.state as { from?: string } | null)?.from ?? "/admin/bookings";
   const [editOpen, setEditOpen] = useState(false);
+  const confirm = useConfirm();
 
   const detailQ = useBookingDetail(id, tenantId);
   const b = detailQ.data;

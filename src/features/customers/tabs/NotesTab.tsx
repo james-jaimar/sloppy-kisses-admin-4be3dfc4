@@ -100,6 +100,7 @@ function NoteRow({
 }) {
   const upd = useUpdateCustomerNote(tenantId, customerId);
   const del = useDeleteCustomerNote(tenantId, customerId);
+  const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.body);
 
@@ -149,7 +150,7 @@ function NoteRow({
           <button
             title="Delete"
             onClick={async () => {
-              if (await confirmDialog({ title: "Delete this note?", confirmLabel: "Delete", tone: "destructive" })) del.mutate(note.id);
+              if (await confirm({ title: "Delete this note?", confirmLabel: "Delete", tone: "destructive" })) del.mutate(note.id);
             }}
             className="rounded p-1 text-sk-coral-dark hover:bg-muted"
           >
