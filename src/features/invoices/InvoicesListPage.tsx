@@ -139,7 +139,14 @@ export default function InvoicesListPage() {
                       <tr key={r.id}
                         className="cursor-pointer hover:bg-sk-surface-muted/40"
                         onClick={() => navigate(`/admin/invoices/${r.id}`)}>
-                        <td className="px-5 py-3 font-mono text-xs">{r.invoice_number}</td>
+                        <td className="px-5 py-3 font-mono text-xs">
+                          <div>{r.invoice_number}</div>
+                          {(r as any).billing_period_start && (
+                            <div className="mt-0.5 inline-flex rounded-full bg-sk-teal/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sk-teal">
+                              {format(new Date((r as any).billing_period_start), "MMM yyyy")}
+                            </div>
+                          )}
+                        </td>
                         <td className="px-5 py-3">
                           <div className="font-medium">{r.customer?.full_name ?? "—"}</div>
                           <div className="text-xs text-muted-foreground">{r.customer?.customer_number}</div>
