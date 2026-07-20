@@ -887,6 +887,64 @@ export type Database = {
           },
         ]
       }
+      customer_notes: {
+        Row: {
+          alert: boolean
+          author_profile_id: string | null
+          body: string
+          created_at: string
+          customer_id: string
+          id: string
+          pinned: boolean
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          alert?: boolean
+          author_profile_id?: string | null
+          body: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          pinned?: boolean
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          alert?: boolean
+          author_profile_id?: string | null
+          body?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          pinned?: boolean
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notes_author_profile_id_fkey"
+            columns: ["author_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_notes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address_line_1: string | null
