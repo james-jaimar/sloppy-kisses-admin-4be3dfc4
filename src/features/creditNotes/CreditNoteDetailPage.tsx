@@ -12,12 +12,14 @@ import {
 } from "./queries";
 import { CreditNoteStatusChip, fmtZar } from "./status";
 import { ApplyCreditDialog } from "./ApplyCreditDialog";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function CreditNoteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { hasPermission, profile } = useCurrentUser();
   const isPlatform = profile?.user_type === "platform";
   const can = (code: string) => isPlatform || hasPermission(code);
