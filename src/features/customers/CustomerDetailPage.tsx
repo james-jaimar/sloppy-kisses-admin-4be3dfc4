@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
-import { useCustomer, useCustomerPets, useCustomerEmailDuplicates } from "./queries";
+import { useCustomer, useCustomerPets, useCustomerEmailDuplicates, useDeleteCustomer } from "./queries";
 import { CustomerFormModal } from "./CustomerFormModal";
 import { PetFormModal } from "@/features/pets/PetFormModal";
 import { format } from "date-fns";
@@ -20,7 +20,10 @@ import {
   Pencil,
   Users,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import type { PetRow } from "./queries";
 import { CustomerCreditPanel } from "@/features/customerCredit/CustomerCreditPanel";
 import PortalAccessPanel from "./PortalAccessPanel";
@@ -43,6 +46,7 @@ function initialsOf(name: string | null | undefined) {
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { tenant } = useCurrentTenant();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("Pets");
   const [editing, setEditing] = useState(false);
   const [addingPet, setAddingPet] = useState(false);
@@ -50,6 +54,7 @@ export default function CustomerDetailPage() {
 
   const { data: customer, isLoading, isError, error } = useCustomer(id, tenant?.id);
   const { data: emailDupes } = useCustomerEmailDuplicates(id);
+  const del = useDeleteCustomer(tenant?.id);
   const {
     data: pets,
     isLoading: petsLoading,
@@ -170,6 +175,22 @@ export default function CustomerDetailPage() {
                   </Link>
                   <button className="h-9 rounded-lg bg-sk-coral px-3 text-sm font-semibold text-white hover:bg-sk-coral-dark">
                     New booking
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm(`Delete customer ${name}? This removes their pets, draft invoices, and cannot be undone. Blocked if they have finalised invoices.`)) return;
+                      try {
+                        await del.mutateAsync(customer.id);
+                        toast.success("Customer deleted");
+                        navigate("/admin/customers");
+                      } catch (err: any) {
+                        toast.error(err?.message ?? "Failed to delete");
+                      }
+                    }}
+                    disabled={del.isPending}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-sk-coral-dark hover:bg-sk-coral-soft disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Delete
                   </button>
                 </div>
               </div>
