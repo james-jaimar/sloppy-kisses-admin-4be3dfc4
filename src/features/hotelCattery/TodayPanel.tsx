@@ -6,6 +6,7 @@ import {
   checkVaccinations, logVaccinationOverride, useHotelWorkflowSettings, useUpdateBookingStatus,
   type HotelBookingRow, type HotelResourceRow,
 } from "./queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
 function endOfDay(d: Date) { const c = new Date(d); c.setHours(23,59,59,999); return c; }
@@ -29,6 +30,7 @@ export function TodayPanel({
   resources: HotelResourceRow[];
   today: Date;
 }) {
+  const confirm = useConfirm();
   const updateStatus = useUpdateBookingStatus(tenantId ?? "");
   const settingsQ = useHotelWorkflowSettings(tenantId);
   const gateMode = settingsQ.data?.vax_gate_mode ?? "soft";

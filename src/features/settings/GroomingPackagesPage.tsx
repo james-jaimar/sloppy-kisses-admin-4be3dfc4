@@ -15,6 +15,7 @@ import {
   type GroomingSizeBand,
   type GroomingSpecies,
 } from "./groomingRateCardQueries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const PERMISSION = "settings.grooming.manage";
 
@@ -27,6 +28,7 @@ function emptyRow(): Draft {
 export default function GroomingPackagesPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const { hasPermission } = useCurrentUser();
   const canManage = hasPermission(PERMISSION);
   const del = useDeleteGroomingPackage(tenantId ?? "");

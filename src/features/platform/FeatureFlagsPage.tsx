@@ -2,11 +2,13 @@ import { useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useDeleteFlag, useFlags, useUpsertFlag } from "./queries";
 import { Flag, Plus, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function FeatureFlagsPage() {
   const flags = useFlags();
   const upsert = useUpsertFlag();
   const del = useDeleteFlag();
+  const confirm = useConfirm();
   const [newKey, setNewKey] = useState("");
   const [newDesc, setNewDesc] = useState("");
 

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useVaccinationRules, useUpsertVaccinationRule, useDeleteVaccinationRule, type VaccinationRule } from "@/features/comms/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const SERVICES = [
   { v: "daycare", l: "Daycare" },
@@ -18,6 +19,7 @@ const SERVICES = [
 export default function VaccinationRulesPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const { hasPermission } = useCurrentUser();
   const canManage = hasPermission("settings.vaccination.manage");
   const rulesQ = useVaccinationRules(tenantId);

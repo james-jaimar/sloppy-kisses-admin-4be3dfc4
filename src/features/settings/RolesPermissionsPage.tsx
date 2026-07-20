@@ -13,10 +13,12 @@ import {
   useToggleRolePermission,
   type RoleRow,
 } from "@/features/users/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function RolesPermissionsPage() {
   const { currentTenant, hasPermission } = useCurrentUser();
   const tenantId = currentTenant?.id ?? "";
+  const confirm = useConfirm();
   const rolesQ = useAssignableRoles(tenantId);
   const permsQ = usePermissionsCatalog();
   const matrixQ = useRolePermissionsMatrix();

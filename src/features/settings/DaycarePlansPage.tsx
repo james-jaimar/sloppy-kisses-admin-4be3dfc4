@@ -6,6 +6,7 @@ import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import {
   useCreateDaycarePlan, useDaycarePlans, useUpdateDaycarePlan, useDeleteDaycarePlan, type DaycarePlan,
 } from "@/features/daycare/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const PERMISSION = "settings.daycare.manage";
 
@@ -18,6 +19,7 @@ function emptyRow(): Draft {
 export default function DaycarePlansPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const { hasPermission } = useCurrentUser();
   const canManage = hasPermission(PERMISSION);
 

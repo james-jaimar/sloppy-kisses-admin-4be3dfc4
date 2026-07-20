@@ -9,6 +9,7 @@ import {
   useDeleteCustomerNote,
   type CustomerNote,
 } from "../notesQueries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export function NotesTab({ tenantId, customerId }: { tenantId: string; customerId: string }) {
   const { data, isLoading, isError, error } = useCustomerNotes(customerId, tenantId);

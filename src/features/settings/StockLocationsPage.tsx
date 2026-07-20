@@ -4,12 +4,14 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useDeleteStockLocation, useStockLocations, useUpsertStockLocation } from "@/features/shop/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Draft = { id?: string; name: string; is_default: boolean; active: boolean; sort_order: number };
 
 export default function StockLocationsPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const listQ = useStockLocations(tenantId);
   const upsert = useUpsertStockLocation(tenantId ?? "");
   const del = useDeleteStockLocation(tenantId ?? "");

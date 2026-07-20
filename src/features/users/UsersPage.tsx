@@ -6,10 +6,12 @@ import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useTenantMembers, useSetUserStatus, useRemoveTenantUser, resendInvite, type TenantUserRow } from "./queries";
 import InviteUserModal from "./InviteUserModal";
 import EditUserRolesDrawer from "./EditUserRolesDrawer";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function UsersPage() {
   const { currentTenant } = useCurrentUser();
   const tenantId = currentTenant?.id ?? "";
+  const confirm = useConfirm();
   const q = useTenantMembers(tenantId);
   const setStatus = useSetUserStatus(tenantId);
   const removeUser = useRemoveTenantUser(tenantId);
@@ -39,7 +41,7 @@ export default function UsersPage() {
   }
 
   async function onRemove(row: TenantUserRow) {
-    if (!confirm(`Remove ${row.profile.full_name ?? row.profile.email} from this tenant?`)) return;
+    if (!(await confirm({ title: "Remove user?", description: `${row.profile.full_name ?? row.profile.email} will lose access to this tenant.`, confirmLabel: "Remove", tone: "destructive" }))) return;
     try {
       await removeUser.mutateAsync(row.id);
       toast({ title: "User removed" });

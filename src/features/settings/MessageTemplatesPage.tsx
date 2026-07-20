@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useMessageTemplates, useUpsertMessageTemplate, useDeleteMessageTemplate, type MessageTemplate } from "@/features/comms/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const EVENT_CODES = [
   "booking_created","booking_rescheduled","booking_cancelled","booking_status_changed",
@@ -15,6 +16,7 @@ const EVENT_CODES = [
 export default function MessageTemplatesPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const { hasPermission } = useCurrentUser();
   const canManage = hasPermission("settings.comms.manage");
   const templatesQ = useMessageTemplates(tenantId);
@@ -52,7 +54,7 @@ export default function MessageTemplatesPage() {
 
   async function remove() {
     if (!selected?.id) return;
-    if (!confirm(`Delete template "${selected.name}"?`)) return;
+    if (!(await confirm({ title: `Delete template "${selected.name}"?`, confirmLabel: "Delete", tone: "destructive" }))) return;
     try { await del.mutateAsync(selected.id); toast.success("Deleted"); setSelectedId(null); setDraft({}); }
     catch (e: any) { toast.error(e?.message); }
   }

@@ -24,6 +24,7 @@ import {
 import { GroomingFields, HotelFields, TransportFields } from "./BookingDetailsFields";
 import { RecurrenceFields, DEFAULT_RECURRENCE, toRule, type RecurrenceValue } from "./RecurrenceFields";
 import { useCreateRecurringBooking } from "./recurringQueries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: ResourceType }[] = [
   { value: "daycare", label: "Daycare", resourceType: "daycare_area" },

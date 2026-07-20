@@ -7,11 +7,13 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useDaycareEnrolments, useDeleteEnrolment, WEEKDAY_LABEL, type DaycareEnrolment, type Weekday } from "./queries";
 import { EnrolmentDrawer } from "./EnrolmentDrawer";
 import { DaySwapDialog } from "./DaySwapDialog";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function EnrolmentsPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [showInactive, setShowInactive] = useState(false);
   const listQ = useDaycareEnrolments(tenantId, { activeOnly: !showInactive });
   const del = useDeleteEnrolment(tenantId as string);
@@ -22,7 +24,7 @@ export default function EnrolmentsPage() {
   const rows = useMemo(() => listQ.data ?? [], [listQ.data]);
 
   async function onDelete(r: DaycareEnrolment) {
-    if (!window.confirm(`Delete enrolment for ${r.pet?.name ?? "this pet"}? This will also remove any auto-created draft invoice line.`)) return;
+    if (!(await confirm({ title: `Delete enrolment for ${r.pet?.name ?? "this pet"}?`, description: "Any auto-created draft invoice line will also be removed.", confirmLabel: "Delete", tone: "destructive" }))) return;
     try {
       await del.mutateAsync(r.id);
       toast.success("Enrolment deleted");

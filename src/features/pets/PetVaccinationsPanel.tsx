@@ -4,6 +4,7 @@ import { Plus, Trash2, Syringe, CheckCircle2, AlertTriangle } from "lucide-react
 import { toast } from "sonner";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { usePetVaccinations, useUpsertPetVaccination, useDeletePetVaccination, type PetVaccination } from "@/features/comms/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 interface Props { tenantId: string; petId: string; canManage?: boolean }
 
@@ -18,6 +19,7 @@ function vaxStatus(v: PetVaccination): { label: string; tone: "green" | "orange"
 
 export function PetVaccinationsPanel({ tenantId, petId, canManage: canManageOverride }: Props) {
   const { hasPermission } = useCurrentUser();
+  const confirm = useConfirm();
   const canManage = canManageOverride ?? hasPermission("pets.manage_vaccinations");
   const q = usePetVaccinations(tenantId, petId);
   const upsert = useUpsertPetVaccination(tenantId, petId);

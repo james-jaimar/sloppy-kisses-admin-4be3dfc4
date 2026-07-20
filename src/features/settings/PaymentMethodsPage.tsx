@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useDeletePaymentMethod, usePaymentMethods, useUpsertPaymentMethod } from "@/features/invoices/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const PERMISSION = "settings.invoicing.manage";
 
@@ -12,6 +13,7 @@ type Draft = { id?: string; code: string; label: string; is_active: boolean; sor
 export default function PaymentMethodsPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const { hasPermission } = useCurrentUser();
   const canManage = hasPermission(PERMISSION);
 

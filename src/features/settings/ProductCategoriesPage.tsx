@@ -4,12 +4,14 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useDeleteProductCategory, useProductCategories, useUpsertProductCategory } from "@/features/shop/queries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Draft = { id?: string; name: string; sort_order: number; active: boolean };
 
 export default function ProductCategoriesPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const listQ = useProductCategories(tenantId);
   const upsert = useUpsertProductCategory(tenantId ?? "");
   const del = useDeleteProductCategory(tenantId ?? "");

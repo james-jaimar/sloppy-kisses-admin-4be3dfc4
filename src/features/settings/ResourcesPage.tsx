@@ -11,6 +11,7 @@ import {
   type ResourceRow,
 } from "./resourceQueries";
 import { ResourceFormModal } from "./ResourceFormModal";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const TYPE_LABEL: Record<string, string> = Object.fromEntries(
   RESOURCE_TYPES.map((t) => [t.value, t.label]),
@@ -19,6 +20,7 @@ const TYPE_LABEL: Record<string, string> = Object.fromEntries(
 export default function ResourcesPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const resourcesQ = useAllResources(tenantId);
   const deactivate = useDeleteResource(tenantId ?? "");
   const update = useUpdateResource(tenantId ?? "");

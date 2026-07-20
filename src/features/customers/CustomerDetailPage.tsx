@@ -33,6 +33,7 @@ import { InvoicesTab } from "./tabs/InvoicesTab";
 import { NotesTab } from "./tabs/NotesTab";
 import { DocumentsTab } from "./tabs/DocumentsTab";
 import { HistoryTab } from "./tabs/HistoryTab";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const TABS = ["Pets", "Bookings", "Invoices", "Credit", "Notes", "Documents", "History"] as const;
 type Tab = (typeof TABS)[number];

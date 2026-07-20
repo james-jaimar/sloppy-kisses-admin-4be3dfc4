@@ -9,6 +9,7 @@ import { BookingFormModal } from "./BookingFormModal";
 import { BookingStatusChip } from "./statusMeta";
 import { useBookingServiceDetails } from "./detailsQueries";
 import { useCancelSeriesForward } from "./recurringQueries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const STATUS_ACTIONS: { status: BookingStatus; label: string }[] = [
   { status: "confirmed", label: "Confirm" },
@@ -29,6 +30,7 @@ interface Props {
 
 export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
   const [editOpen, setEditOpen] = useState(false);
+  const confirm = useConfirm();
   const updateStatus = useUpdateBookingStatus(tenantId);
   const cancelSeries = useCancelSeriesForward(tenantId);
   const notificationsQ = useBookingNotifications(booking.id, tenantId);
@@ -51,9 +53,12 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
   }
 
   async function cancelThisAndFuture() {
-    const ok = confirm(
-      "Cancel this booking AND every future booking in the series? The rule will be deactivated too.",
-    );
+    const ok = await confirm({
+      title: "Cancel this and all future bookings?",
+      description: "The recurring rule will be deactivated too.",
+      confirmLabel: "Cancel series",
+      tone: "destructive",
+    });
     if (!ok) return;
     try {
       await cancelSeries.mutateAsync({ bookingId: booking.id });

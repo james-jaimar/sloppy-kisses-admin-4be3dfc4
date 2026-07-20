@@ -10,11 +10,13 @@ import { toast } from "sonner";
 import { PetFormModal } from "./PetFormModal";
 import { PetVaccinationsPanel } from "./PetVaccinationsPanel";
 import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function PetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { tenant } = useCurrentTenant();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { data: pet, isLoading, isError, error, refetch } = usePet(id, tenant?.id);
   const [editing, setEditing] = useState(false);
   const del = useDeletePet(tenant?.id);

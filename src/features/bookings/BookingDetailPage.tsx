@@ -13,6 +13,7 @@ import { Truck } from "lucide-react";
 import { BookingInvoicePanel } from "./BookingInvoicePanel";
 import { BookingCommsPanel } from "./BookingCommsPanel";
 import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",

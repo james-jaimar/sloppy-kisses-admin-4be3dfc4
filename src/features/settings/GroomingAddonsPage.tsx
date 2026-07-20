@@ -11,6 +11,7 @@ import {
   type GroomingAddon,
   type GroomingAddonKind,
 } from "./groomingRateCardQueries";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const PERMISSION = "settings.grooming.manage";
 const KINDS: { value: GroomingAddonKind; label: string }[] = [
@@ -32,6 +33,7 @@ function emptyRow(): Draft {
 export default function GroomingAddonsPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const confirm = useConfirm();
   const { hasPermission } = useCurrentUser();
   const canManage = hasPermission(PERMISSION);
 
