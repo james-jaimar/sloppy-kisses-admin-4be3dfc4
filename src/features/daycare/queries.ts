@@ -165,6 +165,37 @@ export function useUpdateEnrolment(tenantId: string) {
   });
 }
 
+export function useDeleteEnrolment(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.rpc("delete_daycare_enrolment", {
+        p_enrolment_id: id,
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["daycare_enrolments"] });
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+    },
+  });
+}
+
+export function useDeleteDaycarePlan(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("daycare_plans")
+        .delete()
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["daycare_plans"] }),
+  });
+}
+
 // -------------------- Day swaps --------------------
 
 export interface DaySwap {
