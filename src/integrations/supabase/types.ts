@@ -1199,6 +1199,7 @@ export type Database = {
           daycare_plan_id: string | null
           end_date: string | null
           id: string
+          invoice_id: string | null
           notes: string | null
           pet_id: string
           selected_days: string[]
@@ -1213,6 +1214,7 @@ export type Database = {
           daycare_plan_id?: string | null
           end_date?: string | null
           id?: string
+          invoice_id?: string | null
           notes?: string | null
           pet_id: string
           selected_days?: string[]
@@ -1227,6 +1229,7 @@ export type Database = {
           daycare_plan_id?: string | null
           end_date?: string | null
           id?: string
+          invoice_id?: string | null
           notes?: string | null
           pet_id?: string
           selected_days?: string[]
@@ -1247,6 +1250,13 @@ export type Database = {
             columns: ["daycare_plan_id"]
             isOneToOne: false
             referencedRelation: "daycare_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_enrolments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
@@ -2838,6 +2848,10 @@ export type Database = {
       invoicing_settings: {
         Row: {
           address: string | null
+          auto_invoice_daycare: boolean
+          auto_invoice_grooming: boolean
+          auto_invoice_hotel: boolean
+          auto_invoice_transport: boolean
           banking_details: string | null
           company_name: string | null
           created_at: string
@@ -2856,6 +2870,10 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          auto_invoice_daycare?: boolean
+          auto_invoice_grooming?: boolean
+          auto_invoice_hotel?: boolean
+          auto_invoice_transport?: boolean
           banking_details?: string | null
           company_name?: string | null
           created_at?: string
@@ -2874,6 +2892,10 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          auto_invoice_daycare?: boolean
+          auto_invoice_grooming?: boolean
+          auto_invoice_hotel?: boolean
+          auto_invoice_transport?: boolean
           banking_details?: string | null
           company_name?: string | null
           created_at?: string
@@ -4737,6 +4759,10 @@ export type Database = {
       }
     }
     Functions: {
+      _auto_invoice_enabled: {
+        Args: { p_service: string; p_tenant_id: string }
+        Returns: boolean
+      }
       _customer_notify_status: {
         Args: { target_customer_id: string }
         Returns: Database["public"]["Enums"]["notification_status"]
@@ -4767,6 +4793,10 @@ export type Database = {
         Returns: string
       }
       current_profile_id: { Args: never; Returns: string }
+      ensure_draft_invoice: {
+        Args: { p_customer_id: string; p_tenant_id: string }
+        Returns: string
+      }
       find_customer_email_duplicates: {
         Args: { target_customer_id: string }
         Returns: {
