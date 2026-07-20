@@ -27,6 +27,12 @@ import { toast } from "sonner";
 import type { PetRow } from "./queries";
 import { CustomerCreditPanel } from "@/features/customerCredit/CustomerCreditPanel";
 import PortalAccessPanel from "./PortalAccessPanel";
+import { PinnedNotesBanner } from "./PinnedNotesBanner";
+import { BookingsTab } from "./tabs/BookingsTab";
+import { InvoicesTab } from "./tabs/InvoicesTab";
+import { NotesTab } from "./tabs/NotesTab";
+import { DocumentsTab } from "./tabs/DocumentsTab";
+import { HistoryTab } from "./tabs/HistoryTab";
 
 const TABS = ["Pets", "Bookings", "Invoices", "Credit", "Notes", "Documents", "History"] as const;
 type Tab = (typeof TABS)[number];
@@ -116,6 +122,7 @@ export default function CustomerDetailPage() {
 
         {customer && (
           <>
+            <PinnedNotesBanner customerId={customer.id} tenantId={tenant?.id} />
             {emailDupes && emailDupes.length > 0 && (
               <div className="sk-card flex items-start gap-3 border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
                 <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
@@ -344,13 +351,20 @@ export default function CustomerDetailPage() {
                   <CustomerCreditPanel tenantId={tenant.id} customerId={customer.id} />
                 )}
 
-                {tab !== "Pets" && tab !== "Credit" && (
-                  <div className="flex flex-col items-center gap-2 py-10 text-center text-sm text-muted-foreground">
-                    <div className="font-medium text-foreground">{tab}</div>
-                    <div className="max-w-sm text-xs">
-                      Coming soon — this section will be wired up in a later step.
-                    </div>
-                  </div>
+                {tab === "Bookings" && tenant?.id && (
+                  <BookingsTab tenantId={tenant.id} customerId={customer.id} />
+                )}
+                {tab === "Invoices" && tenant?.id && (
+                  <InvoicesTab tenantId={tenant.id} customerId={customer.id} />
+                )}
+                {tab === "Notes" && tenant?.id && (
+                  <NotesTab tenantId={tenant.id} customerId={customer.id} />
+                )}
+                {tab === "Documents" && tenant?.id && (
+                  <DocumentsTab tenantId={tenant.id} customerId={customer.id} />
+                )}
+                {tab === "History" && tenant?.id && (
+                  <HistoryTab tenantId={tenant.id} customerId={customer.id} />
                 )}
               </div>
             </div>
