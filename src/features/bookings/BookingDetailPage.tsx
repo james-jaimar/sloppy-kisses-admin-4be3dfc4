@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
-import { ArrowLeft, Pencil, CalendarDays, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, Pencil, CalendarDays, ExternalLink, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
-import { useBookingDetail } from "./queries";
+import { useBookingDetail, useDeleteBooking } from "./queries";
 import { BookingStatusChip } from "./statusMeta";
 import { BookingFormModal } from "./BookingFormModal";
 import { useTransportLegExistsForBooking } from "@/features/transport/queries";
@@ -42,6 +43,7 @@ export default function BookingDetailPage() {
 
   const detailQ = useBookingDetail(id, tenantId);
   const b = detailQ.data;
+  const del = useDeleteBooking();
 
   const bookingDate = b?.start_at ? b.start_at.slice(0, 10) : null;
   const needsTransportHint = Boolean(
@@ -77,6 +79,24 @@ export default function BookingDetailPage() {
                 className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark"
               >
                 <Pencil className="h-4 w-4" /> Edit
+              </button>
+            )}
+            {b && (
+              <button
+                onClick={async () => {
+                  if (!window.confirm(`Delete booking ${b.booking_number}? Any auto-created draft invoice lines will be removed.`)) return;
+                  try {
+                    await del.mutateAsync(b.id);
+                    toast.success("Booking deleted");
+                    navigate(backTo);
+                  } catch (err: any) {
+                    toast.error(err?.message ?? "Failed to delete");
+                  }
+                }}
+                disabled={del.isPending}
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium text-sk-coral-dark hover:bg-sk-coral-soft disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
               </button>
             )}
           </div>
