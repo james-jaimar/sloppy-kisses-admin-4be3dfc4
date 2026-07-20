@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
 
 export function DocumentsTab({ tenantId, customerId }: { tenantId: string; customerId: string }) {
@@ -58,7 +59,18 @@ export function DocumentsTab({ tenantId, customerId }: { tenantId: string; custo
               <div className="truncate text-sm font-medium">{d.file_name ?? d.file_path}</div>
               <div className="text-xs text-muted-foreground">
                 {d.type ?? "document"}
-                {d.pet_name ? ` · ${d.pet_name}` : ""} ·{" "}
+                {d.pet_id && d.pet_name ? (
+                  <>
+                    {" · "}
+                    <Link
+                      to={`/admin/pets/${d.pet_id}`}
+                      className="text-sk-coral-dark hover:underline"
+                    >
+                      {d.pet_name}
+                    </Link>
+                  </>
+                ) : null}
+                {" · "}
                 {format(new Date(d.created_at), "dd MMM yyyy")}
               </div>
             </div>

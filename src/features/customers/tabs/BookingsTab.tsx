@@ -83,10 +83,9 @@ export function BookingsTab({ tenantId, customerId }: { tenantId: string; custom
               </thead>
               <tbody className="divide-y divide-border">
                 {rows.map((r) => {
-                  const pets = r.booking_pets
-                    .map((bp) => bp.pet?.name)
-                    .filter(Boolean)
-                    .join(", ");
+                  const petLinks = r.booking_pets
+                    .map((bp) => bp.pet)
+                    .filter((p): p is { id: string; name: string | null } => Boolean(p));
                   const when = r.start_at
                     ? `${format(new Date(r.start_at), "dd MMM yyyy HH:mm")}`
                     : `${fmt(r.start_date)}${r.end_date && r.end_date !== r.start_date ? ` – ${fmt(r.end_date)}` : ""}`;
@@ -100,7 +99,23 @@ export function BookingsTab({ tenantId, customerId }: { tenantId: string; custom
                           {r.booking_number}
                         </Link>
                       </td>
-                      <td className="px-3 py-2">{pets || "—"}</td>
+                      <td className="px-3 py-2">
+                        {petLinks.length ? (
+                          petLinks.map((p, idx) => (
+                            <span key={p.id}>
+                              <Link
+                                to={`/admin/pets/${p.id}`}
+                                className="hover:text-sk-coral-dark hover:underline"
+                              >
+                                {p.name ?? "—"}
+                              </Link>
+                              {idx < petLinks.length - 1 ? ", " : ""}
+                            </span>
+                          ))
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-muted-foreground">{when}</td>
                       <td className="px-3 py-2 text-muted-foreground">{r.resource?.name ?? "—"}</td>
                       <td className="px-3 py-2">
