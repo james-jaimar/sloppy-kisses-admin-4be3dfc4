@@ -389,3 +389,17 @@ export function useBookingNotifications(bookingId: string | null | undefined, te
     },
   });
 }
+
+export function useDeleteBooking() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any).rpc("delete_booking", { p_booking_id: id });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["bookings"] });
+      qc.invalidateQueries({ queryKey: ["invoices"] });
+    },
+  });
+}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Save, X } from "lucide-react";
+import { Plus, Save, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
@@ -9,6 +9,7 @@ import {
   useCreateGroomingPackage,
   useGroomingPackages,
   useUpdateGroomingPackage,
+  useDeleteGroomingPackage,
   type GroomingPackage,
   type GroomingPackageType,
   type GroomingSizeBand,
@@ -28,6 +29,7 @@ export default function GroomingPackagesPage() {
   const tenantId = tenant?.id ?? null;
   const { hasPermission } = useCurrentUser();
   const canManage = hasPermission(PERMISSION);
+  const del = useDeleteGroomingPackage(tenantId ?? "");
 
   const listQ = useGroomingPackages(tenantId);
   const update = useUpdateGroomingPackage(tenantId ?? "");
@@ -222,7 +224,18 @@ export default function GroomingPackagesPage() {
                             <button onClick={() => { setEditingId(null); setDraft({}); }} className="grid h-8 w-8 place-items-center rounded text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
                           </>
                         ) : canManage ? (
-                          <button onClick={() => beginEdit(r)} className="rounded-lg px-3 py-1 text-xs font-medium text-sk-coral-dark hover:bg-sk-coral-soft">Edit</button>
+                          <>
+                            <button onClick={() => beginEdit(r)} className="rounded-lg px-3 py-1 text-xs font-medium text-sk-coral-dark hover:bg-sk-coral-soft">Edit</button>
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm(`Delete package "${r.name}"?`)) return;
+                                try { await del.mutateAsync(r.id); toast.success("Deleted"); }
+                                catch (err: any) { toast.error(err?.message ?? "Failed to delete (in use?)"); }
+                              }}
+                              disabled={del.isPending}
+                              className="grid h-8 w-8 place-items-center rounded text-sk-coral-dark hover:bg-sk-coral-soft disabled:opacity-50"
+                            ><Trash2 className="h-4 w-4" /></button>
+                          </>
                         ) : null}
                       </div>
                     </td>

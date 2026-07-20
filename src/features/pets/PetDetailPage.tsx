@@ -1,19 +1,22 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
-import { usePet } from "@/features/customers/queries";
-import { AlertCircle, ArrowLeft, ExternalLink, Mail, Phone, User } from "lucide-react";
+import { usePet, useDeletePet } from "@/features/customers/queries";
+import { AlertCircle, ArrowLeft, ExternalLink, Mail, Phone, Trash2, User } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { PetFormModal } from "./PetFormModal";
 import { PetVaccinationsPanel } from "./PetVaccinationsPanel";
 
 export default function PetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { tenant } = useCurrentTenant();
+  const navigate = useNavigate();
   const { data: pet, isLoading, isError, error, refetch } = usePet(id, tenant?.id);
   const [editing, setEditing] = useState(false);
+  const del = useDeletePet(tenant?.id);
 
   const customer = (pet as any)?.customers ?? null;
   const active = pet?.status === "active";
@@ -25,12 +28,30 @@ export default function PetDetailPage() {
         subtitle={pet?.pet_number ? `#${pet.pet_number}` : undefined}
         actions={
           pet && tenant && customer ? (
-            <button
-              onClick={() => setEditing(true)}
-              className="h-10 rounded-xl border border-border bg-white px-4 text-sm font-semibold hover:bg-muted"
-            >
-              Edit pet
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditing(true)}
+                className="h-10 rounded-xl border border-border bg-white px-4 text-sm font-semibold hover:bg-muted"
+              >
+                Edit pet
+              </button>
+              <button
+                onClick={async () => {
+                  if (!window.confirm(`Delete pet ${pet.name}? Enrolments, vaccinations and attendance for this pet will be removed. Blocked if linked to finalised invoices.`)) return;
+                  try {
+                    await del.mutateAsync(pet.id);
+                    toast.success("Pet deleted");
+                    navigate(customer ? `/admin/customers/${customer.id}` : "/admin/pets");
+                  } catch (err: any) {
+                    toast.error(err?.message ?? "Failed to delete");
+                  }
+                }}
+                disabled={del.isPending}
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-sk-coral-dark hover:bg-sk-coral-soft disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </button>
+            </div>
           ) : null
         }
       />

@@ -111,3 +111,25 @@ export function useCreateGroomingAddon(tenantId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["grooming_addons"] }),
   });
 }
+
+export function useDeleteGroomingPackage(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("grooming_packages").delete().eq("id", id).eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["grooming_packages"] }),
+  });
+}
+
+export function useDeleteGroomingAddon(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("grooming_addons").delete().eq("id", id).eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["grooming_addons"] }),
+  });
+}

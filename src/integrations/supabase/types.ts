@@ -2653,6 +2653,8 @@ export type Database = {
           product_id: string | null
           quantity: number
           sort_order: number
+          source_id: string | null
+          source_type: string | null
           stock_movement_id: string | null
           tenant_id: string
           unit_price: number
@@ -2667,6 +2669,8 @@ export type Database = {
           product_id?: string | null
           quantity?: number
           sort_order?: number
+          source_id?: string | null
+          source_type?: string | null
           stock_movement_id?: string | null
           tenant_id: string
           unit_price?: number
@@ -2681,6 +2685,8 @@ export type Database = {
           product_id?: string | null
           quantity?: number
           sort_order?: number
+          source_id?: string | null
+          source_type?: string | null
           stock_movement_id?: string | null
           tenant_id?: string
           unit_price?: number
@@ -4767,6 +4773,10 @@ export type Database = {
         Args: { target_customer_id: string }
         Returns: Database["public"]["Enums"]["notification_status"]
       }
+      _strip_auto_invoice_lines: {
+        Args: { p_source_id: string; p_source_type: string }
+        Returns: undefined
+      }
       adjust_customer_credit: {
         Args: { p_amount: number; p_customer_id: string; p_notes: string }
         Returns: string
@@ -4793,6 +4803,13 @@ export type Database = {
         Returns: string
       }
       current_profile_id: { Args: never; Returns: string }
+      delete_booking: { Args: { p_booking_id: string }; Returns: undefined }
+      delete_customer: { Args: { p_customer_id: string }; Returns: undefined }
+      delete_daycare_enrolment: {
+        Args: { p_enrolment_id: string }
+        Returns: undefined
+      }
+      delete_pet: { Args: { p_pet_id: string }; Returns: undefined }
       ensure_draft_invoice: {
         Args: { p_customer_id: string; p_tenant_id: string }
         Returns: string

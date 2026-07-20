@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { Plus, ArrowLeftRight, Pencil } from "lucide-react";
+import { Plus, ArrowLeftRight, Pencil, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
-import { useDaycareEnrolments, WEEKDAY_LABEL, type DaycareEnrolment, type Weekday } from "./queries";
+import { useDaycareEnrolments, useDeleteEnrolment, WEEKDAY_LABEL, type DaycareEnrolment, type Weekday } from "./queries";
 import { EnrolmentDrawer } from "./EnrolmentDrawer";
 import { DaySwapDialog } from "./DaySwapDialog";
 
@@ -13,11 +14,22 @@ export default function EnrolmentsPage() {
   const navigate = useNavigate();
   const [showInactive, setShowInactive] = useState(false);
   const listQ = useDaycareEnrolments(tenantId, { activeOnly: !showInactive });
+  const del = useDeleteEnrolment(tenantId as string);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<DaycareEnrolment | null>(null);
   const [swapEnrolment, setSwapEnrolment] = useState<DaycareEnrolment | null>(null);
 
   const rows = useMemo(() => listQ.data ?? [], [listQ.data]);
+
+  async function onDelete(r: DaycareEnrolment) {
+    if (!window.confirm(`Delete enrolment for ${r.pet?.name ?? "this pet"}? This will also remove any auto-created draft invoice line.`)) return;
+    try {
+      await del.mutateAsync(r.id);
+      toast.success("Enrolment deleted");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Failed to delete");
+    }
+  }
 
   return (
     <>
@@ -98,6 +110,10 @@ export default function EnrolmentsPage() {
                         <button onClick={() => { setEditing(r); setDrawerOpen(true); }}
                           className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs hover:bg-sk-surface-muted">
                           <Pencil className="h-3.5 w-3.5" /> Edit
+                        </button>
+                        <button onClick={() => onDelete(r)} disabled={del.isPending}
+                          className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs text-sk-coral-dark hover:bg-sk-coral-soft disabled:opacity-50">
+                          <Trash2 className="h-3.5 w-3.5" /> Delete
                         </button>
                       </div>
                     </td>
