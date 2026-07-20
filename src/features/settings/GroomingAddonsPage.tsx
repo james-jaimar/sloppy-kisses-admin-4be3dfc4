@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Save, X } from "lucide-react";
+import { Plus, Save, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
@@ -7,6 +7,7 @@ import {
   useCreateGroomingAddon,
   useGroomingAddons,
   useUpdateGroomingAddon,
+  useDeleteGroomingAddon,
   type GroomingAddon,
   type GroomingAddonKind,
 } from "./groomingRateCardQueries";
@@ -37,6 +38,7 @@ export default function GroomingAddonsPage() {
   const listQ = useGroomingAddons(tenantId);
   const update = useUpdateGroomingAddon(tenantId ?? "");
   const create = useCreateGroomingAddon(tenantId ?? "");
+  const del = useDeleteGroomingAddon(tenantId ?? "");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft>({});
@@ -184,7 +186,18 @@ export default function GroomingAddonsPage() {
                             <button onClick={() => { setEditingId(null); setDraft({}); }} className="grid h-8 w-8 place-items-center rounded text-muted-foreground hover:bg-muted"><X className="h-4 w-4" /></button>
                           </>
                         ) : canManage ? (
-                          <button onClick={() => { setEditingId(r.id); setDraft({ ...r }); setCreating(false); }} className="rounded-lg px-3 py-1 text-xs font-medium text-sk-coral-dark hover:bg-sk-coral-soft">Edit</button>
+                          <>
+                            <button onClick={() => { setEditingId(r.id); setDraft({ ...r }); setCreating(false); }} className="rounded-lg px-3 py-1 text-xs font-medium text-sk-coral-dark hover:bg-sk-coral-soft">Edit</button>
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm(`Delete add-on "${r.name}"?`)) return;
+                                try { await del.mutateAsync(r.id); toast.success("Deleted"); }
+                                catch (err: any) { toast.error(err?.message ?? "Failed to delete (in use?)"); }
+                              }}
+                              disabled={del.isPending}
+                              className="grid h-8 w-8 place-items-center rounded text-sk-coral-dark hover:bg-sk-coral-soft disabled:opacity-50"
+                            ><Trash2 className="h-4 w-4" /></button>
+                          </>
                         ) : null}
                       </div>
                     </td>
