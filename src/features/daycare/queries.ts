@@ -100,6 +100,7 @@ export interface DaycareEnrolment {
   selected_days: string[];
   active: boolean;
   notes: string | null;
+  invoice_id: string | null;
   pet: { id: string; name: string | null; species: string | null; breed: string | null } | null;
   customer: { id: string; full_name: string | null } | null;
   plan: { id: string; name: string } | null;
@@ -115,7 +116,7 @@ export function useDaycareEnrolments(tenantId: string | null | undefined, opts?:
         .from("daycare_enrolments")
         .select(`
           id, tenant_id, pet_id, customer_id, daycare_plan_id, start_date, end_date,
-          selected_days, active, notes,
+          selected_days, active, notes, invoice_id,
           pet:pets(id, name, species, breed),
           customer:customers(id, full_name),
           plan:daycare_plans(id, name)
@@ -137,12 +138,13 @@ export function useCreateEnrolment(tenantId: string) {
       pet_id: string; customer_id: string; daycare_plan_id: string | null;
       start_date: string; end_date?: string | null; selected_days: string[]; notes?: string | null; active?: boolean;
     }) => {
-      const { error } = await supabase.from("daycare_enrolments").insert({
+      const { data, error } = await supabase.from("daycare_enrolments").insert({
         tenant_id: tenantId,
         ...input,
         active: input.active ?? true,
-      } as any);
+      } as any).select("id, invoice_id, invoice:invoices(id, invoice_number)").single();
       if (error) throw error;
+      return data as any;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["daycare_enrolments"] }),
   });
