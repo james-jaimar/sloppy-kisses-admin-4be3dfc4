@@ -1,52 +1,45 @@
-## Goal
-Enable safe delete/archive across admin areas that currently only support Create/Update, starting with what blocked you on Tracy's enrolment. Every delete respects invoice locking rules and reverses auto-created invoice lines.
+## Root cause
 
-## What's missing today (verified)
-Only `useDeleteResource` exists in the mutation hooks. No delete for:
-- Daycare: enrolments, plans, day swaps, attendance rows
-- Bookings (admin) and booking pets
-- Customers, Pets
-- Grooming: packages, add-ons, per-booking add-ons
-- Hotel booking details, Transport details
-- Settings items with delete UI but half-wired (spot-check)
+The enrolment save fails inside the auto-invoice trigger chain, not in the enrolment insert itself.
 
-## Scope for this round
-Deliver full CRUD for the operator-facing entities most likely to need cleanup:
+- `daycare_enrolments_auto_invoice()` calls `ensure_draft_invoice()`, then `UPDATE public.invoices ... WHERE id = v_inv`.
+- That UPDATE fires trigger `trg_invoices_lock_after_send` → function `invoices_lock_after_send()`.
+- Inside that function:
+  ```sql
+  v_locked_statuses text[] := ARRAY['sent','part_paid','paid','overdue','cancelled'];
+  IF TG_OP = 'UPDATE' AND OLD.status = ANY(v_locked_statuses) THEN
+  ```
+  `OLD.status` is enum `billing_status`; `v_locked_statuses` is `text[]`. Postgres has no implicit `billing_status = text` operator, so every UPDATE on `invoices` raises:
+  `operator does not exist: billing_status = text`.
 
-1. **Daycare**
-   - `EnrolmentsPage`: add Delete (with confirm). If enrolment has an auto-created draft invoice line, remove that single line; if the draft invoice becomes empty, delete the draft too.
-   - `DaycarePlansPage`: add Delete (block when in use by active enrolments → offer Archive instead).
-   - `DaySwapDialog`: allow deleting an existing swap.
-   - Attendance row: allow clearing a check-in/out on the board card (revert to expected).
+This is why the enrolment (and any other flow that updates an invoice row via a trigger — recompute totals from hotel/grooming/transport auto-invoice, payments, refunds) breaks the moment an invoice already exists to update.
 
-2. **Bookings**
-   - Booking detail: add Cancel + Delete (delete only for draft/requested; otherwise force Cancel). Deleting removes booking + `*_booking_details` + `booking_pets`; blocks if a non-draft invoice is linked.
+## Fix
 
-3. **Customers & Pets**
-   - Customer detail: Archive (soft) + Delete (hard, only when no bookings/invoices/pets). Pet: Archive + Delete (only when no bookings/attendance).
+Single migration that redefines `public.invoices_lock_after_send()` to compare enum-to-enum:
 
-4. **Grooming settings**
-   - `GroomingPackagesPage`, `GroomingAddonsPage`: add Delete with in-use guard (archive fallback).
+```sql
+CREATE OR REPLACE FUNCTION public.invoices_lock_after_send()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_locked billing_status[] := ARRAY['sent','part_paid','paid','overdue','cancelled']::billing_status[];
+BEGIN
+  IF TG_OP = 'UPDATE' AND OLD.status = ANY(v_locked) THEN
+    ... (existing body unchanged) ...
+  END IF;
+  RETURN NEW;
+END;
+$$;
+```
 
-5. **Resources**
-   - Convert current "deactivate" to true Delete when unused, Archive otherwise.
+No schema changes, no data changes, no frontend changes.
 
-6. **Guardrails (DB)**
-   - New SECURITY DEFINER RPCs: `delete_daycare_enrolment`, `delete_booking`, `delete_customer`, `delete_pet` — each checks `user_has_permission`, refuses when linked to locked invoices, and cleans up auto-invoice lines/empty drafts atomically.
-   - New permission codes: `daycare.enrolments.delete`, `bookings.delete`, `customers.delete`, `pets.delete`, `grooming.catalog.delete`, `resources.delete`. Granted to the Owner/Admin roles by default.
+## Verification
 
-## UX pattern (consistent)
-- Row/detail overflow menu → "Delete" opens an AlertDialog with the reason it may be blocked and an "Archive instead" fallback where relevant.
-- Toast confirms deletion and, if a draft invoice was affected, links to the updated invoice.
-
-## Out of scope (call out but don't build now)
-- Deleting sent invoices / payments (already correctly locked; credit-note flow stays the answer).
-- Bulk delete UIs.
-- Platform-level tenants/users deletion.
-
-## Technical notes
-- Client hooks added to each feature's `queries.ts` (`useDeleteEnrolment`, `useDeletePlan`, `useDeleteBooking`, `useDeleteCustomer`, `useDeletePet`, `useDeleteGroomingPackage`, `useDeleteGroomingAddon`).
-- Migrations: one SQL file adding the RPCs, permission rows, and role_permission grants for the default Owner/Admin roles per tenant.
-- Types regen after migration; UI wiring lands after.
-
-Confirm and I'll implement in this order: DB migration → daycare enrolment delete (unblocks Tracy) → the rest.
+1. After migration, retry adding Jackson to daycare — the enrolment saves and a draft invoice line is created.
+2. Sanity-check with `supabase--read_query`: `UPDATE public.invoices SET updated_at = now() WHERE id = <any existing draft>` no longer errors.
+3. Confirm locked-invoice guard still works: attempt to change `total` on a `sent` invoice must still be blocked.
