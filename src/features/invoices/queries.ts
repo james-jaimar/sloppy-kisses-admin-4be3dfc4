@@ -252,8 +252,10 @@ export function useRecordPayment(tenantId: string) {
       payment_reference?: string | null;
       paid_at?: string | null;
       notes?: string | null;
+      proof_document_id?: string | null;
+      allocations?: { invoice_id: string; amount: number }[] | null;
     }) => {
-      const { error } = await supabase.from("payments").insert({
+      const { data: payRow, error } = await supabase.from("payments").insert({
         tenant_id: tenantId,
         invoice_id: input.invoice_id,
         customer_id: input.customer_id,
@@ -262,15 +264,44 @@ export function useRecordPayment(tenantId: string) {
         payment_reference: input.payment_reference ?? null,
         paid_at: input.paid_at ?? new Date().toISOString(),
         notes: input.notes ?? null,
+        proof_document_id: input.proof_document_id ?? null,
         status: "received",
-      } as any);
+      } as any).select("id").single();
       if (error) throw error;
-      await recomputeInvoiceTotals(input.invoice_id, tenantId);
+      const allocs = (input.allocations ?? []).filter((a) => a.amount > 0);
+      if (allocs.length > 0 && payRow?.id) {
+        const { error: aErr } = await supabase.rpc("allocate_payment" as any, {
+          p_payment_id: payRow.id,
+          p_allocations: allocs as any,
+        });
+        if (aErr) throw aErr;
+      } else {
+        await recomputeInvoiceTotals(input.invoice_id, tenantId);
+      }
     },
     onSuccess: (_r, v) => {
       qc.invalidateQueries({ queryKey: ["invoice", tenantId, v.invoice_id] });
       qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.invalidateQueries({ queryKey: ["payments"] });
+      qc.invalidateQueries({ queryKey: ["customer-open-invoices"] });
+    },
+  });
+}
+
+export function useCustomerOpenInvoices(tenantId: string | null | undefined, customerId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["customer-open-invoices", tenantId, customerId],
+    enabled: Boolean(tenantId && customerId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("id, invoice_number, total, amount_paid, balance_due, status, issue_date, due_date, billing_period_start")
+        .eq("tenant_id", tenantId as string)
+        .eq("customer_id", customerId as string)
+        .not("status", "in", "(draft,cancelled,paid)")
+        .order("due_date", { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return (data ?? []).filter((r: any) => Number(r.balance_due ?? 0) > 0);
     },
   });
 }
