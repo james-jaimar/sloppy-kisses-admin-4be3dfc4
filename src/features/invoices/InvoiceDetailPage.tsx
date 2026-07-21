@@ -45,7 +45,10 @@ export default function InvoiceDetailPage() {
   const [refundFor, setRefundFor] = useState<any | null>(null);
   const [allocateOpen, setAllocateOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ description: string; quantity: number; unit_price: number }>({ description: "", quantity: 1, unit_price: 0 });
+  const defaultVat = Number((useInvoicingSettings as any) ? 0 : 0); // placeholder; real default read below
+  const [draft, setDraft] = useState<{ description: string; quantity: number; unit_price: number; vat_rate: number; discount_pct: number; vat_inclusive: boolean }>(
+    { description: "", quantity: 1, unit_price: 0, vat_rate: 15, discount_pct: 0, vat_inclusive: false }
+  );
   const [adding, setAdding] = useState(false);
   const [notesEdit, setNotesEdit] = useState<string | null>(null);
 
@@ -80,9 +83,12 @@ export default function InvoiceDetailPage() {
         description: draft.description,
         quantity: Number(draft.quantity),
         unit_price: Number(draft.unit_price),
+        vat_rate: Number(draft.vat_rate),
+        discount_pct: Number(draft.discount_pct),
+        vat_inclusive: !!draft.vat_inclusive,
       });
       setEditingId(null); setAdding(false);
-      setDraft({ description: "", quantity: 1, unit_price: 0 });
+      setDraft({ description: "", quantity: 1, unit_price: 0, vat_rate: Number(settingsQ.data?.default_vat_rate ?? 15), discount_pct: 0, vat_inclusive: !!(settingsQ.data as any)?.prices_include_vat });
     } catch (err: any) { toast.error(err?.message ?? "Failed"); }
   }
 
