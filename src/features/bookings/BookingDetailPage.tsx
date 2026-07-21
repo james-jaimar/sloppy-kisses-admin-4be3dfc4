@@ -14,6 +14,7 @@ import { BookingInvoicePanel } from "./BookingInvoicePanel";
 import { BookingCommsPanel } from "./BookingCommsPanel";
 import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { HotelVaxGatePanel } from "./HotelVaxGatePanel";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -120,6 +121,9 @@ export default function BookingDetailPage() {
           <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-6">
               <PinnedNotesBanner customerId={b.customer_id} tenantId={tenantId} />
+              {tenantId && (b.service_type === "hotel_dog" || b.service_type === "hotel_cat") && (
+                <HotelVaxGatePanel tenantId={tenantId} bookingId={b.id} />
+              )}
               <div className="sk-card p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
