@@ -111,6 +111,8 @@ import { PaySuccessPage, PayCancelPage } from "@/features/invoices/PayResultPage
 import ReportsIndexPage from "@/features/reports/ReportsIndexPage";
 import AgingReportPage from "@/features/reports/AgingReportPage";
 import CustomerStatementPage from "@/features/reports/CustomerStatementPage";
+import RevenueReportPage from "@/features/reports/RevenueReportPage";
+import VatReportPage from "@/features/reports/VatReportPage";
 
 const queryClient = new QueryClient();
 
@@ -171,6 +173,8 @@ const App = () => (
                 <Route element={<RequirePermission code="reports.view" />}>
                   <Route path="/admin/reports" element={<ReportsIndexPage />} />
                   <Route path="/admin/reports/aging" element={<AgingReportPage />} />
+                  <Route path="/admin/reports/revenue" element={<RevenueReportPage />} />
+                  <Route path="/admin/reports/vat" element={<VatReportPage />} />
                 </Route>
                 <Route element={<RequirePermission code="users.manage" />}>
                   <Route path="/admin/users" element={<UsersPage />} />
