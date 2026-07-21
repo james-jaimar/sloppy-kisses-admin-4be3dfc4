@@ -171,6 +171,8 @@ export interface HotelWorkflowSettings {
   check_in_close_time: string;
   check_out_by_time: string;
   late_checkout_fee_zar: number;
+  peak_start_month_day: string | null;  // 'MM-DD'
+  peak_end_month_day: string | null;
 }
 
 export function useHotelWorkflowSettings(tenantId: string | null | undefined) {

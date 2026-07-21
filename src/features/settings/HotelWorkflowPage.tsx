@@ -30,6 +30,8 @@ export default function HotelWorkflowPage() {
     check_in_close_time: "18:00",
     check_out_by_time: "11:00",
     late_checkout_fee_zar: 0,
+    peak_start_month_day: "",
+    peak_end_month_day: "",
   });
 
   useEffect(() => {
@@ -40,6 +42,8 @@ export default function HotelWorkflowPage() {
         check_in_close_time: trimTime(settingsQ.data.check_in_close_time),
         check_out_by_time: trimTime(settingsQ.data.check_out_by_time),
         late_checkout_fee_zar: Number(settingsQ.data.late_checkout_fee_zar ?? 0),
+        peak_start_month_day: settingsQ.data.peak_start_month_day ?? "",
+        peak_end_month_day: settingsQ.data.peak_end_month_day ?? "",
       });
     }
   }, [settingsQ.data]);
@@ -52,6 +56,8 @@ export default function HotelWorkflowPage() {
         check_in_close_time: form.check_in_close_time,
         check_out_by_time: form.check_out_by_time,
         late_checkout_fee_zar: form.late_checkout_fee_zar,
+        peak_start_month_day: form.peak_start_month_day || null,
+        peak_end_month_day: form.peak_end_month_day || null,
       });
       toast.success("Hotel workflow settings saved");
     } catch (err: any) {
@@ -122,6 +128,31 @@ export default function HotelWorkflowPage() {
                 disabled={!canManage}
                 value={form.late_checkout_fee_zar}
                 onChange={(e) => setForm((f) => ({ ...f, late_checkout_fee_zar: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+              />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Peak season starts (MM-DD)" hint="e.g. 12-15 for 15 December. Leave blank to disable peak pricing.">
+              <input
+                type="text"
+                placeholder="MM-DD"
+                pattern="\d{2}-\d{2}"
+                disabled={!canManage}
+                value={form.peak_start_month_day}
+                onChange={(e) => setForm((f) => ({ ...f, peak_start_month_day: e.target.value }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+              />
+            </Field>
+            <Field label="Peak season ends (MM-DD)">
+              <input
+                type="text"
+                placeholder="MM-DD"
+                pattern="\d{2}-\d{2}"
+                disabled={!canManage}
+                value={form.peak_end_month_day}
+                onChange={(e) => setForm((f) => ({ ...f, peak_end_month_day: e.target.value }))}
                 className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
               />
             </Field>
