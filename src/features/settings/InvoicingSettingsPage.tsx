@@ -23,6 +23,7 @@ export default function InvoicingSettingsPage() {
     company_name: "", vat_number: "", address: "", banking_details: "",
     invoice_prefix: "INV", next_number: 1, payment_terms_days: 14,
     default_vat_rate: 15, footer_notes: "", reminder_days: "3,7,14",
+    prices_include_vat: false,
     auto_invoice_daycare: true, auto_invoice_hotel: true,
     auto_invoice_grooming: true, auto_invoice_transport: true,
     billing_cycle: "monthly_prepaid", billing_run_day: 22, billing_due_day: 1,
@@ -45,6 +46,7 @@ export default function InvoicingSettingsPage() {
         default_vat_rate: Number(d.default_vat_rate ?? 15),
         footer_notes: d.footer_notes ?? "",
         reminder_days: (d.reminder_days ?? [3, 7, 14]).join(","),
+        prices_include_vat: !!(d as any).prices_include_vat,
         auto_invoice_daycare:   (d as any).auto_invoice_daycare   ?? true,
         auto_invoice_hotel:     (d as any).auto_invoice_hotel     ?? true,
         auto_invoice_grooming:  (d as any).auto_invoice_grooming  ?? true,
@@ -71,6 +73,7 @@ export default function InvoicingSettingsPage() {
         default_vat_rate: form.default_vat_rate,
         footer_notes: form.footer_notes || null,
         reminder_days,
+        prices_include_vat: form.prices_include_vat,
         auto_invoice_daycare: form.auto_invoice_daycare,
         auto_invoice_hotel: form.auto_invoice_hotel,
         auto_invoice_grooming: form.auto_invoice_grooming,
@@ -157,6 +160,13 @@ export default function InvoicingSettingsPage() {
                 <input type="number" min={0} step="0.01" disabled={!canManage} value={form.default_vat_rate}
                   onChange={(e) => setForm({ ...form, default_vat_rate: Number(e.target.value) })}
                   className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+              </Field>
+              <Field label="Prices include VAT">
+                <label className="flex h-10 items-center gap-2 rounded-lg border border-border bg-white px-3 text-sm">
+                  <input type="checkbox" disabled={!canManage} checked={form.prices_include_vat}
+                    onChange={(e) => setForm({ ...form, prices_include_vat: e.target.checked })} />
+                  <span className="text-xs text-muted-foreground">New line unit prices are VAT-inclusive by default</span>
+                </label>
               </Field>
               <Field label="Reminder cadence (days after due)" hint="Comma-separated, e.g. 3,7,14" className="sm:col-span-2">
                 <input disabled={!canManage} value={form.reminder_days}

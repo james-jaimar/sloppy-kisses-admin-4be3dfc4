@@ -45,7 +45,8 @@ export default function InvoiceDetailPage() {
   const [refundFor, setRefundFor] = useState<any | null>(null);
   const [allocateOpen, setAllocateOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ description: string; quantity: number; unit_price: number }>({ description: "", quantity: 1, unit_price: 0 });
+  type Draft = { description: string; quantity: number; unit_price: number; vat_rate: number; discount_pct: number; vat_inclusive: boolean };
+  const [draft, setDraft] = useState<Draft>({ description: "", quantity: 1, unit_price: 0, vat_rate: 15, discount_pct: 0, vat_inclusive: false });
   const [adding, setAdding] = useState(false);
   const [notesEdit, setNotesEdit] = useState<string | null>(null);
 
@@ -80,9 +81,12 @@ export default function InvoiceDetailPage() {
         description: draft.description,
         quantity: Number(draft.quantity),
         unit_price: Number(draft.unit_price),
+        vat_rate: Number(draft.vat_rate),
+        discount_pct: Number(draft.discount_pct),
+        vat_inclusive: !!draft.vat_inclusive,
       });
       setEditingId(null); setAdding(false);
-      setDraft({ description: "", quantity: 1, unit_price: 0 });
+      setDraft({ description: "", quantity: 1, unit_price: 0, vat_rate: Number(settingsQ.data?.default_vat_rate ?? 15), discount_pct: 0, vat_inclusive: !!(settingsQ.data as any)?.prices_include_vat });
     } catch (err: any) { toast.error(err?.message ?? "Failed"); }
   }
 
@@ -232,7 +236,7 @@ export default function InvoiceDetailPage() {
                 <div className="flex items-center justify-between border-b border-border px-5 py-3">
                   <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Line items</div>
                   {isDraft && canUpdate && !adding && !editingId && (
-                    <button onClick={() => { setAdding(true); setDraft({ description: "", quantity: 1, unit_price: 0 }); }}
+                    <button onClick={() => { setAdding(true); setDraft({ description: "", quantity: 1, unit_price: 0, vat_rate: Number(settingsQ.data?.default_vat_rate ?? 15), discount_pct: 0, vat_inclusive: !!(settingsQ.data as any)?.prices_include_vat }); }}
                       className="inline-flex items-center gap-1 rounded-lg bg-sk-coral px-2.5 py-1 text-xs font-semibold text-white hover:bg-sk-coral-dark">
                       <Plus className="h-3.5 w-3.5" /> Add line
                     </button>
@@ -244,6 +248,8 @@ export default function InvoiceDetailPage() {
                       <th className="px-5 py-2">Description</th>
                       <th className="px-5 py-2 w-20 text-right">Qty</th>
                       <th className="px-5 py-2 w-32 text-right">Unit</th>
+                      <th className="px-5 py-2 w-16 text-right">Disc%</th>
+                      <th className="px-5 py-2 w-16 text-right">VAT%</th>
                       <th className="px-5 py-2 w-32 text-right">Total</th>
                       <th className="px-5 py-2 w-24"></th>
                     </tr>
@@ -257,11 +263,13 @@ export default function InvoiceDetailPage() {
                         <td className="px-5 py-3">{it.description}</td>
                         <td className="px-5 py-3 text-right tabular-nums">{Number(it.quantity)}</td>
                         <td className="px-5 py-3 text-right tabular-nums">{fmtZar(it.unit_price)}</td>
+                        <td className="px-5 py-3 text-right tabular-nums text-xs text-muted-foreground">{Number((it as any).discount_pct ?? 0) || "—"}</td>
+                        <td className="px-5 py-3 text-right tabular-nums text-xs text-muted-foreground">{Number((it as any).vat_rate ?? 0) || "—"}</td>
                         <td className="px-5 py-3 text-right tabular-nums font-semibold">{fmtZar(it.line_total)}</td>
                         <td className="px-5 py-3 text-right">
                           {isDraft && canUpdate && (
                             <div className="inline-flex gap-1">
-                              <button onClick={() => { setEditingId(it.id); setDraft({ description: it.description, quantity: Number(it.quantity), unit_price: Number(it.unit_price) }); }}
+                              <button onClick={() => { setEditingId(it.id); setDraft({ description: it.description, quantity: Number(it.quantity), unit_price: Number(it.unit_price), vat_rate: Number((it as any).vat_rate ?? settingsQ.data?.default_vat_rate ?? 15), discount_pct: Number((it as any).discount_pct ?? 0), vat_inclusive: !!(it as any).vat_inclusive }); }}
                                 className="rounded border border-border px-2 py-0.5 text-xs">Edit</button>
                               <button onClick={async () => {
                                 if (!(await confirm({ title: "Remove line?", confirmLabel: "Remove", tone: "destructive" }))) return;
@@ -279,12 +287,29 @@ export default function InvoiceDetailPage() {
                         onCancel={() => setAdding(false)} onSave={() => saveLine(inv.id)} pending={upsert.isPending} />
                     )}
                     {inv.items.length === 0 && !adding && (
-                      <tr><td colSpan={5} className="px-5 py-10 text-center text-muted-foreground">No lines yet.</td></tr>
+                      <tr><td colSpan={7} className="px-5 py-10 text-center text-muted-foreground">No lines yet.</td></tr>
                     )}
                   </tbody>
                   <tfoot className="bg-sk-surface-muted">
                     <tr>
-                      <td colSpan={3} className="px-5 py-3 text-right text-sm font-semibold">Total</td>
+                      <td colSpan={5} className="px-5 py-2 text-right text-xs text-muted-foreground">Subtotal</td>
+                      <td className="px-5 py-2 text-right text-xs tabular-nums">{fmtZar(inv.subtotal)}</td>
+                      <td />
+                    </tr>
+                    {Number((inv as any).discount_total ?? 0) > 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-5 py-2 text-right text-xs text-muted-foreground">Discount</td>
+                        <td className="px-5 py-2 text-right text-xs tabular-nums">−{fmtZar((inv as any).discount_total)}</td>
+                        <td />
+                      </tr>
+                    )}
+                    <tr>
+                      <td colSpan={5} className="px-5 py-2 text-right text-xs text-muted-foreground">VAT</td>
+                      <td className="px-5 py-2 text-right text-xs tabular-nums">{fmtZar((inv as any).tax_total ?? 0)}</td>
+                      <td />
+                    </tr>
+                    <tr>
+                      <td colSpan={5} className="px-5 py-3 text-right text-sm font-semibold">Total</td>
                       <td className="px-5 py-3 text-right text-sm font-semibold tabular-nums">{fmtZar(inv.total)}</td>
                       <td />
                     </tr>
@@ -632,36 +657,62 @@ function eventDetail(ev: InvoiceEvent): string {
 }
 
 function LineEditor({ draft, setDraft, onCancel, onSave, pending }: {
-  draft: { description: string; quantity: number; unit_price: number };
+  draft: { description: string; quantity: number; unit_price: number; vat_rate: number; discount_pct: number; vat_inclusive: boolean };
   setDraft: (d: any) => void; onCancel: () => void; onSave: () => void; pending: boolean;
 }) {
+  const gross = Number(draft.quantity) * Number(draft.unit_price);
+  const disc = gross * (Number(draft.discount_pct) || 0) / 100;
+  const net = draft.vat_inclusive
+    ? (gross - disc) / (1 + (Number(draft.vat_rate) || 0) / 100)
+    : (gross - disc);
   return (
-    <tr className="bg-sk-surface-muted/60">
-      <td className="px-5 py-2">
-        <input autoFocus value={draft.description}
-          onChange={(e) => setDraft({ ...draft, description: e.target.value })}
-          className="h-9 w-full rounded border border-border bg-white px-2 text-sm" />
-      </td>
-      <td className="px-5 py-2">
-        <input type="number" min={0} step="0.01" value={draft.quantity}
-          onChange={(e) => setDraft({ ...draft, quantity: Number(e.target.value) })}
-          className="h-9 w-full rounded border border-border bg-white px-2 text-sm text-right tabular-nums" />
-      </td>
-      <td className="px-5 py-2">
-        <input type="number" min={0} step="0.01" value={draft.unit_price}
-          onChange={(e) => setDraft({ ...draft, unit_price: Number(e.target.value) })}
-          className="h-9 w-full rounded border border-border bg-white px-2 text-sm text-right tabular-nums" />
-      </td>
-      <td className="px-5 py-2 text-right tabular-nums text-sm text-muted-foreground">
-        {fmtZar(Number(draft.quantity) * Number(draft.unit_price))}
-      </td>
-      <td className="px-5 py-2 text-right">
-        <div className="inline-flex gap-1">
-          <button onClick={onSave} disabled={pending}
-            className="rounded bg-sk-coral px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">Save</button>
-          <button onClick={onCancel} className="rounded border border-border px-2 py-1 text-xs">Cancel</button>
-        </div>
-      </td>
-    </tr>
+    <>
+      <tr className="bg-sk-surface-muted/60">
+        <td className="px-5 py-2">
+          <input autoFocus value={draft.description}
+            onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+            className="h-9 w-full rounded border border-border bg-white px-2 text-sm" />
+        </td>
+        <td className="px-5 py-2">
+          <input type="number" min={0} step="0.01" value={draft.quantity}
+            onChange={(e) => setDraft({ ...draft, quantity: Number(e.target.value) })}
+            className="h-9 w-full rounded border border-border bg-white px-2 text-sm text-right tabular-nums" />
+        </td>
+        <td className="px-5 py-2">
+          <input type="number" min={0} step="0.01" value={draft.unit_price}
+            onChange={(e) => setDraft({ ...draft, unit_price: Number(e.target.value) })}
+            className="h-9 w-full rounded border border-border bg-white px-2 text-sm text-right tabular-nums" />
+        </td>
+        <td className="px-5 py-2">
+          <input type="number" min={0} max={100} step="0.01" value={draft.discount_pct}
+            onChange={(e) => setDraft({ ...draft, discount_pct: Number(e.target.value) })}
+            className="h-9 w-full rounded border border-border bg-white px-2 text-sm text-right tabular-nums" />
+        </td>
+        <td className="px-5 py-2">
+          <input type="number" min={0} max={100} step="0.01" value={draft.vat_rate}
+            onChange={(e) => setDraft({ ...draft, vat_rate: Number(e.target.value) })}
+            className="h-9 w-full rounded border border-border bg-white px-2 text-sm text-right tabular-nums" />
+        </td>
+        <td className="px-5 py-2 text-right tabular-nums text-sm text-muted-foreground">
+          {fmtZar(net)}
+        </td>
+        <td className="px-5 py-2 text-right">
+          <div className="inline-flex gap-1">
+            <button onClick={onSave} disabled={pending}
+              className="rounded bg-sk-coral px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">Save</button>
+            <button onClick={onCancel} className="rounded border border-border px-2 py-1 text-xs">Cancel</button>
+          </div>
+        </td>
+      </tr>
+      <tr className="bg-sk-surface-muted/60">
+        <td colSpan={7} className="px-5 pb-2 pt-0 text-xs text-muted-foreground">
+          <label className="inline-flex items-center gap-1.5">
+            <input type="checkbox" checked={draft.vat_inclusive}
+              onChange={(e) => setDraft({ ...draft, vat_inclusive: e.target.checked })} />
+            Unit price includes VAT
+          </label>
+        </td>
+      </tr>
+    </>
   );
 }

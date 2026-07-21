@@ -2705,6 +2705,8 @@ export type Database = {
           booking_id: string | null
           created_at: string
           description: string
+          discount_amount: number
+          discount_pct: number
           id: string
           invoice_id: string
           line_total: number
@@ -2716,12 +2718,17 @@ export type Database = {
           stock_movement_id: string | null
           tenant_id: string
           unit_price: number
+          vat_amount: number
+          vat_inclusive: boolean
+          vat_rate: number | null
           xero_account_code: string | null
         }
         Insert: {
           booking_id?: string | null
           created_at?: string
           description: string
+          discount_amount?: number
+          discount_pct?: number
           id?: string
           invoice_id: string
           line_total?: number
@@ -2733,12 +2740,17 @@ export type Database = {
           stock_movement_id?: string | null
           tenant_id: string
           unit_price?: number
+          vat_amount?: number
+          vat_inclusive?: boolean
+          vat_rate?: number | null
           xero_account_code?: string | null
         }
         Update: {
           booking_id?: string | null
           created_at?: string
           description?: string
+          discount_amount?: number
+          discount_pct?: number
           id?: string
           invoice_id?: string
           line_total?: number
@@ -2750,6 +2762,9 @@ export type Database = {
           stock_movement_id?: string | null
           tenant_id?: string
           unit_price?: number
+          vat_amount?: number
+          vat_inclusive?: boolean
+          vat_rate?: number | null
           xero_account_code?: string | null
         }
         Relationships: [
@@ -2799,6 +2814,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           customer_id: string
+          discount_total: number
           due_date: string | null
           id: string
           invoice_number: string
@@ -2815,6 +2831,7 @@ export type Database = {
           sent_at: string | null
           status: Database["public"]["Enums"]["billing_status"]
           subtotal: number
+          tax_total: number
           tenant_id: string
           total: number
           updated_at: string
@@ -2831,6 +2848,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_id: string
+          discount_total?: number
           due_date?: string | null
           id?: string
           invoice_number: string
@@ -2847,6 +2865,7 @@ export type Database = {
           sent_at?: string | null
           status?: Database["public"]["Enums"]["billing_status"]
           subtotal?: number
+          tax_total?: number
           tenant_id: string
           total?: number
           updated_at?: string
@@ -2863,6 +2882,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_id?: string
+          discount_total?: number
           due_date?: string | null
           id?: string
           invoice_number?: string
@@ -2879,6 +2899,7 @@ export type Database = {
           sent_at?: string | null
           status?: Database["public"]["Enums"]["billing_status"]
           subtotal?: number
+          tax_total?: number
           tenant_id?: string
           total?: number
           updated_at?: string
@@ -2939,6 +2960,7 @@ export type Database = {
           next_credit_note_number: number
           next_number: number
           payment_terms_days: number
+          prices_include_vat: boolean
           reminder_days: number[]
           tenant_id: string
           updated_at: string
@@ -2964,6 +2986,7 @@ export type Database = {
           next_credit_note_number?: number
           next_number?: number
           payment_terms_days?: number
+          prices_include_vat?: boolean
           reminder_days?: number[]
           tenant_id: string
           updated_at?: string
@@ -2989,6 +3012,7 @@ export type Database = {
           next_credit_note_number?: number
           next_number?: number
           payment_terms_days?: number
+          prices_include_vat?: boolean
           reminder_days?: number[]
           tenant_id?: string
           updated_at?: string
