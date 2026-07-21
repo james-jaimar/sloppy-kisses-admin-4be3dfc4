@@ -32,6 +32,13 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/hotel-rates",
+    label: "Hotel & Cattery rates",
+    description: "Nightly rates by species/accommodation, peak uplift, extra-pet fee, and surcharges.",
+    icon: Hotel,
+    ready: true,
+  },
+  {
     to: "/admin/settings/van-workflow",
     label: "Mobile van workflow",
     description: "Travel gap warnings, working hours, per-van home suburb.",

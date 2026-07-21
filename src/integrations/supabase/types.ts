@@ -2475,6 +2475,158 @@ export type Database = {
           },
         ]
       }
+      hotel_booking_surcharges: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          price_override_zar: number | null
+          quantity: number
+          surcharge_id: string
+          tenant_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          price_override_zar?: number | null
+          quantity?: number
+          surcharge_id: string
+          tenant_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          price_override_zar?: number | null
+          quantity?: number
+          surcharge_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_booking_surcharges_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_booking_surcharges_surcharge_id_fkey"
+            columns: ["surcharge_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_surcharges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_booking_surcharges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_rate_cards: {
+        Row: {
+          accommodation_type: string
+          active: boolean
+          created_at: string
+          display_name: string
+          extra_pet_rate_zar: number
+          id: string
+          nightly_rate_zar: number
+          peak_uplift_pct: number
+          sort_order: number
+          species: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          accommodation_type: string
+          active?: boolean
+          created_at?: string
+          display_name: string
+          extra_pet_rate_zar?: number
+          id?: string
+          nightly_rate_zar?: number
+          peak_uplift_pct?: number
+          sort_order?: number
+          species: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          accommodation_type?: string
+          active?: boolean
+          created_at?: string
+          display_name?: string
+          extra_pet_rate_zar?: number
+          id?: string
+          nightly_rate_zar?: number
+          peak_uplift_pct?: number
+          sort_order?: number
+          species?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_rate_cards_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_surcharges: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          per_night: boolean
+          price_zar: number
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          per_night?: boolean
+          price_zar?: number
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          per_night?: boolean
+          price_zar?: number
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_surcharges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotel_workflow_settings: {
         Row: {
           check_in_close_time: string
@@ -2483,6 +2635,8 @@ export type Database = {
           created_at: string
           id: string
           late_checkout_fee_zar: number
+          peak_end_month_day: string | null
+          peak_start_month_day: string | null
           tenant_id: string
           updated_at: string
           vax_gate_mode: string
@@ -2494,6 +2648,8 @@ export type Database = {
           created_at?: string
           id?: string
           late_checkout_fee_zar?: number
+          peak_end_month_day?: string | null
+          peak_start_month_day?: string | null
           tenant_id: string
           updated_at?: string
           vax_gate_mode?: string
@@ -2505,6 +2661,8 @@ export type Database = {
           created_at?: string
           id?: string
           late_checkout_fee_zar?: number
+          peak_end_month_day?: string | null
+          peak_start_month_day?: string | null
           tenant_id?: string
           updated_at?: string
           vax_gate_mode?: string
@@ -5001,6 +5159,16 @@ export type Database = {
         Returns: Json
       }
       get_public_invoice: { Args: { p_token: string }; Returns: Json }
+      hotel_can_confirm_booking: {
+        Args: { p_booking_id: string }
+        Returns: {
+          expiry_date: string
+          pet_id: string
+          pet_name: string
+          status: string
+          vaccine_type: string
+        }[]
+      }
       is_platform_owner: { Args: never; Returns: boolean }
       log_invoice_event: {
         Args: {
