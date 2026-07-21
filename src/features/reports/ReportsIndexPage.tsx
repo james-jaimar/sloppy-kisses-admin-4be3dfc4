@@ -1,8 +1,20 @@
 import { Link } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { BarChart3, FileText } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Percent } from "lucide-react";
 
 const CARDS = [
+  {
+    to: "/admin/reports/revenue",
+    title: "Revenue",
+    description: "Invoiced revenue by month, net vs VAT, and top customers. CSV export for the selected date range.",
+    icon: TrendingUp,
+  },
+  {
+    to: "/admin/reports/vat",
+    title: "VAT report",
+    description: "Bi-monthly output VAT summary aligned to SARS Category A/B periods. Per-invoice breakdown and CSV export.",
+    icon: Percent,
+  },
   {
     to: "/admin/reports/aging",
     title: "Debtors aging",
