@@ -1,49 +1,86 @@
-## Revised Slice 2 — Payment capture polish + Xero-ready data
+## Sprint 2 — Hotel & Cattery to daycare parity
 
-Scope corrected: no reconciliation, no bank CSV import, no bank connections. Xero will do the heavy accounting later; this app just needs clean, complete data to hand over and easy tools for admin to mark invoices paid from emailed proofs of payment.
+Daycare is the reference. Every hotel/cattery booking should travel the same path end-to-end:
 
-### What to build
+```text
+Request (portal or admin)
+  → Convert to Booking (bookings + hotel_booking_details)
+    → Resource assigned (kennel / run / cattery pen)
+      → Status transitions logged in booking_status_events
+        → Vaccination gate before confirm
+          → Auto draft invoice line "Hotel stay — {pet} · {nights} nights"
+            → Visible on Customer detail (Bookings + Invoices)
+              → Visible on Customer portal
+                → Comms fired at each key step
+```
 
-**1. Payment allocation across multiple invoices**
-On a customer's page (and from the Record Payment dialog when opened without a specific invoice), let admin capture one payment and split it across several open invoices in one go.
-- New "Record payment" entry point on customer detail → Invoices tab and on `/admin/payments`.
-- Dialog lists the customer's unpaid invoices oldest-first with an amount input per row; "Auto-allocate" button fills top-down.
-- Any unallocated remainder posts to `customer_credit_ledger` as credit (existing table).
-- Server-side RPC does the allocation atomically so partial failures can't leave orphaned rows.
+Current state (verified this turn):
+- `hotel_booking_details` table exists; `hotel_details_auto_invoice` trigger already fires but inserts the "Hotel stay" line with **unit_price = 0** — no rate card wired.
+- `HotelBoardPage` renders occupancy but has no create/edit flow of its own.
+- `BookingFormModal` supports `hotel_dog` / `hotel_cat` with `HotelFields`, so the admin form exists.
+- `HotelRequestWizard` (customer portal) writes to `booking_requests` with a `request_payload` JSONB; `BookingRequestQueue` can flip status to `converted` but there is **no dispatcher that opens the booking modal pre-filled from the payload**.
+- No vaccination gate is enforced on confirm for hotel today (grooming has one — mirror that pattern).
 
-**2. Proof-of-payment attachments**
-So admin has an audit trail when they mark an invoice paid from an emailed POP.
-- Add optional file upload to the Record Payment dialog (PDF/JPG/PNG, single file).
-- Store in existing `documents` bucket, link via new `payments.proof_document_id`.
-- Show a paperclip + "View proof" link on the payment row in invoice detail and payments list.
+### What we'll build
 
-**3. Xero-ready data hygiene**
-Small, targeted additions so the eventual Xero export is clean:
-- Add a **Xero contact code** field on customers (free text, defaults to SK number). Shown in customer detail and included in CSV exports.
-- Add **account code** (free text) on `products` and on `invoice_items` so lines can map to Xero revenue accounts. Default per product; overridable per line.
-- Ensure every invoice line has: description, quantity, unit price, VAT rate, account code, contact code.
-- **Xero-format CSV export** on `/admin/invoices` — one row per invoice line matching Xero's Sales Invoice import columns (ContactName, EmailAddress, InvoiceNumber, InvoiceDate, DueDate, Description, Quantity, UnitAmount, AccountCode, TaxType, TrackingName1, etc.). Sits alongside the existing plain CSV.
-- **Xero-format payments CSV** — one row per payment (Date, Amount, Payee, Reference, InvoiceNumber).
+**1. Hotel rate card (Settings)**
+- New `hotel_rate_cards` table: tenant, species (dog/cat), accommodation type (e.g. `standard_kennel`, `luxury_kennel`, `cattery_pen`), nightly rate ZAR, optional weekend/peak uplift %, extra-pet-in-same-room rate.
+- New `hotel_surcharges` table for named add-ons: bath on checkout, medication admin, single-feed, transport handover — each with a price.
+- Settings page `Admin → Settings → Hotel rates` with CRUD, gated by `settings.manage`.
 
-**4. Small quality-of-life on payments list**
-- "Attach proof" action on existing payments that don't have one yet (for POPs received after the fact).
-- Show allocation breakdown when a payment covers multiple invoices (expandable row).
+**2. Auto-invoice trigger uses the rate card**
+- Rewrite `hotel_details_auto_invoice`: look up nightly rate by tenant + species + `accommodation_type`, multiply by nights, apply peak uplift where dates fall in a peak window, add extra-pet lines, add selected surcharges.
+- Update the trigger to also re-fire on `UPDATE` when `accommodation_type`, `start_date`, `end_date`, or surcharge selections change (strip old draft lines for that booking first).
+- Backfill existing zero-priced hotel lines behind a one-shot admin action, not automatically.
 
-### What we're explicitly NOT doing
-- No bank statement import / CSV reconciliation.
-- No bank feed connections.
-- No auto-matching of bank lines to invoices.
-- No double-entry ledger in-app — Xero owns that.
+**3. Vaccination gate on confirm**
+- Reuse existing `vaccination_rules` (already scoped per service). Add rows for hotel_dog / hotel_cat.
+- Server-side check in a new RPC `hotel_can_confirm_booking(p_booking_id)` that returns missing/expired vaccine names.
+- UI: block status transition to `confirmed` in `BookingDetailPage` when the check fails; show which vaccinations are missing with a link to the pet's Vaccinations tab. Admin override with a note is allowed (writes to `booking_status_events` with `event_kind = 'gate_overridden'`).
 
-### Technical notes
-- New migration: `payments.proof_document_id uuid`, `payment_allocations` table (payment_id, invoice_id, amount) + RPC `allocate_payment(p_payment_id, p_allocations jsonb)`, `customers.xero_contact_code text`, `products.xero_account_code text`, `invoice_items.xero_account_code text`.
-- Xero VAT mapping: SA standard rate 15% → `TaxType = "Tax on Sales"` (configurable in Invoicing Settings later if needed).
-- All new fields optional / nullable so existing data keeps working.
-- Update `RecordPaymentDialog.tsx` to support multi-invoice mode when opened without a specific invoice.
+**4. Status flow + comms**
+- Statuses used: `pending → confirmed → checked_in → checked_out → completed` plus `cancelled`. Every transition writes to `booking_status_events`.
+- Add hotel comms templates (message_templates) with placeholders:
+  - `hotel_booking_confirmed`
+  - `hotel_arrival_reminder_t24h`
+  - `hotel_checked_in`
+  - `hotel_checked_out_receipt`
+  - `hotel_cancelled`
+- Emissions go through the existing `notification_events` pipeline; scheduler picks up the T-24h reminder.
+- Show a small comms strip in `BookingDetailPage` (already present for other services) — verify hotel bookings render it and that "Send now" resends the last template.
+
+**5. Convert-request → Booking dispatcher**
+- New helper `openBookingModalFromRequest(request)` in `src/features/bookingRequests/`.
+- For hotel/cattery requests it opens `BookingFormModal` pre-filled from `request_payload`: customer, pet(s), start_date, end_date, accommodation_type, surcharges, admin_notes.
+- On save it calls the existing `useConvertRequest` mutation to set request status to `converted` and link `converted_booking_id`. Fires `hotel_booking_confirmed` comms.
+- Wire it in `BookingRequestQueue` for `hotel_dog` and `hotel_cat` service types (other services will reuse the same dispatcher in Sprints 3–4).
+
+**6. Customer 360 + Portal visibility**
+- `CustomerDetailPage → Bookings tab`: verify hotel bookings show `start_date/end_date`, resource name, status pill; add night count.
+- `MyBookingsPage` (portal): filter chip for "Hotel"; render nightly cost preview from rate card once the resource is picked.
+- `MyBookingDetailPage`: show hotel_booking_details fields — accommodation type, feeding schedule, medication notes, pickup contact.
+
+**7. Hotel Board polish**
+- Occupancy cells become clickable → open the booking (already partial). Add "Vacant — book" affordance that opens `BookingFormModal` with resource + dates pre-filled.
+- Today panel: separate "Arrivals today" and "Departures today" lists with pet + owner links.
 
 ### Order of work
-1. Migration (allocations table, RPC, new columns, storage link).
-2. Multi-invoice Record Payment dialog + entry points.
-3. Proof-of-payment upload + display.
-4. Xero CSV exports (invoices + payments).
-5. Xero code fields UI (customer, product, line override).
+
+1. Migration: `hotel_rate_cards`, `hotel_surcharges`, updated `hotel_details_auto_invoice`, `hotel_can_confirm_booking` RPC, peak window column on `hotel_workflow_settings`.
+2. Settings page for rate cards + surcharges.
+3. Rewire admin `BookingFormModal` hotel branch to price preview from rate card.
+4. Vaccination gate wiring in `BookingDetailPage` transitions.
+5. `openBookingModalFromRequest` dispatcher and wire it into `BookingRequestQueue` for hotel.
+6. Comms templates + T-24h scheduler entry.
+7. Hotel Board polish + customer detail / portal display checks.
+
+### Technical notes
+- All new tables get `GRANT SELECT, INSERT, UPDATE, DELETE ... TO authenticated` + `GRANT ALL ... TO service_role`, RLS on, policies scoped via `has_role` / tenant membership — same shape as daycare rate card tables.
+- Trigger rewrites are `SECURITY DEFINER` with `search_path = public`, and `REVOKE ALL ... FROM PUBLIC, anon, authenticated` (matching existing style).
+- Convert-request dispatcher is generic on purpose so Sprints 3–4 plug grooming + transport into the same entry point.
+- No changes to Xero export shape — new lines flow through the existing `invoice_items` schema and inherit VAT from Slice 3.
+
+### Explicitly NOT in this sprint
+- Grooming, mobile van, or pickup/dropoff parity — those are Sprints 3 and 4.
+- New payment behaviour — money loop was closed in the previous four slices.
+- Redesigning the occupancy grid (out of scope; polish only).
