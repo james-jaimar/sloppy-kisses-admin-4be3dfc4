@@ -27,7 +27,7 @@ export function useRevenueInvoices(
       const { data, error } = await supabase!
         .from("invoices")
         .select(
-          "id, invoice_number, status, issue_date, customer_id, subtotal, discount_total, tax_total, total, amount_paid, customers:customer_id(display_name, first_name, last_name)"
+          "id, invoice_number, status, issue_date, customer_id, subtotal, discount_total, tax_total, total, amount_paid, customers:customer_id(first_name, last_name)"
         )
         .eq("tenant_id", tenantId!)
         .gte("issue_date", from)
@@ -43,9 +43,7 @@ export function useRevenueInvoices(
         issue_date: r.issue_date,
         customer_id: r.customer_id,
         customer_name:
-          r.customers?.display_name ??
-          [r.customers?.first_name, r.customers?.last_name].filter(Boolean).join(" ") ??
-          null,
+          [r.customers?.first_name, r.customers?.last_name].filter(Boolean).join(" ") || null,
         subtotal: Number(r.subtotal ?? 0),
         discount_total: Number(r.discount_total ?? 0),
         tax_total: Number(r.tax_total ?? 0),
@@ -80,7 +78,7 @@ export function useVatLines(
       const { data, error } = await supabase!
         .from("invoices")
         .select(
-          "id, invoice_number, issue_date, customer_id, customers:customer_id(display_name, first_name, last_name), invoice_items(vat_rate, vat_amount, line_total, discount_amount, quantity, unit_price)"
+          "id, invoice_number, issue_date, customer_id, customers:customer_id(first_name, last_name), invoice_items(vat_rate, vat_amount, line_total, discount_amount, quantity, unit_price)"
         )
         .eq("tenant_id", tenantId!)
         .gte("issue_date", from)
@@ -105,9 +103,7 @@ export function useVatLines(
         }
         const cust: any = (inv as any).customers;
         const name =
-          cust?.display_name ??
-          [cust?.first_name, cust?.last_name].filter(Boolean).join(" ") ??
-          null;
+          [cust?.first_name, cust?.last_name].filter(Boolean).join(" ") || null;
         for (const [rate, b] of buckets) {
           rows.push({
             invoice_id: (inv as any).id,
