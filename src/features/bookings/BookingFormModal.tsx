@@ -25,6 +25,8 @@ import { GroomingFields, HotelFields, TransportFields } from "./BookingDetailsFi
 import { RecurrenceFields, DEFAULT_RECURRENCE, toRule, type RecurrenceValue } from "./RecurrenceFields";
 import { useCreateRecurringBooking } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { HotelExtrasPanel, type SurchargeSelection } from "./HotelExtrasPanel";
+import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQueries";
 
 const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: ResourceType }[] = [
   { value: "daycare", label: "Daycare", resourceType: "daycare_area" },
@@ -117,6 +119,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [hotel, setHotel] = useState<Partial<HotelDetails>>({});
   const [transport, setTransport] = useState<Partial<TransportDetails>>({});
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(DEFAULT_RECURRENCE);
+  const [hotelSurcharges, setHotelSurcharges] = useState<SurchargeSelection[]>([]);
+  const setBookingSurcharges = useSetBookingHotelSurcharges(tenantId);
 
   // Load existing details when editing
   const detailsQ = useBookingServiceDetails(
@@ -189,6 +193,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           pet_ids: petIds,
         });
         await saveDetails(booking.id);
+        if (kind === "hotel") await persistSurcharges(booking.id);
         toast.success("Booking updated");
         onSaved?.(booking.id);
       } else {
@@ -210,6 +215,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           // Persist service-typed details for every occurrence.
           for (const b of res.bookings) {
             await saveDetails(b.id);
+            if (kind === "hotel") await persistSurcharges(b.id);
           }
           toast.success(`Created ${res.bookings.length} bookings in series`);
           onSaved?.(res.bookings[0]?.id);
@@ -229,6 +235,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           booking_request_id: prefill?.booking_request_id ?? null,
         });
         await saveDetails(res.id);
+        if (kind === "hotel") await persistSurcharges(res.id);
         toast.success(`Booking ${res.booking_number} created`);
         onSaved?.(res.id);
       }
@@ -252,6 +259,21 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       await upsertDetails.mutateAsync({ kind: "hotel", bookingId, data: hotel });
     } else if (kind === "transport") {
       await upsertDetails.mutateAsync({ kind: "transport", bookingId, data: transport });
+    }
+  }
+
+  async function persistSurcharges(bookingId: string) {
+    try {
+      await setBookingSurcharges.mutateAsync({
+        bookingId,
+        rows: hotelSurcharges.map((s) => ({
+          surcharge_id: s.surcharge_id,
+          quantity: s.quantity,
+          price_override_zar: null,
+        })),
+      });
+    } catch (err: any) {
+      toast.error("Booking saved, but failed to save surcharges: " + (err?.message ?? "unknown error"));
     }
   }
 
@@ -441,6 +463,20 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             value={hotel}
             onChange={(patch) => setHotel((p) => ({ ...p, ...patch }))}
             species={serviceType === "hotel_cat" ? "cat" : "dog"}
+          />
+        )}
+        {kind === "hotel" && (
+          <HotelExtrasPanel
+            tenantId={tenantId}
+            bookingId={booking?.id ?? null}
+            species={serviceType === "hotel_cat" ? "cat" : "dog"}
+            accommodationType={hotel.accommodation_type ?? ""}
+            onAccommodationChange={(v) => setHotel((p) => ({ ...p, accommodation_type: v || null }))}
+            startAt={startAt ? new Date(startAt).toISOString() : null}
+            endAt={endAt ? new Date(endAt).toISOString() : null}
+            petCount={petIds.length || 1}
+            selection={hotelSurcharges}
+            onSelectionChange={setHotelSurcharges}
           />
         )}
         {kind === "transport" && (
