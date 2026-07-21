@@ -77,18 +77,17 @@ export function useInvoice(id: string | undefined, tenantId: string | null | und
 
 /** Recompute subtotal/total/amount_paid/balance and persist. Simple sum(line_total) = subtotal = total for now. */
 async function recomputeInvoiceTotals(invoiceId: string, tenantId: string) {
-  const [{ data: items, error: iErr }, { data: pays, error: pErr }] = await Promise.all([
-    supabase.from("invoice_items").select("line_total").eq("invoice_id", invoiceId).eq("tenant_id", tenantId),
+  // Line totals (subtotal/tax_total/total) are maintained by a DB trigger on
+  // invoice_items. Here we only reconcile payment-derived fields.
+  const [{ data: pays, error: pErr }, { data: inv, error: invErr }] = await Promise.all([
     supabase.from("payments").select("amount").eq("invoice_id", invoiceId).eq("tenant_id", tenantId),
+    supabase.from("invoices").select("total, status, due_date").eq("id", invoiceId).maybeSingle(),
   ]);
-  if (iErr) throw iErr;
   if (pErr) throw pErr;
-  const subtotal = (items ?? []).reduce((s, r) => s + Number(r.line_total ?? 0), 0);
-  const total = subtotal;
+  if (invErr) throw invErr;
+  const total = Number(inv?.total ?? 0);
   const paid = (pays ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0);
   const balance = Math.max(0, total - paid);
-  // status transitions
-  const { data: inv } = await supabase.from("invoices").select("status, due_date").eq("id", invoiceId).maybeSingle();
   let nextStatus = inv?.status ?? "draft";
   if (nextStatus !== "draft" && nextStatus !== "cancelled") {
     if (total > 0 && paid >= total) nextStatus = "paid";
@@ -97,7 +96,7 @@ async function recomputeInvoiceTotals(invoiceId: string, tenantId: string) {
   }
   const { error } = await supabase
     .from("invoices")
-    .update({ subtotal, total, amount_paid: paid, balance_due: balance, status: nextStatus })
+    .update({ amount_paid: paid, balance_due: balance, status: nextStatus })
     .eq("id", invoiceId)
     .eq("tenant_id", tenantId);
   if (error) throw error;
@@ -192,15 +191,21 @@ export function useUpsertInvoiceItem(tenantId: string) {
       unit_price: number;
       booking_id?: string | null;
       sort_order?: number;
+      vat_rate?: number | null;
+      discount_pct?: number | null;
+      vat_inclusive?: boolean | null;
     }) => {
-      const line_total = Number((input.quantity * input.unit_price).toFixed(2));
+      // line_total / vat_amount are computed by DB trigger — do not send them.
       if (input.id) {
         const { error } = await supabase.from("invoice_items")
           .update({
             description: input.description, quantity: input.quantity,
-            unit_price: input.unit_price, line_total,
+            unit_price: input.unit_price,
             booking_id: input.booking_id ?? null,
             sort_order: input.sort_order ?? 0,
+            ...(input.vat_rate != null ? { vat_rate: input.vat_rate } : {}),
+            ...(input.discount_pct != null ? { discount_pct: input.discount_pct } : {}),
+            ...(input.vat_inclusive != null ? { vat_inclusive: input.vat_inclusive } : {}),
           } as any)
           .eq("id", input.id).eq("tenant_id", tenantId);
         if (error) throw error;
@@ -211,12 +216,17 @@ export function useUpsertInvoiceItem(tenantId: string) {
           description: input.description,
           quantity: input.quantity,
           unit_price: input.unit_price,
-          line_total,
+          line_total: 0, // overwritten by BEFORE trigger
           booking_id: input.booking_id ?? null,
           sort_order: input.sort_order ?? 0,
+          ...(input.vat_rate != null ? { vat_rate: input.vat_rate } : {}),
+          ...(input.discount_pct != null ? { discount_pct: input.discount_pct } : {}),
+          ...(input.vat_inclusive != null ? { vat_inclusive: input.vat_inclusive } : {}),
         } as any);
         if (error) throw error;
       }
+      // Trigger already updated subtotal/tax/total/balance; refresh payment-derived
+      // status only if a payment already exists.
       await recomputeInvoiceTotals(input.invoice_id, tenantId);
     },
     onSuccess: (_r, v) => {
