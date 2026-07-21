@@ -236,10 +236,11 @@ Deno.serve(async (req) => {
 
   // ── Items table ───────────────────────────────────────────────────────────
   const cols = [
-    { label: "DESCRIPTION", w: 300, align: "left" as const },
-    { label: "QTY", w: 45, align: "right" as const },
-    { label: "UNIT", w: 80, align: "right" as const },
-    { label: "TOTAL", w: width - 2 * M - 300 - 45 - 80, align: "right" as const },
+    { label: "DESCRIPTION", w: 260, align: "left" as const },
+    { label: "QTY", w: 40, align: "right" as const },
+    { label: "UNIT", w: 75, align: "right" as const },
+    { label: "VAT%", w: 45, align: "right" as const },
+    { label: "TOTAL", w: width - 2 * M - 260 - 40 - 75 - 45, align: "right" as const },
   ];
   const headerH = 22;
   page.drawRectangle({ x: M, y: cursorY - headerH, width: width - 2 * M, height: headerH, color: brand });
@@ -262,6 +263,7 @@ Deno.serve(async (req) => {
       it.description || "",
       String(it.quantity),
       fmtZar(Number(it.unit_price)),
+      Number(it.vat_rate ?? 0) > 0 ? `${Number(it.vat_rate).toFixed(0)}%` : "—",
       fmtZar(Number(it.line_total)),
     ];
     cols.forEach((c, i) => {
@@ -283,10 +285,12 @@ Deno.serve(async (req) => {
   const totalsX = width - M - totalsW;
   const rows: Array<[string, string, boolean]> = [
     ["Subtotal", fmtZar(Number(inv.subtotal)), false],
-    ["Total", fmtZar(Number(inv.total)), true],
-    ["Paid", fmtZar(Number(inv.amount_paid)), false],
-    ["Balance due", fmtZar(Number(inv.balance_due)), true],
   ];
+  if (Number(inv.discount_total ?? 0) > 0) rows.push(["Discount", "−" + fmtZar(Number(inv.discount_total)), false]);
+  rows.push(["VAT", fmtZar(Number(inv.tax_total ?? 0)), false]);
+  rows.push(["Total", fmtZar(Number(inv.total)), true]);
+  rows.push(["Paid", fmtZar(Number(inv.amount_paid)), false]);
+  rows.push(["Balance due", fmtZar(Number(inv.balance_due)), true]);
   let ty = cursorY;
   for (const [label, val, emph] of rows) {
     const f = emph ? bold : reg;
