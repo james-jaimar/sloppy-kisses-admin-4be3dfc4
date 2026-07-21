@@ -2716,6 +2716,7 @@ export type Database = {
           stock_movement_id: string | null
           tenant_id: string
           unit_price: number
+          xero_account_code: string | null
         }
         Insert: {
           booking_id?: string | null
@@ -2732,6 +2733,7 @@ export type Database = {
           stock_movement_id?: string | null
           tenant_id: string
           unit_price?: number
+          xero_account_code?: string | null
         }
         Update: {
           booking_id?: string | null
@@ -2748,6 +2750,7 @@ export type Database = {
           stock_movement_id?: string | null
           tenant_id?: string
           unit_price?: number
+          xero_account_code?: string | null
         }
         Relationships: [
           {
@@ -3168,6 +3171,58 @@ export type Database = {
           },
           {
             foreignKeyName: "notification_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_allocations: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          invoice_id: string
+          payment_id: string
+          tenant_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_id: string
+          payment_id: string
+          tenant_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          invoice_id?: string
+          payment_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_allocations_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_allocations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3793,6 +3848,7 @@ export type Database = {
           unit: string | null
           updated_at: string
           vat_rate: number
+          xero_account_code: string | null
           xero_item_id: string | null
         }
         Insert: {
@@ -3814,6 +3870,7 @@ export type Database = {
           unit?: string | null
           updated_at?: string
           vat_rate?: number
+          xero_account_code?: string | null
           xero_item_id?: string | null
         }
         Update: {
@@ -3835,6 +3892,7 @@ export type Database = {
           unit?: string | null
           updated_at?: string
           vat_rate?: number
+          xero_account_code?: string | null
           xero_item_id?: string | null
         }
         Relationships: [
@@ -4869,6 +4927,10 @@ export type Database = {
           p_notes?: string
         }
         Returns: string
+      }
+      allocate_payment: {
+        Args: { p_allocations: Json; p_payment_id: string }
+        Returns: Json
       }
       apply_credit_note: {
         Args: {
