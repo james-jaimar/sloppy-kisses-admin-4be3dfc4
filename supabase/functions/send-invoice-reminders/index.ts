@@ -81,6 +81,17 @@ Deno.serve(async (req) => {
         .from("invoices")
         .update({ last_reminder_at: new Date().toISOString(), last_reminder_offset: overdueDays })
         .eq("id", inv.id);
+      // Mirror to notification_events so the Comms inbox shows one unified
+      // timeline per customer instead of two silos.
+      await admin.from("notification_events").insert({
+        tenant_id: inv.tenant_id,
+        invoice_id: inv.id,
+        event_type: "invoice_reminder",
+        channel: "email",
+        status: "sent",
+        sent_at: new Date().toISOString(),
+        subject: `Reminder: invoice ${overdueDays >= 0 ? overdueDays : 0} days overdue`,
+      });
     } else {
       failed++;
       details.push({ invoice_id: inv.id, error: body?.error ?? `HTTP ${res.status}` });
