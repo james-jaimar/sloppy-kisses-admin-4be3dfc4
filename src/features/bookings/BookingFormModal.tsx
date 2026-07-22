@@ -27,6 +27,9 @@ import { useCreateRecurringBooking } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { HotelExtrasPanel, type SurchargeSelection } from "./HotelExtrasPanel";
 import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQueries";
+import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtrasPanel";
+import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries";
+import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 
 const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: ResourceType }[] = [
   { value: "daycare", label: "Daycare", resourceType: "daycare_area" },
@@ -121,6 +124,9 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(DEFAULT_RECURRENCE);
   const [hotelSurcharges, setHotelSurcharges] = useState<SurchargeSelection[]>([]);
   const setBookingSurcharges = useSetBookingHotelSurcharges(tenantId);
+  const [groomingAddons, setGroomingAddons] = useState<GroomingAddonSelection[]>([]);
+  const setBookingGroomingAddons = useSetBookingGroomingAddons(tenantId);
+  const addonsCatalogQ = useGroomingAddons(tenantId, { activeOnly: true });
 
   // Load existing details when editing
   const detailsQ = useBookingServiceDetails(
@@ -194,6 +200,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         });
         await saveDetails(booking.id);
         if (kind === "hotel") await persistSurcharges(booking.id);
+        if (kind === "grooming") await persistGroomingAddons(booking.id);
         toast.success("Booking updated");
         onSaved?.(booking.id);
       } else {
@@ -216,6 +223,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           for (const b of res.bookings) {
             await saveDetails(b.id);
             if (kind === "hotel") await persistSurcharges(b.id);
+            if (kind === "grooming") await persistGroomingAddons(b.id);
           }
           toast.success(`Created ${res.bookings.length} bookings in series`);
           onSaved?.(res.bookings[0]?.id);
@@ -236,6 +244,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         });
         await saveDetails(res.id);
         if (kind === "hotel") await persistSurcharges(res.id);
+        if (kind === "grooming") await persistGroomingAddons(res.id);
         toast.success(`Booking ${res.booking_number} created`);
         onSaved?.(res.id);
       }
@@ -274,6 +283,25 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       });
     } catch (err: any) {
       toast.error("Booking saved, but failed to save surcharges: " + (err?.message ?? "unknown error"));
+    }
+  }
+
+  async function persistGroomingAddons(bookingId: string) {
+    try {
+      const catalog = addonsCatalogQ.data ?? [];
+      const rows = groomingAddons.map((s) => {
+        const cat = catalog.find((c) => c.id === s.addon_id);
+        return {
+          addon_id: s.addon_id,
+          addon_code: cat?.code ?? null,
+          addon_name: cat?.name ?? null,
+          price_zar_snapshot: Number(cat?.price_zar ?? 0),
+          qty: s.qty,
+        };
+      });
+      await setBookingGroomingAddons.mutateAsync({ bookingId, rows });
+    } catch (err: any) {
+      toast.error("Booking saved, but failed to save add-ons: " + (err?.message ?? "unknown error"));
     }
   }
 
@@ -456,6 +484,22 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             value={grooming}
             onChange={(patch) => setGrooming((p) => ({ ...p, ...patch }))}
             mode={serviceType === "grooming_mobile" ? "mobile" : "in_house"}
+          />
+        )}
+        {kind === "grooming" && (
+          <GroomingExtrasPanel
+            tenantId={tenantId}
+            bookingId={booking?.id ?? null}
+            species={(petsQ.data?.find((p) => petIds.includes(p.id))?.species as any) === "cat" ? "cat" : "dog"}
+            mode={serviceType === "grooming_mobile" ? "mobile" : "in_house"}
+            packageId={grooming.package_id ?? null}
+            onPackageChange={(id) => setGrooming((p) => ({ ...p, package_id: id }))}
+            addonSelection={groomingAddons}
+            onAddonChange={setGroomingAddons}
+            pensionerDiscount={grooming.pensioner_discount ?? false}
+            mattedSurchargeZar={grooming.matted_surcharge_zar ?? null}
+            sedationSurchargeZar={grooming.sedation_surcharge_zar ?? null}
+            travelFee={grooming.travel_fee ?? null}
           />
         )}
         {kind === "hotel" && (
