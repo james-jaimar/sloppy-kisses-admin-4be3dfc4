@@ -63,7 +63,12 @@ interface Props {
     pet_ids: string[];
     service_type: ServiceType;
     start_at: string;
+    end_at: string;
     booking_request_id: string;
+    notes_customer: string | null;
+    grooming: Partial<GroomingDetails>;
+    hotel: Partial<HotelDetails>;
+    transport: Partial<TransportDetails>;
   }>;
 }
 
@@ -87,9 +92,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     toLocalInput(booking?.start_at ?? prefill?.start_at ?? null),
   );
   const [endAt, setEndAt] = useState<string>(toLocalInput(booking?.end_at ?? null));
+  useEffect(() => {
+    if (isEdit) return;
+    if (endAt) return;
+    if (prefill?.end_at) setEndAt(toLocalInput(prefill.end_at));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [resourceId, setResourceId] = useState<string | null>(booking?.resource_id ?? null);
   const [notesInternal, setNotesInternal] = useState(booking?.notes_internal ?? "");
-  const [notesCustomer, setNotesCustomer] = useState(booking?.notes_customer ?? "");
+  const [notesCustomer, setNotesCustomer] = useState(
+    booking?.notes_customer ?? prefill?.notes_customer ?? "",
+  );
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(customerSearch), 250);
@@ -118,9 +131,15 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
   // Service-typed details state
   const kind = serviceKind(serviceType);
-  const [grooming, setGrooming] = useState<Partial<GroomingDetails>>({});
-  const [hotel, setHotel] = useState<Partial<HotelDetails>>({});
-  const [transport, setTransport] = useState<Partial<TransportDetails>>({});
+  const [grooming, setGrooming] = useState<Partial<GroomingDetails>>(
+    !isEdit && prefill?.grooming ? prefill.grooming : {},
+  );
+  const [hotel, setHotel] = useState<Partial<HotelDetails>>(
+    !isEdit && prefill?.hotel ? prefill.hotel : {},
+  );
+  const [transport, setTransport] = useState<Partial<TransportDetails>>(
+    !isEdit && prefill?.transport ? prefill.transport : {},
+  );
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(DEFAULT_RECURRENCE);
   const [hotelSurcharges, setHotelSurcharges] = useState<SurchargeSelection[]>([]);
   const setBookingSurcharges = useSetBookingHotelSurcharges(tenantId);
