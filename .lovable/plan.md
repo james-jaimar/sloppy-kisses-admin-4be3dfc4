@@ -1,52 +1,65 @@
-# Sprint 5 — Cross-service convert-request dispatcher
+# Sprint 7 — Comms polish
 
-Turn the per-service "Convert" wiring (added ad-hoc in Sprints 2–4) into one reusable path that every service type uses, so the four portal wizards all funnel through a single, predictable admin flow.
+Turn the dispatcher (already sending SMTP + logging) into a proper comms layer with real customer-ready templates, live previews, tenant editing, and the missing scheduled events.
 
-## Current state (verified)
-- `BookingRequestQueue` already opens `BookingFormModal` with a minimal prefill: `customer_id`, first `pet_id`, `service_type`, `start_at`, `booking_request_id`.
-- On save it calls `useMarkRequestConverted` → sets `status='converted'`, `converted_booking_id`, `reviewed_at/by`.
-- Portal wizards write rich data into `booking_requests.request_payload` (hotel dates + room, grooming package + addons, mobile suburb, transport direction/addresses, daycare days) — none of it flows into the booking today.
-- No `booking_created` notification event is fired from the convert path.
+## What's in place today (verified)
+- `send-notifications` dispatcher renders `{{path.to.value}}` templates and sends via tenant SMTP; logs to `email_log`.
+- `message_templates` table + `MessageTemplatesPage` CRUD (event, channel, subject, body, active, auto_send).
+- `notification_events` triggers already fire for: booking_created (Sprint 5), booking_request_created, booking_request_status_changed, invoice_issued, invoice_paid.
+- Comms inbox + booking-scoped comms panel exist.
+- Quiet hours + comms_settings live in `CommsSettingsPage`.
 
-## What Sprint 5 delivers
+## Gaps this sprint closes
+1. No polished default templates — tenants start with an empty list.
+2. No preview: admins can't see the rendered subject/body before saving.
+3. No T-24h booking reminder, no overdue invoice nudge scheduler (only the daily invoice-reminder cron for issued invoices exists).
+4. Template body has no rich-context reference (variables are guessed).
+5. No test-send button per template (only the global test recipient).
+6. HTML email rendering is plain-text only; needs branded HTML wrapper (logo + brand color + footer) reused from auth emails.
 
-### 1. `buildBookingPrefillFromRequest(request)` helper
-Single pure function in `src/features/bookingRequests/convert.ts` that maps a `BookingRequestListRow` → `BookingFormModal` prefill, per service type:
-- `hotel_dog` / `hotel_cat`: start/end, room/resource, pets[], special requests → hotel details prefill.
-- `grooming_inhouse`: preferred date/time, package id, addon ids, groomer preference.
-- `grooming_mobile`: same + pickup suburb + address.
-- `pickup_dropoff`: direction, suburb, pickup/dropoff addresses, linked service booking id if present.
-- `daycare` / `daycare_assessment`: enrolment day(s), plan hint.
+## Deliverables
 
-Extends `BookingFormModal`'s `prefill` prop with the typed detail fields it already writes on save, so the same modal handles every service with no new UI branches.
+### 1. Seeded default templates (migration)
+Insert `is_active=true, auto_send=true` rows per tenant for the five customer-facing events, email channel:
+- `booking_created` — "Booking confirmed" (dates, service, pet, price)
+- `booking_reminder_24h` — new event code, "See you tomorrow"
+- `booking_cancelled` — "Booking cancelled"
+- `invoice_issued` — "Your invoice from {{tenant.name}}" with link
+- `invoice_reminder` — overdue nudge (existing but seeded)
+- `invoice_paid` — "Payment received, thank you"
 
-### 2. Unified convert action
-- `BookingRequestQueue` continues to be the single entry point — no per-service branches.
-- Replaces the current inline prefill block with `prefill={buildBookingPrefillFromRequest(selected)}`.
-- Removes the mobile/transport ad-hoc convert wiring noted in Sprint 4 §4 (superseded).
+Seeded only if the tenant has zero templates for that `(event_code, channel)`; safe to re-run.
 
-### 3. `booking_created` notification event
-- On successful convert, insert a `notification_events` row (`event_code='booking_created'`, `booking_id`, `customer_id`, channel resolved from `customers.notify_email/sms/whatsapp`). Uses the existing dispatcher; template body is Sprint 7.
-- Fired from the same `onSaved` callback, after `markConverted` succeeds, so it only fires for real conversions (not manual admin bookings — those get their own event later).
+### 2. Branded HTML wrapper
+Extract `renderBrandedHtml(tenant, bodyText)` from `_shared/auth-email.ts` and use it in `send-notifications` so notification emails match the invite/reset look (logo from `tenants.logo_url`, coral accent, footer with tenant name + reply-to). Plain-text stays for the `content` field; HTML goes in `html`.
 
-### 4. Decline / needs-info parity
-Small cleanup so the queue's non-convert actions also emit events:
-- `booking_request_declined` when status → `declined`.
-- `booking_request_info_requested` when status → `needs_info`.
-Both use `admin_notes` as the message body hint.
+### 3. Template preview + test-send in the editor
+`MessageTemplatesPage` right panel adds:
+- **Preview tab** next to the body editor. Renders subject + HTML body using a sample context object (fake customer/pet/booking/invoice) so brand + variables are visible while typing.
+- **Variables reference** collapsible listing available `{{...}}` paths per event code (driven by a static map in `src/features/comms/templateVariables.ts`).
+- **Send test** button — POSTs to a new `notify-test-send` edge function that renders with the sample context and mails the tenant's `comms_settings.test_recipient`. Logged to `email_log` with `template_code='test.<event_code>'`.
 
-### 5. Idempotency + audit
-- `useMarkRequestConverted` already guards with `.neq('status','converted')`. Add a matching DB-level unique partial index on `booking_requests(converted_booking_id)` where not null, so a request can never point at two bookings.
-- Log convert / decline / needs-info transitions to `activity_log` (`entity='booking_request'`).
+### 4. T-24h booking reminder
+- New event code `booking_reminder_24h` added to enum + `EVENT_CODES` list.
+- New edge function `queue-booking-reminders` (cron daily 09:00 SAST): finds `bookings` where `start_at` is between now+23h and now+25h, `status in ('confirmed','pending')`, and no existing `notification_events` row of that type for that booking. Inserts one pending event; existing dispatcher handles the send.
+- pg_cron schedule inserted via `supabase--insert` (user-specific URL/key, per schedule-jobs rule).
+
+### 5. Overdue nudge visibility
+The daily `send-invoice-reminders` already sends via SMTP directly, bypassing `notification_events`. Wrap it so each reminder also inserts a `notification_events` row (`event_code='invoice_reminder'`, status='sent', body_rendered filled) so the Comms inbox shows one timeline per customer instead of two silos.
+
+### 6. Per-tenant fallback subject
+If a template has no subject, dispatcher falls back to `"{event_code} — {tenant.name}"` instead of `"(no subject)"`.
 
 ## Out of scope
-- Comms template bodies for the new event codes (Sprint 7).
-- Admin-initiated `booking_created` event on manual bookings (separate small task).
-- Redesign of `BookingFormModal` field layout.
+- WhatsApp/SMS transports (channels remain stubbed; templates can be authored but won't send).
+- Rich WYSIWYG editor (Markdown/HTML by hand for now).
+- Per-customer language variants.
+- Auth email template editor (auth emails stay code-defined).
 
 ## Technical notes
-- One migration: unique partial index + activity_log trigger on `booking_requests` status changes; four-step template not needed (no new table).
-- All prefill mapping is client-side, typed against the existing `*_booking_details` insert shapes already used by `BookingFormModal`.
-- No hardcoded colors; no new settings screen needed (dispatcher is infrastructure, not user-tunable).
+- One migration: add `booking_reminder_24h` to notification event enum + seed templates via `INSERT … SELECT tenant_id … WHERE NOT EXISTS`. No new tables → no GRANT/RLS work.
+- Two new edge functions: `notify-test-send`, `queue-booking-reminders`. Both use tenant SMTP via existing `loadTransport` helper (extract to `_shared/comms-transport.ts`).
+- `templateVariables.ts` is a plain map `event_code → { path, label, sampleValue }[]` used by both the reference panel and the preview sample context.
+- No new settings screen — everything hangs off existing Message Templates + Comms settings pages per the settings-first rule.
 
 Say **"go"** to build, or tell me which item to drop / re-order.
