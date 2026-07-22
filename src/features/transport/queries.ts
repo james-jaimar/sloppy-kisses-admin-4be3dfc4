@@ -175,6 +175,9 @@ export interface TransportWorkflowSettings {
   day_end_time: string;
   default_pickup_lead_minutes: number;
   default_dropoff_trail_minutes: number;
+  default_fee_zar: number;
+  round_trip_multiplier: number;
+  suburb_fees: Record<string, number> | null;
 }
 
 export function useTransportWorkflowSettings(tenantId: string | null | undefined) {
