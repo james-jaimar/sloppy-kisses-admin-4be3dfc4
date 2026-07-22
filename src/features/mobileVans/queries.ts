@@ -97,6 +97,16 @@ export function useAssignBookingToVan(tenantId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ bookingId, resourceId }: { bookingId: string; resourceId: string | null }) => {
+      if (resourceId) {
+        const { data: check, error: chkErr } = await supabase.rpc("van_can_assign_stop" as any, {
+          _booking_id: bookingId, _resource_id: resourceId,
+        });
+        if (chkErr) throw chkErr;
+        const c: any = check;
+        if (c && c.ok === false) {
+          throw new Error(c.reason === "overlap" ? "Overlaps another stop on this van" : "Cannot assign to this van");
+        }
+      }
       const { error } = await supabase
         .from("bookings")
         .update({ resource_id: resourceId } as any)
