@@ -1,59 +1,52 @@
-# Sprint 4 — Mobile vans + Pickup/Drop-off to parity
+# Sprint 5 — Cross-service convert-request dispatcher
 
-Bring mobile grooming vans and pickup/drop-off transport up to the same end-to-end path daycare and hotel already have: request → booking with resource → status flow → auto-invoice line on the correct month's draft → visible on Customer 360 + portal → comms fired.
+Turn the per-service "Convert" wiring (added ad-hoc in Sprints 2–4) into one reusable path that every service type uses, so the four portal wizards all funnel through a single, predictable admin flow.
 
-## What already exists (verified)
-- `MobileVansPage` with day picker, van tabs, `VanTimeline`, `RouteSummary`, `UnassignedStrip`, and `van_workflow_settings` (min/max travel gap).
-- `TransportBoardPage` with vehicle tabs, columns view, `UnassignedTransportStrip`, and `transport_workflow_settings`.
-- Resources of type `mobile_van` and `transport_vehicle` (with `home_suburb`) via `ResourcesPage`.
-- Portal `GroomingRequestWizard` (in-house + mobile) and `TransportRequestWizard` writing to `booking_requests`.
-- Grooming auto-invoice trigger (Sprint 3) already produces lines for both `grooming_inhouse` and `grooming_mobile` service types.
+## Current state (verified)
+- `BookingRequestQueue` already opens `BookingFormModal` with a minimal prefill: `customer_id`, first `pet_id`, `service_type`, `start_at`, `booking_request_id`.
+- On save it calls `useMarkRequestConverted` → sets `status='converted'`, `converted_booking_id`, `reviewed_at/by`.
+- Portal wizards write rich data into `booking_requests.request_payload` (hotel dates + room, grooming package + addons, mobile suburb, transport direction/addresses, daycare days) — none of it flows into the booking today.
+- No `booking_created` notification event is fired from the convert path.
 
-## Parity gaps to close
+## What Sprint 5 delivers
 
-### 1. Transport auto-invoice trigger + settings
-- New `transport_details_auto_invoice` trigger on `transport_details` insert/update, mirroring the grooming/hotel triggers.
-- Rate source: new columns on `transport_workflow_settings` — `default_fee_zar`, `per_km_zar`, `round_trip_multiplier`, plus optional `suburb_fees` jsonb (`{ "Bryanston": 120, ... }`).
-- Line description: `"Transport — {pet} · {direction} · {suburb}"`, appended to the current-period draft (respects billing cycle).
-- Trigger recalculates when direction/suburb changes.
-- Settings-first: extend `TransportWorkflowPage` with the new fields, gated by `settings.transport.manage`.
+### 1. `buildBookingPrefillFromRequest(request)` helper
+Single pure function in `src/features/bookingRequests/convert.ts` that maps a `BookingRequestListRow` → `BookingFormModal` prefill, per service type:
+- `hotel_dog` / `hotel_cat`: start/end, room/resource, pets[], special requests → hotel details prefill.
+- `grooming_inhouse`: preferred date/time, package id, addon ids, groomer preference.
+- `grooming_mobile`: same + pickup suburb + address.
+- `pickup_dropoff`: direction, suburb, pickup/dropoff addresses, linked service booking id if present.
+- `daycare` / `daycare_assessment`: enrolment day(s), plan hint.
 
-### 2. Van route / time enforcement
-- Server-side check `van_can_assign_stop(booking_id, resource_id)` RPC:
-  - Enforces `min_travel_gap_minutes` between this stop and its neighbours on the same van/day.
-  - Warns (never blocks) when gap > `max_travel_gap_minutes`.
-  - Blocks overlap with any confirmed stop on the same van.
-- `useAssignBookingToVan` calls the RPC before the update; surfaces block reason as a toast.
-- Same pattern for transport: `transport_can_assign_leg(booking_id, resource_id)` respecting vehicle capacity (new `capacity` already on `resources`).
+Extends `BookingFormModal`'s `prefill` prop with the typed detail fields it already writes on save, so the same modal handles every service with no new UI branches.
 
-### 3. Suburb-aware auto-assign helper (optional per stop)
-- "Auto-assign" button on `UnassignedStrip` (mobile) and `UnassignedTransportStrip`:
-  - Picks the van/vehicle whose `home_suburb` matches the customer suburb; falls back to the van with the smallest resulting max-gap.
-  - Client-side heuristic, no schema change.
+### 2. Unified convert action
+- `BookingRequestQueue` continues to be the single entry point — no per-service branches.
+- Replaces the current inline prefill block with `prefill={buildBookingPrefillFromRequest(selected)}`.
+- Removes the mobile/transport ad-hoc convert wiring noted in Sprint 4 §4 (superseded).
 
-### 4. Convert-request wiring for mobile + transport
-- Extend `BookingRequestQueue` "Convert" action so `grooming_mobile` and `pickup_dropoff` requests open `BookingFormModal` prefilled from `request_payload` (pet, times, direction, addresses).
-- On save: mark request `converted`, set `booking_id`, fire `booking_created` notification event.
-- (Full cross-service dispatcher lands in Sprint 5; this sprint just handles these two service types.)
+### 3. `booking_created` notification event
+- On successful convert, insert a `notification_events` row (`event_code='booking_created'`, `booking_id`, `customer_id`, channel resolved from `customers.notify_email/sms/whatsapp`). Uses the existing dispatcher; template body is Sprint 7.
+- Fired from the same `onSaved` callback, after `markConverted` succeeds, so it only fires for real conversions (not manual admin bookings — those get their own event later).
 
-### 5. Status flow + comms hooks
-- Add the same `booking_status_events` transitions the hotel/grooming boards use — `en_route`, `arrived`, `completed` — surfaced as buttons on van/transport cards.
-- Ensure each transition writes a `notification_events` row (`transport_en_route`, `transport_arrived`, `grooming_mobile_en_route`, `grooming_mobile_arrived`) using existing dispatcher; template bodies come in Sprint 7.
+### 4. Decline / needs-info parity
+Small cleanup so the queue's non-convert actions also emit events:
+- `booking_request_declined` when status → `declined`.
+- `booking_request_info_requested` when status → `needs_info`.
+Both use `admin_notes` as the message body hint.
 
-### 6. Customer 360 + portal visibility
-- Confirm `BookingsTab` and `HistoryTab` render mobile grooming and transport bookings with their resource and suburb (data is already fetched — verify labels are correct, add resource name column if missing).
-- Portal `MyBookingDetailPage`: show assigned van/vehicle name and ETA window when set.
+### 5. Idempotency + audit
+- `useMarkRequestConverted` already guards with `.neq('status','converted')`. Add a matching DB-level unique partial index on `booking_requests(converted_booking_id)` where not null, so a request can never point at two bookings.
+- Log convert / decline / needs-info transitions to `activity_log` (`entity='booking_request'`).
 
 ## Out of scope
-- Live GPS / driver mobile app (later).
-- Multi-stop routing optimisation beyond suburb heuristic.
-- Full cross-service convert dispatcher (Sprint 5).
-- Comms template bodies (Sprint 7).
+- Comms template bodies for the new event codes (Sprint 7).
+- Admin-initiated `booking_created` event on manual bookings (separate small task).
+- Redesign of `BookingFormModal` field layout.
 
 ## Technical notes
-- All new SQL (trigger, RPCs, settings columns) in one migration following the four-step template; grant `EXECUTE` to `authenticated`.
-- New queries live in existing `mobileVans/queries.ts` and `transport/queries.ts`.
-- Settings-first: nothing hardcoded; every fee, gap, and suburb rule editable in Admin → Settings.
-- No hardcoded colors — reuse coral / semantic tokens.
+- One migration: unique partial index + activity_log trigger on `booking_requests` status changes; four-step template not needed (no new table).
+- All prefill mapping is client-side, typed against the existing `*_booking_details` insert shapes already used by `BookingFormModal`.
+- No hardcoded colors; no new settings screen needed (dispatcher is infrastructure, not user-tunable).
 
-Say **"go"** to start, or tell me which deliverable to drop / re-order.
+Say **"go"** to build, or tell me which item to drop / re-order.
