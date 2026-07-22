@@ -25,6 +25,13 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/grooming-workflow",
+    label: "Grooming workflow",
+    description: "Vaccination gate, pensioner discount, default mobile travel fee.",
+    icon: Scissors,
+    ready: true,
+  },
+  {
     to: "/admin/settings/hotel-workflow",
     label: "Hotel & Cattery workflow",
     description: "Vaccination gate, check-in window, late-checkout fee.",

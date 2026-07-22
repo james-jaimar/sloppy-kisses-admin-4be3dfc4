@@ -40,6 +40,7 @@ import GroomingBoardPage from "@/features/grooming/GroomingBoardPage";
 import HotelBoardPage from "@/features/hotelCattery/HotelBoardPage";
 import HotelWorkflowPage from "@/features/settings/HotelWorkflowPage";
 import HotelRatesPage from "@/features/settings/HotelRatesPage";
+import GroomingWorkflowPage from "@/features/settings/GroomingWorkflowPage";
 import MobileVansPage from "@/features/mobileVans/MobileVansPage";
 import VanWorkflowPage from "@/features/settings/VanWorkflowPage";
 import TransportBoardPage from "@/features/transport/TransportBoardPage";
@@ -187,6 +188,7 @@ const App = () => (
                 <Route path="/admin/settings/grooming-addons" element={<GroomingAddonsPage />} />
                 <Route path="/admin/settings/hotel-workflow" element={<HotelWorkflowPage />} />
                 <Route path="/admin/settings/hotel-rates" element={<HotelRatesPage />} />
+                <Route path="/admin/settings/grooming-workflow" element={<GroomingWorkflowPage />} />
                 <Route path="/admin/settings/van-workflow" element={<VanWorkflowPage />} />
                 <Route path="/admin/settings/transport-workflow" element={<TransportWorkflowPage />} />
                 <Route path="/admin/settings/daycare-plans" element={<DaycarePlansPage />} />
