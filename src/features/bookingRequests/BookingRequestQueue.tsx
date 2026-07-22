@@ -14,7 +14,7 @@ import {
 } from "./queries";
 import { BookingRequestFormModal } from "./BookingRequestFormModal";
 import { BookingFormModal } from "@/features/bookings/BookingFormModal";
-import type { ServiceType } from "@/features/bookings/queries";
+import { buildBookingPrefillFromRequest } from "./convert";
 import {
   Check,
   X,
