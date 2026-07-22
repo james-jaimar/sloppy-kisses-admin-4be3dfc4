@@ -14,7 +14,7 @@ import {
 } from "./queries";
 import { BookingRequestFormModal } from "./BookingRequestFormModal";
 import { BookingFormModal } from "@/features/bookings/BookingFormModal";
-import type { ServiceType } from "@/features/bookings/queries";
+import { buildBookingPrefillFromRequest } from "./convert";
 import {
   Check,
   X,
@@ -484,13 +484,7 @@ export default function BookingRequestQueue() {
         <BookingFormModal
           tenantId={tenantId}
           onClose={() => setConvertOpen(false)}
-          prefill={{
-            customer_id: selected.customer_id ?? undefined,
-            pet_ids: selected.pet_id ? [selected.pet_id] : [],
-            service_type: selected.service_type as ServiceType,
-            start_at: selected.preferred_start_at ?? undefined,
-            booking_request_id: selected.id,
-          }}
+          prefill={buildBookingPrefillFromRequest(selected)}
           onSaved={async (bookingId) => {
             try {
               await markConverted.mutateAsync({
