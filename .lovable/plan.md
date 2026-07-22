@@ -1,63 +1,59 @@
-# Sprint 3 — In-house grooming to parity
+# Sprint 4 — Mobile vans + Pickup/Drop-off to parity
 
-Bring grooming (in-house + mobile) up to the same level as Hotel/Cattery: rate-card driven pricing, live preview, addon selection, vax gate on Confirm, and pensioner discount actually applied to the invoice.
+Bring mobile grooming vans and pickup/drop-off transport up to the same end-to-end path daycare and hotel already have: request → booking with resource → status flow → auto-invoice line on the correct month's draft → visible on Customer 360 + portal → comms fired.
 
 ## What already exists (verified)
-- `grooming_packages` + `grooming_addons` tables + full Settings CRUD (`GroomingPackagesPage`, `GroomingAddonsPage`).
-- Auto-invoice triggers on `grooming_booking_details` and `grooming_booking_addons` (migrations already in place).
-- Grooming board with soft vax check on Check-in.
-- Customer portal wizard already picks package + addons.
+- `MobileVansPage` with day picker, van tabs, `VanTimeline`, `RouteSummary`, `UnassignedStrip`, and `van_workflow_settings` (min/max travel gap).
+- `TransportBoardPage` with vehicle tabs, columns view, `UnassignedTransportStrip`, and `transport_workflow_settings`.
+- Resources of type `mobile_van` and `transport_vehicle` (with `home_suburb`) via `ResourcesPage`.
+- Portal `GroomingRequestWizard` (in-house + mobile) and `TransportRequestWizard` writing to `booking_requests`.
+- Grooming auto-invoice trigger (Sprint 3) already produces lines for both `grooming_inhouse` and `grooming_mobile` service types.
 
-## What's still missing (parity gaps)
-- Staff `BookingFormModal` grooming section is free-text: no package picker, no addon multi-select, no price preview.
-- Vaccination gate on Confirm (like hotel) — currently only checked at Check-in.
-- Pensioner discount is a boolean on the booking but never applied to the invoice line.
-- Mobile travel fee is a free number instead of settings-driven.
+## Parity gaps to close
 
-## Deliverables
+### 1. Transport auto-invoice trigger + settings
+- New `transport_details_auto_invoice` trigger on `transport_details` insert/update, mirroring the grooming/hotel triggers.
+- Rate source: new columns on `transport_workflow_settings` — `default_fee_zar`, `per_km_zar`, `round_trip_multiplier`, plus optional `suburb_fees` jsonb (`{ "Bryanston": 120, ... }`).
+- Line description: `"Transport — {pet} · {direction} · {suburb}"`, appended to the current-period draft (respects billing cycle).
+- Trigger recalculates when direction/suburb changes.
+- Settings-first: extend `TransportWorkflowPage` with the new fields, gated by `settings.transport.manage`.
 
-### 1. Rate-card driven grooming fields in `BookingFormModal`
-Rewrite `GroomingFields` in `src/features/bookings/BookingDetailsFields.tsx`:
-- Species/size aware package dropdown pulled from `grooming_packages` (active only, filtered by pet species + size band when known, otherwise show all with size in label).
-- Multi-select chips for `grooming_addons` (active only), persisted to `grooming_booking_addons`.
-- Duration auto-fills from `packages.expected_minutes` (still editable).
-- Keep groomer name / notes / recurring / pensioner discount toggle.
-- Mobile-only: travel fee remains editable but is prefilled from a new default in Grooming workflow settings.
+### 2. Van route / time enforcement
+- Server-side check `van_can_assign_stop(booking_id, resource_id)` RPC:
+  - Enforces `min_travel_gap_minutes` between this stop and its neighbours on the same van/day.
+  - Warns (never blocks) when gap > `max_travel_gap_minutes`.
+  - Blocks overlap with any confirmed stop on the same van.
+- `useAssignBookingToVan` calls the RPC before the update; surfaces block reason as a toast.
+- Same pattern for transport: `transport_can_assign_leg(booking_id, resource_id)` respecting vehicle capacity (new `capacity` already on `resources`).
 
-### 2. Live price preview panel
-New `GroomingPricePreviewPanel` (mirrors `HotelExtrasPanel` pattern):
-- Shows package price, addons subtotal, travel fee (mobile), pensioner discount %, and total in ZAR.
-- Pensioner discount % read from grooming workflow settings (new field, default 10%).
+### 3. Suburb-aware auto-assign helper (optional per stop)
+- "Auto-assign" button on `UnassignedStrip` (mobile) and `UnassignedTransportStrip`:
+  - Picks the van/vehicle whose `home_suburb` matches the customer suburb; falls back to the van with the smallest resulting max-gap.
+  - Client-side heuristic, no schema change.
 
-### 3. Persist grooming_booking_addons on save
-Extend `saveDetails` in `BookingFormModal` to upsert/replace rows in `grooming_booking_addons` alongside `grooming_booking_details`, so the existing auto-invoice trigger materialises the addon lines.
+### 4. Convert-request wiring for mobile + transport
+- Extend `BookingRequestQueue` "Convert" action so `grooming_mobile` and `pickup_dropoff` requests open `BookingFormModal` prefilled from `request_payload` (pet, times, direction, addresses).
+- On save: mark request `converted`, set `booking_id`, fire `booking_created` notification event.
+- (Full cross-service dispatcher lands in Sprint 5; this sprint just handles these two service types.)
 
-### 4. Vaccination gate on Confirm
-- Add `grooming_can_confirm_booking(booking_id)` RPC mirroring `hotel_can_confirm_booking` — reuses `vaccination_rules` for grooming service.
-- Add `grooming_confirm_mode` (`off` | `warn` | `block`) to grooming workflow settings.
-- New `GroomingVaxGatePanel` on booking detail page for in-house + mobile grooming bookings; behaviour identical to `HotelVaxGatePanel`.
+### 5. Status flow + comms hooks
+- Add the same `booking_status_events` transitions the hotel/grooming boards use — `en_route`, `arrived`, `completed` — surfaced as buttons on van/transport cards.
+- Ensure each transition writes a `notification_events` row (`transport_en_route`, `transport_arrived`, `grooming_mobile_en_route`, `grooming_mobile_arrived`) using existing dispatcher; template bodies come in Sprint 7.
 
-### 5. Pensioner discount in auto-invoice
-Update `grooming_details_auto_invoice` trigger:
-- If `pensioner_discount = true`, apply configured % as a `discount` on the package line (using existing `invoice_items.discount` column from Slice 3).
-- Trigger recalculates when the flag toggles.
+### 6. Customer 360 + portal visibility
+- Confirm `BookingsTab` and `HistoryTab` render mobile grooming and transport bookings with their resource and suburb (data is already fetched — verify labels are correct, add resource name column if missing).
+- Portal `MyBookingDetailPage`: show assigned van/vehicle name and ETA window when set.
 
-### 6. Settings additions (settings-first rule)
-Extend `GroomingWorkflowPage` (or add one if missing) with:
-- `confirm_mode` for the vax gate.
-- `pensioner_discount_pct` (default 10).
-- `default_mobile_travel_fee_zar`.
-Gated by `settings.grooming.manage`.
-
-## Out of scope for this sprint
-- Groomer resource assignment / capacity (belongs to a later "resources" sprint).
-- Mobile van routing (already handled by MobileVansPage).
-- Customer-facing portal wizard changes — already parity-compliant.
+## Out of scope
+- Live GPS / driver mobile app (later).
+- Multi-stop routing optimisation beyond suburb heuristic.
+- Full cross-service convert dispatcher (Sprint 5).
+- Comms template bodies (Sprint 7).
 
 ## Technical notes
-- All new queries live in `src/features/grooming/queries.ts` and `src/features/settings/groomingRateCardQueries.ts` (extend, don't fork).
-- New RPC + trigger changes go in a single migration; grants/policies follow the standard four-step template.
-- Follow existing coral / semantic token styling — no hardcoded colors.
-- Recurring grooming bookings continue to use the shared `recurring_rule_id` generator; no changes needed there.
+- All new SQL (trigger, RPCs, settings columns) in one migration following the four-step template; grant `EXECUTE` to `authenticated`.
+- New queries live in existing `mobileVans/queries.ts` and `transport/queries.ts`.
+- Settings-first: nothing hardcoded; every fee, gap, and suburb rule editable in Admin → Settings.
+- No hardcoded colors — reuse coral / semantic tokens.
 
 Say **"go"** to start, or tell me which deliverable to drop / re-order.
