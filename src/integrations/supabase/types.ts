@@ -2400,6 +2400,44 @@ export type Database = {
           },
         ]
       }
+      grooming_workflow_settings: {
+        Row: {
+          created_at: string
+          default_mobile_travel_fee_zar: number
+          id: string
+          pensioner_discount_pct: number
+          tenant_id: string
+          updated_at: string
+          vax_gate_mode: string
+        }
+        Insert: {
+          created_at?: string
+          default_mobile_travel_fee_zar?: number
+          id?: string
+          pensioner_discount_pct?: number
+          tenant_id: string
+          updated_at?: string
+          vax_gate_mode?: string
+        }
+        Update: {
+          created_at?: string
+          default_mobile_travel_fee_zar?: number
+          id?: string
+          pensioner_discount_pct?: number
+          tenant_id?: string
+          updated_at?: string
+          vax_gate_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grooming_workflow_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotel_booking_details: {
         Row: {
           accommodation_type: string | null
@@ -5159,6 +5197,16 @@ export type Database = {
         Returns: Json
       }
       get_public_invoice: { Args: { p_token: string }; Returns: Json }
+      grooming_can_confirm_booking: {
+        Args: { p_booking_id: string }
+        Returns: {
+          expiry_date: string
+          pet_id: string
+          pet_name: string
+          status: string
+          vaccine_type: string
+        }[]
+      }
       hotel_can_confirm_booking: {
         Args: { p_booking_id: string }
         Returns: {

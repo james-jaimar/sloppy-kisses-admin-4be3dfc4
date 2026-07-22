@@ -8,11 +8,14 @@ export interface GroomingDetails {
   booking_id: string;
   tenant_id: string;
   grooming_mode: "in_house" | "mobile" | null;
+  package_id: string | null;
   service_package: string | null;
   groomer_name: string | null;
   duration_minutes: number | null;
   travel_fee: number | null;
   surcharge_amount: number | null;
+  matted_surcharge_zar: number | null;
+  sedation_surcharge_zar: number | null;
   pensioner_discount: boolean;
   recurring: boolean;
   grooming_notes: string | null;
