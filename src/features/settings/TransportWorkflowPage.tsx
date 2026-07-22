@@ -140,6 +140,76 @@ export default function TransportWorkflowPage() {
             </Field>
           </div>
 
+          <div className="border-t border-border pt-6 space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold">Pricing</h3>
+              <p className="text-xs text-muted-foreground">
+                Used by the transport auto-invoice line. A matching suburb below overrides the default fee.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Default fee (ZAR)" hint="Applied when no suburb-specific fee is configured.">
+                <input
+                  type="number" min={0} step="0.01" disabled={!canManage}
+                  value={form.default_fee_zar}
+                  onChange={(e) => setForm((f) => ({ ...f, default_fee_zar: Number(e.target.value) }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                />
+              </Field>
+              <Field label="Round-trip multiplier" hint="Applied when direction = round_trip. Default 1.8×.">
+                <input
+                  type="number" min={1} step="0.05" disabled={!canManage}
+                  value={form.round_trip_multiplier}
+                  onChange={(e) => setForm((f) => ({ ...f, round_trip_multiplier: Number(e.target.value) }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                />
+              </Field>
+            </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Suburb fees (ZAR)</div>
+                <button
+                  type="button"
+                  disabled={!canManage}
+                  onClick={() => setSuburbFees((r) => [...r, { suburb: "", fee: 0 }])}
+                  className="text-xs font-semibold text-sk-coral hover:underline disabled:opacity-50"
+                >
+                  + Add suburb
+                </button>
+              </div>
+              {suburbFees.length === 0 && (
+                <div className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+                  No suburb overrides. All legs will use the default fee.
+                </div>
+              )}
+              <ul className="space-y-2">
+                {suburbFees.map((row, i) => (
+                  <li key={i} className="grid grid-cols-[1fr_120px_auto] items-center gap-2">
+                    <input
+                      type="text" disabled={!canManage} placeholder="Suburb (case-sensitive)"
+                      value={row.suburb}
+                      onChange={(e) => setSuburbFees((rows) => rows.map((r, idx) => idx === i ? { ...r, suburb: e.target.value } : r))}
+                      className="h-9 rounded-lg border border-border bg-white px-3 text-sm"
+                    />
+                    <input
+                      type="number" min={0} step="0.01" disabled={!canManage}
+                      value={row.fee}
+                      onChange={(e) => setSuburbFees((rows) => rows.map((r, idx) => idx === i ? { ...r, fee: Number(e.target.value) } : r))}
+                      className="h-9 rounded-lg border border-border bg-white px-3 text-sm"
+                    />
+                    <button
+                      type="button" disabled={!canManage}
+                      onClick={() => setSuburbFees((rows) => rows.filter((_, idx) => idx !== i))}
+                      className="text-xs text-muted-foreground hover:text-destructive disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
           <div className="flex justify-end">
             <button
               disabled={!canManage || update.isPending}
