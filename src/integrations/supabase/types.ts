@@ -5387,6 +5387,7 @@ export type Database = {
         | "portal_invited"
         | "password_reset_requested"
         | "booking_cancellation_requested"
+        | "booking_reminder_24h"
       notification_status: "pending" | "sent" | "failed" | "skipped"
       payment_method: "eft" | "cash" | "card" | "yoko" | "payfast" | "other"
       payment_provider_mode: "test" | "live"
@@ -5631,6 +5632,7 @@ export const Constants = {
         "portal_invited",
         "password_reset_requested",
         "booking_cancellation_requested",
+        "booking_reminder_24h",
       ],
       notification_status: ["pending", "sent", "failed", "skipped"],
       payment_method: ["eft", "cash", "card", "yoko", "payfast", "other"],
