@@ -4665,10 +4665,13 @@ export type Database = {
           day_end_time: string
           day_start_time: string
           default_dropoff_trail_minutes: number
+          default_fee_zar: number
           default_pickup_lead_minutes: number
           id: string
           max_leg_gap_minutes: number
           min_leg_gap_minutes: number
+          round_trip_multiplier: number
+          suburb_fees: Json
           tenant_id: string
           updated_at: string
         }
@@ -4677,10 +4680,13 @@ export type Database = {
           day_end_time?: string
           day_start_time?: string
           default_dropoff_trail_minutes?: number
+          default_fee_zar?: number
           default_pickup_lead_minutes?: number
           id?: string
           max_leg_gap_minutes?: number
           min_leg_gap_minutes?: number
+          round_trip_multiplier?: number
+          suburb_fees?: Json
           tenant_id: string
           updated_at?: string
         }
@@ -4689,10 +4695,13 @@ export type Database = {
           day_end_time?: string
           day_start_time?: string
           default_dropoff_trail_minutes?: number
+          default_fee_zar?: number
           default_pickup_lead_minutes?: number
           id?: string
           max_leg_gap_minutes?: number
           min_leg_gap_minutes?: number
+          round_trip_multiplier?: number
+          suburb_fees?: Json
           tenant_id?: string
           updated_at?: string
         }
@@ -5277,6 +5286,10 @@ export type Database = {
         Args: { target_provider: string; target_tenant_id: string }
         Returns: boolean
       }
+      transport_can_assign_leg: {
+        Args: { _booking_id: string; _resource_id: string }
+        Returns: Json
+      }
       user_can_access_customer: {
         Args: { target_customer_id: string; target_tenant_id: string }
         Returns: boolean
@@ -5292,6 +5305,10 @@ export type Database = {
       user_has_tenant_access: {
         Args: { target_tenant_id: string }
         Returns: boolean
+      }
+      van_can_assign_stop: {
+        Args: { _booking_id: string; _resource_id: string }
+        Returns: Json
       }
       void_refund: { Args: { p_refund_id: string }; Returns: undefined }
     }
