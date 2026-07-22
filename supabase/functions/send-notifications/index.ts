@@ -5,7 +5,7 @@
 // Trigger with `supabase.functions.invoke("send-notifications")` or via cron.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { loadTransport, loadTenantBrand, renderBrandedHtml, sendMail } from "../_shared/comms-transport.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,54 +33,19 @@ function isQuietHours(nowUtc: Date, quietStart: string, quietEnd: string): boole
   return s <= e ? h >= s && h < e : h >= s || h < e;
 }
 
-interface Transport {
-  smtp_host: string;
-  smtp_port: number;
-  smtp_secure: string;
-  smtp_username: string;
-  smtp_password: string;
-  from_name: string | null;
-  from_email: string;
-  reply_to: string | null;
-}
-
-const transportCache = new Map<string, Transport | null>();
-
-async function loadTransport(sb: ReturnType<typeof createClient>, tenantId: string): Promise<Transport | null> {
-  if (transportCache.has(tenantId)) return transportCache.get(tenantId)!;
-  const { data } = await sb
-    .from("email_transport_settings")
-    .select("smtp_host,smtp_port,smtp_secure,smtp_username,smtp_password,from_name,from_email,reply_to")
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
-  const t = (data && data.smtp_host && data.smtp_password && data.from_email ? data : null) as Transport | null;
-  transportCache.set(tenantId, t);
-  return t;
-}
-
-async function sendViaSmtp(t: Transport, to: string, subject: string, text: string) {
-  const client = new SMTPClient({
-    connection: {
-      hostname: t.smtp_host,
-      port: t.smtp_port,
-      tls: t.smtp_secure === "ssl",
-      auth: { username: t.smtp_username, password: t.smtp_password },
-    },
-  });
-  try {
-    await client.send({
-      from: t.from_name ? `${t.from_name} <${t.from_email}>` : t.from_email,
-      to,
-      replyTo: t.reply_to ?? undefined,
-      subject,
-      content: text,
-    });
-    return { ok: true, error: null as string | null };
-  } catch (e) {
-    return { ok: false, error: (e as Error).message };
-  } finally {
-    try { await client.close(); } catch { /* ignore */ }
-  }
+function buildInvoiceCtx(invoice: any, brand: any): any {
+  if (!invoice) return null;
+  const appUrl = (brand?.app_url as string | undefined)?.replace(/\/+$/, "");
+  const base = appUrl || Deno.env.get("APP_BASE_URL")?.replace(/\/+$/, "") || "";
+  const public_url = invoice.public_view_token
+    ? `${base}/i/${invoice.public_view_token}`
+    : "";
+  return {
+    ...invoice,
+    total: invoice.total != null ? Number(invoice.total).toFixed(2) : "",
+    balance_due: invoice.balance_due != null ? Number(invoice.balance_due).toFixed(2) : "",
+    public_url,
+  };
 }
 
 async function logEmail(
@@ -136,6 +101,7 @@ Deno.serve(async (req) => {
       const settings = settingsRes.data;
       const tpl = tplRes.data;
       const customer = custRes.data;
+      const brand = await loadTenantBrand(sb, ev.tenant_id);
 
       if (settings && isQuietHours(new Date(), settings.quiet_start ?? "20:00", settings.quiet_end ?? "07:00")) {
         skipped++;
@@ -170,13 +136,16 @@ Deno.serve(async (req) => {
         tenant: tenantRes.data,
         customer,
         booking: bookingRes.data,
-        invoice: invoiceRes.data,
+        invoice: buildInvoiceCtx(invoiceRes.data, brand),
         pet: petRes.data,
         vaccine: ev.payload?.vaccine ?? {},
         payload: ev.payload,
       };
-      const subject = tpl.subject ? render(tpl.subject, ctx) : null;
+      const tenantName = (tenantRes.data as any)?.name ?? "Sloppy Kisses";
+      const fallbackSubject = `${ev.event_type} — ${tenantName}`;
+      const subject = (tpl.subject ? render(tpl.subject, ctx) : "") || fallbackSubject;
       const body = render(tpl.body, ctx);
+      const html = renderBrandedHtml(brand, tenantName, body);
 
       if (ev.channel === "email") {
         const transport = await loadTransport(sb, ev.tenant_id);
@@ -190,7 +159,7 @@ Deno.serve(async (req) => {
           await logEmail(sb, ev.tenant_id, recipient, subject ?? "(no subject)", "failed", errMsg, `notify.${ev.event_type}`);
           continue;
         }
-        const result = await sendViaSmtp(transport, recipient, subject ?? "(no subject)", body);
+        const result = await sendMail(transport, recipient, subject, body, html);
         if (result.ok) {
           sent++;
           await sb.from("notification_events").update({
@@ -198,14 +167,14 @@ Deno.serve(async (req) => {
             recipient_email: recipient, template_key: `${tpl.event_code}:${tpl.channel}`,
             provider_message_id: null, attempts: (ev.attempts ?? 0) + 1,
           }).eq("id", ev.id);
-          await logEmail(sb, ev.tenant_id, recipient, subject ?? "(no subject)", "sent", null, `notify.${ev.event_type}`);
+          await logEmail(sb, ev.tenant_id, recipient, subject, "sent", null, `notify.${ev.event_type}`);
         } else {
           failed++;
           await sb.from("notification_events").update({
             status: "failed", error: result.error, subject, body_rendered: body,
             recipient_email: recipient, attempts: (ev.attempts ?? 0) + 1,
           }).eq("id", ev.id);
-          await logEmail(sb, ev.tenant_id, recipient, subject ?? "(no subject)", "failed", result.error, `notify.${ev.event_type}`);
+          await logEmail(sb, ev.tenant_id, recipient, subject, "failed", result.error, `notify.${ev.event_type}`);
         }
       } else {
         // whatsapp/sms — provider not wired yet

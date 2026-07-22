@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
-import { Save, Plus, Trash2 } from "lucide-react";
+import { Save, Plus, Trash2, Send, Eye, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useMessageTemplates, useUpsertMessageTemplate, useDeleteMessageTemplate, type MessageTemplate } from "@/features/comms/queries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { supabase } from "@/lib/supabase/client";
+import { buildSampleContext, getVariablesFor, renderTemplate } from "@/features/comms/templateVariables";
 
 const EVENT_CODES = [
-  "booking_created","booking_rescheduled","booking_cancelled","booking_status_changed",
+  "booking_created","booking_reminder_24h","booking_rescheduled","booking_cancelled","booking_status_changed",
   "booking_request_created","booking_request_status_changed",
   "invoice_issued","invoice_reminder","invoice_paid",
   "vax_expiring_30d","vax_expiring_7d","vax_expired","manual_message",
@@ -24,11 +26,22 @@ export default function MessageTemplatesPage() {
   const del = useDeleteMessageTemplate(tenantId ?? "");
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [mode, setMode] = useState<"edit" | "preview">("edit");
+  const [showVars, setShowVars] = useState(false);
+  const [testing, setTesting] = useState(false);
   const templates = templatesQ.data ?? [];
   const selected = useMemo(() => templates.find((t) => t.id === selectedId) ?? templates[0] ?? null, [templates, selectedId]);
 
   const [draft, setDraft] = useState<Partial<MessageTemplate>>({});
   const current: Partial<MessageTemplate> = { ...(selected ?? {}), ...draft };
+  const vars = getVariablesFor(current.event_code ?? null);
+  const sampleCtx = useMemo(() => {
+    const ctx = buildSampleContext(current.event_code ?? null);
+    (ctx as any).tenant = { name: tenant?.name ?? "Sloppy Kisses" };
+    return ctx;
+  }, [current.event_code, tenant?.name]);
+  const previewSubject = current.subject ? renderTemplate(current.subject, sampleCtx) : "";
+  const previewBody = current.body ? renderTemplate(current.body, sampleCtx) : "";
 
   async function save() {
     if (!current.event_code || !current.channel || !current.name || !current.body) {
@@ -57,6 +70,28 @@ export default function MessageTemplatesPage() {
     if (!(await confirm({ title: `Delete template "${selected.name}"?`, confirmLabel: "Delete", tone: "destructive" }))) return;
     try { await del.mutateAsync(selected.id); toast.success("Deleted"); setSelectedId(null); setDraft({}); }
     catch (e: any) { toast.error(e?.message); }
+  }
+
+  async function sendTest() {
+    if (!tenantId || !current.body) { toast.error("Body required"); return; }
+    setTesting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("notify-test-send", {
+        body: {
+          tenant_id: tenantId,
+          event_code: current.event_code,
+          subject: current.subject ?? "",
+          body: current.body,
+          sample: sampleCtx,
+        },
+      });
+      if (error) throw error;
+      toast.success(`Test sent to ${data?.recipient ?? "test recipient"}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Test send failed");
+    } finally {
+      setTesting(false);
+    }
   }
 
   function newTemplate() {
@@ -94,6 +129,35 @@ export default function MessageTemplatesPage() {
                 Read-only. Requires "Manage comms settings".
               </div>
             )}
+            <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
+              <div className="inline-flex rounded-lg border border-border p-0.5 text-xs">
+                <button onClick={() => setMode("edit")}
+                  className={"inline-flex items-center gap-1 rounded-md px-3 py-1.5 " + (mode === "edit" ? "bg-sk-coral-soft text-sk-coral-dark font-semibold" : "text-muted-foreground hover:bg-muted")}>
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </button>
+                <button onClick={() => setMode("preview")}
+                  className={"inline-flex items-center gap-1 rounded-md px-3 py-1.5 " + (mode === "preview" ? "bg-sk-coral-soft text-sk-coral-dark font-semibold" : "text-muted-foreground hover:bg-muted")}>
+                  <Eye className="h-3.5 w-3.5" /> Preview
+                </button>
+              </div>
+              <button disabled={!canManage || testing || !current.body} onClick={sendTest}
+                className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted disabled:opacity-50">
+                <Send className="h-3.5 w-3.5" /> {testing ? "Sending…" : "Send test"}
+              </button>
+            </div>
+            {mode === "preview" ? (
+              <div className="space-y-3">
+                <div className="rounded-lg border border-border bg-muted px-3 py-2 text-sm">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Subject</div>
+                  <div className="mt-1">{previewSubject || <span className="text-muted-foreground">(no subject — falls back to "{current.event_code} — {tenant?.name}")</span>}</div>
+                </div>
+                <div className="rounded-lg border border-border bg-white px-4 py-4 text-sm leading-relaxed whitespace-pre-wrap">
+                  {previewBody || <span className="text-muted-foreground">(empty body)</span>}
+                </div>
+                <div className="text-[11px] text-muted-foreground">Preview uses sample data. Real sends fill in the customer's actual details.</div>
+              </div>
+            ) : (
+            <>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Name">
                 <input disabled={!canManage} value={current.name ?? ""} onChange={(e) => setDraft({ ...draft, name: e.target.value })}
@@ -136,10 +200,29 @@ export default function MessageTemplatesPage() {
                   className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
               </Field>
             )}
-            <Field label="Body" hint="Use {{customer.first_name}}, {{pet.name}}, {{booking.booking_number}}, {{invoice.number}} etc.">
+            <Field label="Body" hint="Use variables like {{customer.full_name}}. Full list below.">
               <textarea disabled={!canManage} rows={12} value={current.body ?? ""} onChange={(e) => setDraft({ ...draft, body: e.target.value })}
                 className="w-full rounded-lg border border-border bg-white px-3 py-2 font-mono text-xs" />
             </Field>
+            <div className="rounded-lg border border-border bg-muted/40">
+              <button type="button" onClick={() => setShowVars((v) => !v)}
+                className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Variables reference ({vars.length})
+                <span>{showVars ? "−" : "+"}</span>
+              </button>
+              {showVars && (
+                <ul className="space-y-1 border-t border-border px-3 py-2 text-xs">
+                  {vars.map((v) => (
+                    <li key={v.path} className="flex items-baseline justify-between gap-3">
+                      <code className="rounded bg-white px-1.5 py-0.5 font-mono">{"{{"}{v.path}{"}}"}</code>
+                      <span className="text-muted-foreground">{v.label}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            </>
+            )}
 
             <div className="flex justify-between">
               {selected?.id ? (
