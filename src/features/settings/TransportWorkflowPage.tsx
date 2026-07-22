@@ -9,6 +9,21 @@ import {
 
 const PERMISSION = "settings.transport.manage";
 
+interface SuburbFee { suburb: string; fee: number }
+function fromMap(m: Record<string, number> | null | undefined): SuburbFee[] {
+  if (!m) return [];
+  return Object.entries(m).map(([suburb, fee]) => ({ suburb, fee: Number(fee) || 0 }));
+}
+function toMap(rows: SuburbFee[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const r of rows) {
+    const s = r.suburb.trim();
+    if (!s) continue;
+    out[s] = Number(r.fee) || 0;
+  }
+  return out;
+}
+
 function trimTime(t: string | undefined | null): string {
   if (!t) return "";
   return t.length >= 5 ? t.slice(0, 5) : t;
@@ -30,7 +45,10 @@ export default function TransportWorkflowPage() {
     day_end_time: "18:00",
     default_pickup_lead_minutes: 30,
     default_dropoff_trail_minutes: 15,
+    default_fee_zar: 0,
+    round_trip_multiplier: 1.8,
   });
+  const [suburbFees, setSuburbFees] = useState<SuburbFee[]>([]);
 
   useEffect(() => {
     if (settingsQ.data) {
@@ -41,13 +59,16 @@ export default function TransportWorkflowPage() {
         day_end_time: trimTime(settingsQ.data.day_end_time),
         default_pickup_lead_minutes: settingsQ.data.default_pickup_lead_minutes,
         default_dropoff_trail_minutes: settingsQ.data.default_dropoff_trail_minutes,
+        default_fee_zar: Number(settingsQ.data.default_fee_zar ?? 0),
+        round_trip_multiplier: Number(settingsQ.data.round_trip_multiplier ?? 1.8),
       });
+      setSuburbFees(fromMap(settingsQ.data.suburb_fees));
     }
   }, [settingsQ.data]);
 
   async function save() {
     try {
-      await update.mutateAsync(form);
+      await update.mutateAsync({ ...form, suburb_fees: toMap(suburbFees) } as any);
       toast.success("Transport workflow settings saved");
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to save");
