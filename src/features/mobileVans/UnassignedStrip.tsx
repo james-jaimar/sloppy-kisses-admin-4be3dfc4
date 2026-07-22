@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import { AlertTriangle, PawPrint } from "lucide-react";
+import { AlertTriangle, PawPrint, Wand2 } from "lucide-react";
 import { useAssignBookingToVan, type MobileVanResource, type VanStop } from "./queries";
 
 function fmtTime(iso: string | null): string {
@@ -26,6 +26,21 @@ export function UnassignedStrip({
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to assign");
     }
+  }
+
+  function pickVanForStop(stop: VanStop): string | null {
+    const suburb = stop.customer?.suburb?.trim().toLowerCase() ?? "";
+    if (suburb) {
+      const match = vans.find((v) => (v.home_suburb ?? "").trim().toLowerCase() === suburb);
+      if (match) return match.id;
+    }
+    return vans[0]?.id ?? null;
+  }
+
+  async function autoAssign(stop: VanStop) {
+    const rid = pickVanForStop(stop);
+    if (!rid) { toast.error("No vans available"); return; }
+    await doAssign(stop.id, rid);
   }
 
   return (
@@ -64,6 +79,14 @@ export function UnassignedStrip({
                 <option key={v.id} value={v.id}>{v.name}</option>
               ))}
             </select>
+            <button
+              type="button"
+              disabled={assign.isPending}
+              onClick={() => autoAssign(s)}
+              className="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-1 rounded-md border border-sk-coral/40 bg-sk-coral/10 text-[11px] font-semibold text-sk-coral hover:bg-sk-coral/20 disabled:opacity-50"
+            >
+              <Wand2 className="h-3 w-3" /> Auto-assign by suburb
+            </button>
           </li>
         ))}
       </ul>

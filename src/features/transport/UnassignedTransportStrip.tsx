@@ -1,6 +1,6 @@
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import { AlertTriangle, PawPrint } from "lucide-react";
+import { AlertTriangle, PawPrint, Wand2 } from "lucide-react";
 import { useAssignLegToVehicle, type TransportLeg, type TransportVehicle } from "./queries";
 
 function fmtTime(iso: string | null): string {
@@ -26,6 +26,21 @@ export function UnassignedTransportStrip({
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to assign");
     }
+  }
+
+  function pickVehicle(leg: TransportLeg): string | null {
+    const suburb = (leg.details?.suburb ?? leg.customer?.suburb ?? "").trim().toLowerCase();
+    if (suburb) {
+      const match = vehicles.find((v) => (v.home_suburb ?? "").trim().toLowerCase() === suburb);
+      if (match) return match.id;
+    }
+    return vehicles[0]?.id ?? null;
+  }
+
+  async function autoAssign(leg: TransportLeg) {
+    const rid = pickVehicle(leg);
+    if (!rid) { toast.error("No vehicles available"); return; }
+    await doAssign(leg.id, rid);
   }
 
   return (
@@ -67,6 +82,14 @@ export function UnassignedTransportStrip({
                   <option key={v.id} value={v.id}>{v.name}</option>
                 ))}
               </select>
+              <button
+                type="button"
+                disabled={assign.isPending}
+                onClick={() => autoAssign(l)}
+                className="mt-1.5 inline-flex h-7 w-full items-center justify-center gap-1 rounded-md border border-sk-coral/40 bg-sk-coral/10 text-[11px] font-semibold text-sk-coral hover:bg-sk-coral/20 disabled:opacity-50"
+              >
+                <Wand2 className="h-3 w-3" /> Auto-assign by suburb
+              </button>
             </li>
           );
         })}

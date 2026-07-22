@@ -132,6 +132,16 @@ export function useAssignLegToVehicle(tenantId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ bookingId, resourceId }: { bookingId: string; resourceId: string | null }) => {
+      if (resourceId) {
+        const { data: check, error: chkErr } = await supabase.rpc("transport_can_assign_leg" as any, {
+          _booking_id: bookingId, _resource_id: resourceId,
+        });
+        if (chkErr) throw chkErr;
+        const c: any = check;
+        if (c && c.ok === false) {
+          throw new Error(c.reason === "overlap" ? "Overlaps another leg on this vehicle" : "Cannot assign to this vehicle");
+        }
+      }
       const { error } = await supabase
         .from("bookings")
         .update({ resource_id: resourceId } as any)
@@ -175,6 +185,9 @@ export interface TransportWorkflowSettings {
   day_end_time: string;
   default_pickup_lead_minutes: number;
   default_dropoff_trail_minutes: number;
+  default_fee_zar: number;
+  round_trip_multiplier: number;
+  suburb_fees: Record<string, number> | null;
 }
 
 export function useTransportWorkflowSettings(tenantId: string | null | undefined) {
