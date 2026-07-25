@@ -27,7 +27,7 @@ export function GroomingExtrasPanel({
   tenantId: string;
   bookingId: string | null;
   species: "dog" | "cat" | "rabbit";
-  mode: "in_house" | "mobile";
+  mode: "inhouse" | "mobile";
   packageId: string | null;
   onPackageChange: (id: string | null) => void;
   addonSelection: GroomingAddonSelection[];

@@ -7,7 +7,7 @@ export interface GroomingDetails {
   id?: string;
   booking_id: string;
   tenant_id: string;
-  grooming_mode: "in_house" | "mobile" | null;
+  grooming_mode: "inhouse" | "mobile" | null;
   package_id: string | null;
   service_package: string | null;
   groomer_name: string | null;

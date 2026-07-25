@@ -343,7 +343,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         bookingId,
         data: {
           ...grooming,
-          grooming_mode: serviceType === "grooming_mobile" ? "mobile" : "in_house",
+          grooming_mode: serviceType === "grooming_mobile" ? "mobile" : "inhouse",
         },
       });
     } else if (kind === "hotel") {
@@ -579,7 +579,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           <GroomingFields
             value={grooming}
             onChange={(patch) => setGrooming((p) => ({ ...p, ...patch }))}
-            mode={serviceType === "grooming_mobile" ? "mobile" : "in_house"}
+            mode={serviceType === "grooming_mobile" ? "mobile" : "inhouse"}
           />
         )}
         {kind === "grooming" && (
@@ -587,7 +587,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             tenantId={tenantId}
             bookingId={booking?.id ?? null}
             species={(petsQ.data?.find((p) => petIds.includes(p.id))?.species as any) === "cat" ? "cat" : "dog"}
-            mode={serviceType === "grooming_mobile" ? "mobile" : "in_house"}
+            mode={serviceType === "grooming_mobile" ? "mobile" : "inhouse"}
             packageId={grooming.package_id ?? null}
             onPackageChange={(id) => setGrooming((p) => ({ ...p, package_id: id }))}
             addonSelection={groomingAddons}
