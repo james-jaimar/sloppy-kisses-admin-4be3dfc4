@@ -25,6 +25,11 @@ export interface ConvertPrefill {
   grooming?: Partial<GroomingDetails>;
   hotel?: Partial<HotelDetails>;
   transport?: Partial<TransportDetails>;
+  grooming_instructions?: {
+    selections: Record<string, any>;
+    medical_flags: string[];
+    notes: string;
+  } | null;
 }
 
 function joinAddress(a: any): string | null {
@@ -83,8 +88,18 @@ export function buildBookingPrefillFromRequest(
     case "grooming_inhouse":
     case "grooming_mobile": {
       const mobile = request.service_type === "grooming_mobile";
+      const instr = payload.instructions && typeof payload.instructions === "object"
+        ? {
+            selections: payload.instructions.selections ?? {},
+            medical_flags: Array.isArray(payload.instructions.medical_flags)
+              ? payload.instructions.medical_flags
+              : [],
+            notes: typeof payload.instructions.notes === "string" ? payload.instructions.notes : "",
+          }
+        : null;
       return {
         ...base,
+        grooming_instructions: instr,
         grooming: {
           grooming_mode: mobile ? "mobile" : "in_house",
           package_id: payload.package_id ?? null,
