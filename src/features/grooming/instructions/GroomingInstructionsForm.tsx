@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useInstructionCatalog, type Selections } from "./queries";
+import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 
 export interface GroomingInstructionsValue {
   selections: Selections;
@@ -18,6 +19,7 @@ interface Props {
 
 export function GroomingInstructionsForm({ tenantId, value, onChange, disabled, compact }: Props) {
   const catalog = useInstructionCatalog(tenantId);
+  const addonsQ = useGroomingAddons(tenantId ?? undefined, { activeOnly: true });
   const [local, setLocal] = useState<GroomingInstructionsValue>(value);
 
   useEffect(() => { setLocal(value); }, [value]);
@@ -35,6 +37,13 @@ export function GroomingInstructionsForm({ tenantId, value, onChange, disabled, 
   if (catalog.isLoading) return <div className="text-sm text-muted-foreground">Loading instructions…</div>;
   if (catalog.isError) return <div className="text-sm text-destructive">Failed to load instructions.</div>;
   const { groups, byGroup } = catalog.data!;
+  const addonPrice = new Map<string, number>();
+  for (const a of addonsQ.data ?? []) addonPrice.set(a.code, Number(a.price_zar));
+  const priceHint = (code: string | null | undefined) => {
+    if (!code) return "";
+    const p = addonPrice.get(code);
+    return p ? ` +R${Math.round(p)}` : "";
+  };
 
   return (
     <div className={compact ? "space-y-3" : "space-y-4"}>
@@ -95,7 +104,7 @@ export function GroomingInstructionsForm({ tenantId, value, onChange, disabled, 
                     <button key={o.id} type="button" disabled={disabled}
                       onClick={() => setSel(g.code, on ? null : o.code)}
                       className={`rounded-full border px-3 py-1 text-xs ${on ? "bg-sk-coral text-white border-sk-coral" : "bg-white border-border"}`}>
-                      {o.label}
+                      {o.label}{priceHint(o.addon_code)}
                     </button>
                   );
                 })}
@@ -113,7 +122,7 @@ export function GroomingInstructionsForm({ tenantId, value, onChange, disabled, 
                         setSel(g.code, next);
                       }}
                       className={`rounded-full border px-3 py-1 text-xs ${on ? "bg-sk-coral text-white border-sk-coral" : "bg-white border-border"}`}>
-                      {o.label}
+                      {o.label}{priceHint(o.addon_code)}
                     </button>
                   );
                 })}

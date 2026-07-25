@@ -32,6 +32,7 @@ import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { BookingGroomingInstructionsPanel } from "@/features/grooming/instructions/BookingGroomingInstructionsPanel";
 import { useSaveBookingInstructions } from "@/features/grooming/instructions/queries";
+import { useInstructionCatalog } from "@/features/grooming/instructions/queries";
 import type { GroomingInstructionsValue } from "@/features/grooming/instructions/GroomingInstructionsForm";
 
 const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: ResourceType }[] = [
@@ -153,6 +154,50 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     selections: {}, medical_flags: [], notes: "", told_office_to_call: "",
   });
   const saveInstructions = useSaveBookingInstructions(tenantId);
+  const instrCatalogQ = useInstructionCatalog(tenantId);
+
+  // Auto-add priced add-ons when an instruction option carries an addon_code.
+  // Auto-added addons carry qty 1; users can still tick/untick manually in the extras panel.
+  useEffect(() => {
+    const cat = instrCatalogQ.data;
+    const addons = addonsCatalogQ.data;
+    if (!cat || !addons) return;
+    const triggered = new Set<string>();
+    for (const g of cat.groups) {
+      const val = groomingInstructions.selections[g.code];
+      if (g.kind === "bool" && val) {
+        // Special-case: hand_strip boolean → hand_strip addon
+        if (g.code === "hand_strip" && addons.some((a) => a.code === "hand_strip")) {
+          triggered.add("hand_strip");
+        }
+      }
+      const opts = cat.byGroup[g.id] ?? [];
+      if (g.kind === "single" && typeof val === "string") {
+        const opt = opts.find((o) => o.code === val);
+        if (opt?.addon_code) triggered.add(opt.addon_code);
+      }
+      if (g.kind === "multi" && Array.isArray(val)) {
+        for (const code of val) {
+          const opt = opts.find((o) => o.code === code);
+          if (opt?.addon_code) triggered.add(opt.addon_code);
+        }
+      }
+    }
+    // Resolve codes → addon ids
+    const ids = new Set<string>();
+    for (const code of triggered) {
+      const a = addons.find((x) => x.code === code);
+      if (a) ids.add(a.id);
+    }
+    // Merge: keep existing selections, ensure triggered ids are present.
+    setGroomingAddons((prev) => {
+      const have = new Set(prev.map((s) => s.addon_id));
+      const additions: GroomingAddonSelection[] = [];
+      for (const id of ids) if (!have.has(id)) additions.push({ addon_id: id, qty: 1 });
+      return additions.length ? [...prev, ...additions] : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groomingInstructions.selections, instrCatalogQ.data, addonsCatalogQ.data]);
 
   // Load existing details when editing
   const detailsQ = useBookingServiceDetails(
