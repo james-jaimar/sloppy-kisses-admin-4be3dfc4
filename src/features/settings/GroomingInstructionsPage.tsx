@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import {
   useAllInstructionGroups,
   useAllInstructionOptions,
@@ -26,6 +27,7 @@ export default function GroomingInstructionsPage() {
 
   const groupsQ = useAllInstructionGroups(tenantId);
   const optsQ = useAllInstructionOptions(tenantId);
+  const addonsQ = useGroomingAddons(tenantId, { activeOnly: true });
   const upsertGroup = useUpsertInstructionGroup(tenantId ?? "");
   const delGroup = useDeleteInstructionGroup();
   const upsertOpt = useUpsertInstructionOption(tenantId ?? "");
@@ -63,6 +65,7 @@ export default function GroomingInstructionsPage() {
 
   const groups = groupsQ.data ?? [];
   const options = optsQ.data ?? [];
+  const addons = addonsQ.data ?? [];
 
   return (
     <>
@@ -126,6 +129,15 @@ export default function GroomingInstructionsPage() {
                         <input disabled={!canManage} value={o.code}
                           onChange={(e) => upsertOpt.mutate({ ...o, code: e.target.value })}
                           className="h-8 w-32 rounded border border-border px-2 text-xs text-muted-foreground" />
+                        <select disabled={!canManage} value={o.addon_code ?? ""}
+                          onChange={(e) => upsertOpt.mutate({ ...o, addon_code: e.target.value || null })}
+                          title="Link to rate-card add-on (auto-adds to booking price when ticked)"
+                          className="h-8 w-44 rounded border border-border px-2 text-xs">
+                          <option value="">— no charge —</option>
+                          {addons.map((a) => (
+                            <option key={a.id} value={a.code}>{a.name} (R{Math.round(Number(a.price_zar))})</option>
+                          ))}
+                        </select>
                         <input type="number" disabled={!canManage} value={o.sort_order}
                           onChange={(e) => upsertOpt.mutate({ ...o, sort_order: Number(e.target.value) })}
                           className="h-8 w-16 rounded border border-border px-2 text-xs" />
