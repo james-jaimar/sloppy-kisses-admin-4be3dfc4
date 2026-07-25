@@ -245,15 +245,33 @@ export default function CalendarWeekView() {
   }, [searchParams]);
 
   const prefill = useMemo(() => {
-    if (!showNew || searchParams.get("newBooking") !== "1") return undefined;
-    return {
-      customer_id: searchParams.get("customer") ?? undefined,
-      pet_ids: searchParams.get("pet") ? [searchParams.get("pet") as string] : undefined,
-      service_type: (searchParams.get("service") as ServiceType) ?? undefined,
-      start_at: searchParams.get("start") ?? undefined,
-      booking_request_id: searchParams.get("request") ?? undefined,
-    };
-  }, [showNew, searchParams]);
+    if (!showNew) return undefined;
+    // From deep link (booking requests, etc.)
+    if (searchParams.get("newBooking") === "1") {
+      return {
+        customer_id: searchParams.get("customer") ?? undefined,
+        pet_ids: searchParams.get("pet") ? [searchParams.get("pet") as string] : undefined,
+        service_type: (searchParams.get("service") as ServiceType) ?? undefined,
+        start_at: searchParams.get("start") ?? undefined,
+        booking_request_id: searchParams.get("request") ?? undefined,
+      };
+    }
+    // From the calendar itself: seed start_at from the currently viewed day.
+    // If today, round up to the next 15 min; otherwise default to 09:00.
+    const now = new Date();
+    const isToday =
+      anchor.getFullYear() === now.getFullYear() &&
+      anchor.getMonth() === now.getMonth() &&
+      anchor.getDate() === now.getDate();
+    const seed = new Date(anchor);
+    if (isToday) {
+      const mins = now.getMinutes();
+      seed.setHours(now.getHours(), Math.ceil(mins / 15) * 15, 0, 0);
+    } else {
+      seed.setHours(9, 0, 0, 0);
+    }
+    return { start_at: seed.toISOString() };
+  }, [showNew, searchParams, anchor]);
 
   const range = useMemo(() => {
     if (view === "day") return { from: startOfDay(anchor), to: endOfDay(anchor) };
