@@ -23,15 +23,36 @@ export default function GroomingWorkflowPage() {
   const [form, setForm] = useState({
     vax_gate_mode: "soft" as GroomingVaxGateMode,
     pensioner_discount_pct: 10,
-    default_mobile_travel_fee_zar: 0,
+    default_mobile_travel_fee_zar: 110,
+    matted_rate_per_15min_zar: 50,
+    overtime_threshold_minutes: 60,
+    after_grooming_stay_play_zar: 250,
+    pickup_dropoff_fee_zar: 140,
+    puppy_half_price_max_months: 6,
+    pensioner_discount_days: [1, 3] as number[],
+    cancellation_fee_pct: 100,
+    cancellation_notice_hours: 24,
+    sedation_enabled: true,
+    sedation_default_fee_zar: 0,
   });
 
   useEffect(() => {
     if (settingsQ.data) {
+      const d = settingsQ.data;
       setForm({
-        vax_gate_mode: settingsQ.data.vax_gate_mode,
-        pensioner_discount_pct: Number(settingsQ.data.pensioner_discount_pct ?? 0),
-        default_mobile_travel_fee_zar: Number(settingsQ.data.default_mobile_travel_fee_zar ?? 0),
+        vax_gate_mode: d.vax_gate_mode,
+        pensioner_discount_pct: Number(d.pensioner_discount_pct ?? 0),
+        default_mobile_travel_fee_zar: Number(d.default_mobile_travel_fee_zar ?? 0),
+        matted_rate_per_15min_zar: Number(d.matted_rate_per_15min_zar ?? 50),
+        overtime_threshold_minutes: Number(d.overtime_threshold_minutes ?? 60),
+        after_grooming_stay_play_zar: Number(d.after_grooming_stay_play_zar ?? 250),
+        pickup_dropoff_fee_zar: Number(d.pickup_dropoff_fee_zar ?? 140),
+        puppy_half_price_max_months: Number(d.puppy_half_price_max_months ?? 6),
+        pensioner_discount_days: (d.pensioner_discount_days ?? [1, 3]) as number[],
+        cancellation_fee_pct: Number(d.cancellation_fee_pct ?? 100),
+        cancellation_notice_hours: Number(d.cancellation_notice_hours ?? 24),
+        sedation_enabled: Boolean(d.sedation_enabled ?? true),
+        sedation_default_fee_zar: Number(d.sedation_default_fee_zar ?? 0),
       });
     }
   }, [settingsQ.data]);
