@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2, Pencil } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { PetVaccinationsPanel } from "@/features/pets/PetVaccinationsPanel";
+import { DocumentsPanel } from "@/features/documents/DocumentsPanel";
 import { useCurrentCustomer } from "../hooks";
 import { MyPetFormModal } from "./MyPetFormModal";
 
@@ -62,6 +63,12 @@ export default function MyPetDetailPage() {
         </div>
 
         <PetVaccinationsPanel tenantId={p.tenant_id} petId={p.id} canManage />
+        <DocumentsPanel
+          tenantId={p.tenant_id}
+          petId={p.id}
+          uploadedVia="portal"
+          title={`${p.name ?? "Pet"} — documents`}
+        />
       </div>
 
       {editOpen && (
