@@ -41,6 +41,7 @@ import HotelBoardPage from "@/features/hotelCattery/HotelBoardPage";
 import HotelWorkflowPage from "@/features/settings/HotelWorkflowPage";
 import HotelRatesPage from "@/features/settings/HotelRatesPage";
 import GroomingWorkflowPage from "@/features/settings/GroomingWorkflowPage";
+import GroomingInstructionsPage from "@/features/settings/GroomingInstructionsPage";
 import MobileVansPage from "@/features/mobileVans/MobileVansPage";
 import VanWorkflowPage from "@/features/settings/VanWorkflowPage";
 import TransportBoardPage from "@/features/transport/TransportBoardPage";
