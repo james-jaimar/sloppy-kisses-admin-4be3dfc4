@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
+import { BreedPicker } from "@/features/pets/BreedPicker";
 
 interface Props {
   customerId: string;
@@ -42,6 +43,10 @@ export function MyPetFormModal({ customerId, tenantId, pet, onClose }: Props) {
 
   const save = useMutation({
     mutationFn: async () => {
+      if (form.species === "dog") {
+        if (!form.breed.trim()) throw new Error("Breed is required for dogs");
+        if (!form.size) throw new Error("Size is required for dogs");
+      }
       const payload: any = {
         name: form.name.trim(),
         species: form.species,
@@ -107,7 +112,16 @@ export function MyPetFormModal({ customerId, tenantId, pet, onClose }: Props) {
           </div>
           <label className="block">
             <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Breed</div>
-            <input value={form.breed} onChange={(e) => setForm({ ...form, breed: e.target.value })} className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            {form.species === "dog" ? (
+              <BreedPicker
+                value={form.breed}
+                onChange={(breed, size) =>
+                  setForm({ ...form, breed, ...(size ? { size } : {}) })
+                }
+              />
+            ) : (
+              <input value={form.breed} onChange={(e) => setForm({ ...form, breed: e.target.value })} className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            )}
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
