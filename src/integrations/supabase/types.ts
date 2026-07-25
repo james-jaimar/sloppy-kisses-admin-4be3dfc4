@@ -1709,6 +1709,36 @@ export type Database = {
           },
         ]
       }
+      dog_breeds: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          size_band: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          size_band: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          size_band?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_log: {
         Row: {
           booking_id: string | null
