@@ -1,49 +1,39 @@
-## Problem
+# Breed catalog → auto-size, mandatory selection
 
-The New/Edit Booking modal shows two overlapping controls for grooming extras:
+Capture the Sloppy Kisses website's dog-breed-by-size list as a seeded catalog, then wire the pet form so choosing a breed auto-sets the size band. Breed and size become mandatory for dogs.
 
-- **Add-ons panel** — every row from `grooming_addons` (Tick & Flea shampoo, Anal glands, Ear cleaning, Teeth, De-shedding, Hypoallergenic, Travel, Pickup, Stay & Play…).
-- **Grooming instructions panel** — the catalog (Shampoo/Conditioner, Teeth, Ears, etc.) where several options are linked to those same add-ons via `grooming_instruction_options.addon_code`.
+## 1. Seed catalog (DB)
 
-Ticking "Tick & Flea" in Add-ons does not tick it under Shampoo/Conditioner in Instructions (and vice-versa), so groomers see conflicting info and the price preview can double-charge.
+New table `dog_breeds` (global, not per-tenant — same list for everyone; can be overridden later):
 
-## Goal
+- `name` (unique, text)
+- `size_band` — `small | medium | large | xl | xxl` (matches `grooming_size_band` values)
+- `active` (bool, default true)
+- `sort_order` (int)
 
-One tick, one price, one source of truth — and the groomer view still shows everything they need.
+Seed rows from the 5 uploaded screenshots (Small 17, Medium 25, Large 25, XL 13, XXL 11). Where a breed appears in two bands (e.g. Dutch Shepherd, Great Pyrenees, Irish Wolfhound), keep the **larger** band — safer for booking length/pricing defaults.
 
-## Approach
+Grants: `SELECT` to `anon, authenticated`; `ALL` to `service_role`. RLS: read-only for everyone, no write policy (managed via migrations / future Settings screen).
 
-Treat **grooming instructions as the source of truth for any add-on that belongs to a catalog group**. The Add-ons panel becomes a slim "extras & fees" list that only shows add-ons the catalog doesn't cover.
+## 2. Settings screen (settings-first rule)
 
-### 1. Split add-ons into "catalog-linked" vs "standalone"
+`Admin → Settings → Dog breeds` — simple table: name, size, active, sort. Full CRUD gated by an existing catalog permission code (reuse `settings.grooming.manage` or similar — will confirm from `permissions.ts` at build time). This lets Charlotte tweak the list without a developer.
 
-- Compute `linkedAddonCodes = new Set(instructionOptions.filter(o => o.addon_code).map(o => o.addon_code))`.
-- In `GroomingExtrasPanel`, filter the add-on checkbox list to **only** addons whose `code` is NOT in `linkedAddonCodes`. What remains: travel, pickup/drop-off, Stay & Play, matted/sedation surcharges, toothbrush purchase, and anything else that is a fee rather than a styling choice.
-- Price preview keeps summing both sources (already does).
+## 3. Pet form UX (admin + portal)
 
-### 2. Instruction ticks drive add-on selection (already partly wired)
+Both `src/features/pets/PetFormModal.tsx` and `src/features/customerPortal/pets/MyPetFormModal.tsx`:
 
-- `BookingFormModal` already has a `useEffect` that adds priced add-ons when instruction options are ticked. Extend it to also **remove** add-ons whose linked instruction option was un-ticked, so the two panels stay perfectly in sync.
-- Result: ticking "Tick & Flea" under Shampoo/Conditioner adds the R60 to price preview and to the draft invoice — no separate Add-ons checkbox needed.
+- Replace the free-text **Breed** input with a searchable combobox sourced from `dog_breeds` (only when `species = dog`). Allow "Other / not listed" → falls back to free text + manual size.
+- On breed pick, auto-fill **Size** with the mapped band and lock it (with a small "change" link to override manually if needed).
+- Validation: for dogs, **breed** and **size** are required (block submit + toast). Cats/other keep current optional behaviour.
+- Keep existing `pets.breed` (text) column — we store the chosen name; optionally add `breed_id uuid` FK for analytics later (nice-to-have, not required for v1).
 
-### 3. Mirror customer-portal add-on picks back into instructions
+## 4. Where size flows
 
-- In `src/features/bookingRequests/convert.ts`, when a request carries add-on codes that correspond to instruction options, seed those options into `grooming_booking_instructions` on conversion so the groomer's instruction sheet reflects what the customer requested.
-- Same mirroring in the customer portal `GroomingRequestWizard` — it already uses `GroomingInstructionsForm`; verify it does not additionally expose linked add-ons as separate pills.
+Size band already drives grooming rate cards, hotel rates, and add-on pricing — no changes needed downstream; this just guarantees the field is populated correctly from day one.
 
-### 4. Groomer read-only summary
+## Out of scope (ask if wanted)
 
-- `BookingDetailPanel` already has `InstructionsSummary`. Confirm it lists every priced instruction with its add-on fee inline so groomers see a single unambiguous checklist (no separate "Add-ons" section duplicating the same items).
-
-## Files to touch
-
-- `src/features/bookings/GroomingExtrasPanel.tsx` — filter add-on list by `linkedAddonCodes`; fetch instruction options via existing `useAllInstructionOptions(tenantId)`.
-- `src/features/bookings/BookingFormModal.tsx` — extend the instructions→addons sync effect to also remove de-selected linked add-ons.
-- `src/features/bookings/BookingDetailPanel.tsx` — ensure `InstructionsSummary` renders linked prices; drop any duplicate add-on list for those items.
-- `src/features/bookingRequests/convert.ts` — mirror portal-selected add-on codes into instruction selections on convert.
-- `src/features/customerPortal/.../GroomingRequestWizard.tsx` — sanity-check that no linked-addon pills remain outside the instructions form.
-
-## Out of scope
-
-- No schema changes. `grooming_instruction_options.addon_code` already exists and is the join key.
-- No changes to standalone fees (travel, pickup, Stay & Play, matted/sedation) — they stay in the Extras panel.
+- Cat breed list (site doesn't publish one)
+- Backfilling size on existing pets from their current free-text breed (can be a one-off script later)
+- Per-tenant breed overrides
