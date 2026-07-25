@@ -208,6 +208,7 @@ const App = () => (
                 <Route path="/admin/settings/product-categories" element={<ProductCategoriesPage />} />
                 <Route path="/admin/settings/stock-locations" element={<StockLocationsPage />} />
                 <Route path="/admin/settings/retail" element={<RetailSettingsPage />} />
+                <Route path="/admin/settings/documents" element={<DocumentRetentionPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>
