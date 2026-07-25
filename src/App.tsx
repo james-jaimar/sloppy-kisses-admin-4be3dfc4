@@ -35,6 +35,7 @@ import ChangePasswordPage from "@/features/settings/ChangePasswordPage";
 import SettingsIndexPage from "@/features/settings/SettingsIndexPage";
 import ResourcesPage from "@/features/settings/ResourcesPage";
 import GroomingPackagesPage from "@/features/settings/GroomingPackagesPage";
+import DogBreedsPage from "@/features/settings/DogBreedsPage";
 import GroomingAddonsPage from "@/features/settings/GroomingAddonsPage";
 import GroomingBoardPage from "@/features/grooming/GroomingBoardPage";
 import HotelBoardPage from "@/features/hotelCattery/HotelBoardPage";
