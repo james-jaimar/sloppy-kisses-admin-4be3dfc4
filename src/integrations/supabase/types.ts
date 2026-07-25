@@ -2547,6 +2547,7 @@ export type Database = {
       grooming_instruction_options: {
         Row: {
           active: boolean
+          addon_code: string | null
           code: string
           created_at: string
           group_id: string
@@ -2559,6 +2560,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          addon_code?: string | null
           code: string
           created_at?: string
           group_id: string
@@ -2571,6 +2573,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          addon_code?: string | null
           code?: string
           created_at?: string
           group_id?: string
