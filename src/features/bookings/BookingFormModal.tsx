@@ -151,7 +151,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const setBookingGroomingAddons = useSetBookingGroomingAddons(tenantId);
   const addonsCatalogQ = useGroomingAddons(tenantId, { activeOnly: true });
   const [groomingInstructions, setGroomingInstructions] = useState<GroomingInstructionsValue>({
-    selections: {}, medical_flags: [], notes: "", told_office_to_call: "",
+    selections: (!isEdit && prefill?.grooming_instructions?.selections) || {},
+    medical_flags: (!isEdit && prefill?.grooming_instructions?.medical_flags) || [],
+    notes: (!isEdit && prefill?.grooming_instructions?.notes) || "",
+    told_office_to_call: "",
   });
   const saveInstructions = useSaveBookingInstructions(tenantId);
   const instrCatalogQ = useInstructionCatalog(tenantId);
