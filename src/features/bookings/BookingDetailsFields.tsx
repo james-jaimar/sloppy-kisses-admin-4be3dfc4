@@ -31,82 +31,14 @@ export function GroomingFields({
       <SectionTitle>Grooming details ({mode === "inhouse" ? "in-house" : "mobile"})</SectionTitle>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <div className="mb-1 text-xs font-medium">Service package</div>
-          <input
-            className={inputCls}
-            value={value.service_package ?? ""}
-            onChange={(e) => onChange({ service_package: e.target.value || null })}
-            placeholder="Full groom, bath & tidy, nails only…"
-          />
-        </div>
-        <div>
-          <div className="mb-1 text-xs font-medium">Groomer</div>
+          <div className="mb-1 text-xs font-medium">Groomer (override)</div>
           <input
             className={inputCls}
             value={value.groomer_name ?? ""}
             onChange={(e) => onChange({ groomer_name: e.target.value || null })}
+            placeholder="Leave blank to use the assigned resource"
           />
         </div>
-        <div>
-          <div className="mb-1 text-xs font-medium">Duration (min)</div>
-          <input
-            type="number"
-            min={0}
-            className={inputCls}
-            value={value.duration_minutes ?? ""}
-            onChange={(e) =>
-              onChange({ duration_minutes: e.target.value ? Number(e.target.value) : null })
-            }
-          />
-        </div>
-        {mode === "mobile" && (
-          <div>
-            <div className="mb-1 text-xs font-medium">Travel fee</div>
-            <input
-              type="number"
-              min={0}
-              step="0.01"
-              className={inputCls}
-              value={value.travel_fee ?? ""}
-              onChange={(e) =>
-                onChange({ travel_fee: e.target.value ? Number(e.target.value) : null })
-              }
-            />
-          </div>
-        )}
-        <div>
-          <div className="mb-1 text-xs font-medium">Surcharge</div>
-          <input
-            type="number"
-            min={0}
-            step="0.01"
-            className={inputCls}
-            value={value.surcharge_amount ?? ""}
-            onChange={(e) =>
-              onChange({ surcharge_amount: e.target.value ? Number(e.target.value) : null })
-            }
-          />
-        </div>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-4">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="h-4 w-4"
-            checked={value.pensioner_discount ?? false}
-            onChange={(e) => onChange({ pensioner_discount: e.target.checked })}
-          />
-          Pensioner discount
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            className="h-4 w-4"
-            checked={value.recurring ?? false}
-            onChange={(e) => onChange({ recurring: e.target.checked })}
-          />
-          Recurring booking
-        </label>
       </div>
       <div className="mt-3">
         <div className="mb-1 text-xs font-medium">Grooming notes</div>
