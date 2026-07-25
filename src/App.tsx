@@ -107,6 +107,8 @@ import HotelRequestWizard from "@/features/customerPortal/bookings/new/HotelRequ
 import DaycareRequestWizard from "@/features/customerPortal/bookings/new/DaycareRequestWizard";
 import GroomingRequestWizard from "@/features/customerPortal/bookings/new/GroomingRequestWizard";
 import TransportRequestWizard from "@/features/customerPortal/bookings/new/TransportRequestWizard";
+import MyRequestsPage from "@/features/customerPortal/requests/MyRequestsPage";
+import MyMessagesPage from "@/features/customerPortal/messages/MyMessagesPage";
 import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
 import PublicInvoicePage from "@/features/invoices/PublicInvoicePage";
 import { PaySuccessPage, PayCancelPage } from "@/features/invoices/PayResultPages";
@@ -236,10 +238,12 @@ const App = () => (
                 <Route path="/customer/bookings/new/grooming-mobile" element={<GroomingRequestWizard mode="mobile" />} />
                 <Route path="/customer/bookings/new/transport" element={<TransportRequestWizard />} />
                 <Route path="/customer/bookings/:id" element={<MyBookingDetailPage />} />
+                <Route path="/customer/requests" element={<MyRequestsPage />} />
                 <Route path="/customer/documents" element={<MyDocumentsPage />} />
                 <Route path="/customer/invoices" element={<MyInvoicesPage />} />
                 <Route path="/customer/invoices/:id" element={<MyInvoiceDetailPage />} />
                 <Route path="/customer/payments" element={<MyPaymentsPage />} />
+                <Route path="/customer/messages" element={<MyMessagesPage />} />
               </Route>
               </Route>
 
