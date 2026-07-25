@@ -2333,6 +2333,9 @@ export type Database = {
           actual_end_at: string | null
           actual_start_at: string | null
           booking_id: string
+          cancellation_fee_waived: boolean
+          cancellation_fee_zar: number
+          cancellation_waive_reason: string | null
           created_at: string
           duration_minutes: number | null
           groomer_name: string | null
@@ -2346,8 +2349,13 @@ export type Database = {
           pensioner_discount: boolean
           pensioner_discount_applied: boolean
           recurring: boolean
+          sedation_consent_at: string | null
+          sedation_consent_channel: string | null
+          sedation_consent_note: string | null
+          sedation_consent_state: string
           sedation_surcharge_zar: number | null
           service_package: string | null
+          stay_and_play_after: boolean
           surcharge_amount: number
           tenant_id: string
           travel_fee: number
@@ -2357,6 +2365,9 @@ export type Database = {
           actual_end_at?: string | null
           actual_start_at?: string | null
           booking_id: string
+          cancellation_fee_waived?: boolean
+          cancellation_fee_zar?: number
+          cancellation_waive_reason?: string | null
           created_at?: string
           duration_minutes?: number | null
           groomer_name?: string | null
@@ -2370,8 +2381,13 @@ export type Database = {
           pensioner_discount?: boolean
           pensioner_discount_applied?: boolean
           recurring?: boolean
+          sedation_consent_at?: string | null
+          sedation_consent_channel?: string | null
+          sedation_consent_note?: string | null
+          sedation_consent_state?: string
           sedation_surcharge_zar?: number | null
           service_package?: string | null
+          stay_and_play_after?: boolean
           surcharge_amount?: number
           tenant_id: string
           travel_fee?: number
@@ -2381,6 +2397,9 @@ export type Database = {
           actual_end_at?: string | null
           actual_start_at?: string | null
           booking_id?: string
+          cancellation_fee_waived?: boolean
+          cancellation_fee_zar?: number
+          cancellation_waive_reason?: string | null
           created_at?: string
           duration_minutes?: number | null
           groomer_name?: string | null
@@ -2394,8 +2413,13 @@ export type Database = {
           pensioner_discount?: boolean
           pensioner_discount_applied?: boolean
           recurring?: boolean
+          sedation_consent_at?: string | null
+          sedation_consent_channel?: string | null
+          sedation_consent_note?: string | null
+          sedation_consent_state?: string
           sedation_surcharge_zar?: number | null
           service_package?: string | null
+          stay_and_play_after?: boolean
           surcharge_amount?: number
           tenant_id?: string
           travel_fee?: number
@@ -2418,6 +2442,155 @@ export type Database = {
           },
           {
             foreignKeyName: "grooming_booking_details_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grooming_booking_instructions: {
+        Row: {
+          booking_id: string
+          created_at: string
+          medical_flags: string[]
+          notes: string | null
+          selections: Json
+          tenant_id: string
+          told_office_to_call: string | null
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          medical_flags?: string[]
+          notes?: string | null
+          selections?: Json
+          tenant_id: string
+          told_office_to_call?: string | null
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          medical_flags?: string[]
+          notes?: string | null
+          selections?: Json
+          tenant_id?: string
+          told_office_to_call?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grooming_booking_instructions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grooming_booking_instructions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grooming_instruction_groups: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          is_medical: boolean
+          kind: string
+          label: string
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          is_medical?: boolean
+          kind?: string
+          label: string
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          is_medical?: boolean
+          kind?: string
+          label?: string
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grooming_instruction_groups_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grooming_instruction_options: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          group_id: string
+          id: string
+          is_alert: boolean
+          label: string
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          group_id: string
+          id?: string
+          is_alert?: boolean
+          label: string
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          is_alert?: boolean
+          label?: string
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grooming_instruction_options_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "grooming_instruction_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grooming_instruction_options_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2483,28 +2656,58 @@ export type Database = {
       }
       grooming_workflow_settings: {
         Row: {
+          after_grooming_stay_play_zar: number
+          cancellation_fee_pct: number
+          cancellation_notice_hours: number
           created_at: string
           default_mobile_travel_fee_zar: number
           id: string
+          matted_rate_per_15min_zar: number
+          overtime_threshold_minutes: number
+          pensioner_discount_days: number[]
           pensioner_discount_pct: number
+          pickup_dropoff_fee_zar: number
+          puppy_half_price_max_months: number
+          sedation_default_fee_zar: number
+          sedation_enabled: boolean
           tenant_id: string
           updated_at: string
           vax_gate_mode: string
         }
         Insert: {
+          after_grooming_stay_play_zar?: number
+          cancellation_fee_pct?: number
+          cancellation_notice_hours?: number
           created_at?: string
           default_mobile_travel_fee_zar?: number
           id?: string
+          matted_rate_per_15min_zar?: number
+          overtime_threshold_minutes?: number
+          pensioner_discount_days?: number[]
           pensioner_discount_pct?: number
+          pickup_dropoff_fee_zar?: number
+          puppy_half_price_max_months?: number
+          sedation_default_fee_zar?: number
+          sedation_enabled?: boolean
           tenant_id: string
           updated_at?: string
           vax_gate_mode?: string
         }
         Update: {
+          after_grooming_stay_play_zar?: number
+          cancellation_fee_pct?: number
+          cancellation_notice_hours?: number
           created_at?: string
           default_mobile_travel_fee_zar?: number
           id?: string
+          matted_rate_per_15min_zar?: number
+          overtime_threshold_minutes?: number
+          pensioner_discount_days?: number[]
           pensioner_discount_pct?: number
+          pickup_dropoff_fee_zar?: number
+          puppy_half_price_max_months?: number
+          sedation_default_fee_zar?: number
+          sedation_enabled?: boolean
           tenant_id?: string
           updated_at?: string
           vax_gate_mode?: string
@@ -3855,6 +4058,54 @@ export type Database = {
           label?: string
         }
         Relationships: []
+      }
+      pet_grooming_defaults: {
+        Row: {
+          created_at: string
+          medical_flags: string[]
+          notes: string | null
+          pet_id: string
+          selections: Json
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          medical_flags?: string[]
+          notes?: string | null
+          pet_id: string
+          selections?: Json
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          medical_flags?: string[]
+          notes?: string | null
+          pet_id?: string
+          selections?: Json
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pet_grooming_defaults_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: true
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_grooming_defaults_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pets: {
         Row: {

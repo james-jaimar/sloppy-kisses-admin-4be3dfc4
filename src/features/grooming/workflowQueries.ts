@@ -9,6 +9,16 @@ export interface GroomingWorkflowSettings {
   vax_gate_mode: GroomingVaxGateMode;
   pensioner_discount_pct: number;
   default_mobile_travel_fee_zar: number;
+  matted_rate_per_15min_zar: number;
+  overtime_threshold_minutes: number;
+  after_grooming_stay_play_zar: number;
+  pickup_dropoff_fee_zar: number;
+  puppy_half_price_max_months: number;
+  pensioner_discount_days: number[];
+  cancellation_fee_pct: number;
+  cancellation_notice_hours: number;
+  sedation_enabled: boolean;
+  sedation_default_fee_zar: number;
 }
 
 export function useGroomingWorkflowSettings(tenantId: string | null | undefined) {

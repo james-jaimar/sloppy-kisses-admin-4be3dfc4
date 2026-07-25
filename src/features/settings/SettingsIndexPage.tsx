@@ -33,6 +33,13 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/grooming-instructions",
+    label: "Grooming instructions",
+    description: "Catalog of Shampoo / Head / Body / Legs / Accessories / Medical flags for staff and customer selection.",
+    icon: Scissors,
+    ready: true,
+  },
+  {
     to: "/admin/settings/hotel-workflow",
     label: "Hotel & Cattery workflow",
     description: "Vaccination gate, check-in window, late-checkout fee.",

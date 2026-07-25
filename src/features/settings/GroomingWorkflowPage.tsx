@@ -23,15 +23,36 @@ export default function GroomingWorkflowPage() {
   const [form, setForm] = useState({
     vax_gate_mode: "soft" as GroomingVaxGateMode,
     pensioner_discount_pct: 10,
-    default_mobile_travel_fee_zar: 0,
+    default_mobile_travel_fee_zar: 110,
+    matted_rate_per_15min_zar: 50,
+    overtime_threshold_minutes: 60,
+    after_grooming_stay_play_zar: 250,
+    pickup_dropoff_fee_zar: 140,
+    puppy_half_price_max_months: 6,
+    pensioner_discount_days: [1, 3] as number[],
+    cancellation_fee_pct: 100,
+    cancellation_notice_hours: 24,
+    sedation_enabled: true,
+    sedation_default_fee_zar: 0,
   });
 
   useEffect(() => {
     if (settingsQ.data) {
+      const d = settingsQ.data;
       setForm({
-        vax_gate_mode: settingsQ.data.vax_gate_mode,
-        pensioner_discount_pct: Number(settingsQ.data.pensioner_discount_pct ?? 0),
-        default_mobile_travel_fee_zar: Number(settingsQ.data.default_mobile_travel_fee_zar ?? 0),
+        vax_gate_mode: d.vax_gate_mode,
+        pensioner_discount_pct: Number(d.pensioner_discount_pct ?? 0),
+        default_mobile_travel_fee_zar: Number(d.default_mobile_travel_fee_zar ?? 0),
+        matted_rate_per_15min_zar: Number(d.matted_rate_per_15min_zar ?? 50),
+        overtime_threshold_minutes: Number(d.overtime_threshold_minutes ?? 60),
+        after_grooming_stay_play_zar: Number(d.after_grooming_stay_play_zar ?? 250),
+        pickup_dropoff_fee_zar: Number(d.pickup_dropoff_fee_zar ?? 140),
+        puppy_half_price_max_months: Number(d.puppy_half_price_max_months ?? 6),
+        pensioner_discount_days: (d.pensioner_discount_days ?? [1, 3]) as number[],
+        cancellation_fee_pct: Number(d.cancellation_fee_pct ?? 100),
+        cancellation_notice_hours: Number(d.cancellation_notice_hours ?? 24),
+        sedation_enabled: Boolean(d.sedation_enabled ?? true),
+        sedation_default_fee_zar: Number(d.sedation_default_fee_zar ?? 0),
       });
     }
   }, [settingsQ.data]);
@@ -92,6 +113,83 @@ export default function GroomingWorkflowPage() {
                 onChange={(e) => setForm((f) => ({ ...f, default_mobile_travel_fee_zar: Number(e.target.value) }))}
                 className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
               />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Pickup / drop-off fee (ZAR, per way)">
+              <input type="number" min={0} step="0.01" disabled={!canManage}
+                value={form.pickup_dropoff_fee_zar}
+                onChange={(e) => setForm((f) => ({ ...f, pickup_dropoff_fee_zar: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            </Field>
+            <Field label="After-groom Stay & Play (ZAR)">
+              <input type="number" min={0} step="0.01" disabled={!canManage}
+                value={form.after_grooming_stay_play_zar}
+                onChange={(e) => setForm((f) => ({ ...f, after_grooming_stay_play_zar: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Matted / overtime rate per 15 min (ZAR)" hint="Applied to every 15 min block beyond the overtime threshold.">
+              <input type="number" min={0} step="0.01" disabled={!canManage}
+                value={form.matted_rate_per_15min_zar}
+                onChange={(e) => setForm((f) => ({ ...f, matted_rate_per_15min_zar: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            </Field>
+            <Field label="Overtime threshold (minutes)">
+              <input type="number" min={0} step="5" disabled={!canManage}
+                value={form.overtime_threshold_minutes}
+                onChange={(e) => setForm((f) => ({ ...f, overtime_threshold_minutes: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Puppy half-price cutoff (months)" hint="Pets under this age pay 50% of the package.">
+              <input type="number" min={0} max={24} disabled={!canManage}
+                value={form.puppy_half_price_max_months}
+                onChange={(e) => setForm((f) => ({ ...f, puppy_half_price_max_months: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            </Field>
+            <Field label="Pensioner discount days" hint="Weekday numbers 0=Sun … 6=Sat, comma-separated. Empty = every day.">
+              <input type="text" disabled={!canManage}
+                value={form.pensioner_discount_days.join(",")}
+                onChange={(e) => setForm((f) => ({ ...f, pensioner_discount_days: e.target.value.split(",").map((s) => Number(s.trim())).filter((n) => !Number.isNaN(n)) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Cancellation fee %" hint="Charged if cancellation is inside the notice window.">
+              <input type="number" min={0} max={100} step="1" disabled={!canManage}
+                value={form.cancellation_fee_pct}
+                onChange={(e) => setForm((f) => ({ ...f, cancellation_fee_pct: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            </Field>
+            <Field label="Cancellation notice (hours)">
+              <input type="number" min={0} step="1" disabled={!canManage}
+                value={form.cancellation_notice_hours}
+                onChange={(e) => setForm((f) => ({ ...f, cancellation_notice_hours: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Sedation enabled" hint="If off, the sedation consent workflow is hidden.">
+              <label className="flex h-10 items-center gap-2 rounded-lg border border-border bg-white px-3 text-sm">
+                <input type="checkbox" disabled={!canManage}
+                  checked={form.sedation_enabled}
+                  onChange={(e) => setForm((f) => ({ ...f, sedation_enabled: e.target.checked }))} />
+                Offer sedation with logged consent
+              </label>
+            </Field>
+            <Field label="Default sedation fee (ZAR)" hint="Paid directly to Sloppy Kisses. Can be overridden per booking.">
+              <input type="number" min={0} step="0.01" disabled={!canManage}
+                value={form.sedation_default_fee_zar}
+                onChange={(e) => setForm((f) => ({ ...f, sedation_default_fee_zar: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
             </Field>
           </div>
 
