@@ -1515,64 +1515,138 @@ export type Database = {
           },
         ]
       }
+      document_settings: {
+        Row: {
+          archive_grace_days: number
+          auto_purge_enabled: boolean
+          created_at: string
+          default_retention_days: number
+          max_upload_mb: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          archive_grace_days?: number
+          auto_purge_enabled?: boolean
+          created_at?: string
+          default_retention_days?: number
+          max_upload_mb?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          archive_grace_days?: number
+          auto_purge_enabled?: boolean
+          created_at?: string
+          default_retention_days?: number
+          max_upload_mb?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
+          archive_reason: string | null
+          archived_at: string | null
           booking_id: string | null
           booking_request_id: string | null
+          checksum: string | null
+          content_type: string | null
           created_at: string
           customer_id: string | null
+          deleted_at: string | null
+          expires_at: string | null
           file_name: string
-          file_path: string
+          file_path: string | null
           file_size_bytes: number | null
           id: string
           mime_type: string | null
           notes: string | null
           pet_id: string | null
+          s3_bucket: string | null
+          s3_key: string | null
+          size_bytes: number | null
           status: Database["public"]["Enums"]["document_status"]
+          storage_provider: string
           tenant_id: string
           type: string
           updated_at: string
           uploaded_by: string | null
+          uploaded_by_profile_id: string | null
+          uploaded_via: string
           verified_at: string | null
           verified_by: string | null
         }
         Insert: {
+          archive_reason?: string | null
+          archived_at?: string | null
           booking_id?: string | null
           booking_request_id?: string | null
+          checksum?: string | null
+          content_type?: string | null
           created_at?: string
           customer_id?: string | null
+          deleted_at?: string | null
+          expires_at?: string | null
           file_name: string
-          file_path: string
+          file_path?: string | null
           file_size_bytes?: number | null
           id?: string
           mime_type?: string | null
           notes?: string | null
           pet_id?: string | null
+          s3_bucket?: string | null
+          s3_key?: string | null
+          size_bytes?: number | null
           status?: Database["public"]["Enums"]["document_status"]
+          storage_provider?: string
           tenant_id: string
           type: string
           updated_at?: string
           uploaded_by?: string | null
+          uploaded_by_profile_id?: string | null
+          uploaded_via?: string
           verified_at?: string | null
           verified_by?: string | null
         }
         Update: {
+          archive_reason?: string | null
+          archived_at?: string | null
           booking_id?: string | null
           booking_request_id?: string | null
+          checksum?: string | null
+          content_type?: string | null
           created_at?: string
           customer_id?: string | null
+          deleted_at?: string | null
+          expires_at?: string | null
           file_name?: string
-          file_path?: string
+          file_path?: string | null
           file_size_bytes?: number | null
           id?: string
           mime_type?: string | null
           notes?: string | null
           pet_id?: string | null
+          s3_bucket?: string | null
+          s3_key?: string | null
+          size_bytes?: number | null
           status?: Database["public"]["Enums"]["document_status"]
+          storage_provider?: string
           tenant_id?: string
           type?: string
           updated_at?: string
           uploaded_by?: string | null
+          uploaded_by_profile_id?: string | null
+          uploaded_via?: string
           verified_at?: string | null
           verified_by?: string | null
         }
@@ -1615,6 +1689,13 @@ export type Database = {
           {
             foreignKeyName: "documents_uploaded_by_fkey"
             columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_uploaded_by_profile_id_fkey"
+            columns: ["uploaded_by_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -3786,6 +3867,7 @@ export type Database = {
           created_by: string | null
           customer_id: string
           date_of_birth: string | null
+          deceased_at: string | null
           id: string
           import_batch: string | null
           import_source: string | null
@@ -3827,6 +3909,7 @@ export type Database = {
           created_by?: string | null
           customer_id: string
           date_of_birth?: string | null
+          deceased_at?: string | null
           id?: string
           import_batch?: string | null
           import_source?: string | null
@@ -3868,6 +3951,7 @@ export type Database = {
           created_by?: string | null
           customer_id?: string
           date_of_birth?: string | null
+          deceased_at?: string | null
           id?: string
           import_batch?: string | null
           import_source?: string | null
@@ -5181,6 +5265,10 @@ export type Database = {
         Returns: undefined
       }
       delete_pet: { Args: { p_pet_id: string }; Returns: undefined }
+      document_hard_delete: {
+        Args: { p_document_id: string }
+        Returns: undefined
+      }
       ensure_draft_invoice: {
         Args: {
           p_customer_id: string
