@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { PetVaccinationsPanel } from "@/features/pets/PetVaccinationsPanel";
 import { DocumentsPanel } from "@/features/documents/DocumentsPanel";
+import { PetGroomingDefaultsPanel } from "@/features/grooming/instructions/PetGroomingDefaultsPanel";
 import { useCurrentCustomer } from "../hooks";
 import { MyPetFormModal } from "./MyPetFormModal";
 
@@ -63,6 +64,9 @@ export default function MyPetDetailPage() {
         </div>
 
         <PetVaccinationsPanel tenantId={p.tenant_id} petId={p.id} canManage />
+        {(p.species === "dog" || p.species === "cat") && (
+          <PetGroomingDefaultsPanel tenantId={p.tenant_id} petId={p.id} />
+        )}
         <DocumentsPanel
           tenantId={p.tenant_id}
           petId={p.id}

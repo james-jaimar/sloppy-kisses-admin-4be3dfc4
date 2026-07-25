@@ -10,6 +10,7 @@ import { BookingStatusChip } from "./statusMeta";
 import { useBookingServiceDetails } from "./detailsQueries";
 import { useCancelSeriesForward } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useBookingInstructions, useInstructionCatalog } from "@/features/grooming/instructions/queries";
 
 const STATUS_ACTIONS: { status: BookingStatus; label: string }[] = [
   { status: "confirmed", label: "Confirm" },
@@ -35,6 +36,9 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
   const cancelSeries = useCancelSeriesForward(tenantId);
   const notificationsQ = useBookingNotifications(booking.id, tenantId);
   const detailsQ = useBookingServiceDetails(booking.id, booking.service_type, tenantId);
+  const isGrooming = booking.service_type === "grooming_inhouse" || booking.service_type === "grooming_mobile";
+  const instrQ = useBookingInstructions(isGrooming ? booking.id : null);
+  const catalogQ = useInstructionCatalog(isGrooming ? tenantId : null);
 
   const start = booking.start_at ? new Date(booking.start_at) : null;
   const end = booking.end_at ? new Date(booking.end_at) : null;
@@ -203,6 +207,22 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
             </section>
           )}
 
+          {isGrooming && instrQ.data && catalogQ.data && (
+            <section>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Grooming instructions
+              </div>
+              <InstructionsSummary
+                selections={instrQ.data.selections ?? {}}
+                medicalFlags={instrQ.data.medical_flags ?? []}
+                notes={instrQ.data.notes}
+                toldOfficeToCall={instrQ.data.told_office_to_call}
+                groups={catalogQ.data.groups}
+                byGroup={catalogQ.data.byGroup}
+              />
+            </section>
+          )}
+
           <section>
             <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <Mail className="h-3.5 w-3.5" /> Notifications
@@ -282,5 +302,87 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
         />
       )}
     </>
+  );
+}
+
+function InstructionsSummary({
+  selections, medicalFlags, notes, toldOfficeToCall, groups, byGroup,
+}: {
+  selections: Record<string, any>;
+  medicalFlags: string[];
+  notes: string | null;
+  toldOfficeToCall: string | null;
+  groups: { id: string; code: string; label: string; kind: string; is_medical: boolean }[];
+  byGroup: Record<string, { id: string; code: string; label: string; is_alert: boolean }[]>;
+}) {
+  const rows: { label: string; values: { text: string; alert: boolean }[] }[] = [];
+  for (const g of groups) {
+    if (g.is_medical) continue;
+    const val = selections[g.code];
+    if (val == null || val === "" || val === false) continue;
+    const opts = byGroup[g.id] ?? [];
+    let values: { text: string; alert: boolean }[] = [];
+    if (g.kind === "single" && typeof val === "string") {
+      const o = opts.find((x) => x.code === val);
+      if (o) values = [{ text: o.label, alert: o.is_alert }];
+    } else if (g.kind === "multi" && Array.isArray(val)) {
+      values = val
+        .map((c) => opts.find((x) => x.code === c))
+        .filter(Boolean)
+        .map((o) => ({ text: (o as any).label, alert: (o as any).is_alert }));
+    } else if (g.kind === "bool" && val === true) {
+      values = [{ text: "Yes", alert: false }];
+    } else if ((g.kind === "text" || g.kind === "number") && val !== "") {
+      values = [{ text: String(val), alert: false }];
+    }
+    if (values.length) rows.push({ label: g.label, values });
+  }
+  const alerts = new Set(medicalFlags);
+  const medGroup = groups.find((g) => g.is_medical);
+  const medOpts = medGroup ? (byGroup[medGroup.id] ?? []) : [];
+  const medChips = medOpts.filter((o) => alerts.has(o.code));
+
+  if (rows.length === 0 && medChips.length === 0 && !notes && !toldOfficeToCall) {
+    return <div className="mt-1 text-xs text-muted-foreground">No instructions recorded.</div>;
+  }
+
+  return (
+    <div className="mt-1 space-y-2 text-xs">
+      {medChips.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {medChips.map((m) => (
+            <span key={m.code} className="rounded-full bg-destructive/10 px-2 py-0.5 font-semibold text-destructive">
+              ⚠ {m.label}
+            </span>
+          ))}
+        </div>
+      )}
+      <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
+        {rows.map((r) => (
+          <div key={r.label} className="contents">
+            <dt className="text-muted-foreground">{r.label}</dt>
+            <dd className="flex flex-wrap gap-1">
+              {r.values.map((v, i) => (
+                <span key={i} className={"rounded px-1.5 py-0.5 " + (v.alert ? "bg-sk-orange-soft text-sk-orange" : "bg-muted")}>
+                  {v.text}
+                </span>
+              ))}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {notes && (
+        <div>
+          <div className="text-muted-foreground">Notes</div>
+          <div className="whitespace-pre-wrap">{notes}</div>
+        </div>
+      )}
+      {toldOfficeToCall && (
+        <div>
+          <div className="text-muted-foreground">Told office to call</div>
+          <div>{toldOfficeToCall}</div>
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls, textareaCls } from "./WizardShell";
-import { usePortalPets, useGroomingPackages, useGroomingAddons } from "./wizardHooks";
+import { usePortalPets, useGroomingPackages } from "./wizardHooks";
 import { dateToIso, useRequestSubmit } from "./useRequestSubmit";
+import { GroomingInstructionsForm, type GroomingInstructionsValue } from "@/features/grooming/instructions/GroomingInstructionsForm";
+import { usePetGroomingDefaults } from "@/features/grooming/instructions/queries";
 
 interface Props { mode: "inhouse" | "mobile" }
 
@@ -11,24 +13,39 @@ export default function GroomingRequestWizard({ mode }: Props) {
   const cust = useCurrentCustomer();
   const pets = usePortalPets(cust.data?.id);
   const packages = useGroomingPackages(cust.data?.tenant_id);
-  const addons = useGroomingAddons(cust.data?.tenant_id);
   const submit = useRequestSubmit();
 
   const [petId, setPetId] = useState("");
   const [date, setDate] = useState("");
   const [window, setWindow] = useState<"morning" | "afternoon" | "any">("any");
   const [packageId, setPackageId] = useState("");
-  const [addonIds, setAddonIds] = useState<string[]>([]);
   const [addressLine, setAddressLine] = useState(cust.data?.address_line_1 ?? "");
   const [suburb, setSuburb] = useState(cust.data?.suburb ?? "");
   const [accessNotes, setAccessNotes] = useState("");
   const [notes, setNotes] = useState("");
+  const [instructions, setInstructions] = useState<GroomingInstructionsValue>({
+    selections: {}, medical_flags: [], notes: "",
+  });
+  const defaultsQ = usePetGroomingDefaults(petId || null);
+
+  // Seed instructions from selected pet's saved defaults whenever the pet changes.
+  useEffect(() => {
+    if (!petId) {
+      setInstructions({ selections: {}, medical_flags: [], notes: "" });
+      return;
+    }
+    if (defaultsQ.data) {
+      setInstructions({
+        selections: defaultsQ.data.selections ?? {},
+        medical_flags: defaultsQ.data.medical_flags ?? [],
+        notes: defaultsQ.data.notes ?? "",
+      });
+    } else if (defaultsQ.isFetched) {
+      setInstructions({ selections: {}, medical_flags: [], notes: "" });
+    }
+  }, [petId, defaultsQ.data, defaultsQ.isFetched]);
 
   const canSubmit = cust.data && petId && date && (mode === "inhouse" || (addressLine && suburb)) && !submit.isPending;
-
-  function toggleAddon(id: string) {
-    setAddonIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }
 
   function onSubmit() {
     if (!cust.data) return;
@@ -44,7 +61,11 @@ export default function GroomingRequestWizard({ mode }: Props) {
       requestPayload: {
         time_window: window,
         package_id: packageId || null,
-        addon_ids: addonIds,
+        instructions: {
+          selections: instructions.selections,
+          medical_flags: instructions.medical_flags,
+          notes: instructions.notes,
+        },
         ...(mode === "mobile" ? {
           service_address: {
             line_1: addressLine,
@@ -95,18 +116,18 @@ export default function GroomingRequestWizard({ mode }: Props) {
         </select>
       </Field>
 
-      {(addons.data ?? []).length > 0 && (
-        <Field label="Add-ons (optional)">
-          <div className="flex flex-wrap gap-2">
-            {(addons.data ?? []).map((a: any) => {
-              const active = addonIds.includes(a.id);
-              return (
-                <button key={a.id} type="button" onClick={() => toggleAddon(a.id)}
-                  className={"rounded-full border px-3 py-1.5 text-sm " + (active ? "border-sk-coral bg-sk-coral-soft text-sk-coral-dark" : "border-border bg-white hover:bg-muted")}>
-                  {a.name} · R{Number(a.price_zar ?? 0).toFixed(0)}
-                </button>
-              );
-            })}
+      {petId && (
+        <Field label="Grooming instructions">
+          <div className="rounded-lg border border-border bg-white p-3">
+            {defaultsQ.data && (
+              <p className="mb-2 text-[11px] text-muted-foreground">Prefilled from this pet's saved defaults — tweak for this visit if you like.</p>
+            )}
+            <GroomingInstructionsForm
+              tenantId={cust.data?.tenant_id ?? null}
+              value={instructions}
+              onChange={setInstructions}
+              compact
+            />
           </div>
         </Field>
       )}

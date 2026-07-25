@@ -5558,6 +5558,10 @@ export type Database = {
           vaccine_type: string
         }[]
       }
+      grooming_sync_instruction_addons: {
+        Args: { p_booking_id: string }
+        Returns: undefined
+      }
       hotel_can_confirm_booking: {
         Args: { p_booking_id: string }
         Returns: {
