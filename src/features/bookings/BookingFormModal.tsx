@@ -32,6 +32,7 @@ import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { BookingGroomingInstructionsPanel } from "@/features/grooming/instructions/BookingGroomingInstructionsPanel";
 import { useSaveBookingInstructions } from "@/features/grooming/instructions/queries";
+import { useInstructionCatalog } from "@/features/grooming/instructions/queries";
 import type { GroomingInstructionsValue } from "@/features/grooming/instructions/GroomingInstructionsForm";
 
 const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: ResourceType }[] = [
