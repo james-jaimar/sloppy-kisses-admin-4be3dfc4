@@ -80,6 +80,7 @@ import ProductCategoriesPage from "@/features/settings/ProductCategoriesPage";
 import StockLocationsPage from "@/features/settings/StockLocationsPage";
 import RetailSettingsPage from "@/features/settings/RetailSettingsPage";
 import RolesPermissionsPage from "@/features/settings/RolesPermissionsPage";
+import DocumentRetentionPage from "@/features/settings/DocumentRetentionPage";
 import UsersPage from "@/features/users/UsersPage";
 import { RequirePermission } from "@/components/auth/Can";
 import RequirePlatform from "@/components/auth/RequirePlatform";
@@ -207,6 +208,7 @@ const App = () => (
                 <Route path="/admin/settings/product-categories" element={<ProductCategoriesPage />} />
                 <Route path="/admin/settings/stock-locations" element={<StockLocationsPage />} />
                 <Route path="/admin/settings/retail" element={<RetailSettingsPage />} />
+                <Route path="/admin/settings/documents" element={<DocumentRetentionPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>
