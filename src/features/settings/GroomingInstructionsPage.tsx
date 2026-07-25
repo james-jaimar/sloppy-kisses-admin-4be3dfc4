@@ -45,7 +45,7 @@ export default function GroomingInstructionsPage() {
   }
 
   async function removeGroup(g: InstructionGroup) {
-    const ok = await confirm({ title: "Delete group?", description: `Remove "${g.label}" and all its options.`, confirmLabel: "Delete", variant: "destructive" });
+    const ok = await confirm({ title: "Delete group?", description: `Remove "${g.label}" and all its options.`, confirmLabel: "Delete" });
     if (!ok) return;
     try { await delGroup.mutateAsync(g.id); toast.success("Deleted"); } catch (e: any) { toast.error(e?.message ?? "Failed"); }
   }
