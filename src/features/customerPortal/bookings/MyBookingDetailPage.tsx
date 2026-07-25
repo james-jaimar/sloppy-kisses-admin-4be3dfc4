@@ -19,7 +19,7 @@ export default function MyBookingDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, tenant_id, booking_number, service_type, status, start_at, end_at, notes_customer, booking_pets(pet:pets(id, name)), resource:resources(name)")
+        .select("id, tenant_id, booking_number, service_type, status, start_at, end_at, notes_customer, booking_pets(pet:pets(id, name)), invoice:invoices!bookings_invoice_id_fkey(id, invoice_number, total, balance_due, status)")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
@@ -33,6 +33,7 @@ export default function MyBookingDetailPage() {
   const b: any = q.data;
   const petNames = (b.booking_pets ?? []).map((bp: any) => bp.pet?.name).filter(Boolean).join(", ");
   const cancellable = !["cancelled", "completed", "checked_out", "no_show"].includes(b.status);
+  const inv = b.invoice ?? null;
 
   return (
     <>
@@ -58,11 +59,25 @@ export default function MyBookingDetailPage() {
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <Field label="Pet(s)" value={petNames} />
-            <Field label="Resource" value={b.resource?.name ?? "—"} />
             <Field label="Start" value={fmtDateTime(b.start_at)} />
             <Field label="End" value={fmtDateTime(b.end_at)} />
             <Field label="Notes" value={b.notes_customer} full />
           </div>
+          {inv && (
+            <div className="rounded-xl border border-border bg-sk-surface-muted p-4">
+              <div className="text-xs font-semibold uppercase text-muted-foreground">Invoice</div>
+              <div className="mt-1 flex items-center justify-between">
+                <Link to={`/customer/invoices/${inv.id}`} className="text-sm font-semibold text-sk-coral-dark hover:underline">
+                  {inv.invoice_number}
+                </Link>
+                <div className="text-sm">
+                  Total <span className="font-semibold">R {Number(inv.total ?? 0).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</span>
+                  {" · "}
+                  Balance <span className="font-semibold text-sk-coral-dark">R {Number(inv.balance_due ?? 0).toLocaleString("en-ZA", { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

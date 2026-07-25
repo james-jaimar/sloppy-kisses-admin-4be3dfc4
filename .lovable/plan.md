@@ -1,65 +1,66 @@
-# Sprint 7 — Comms polish
+# Customer Portal — QA pass + gap fixes
 
-Turn the dispatcher (already sending SMTP + logging) into a proper comms layer with real customer-ready templates, live previews, tenant editing, and the missing scheduled events.
+The portal is fully scaffolded (dashboard, pets, bookings + 4 request wizards, invoices with PayFast pay, payments, documents, profile + password, notification prefs, auto-approve signup). Rather than rebuild, this plan is a structured **test pass** followed by a targeted **gap-fix sprint** for the things the walkthrough will expose.
 
-## What's in place today (verified)
-- `send-notifications` dispatcher renders `{{path.to.value}}` templates and sends via tenant SMTP; logs to `email_log`.
-- `message_templates` table + `MessageTemplatesPage` CRUD (event, channel, subject, body, active, auto_send).
-- `notification_events` triggers already fire for: booking_created (Sprint 5), booking_request_created, booking_request_status_changed, invoice_issued, invoice_paid.
-- Comms inbox + booking-scoped comms panel exist.
-- Quiet hours + comms_settings live in `CommsSettingsPage`.
+## Phase A — Guided QA walkthrough (no code)
 
-## Gaps this sprint closes
-1. No polished default templates — tenants start with an empty list.
-2. No preview: admins can't see the rendered subject/body before saving.
-3. No T-24h booking reminder, no overdue invoice nudge scheduler (only the daily invoice-reminder cron for issued invoices exists).
-4. Template body has no rich-context reference (variables are guessed).
-5. No test-send button per template (only the global test recipient).
-6. HTML email rendering is plain-text only; needs branded HTML wrapper (logo + brand color + footer) reused from auth emails.
+Together, in this order, on the live preview. Each step ends with pass / fail / note.
 
-## Deliverables
+1. **Sign-up + first login** — `/customer/signup` → verify auto-login lands on `/customer/dashboard`, welcome data correct.
+2. **Profile & prefs** — edit contact, toggle email/SMS/WhatsApp, change password, log out + back in.
+3. **My Pets** — add a pet, edit, upload photo, add vaccinations (does the upload flow work end-to-end from portal?).
+4. **Bookings** — Upcoming / Past tabs, drill into a booking, `Request change` and `Cancel booking` — verify admin sees the request in the Booking Requests queue.
+5. **Request booking wizards** — walk through all four (Hotel, Daycare, Grooming in-house, Grooming mobile, Transport). Confirm the customer sees a **price preview** in each and the request lands in admin queue with the right payload.
+6. **Invoices** — list filters, drill in, download PDF, `Pay` button → PayFast redirect → success page → invoice marks paid.
+7. **Payments** — history renders, links back to invoices.
+8. **Documents** — vaccination certificates visible for the customer's pets only (see gap D1 below).
+9. **Mobile / tablet** — every page on 375px + 768px, sidebar → top bar, tables scroll cleanly.
 
-### 1. Seeded default templates (migration)
-Insert `is_active=true, auto_send=true` rows per tenant for the five customer-facing events, email channel:
-- `booking_created` — "Booking confirmed" (dates, service, pet, price)
-- `booking_reminder_24h` — new event code, "See you tomorrow"
-- `booking_cancelled` — "Booking cancelled"
-- `invoice_issued` — "Your invoice from {{tenant.name}}" with link
-- `invoice_reminder` — overdue nudge (existing but seeded)
-- `invoice_paid` — "Payment received, thank you"
+## Phase B — Gap fixes (build after walkthrough)
 
-Seeded only if the tenant has zero templates for that `(event_code, channel)`; safe to re-run.
+Everything below is either a known gap or something I expect the walkthrough to flag. Confirm/re-order after Phase A.
 
-### 2. Branded HTML wrapper
-Extract `renderBrandedHtml(tenant, bodyText)` from `_shared/auth-email.ts` and use it in `send-notifications` so notification emails match the invite/reset look (logo from `tenants.logo_url`, coral accent, footer with tenant name + reply-to). Plain-text stays for the `content` field; HTML goes in `html`.
+### B1. Dashboard hero upgrades
+- Outstanding invoices list (top 3, "Pay" button inline).
+- "Pending requests" chip showing `booking_requests` where status ∈ (`pending_review`, `needs_info`) with a link.
+- Recent activity feed (last 5 events: booking confirmed, invoice sent, payment received) from `notification_events`.
 
-### 3. Template preview + test-send in the editor
-`MessageTemplatesPage` right panel adds:
-- **Preview tab** next to the body editor. Renders subject + HTML body using a sample context object (fake customer/pet/booking/invoice) so brand + variables are visible while typing.
-- **Variables reference** collapsible listing available `{{...}}` paths per event code (driven by a static map in `src/features/comms/templateVariables.ts`).
-- **Send test** button — POSTs to a new `notify-test-send` edge function that renders with the sample context and mails the tenant's `comms_settings.test_recipient`. Logged to `email_log` with `template_code='test.<event_code>'`.
+### B2. My Requests page (new)
+- New route `/customer/requests` and sidebar entry, showing every `booking_requests` row the customer submitted, current status, and admin reply. Today a customer submits a wizard and it disappears from view.
 
-### 4. T-24h booking reminder
-- New event code `booking_reminder_24h` added to enum + `EVENT_CODES` list.
-- New edge function `queue-booking-reminders` (cron daily 09:00 SAST): finds `bookings` where `start_at` is between now+23h and now+25h, `status in ('confirmed','pending')`, and no existing `notification_events` row of that type for that booking. Inserts one pending event; existing dispatcher handles the send.
-- pg_cron schedule inserted via `supabase--insert` (user-specific URL/key, per schedule-jobs rule).
+### B3. Booking detail — customer-friendly
+- Show price / balance for the linked booking + invoice, add-ons, vax status ("All up to date" / "Missing: rabies").
+- Hide staff-only fields (`resource.name`).
+- "Reschedule" wizard (opens the same service wizard prefilled) instead of a generic notes-only request.
 
-### 5. Overdue nudge visibility
-The daily `send-invoice-reminders` already sends via SMTP directly, bypassing `notification_events`. Wrap it so each reminder also inserts a `notification_events` row (`event_code='invoice_reminder'`, status='sent', body_rendered filled) so the Comms inbox shows one timeline per customer instead of two silos.
+### B4. Documents (D1 fix)
+- Current query `pet_id.not.is.null` leaks docs across customers. Restrict to `customer_id = me` OR `pet_id IN (my pets)`.
+- Add "Upload vaccination certificate" flow (pet picker + file → `documents` + link to `vaccinations` for admin verification). Portal-side counterpart to admin's vax gate.
 
-### 6. Per-tenant fallback subject
-If a template has no subject, dispatcher falls back to `"{event_code} — {tenant.name}"` instead of `"(no subject)"`.
+### B5. Invoices & Payments
+- **Statement** — download `Customer statement` PDF (reuse `/admin/customers/:id/statement`).
+- **Credit notes** — list under `/customer/invoices` with a "Credit notes" tab (read from `credit_notes` filtered by `customer_id`).
+- **Pay options** — also surface Yoco / Stripe once enabled in `payment_providers` (today only PayFast branch exists).
+- **Proof of payment upload** — for offline methods (EFT), let the customer attach POP against an invoice.
 
-## Out of scope
-- WhatsApp/SMS transports (channels remain stubbed; templates can be authored but won't send).
-- Rich WYSIWYG editor (Markdown/HTML by hand for now).
-- Per-customer language variants.
-- Auth email template editor (auth emails stay code-defined).
+### B6. Comms inbox for the customer
+- New route `/customer/messages` reading `notification_events` where `customer_id = me` and status ∈ (`sent`, `queued`). Lets the customer re-read confirmations and reminders without hunting through email.
 
-## Technical notes
-- One migration: add `booking_reminder_24h` to notification event enum + seed templates via `INSERT … SELECT tenant_id … WHERE NOT EXISTS`. No new tables → no GRANT/RLS work.
-- Two new edge functions: `notify-test-send`, `queue-booking-reminders`. Both use tenant SMTP via existing `loadTransport` helper (extract to `_shared/comms-transport.ts`).
-- `templateVariables.ts` is a plain map `event_code → { path, label, sampleValue }[]` used by both the reference panel and the preview sample context.
-- No new settings screen — everything hangs off existing Message Templates + Comms settings pages per the settings-first rule.
+### B7. Pricing confirmed everywhere
+- Sweep each of the four request wizards, confirm `HotelExtrasPanel` / `GroomingExtrasPanel` / transport suburb pricing render a live estimate before submit.
+- Add a "This is an estimate — final price on confirmation" microcopy line to avoid disputes.
 
-Say **"go"** to build, or tell me which item to drop / re-order.
+### B8. Responsive polish
+- Portal tables → cards on `<sm`.
+- Booking detail action bar becomes a sticky bottom bar on mobile.
+- Sidebar drawer close-on-navigate check across `MobileTopBar`.
+
+### B9. Small correctness items
+- `MyProfilePage.save` writes `notify_email/sms/whatsapp` — confirm those columns exist and RLS allows update (spot-check).
+- Booking `Cancel` should require a reason (currently just a notes field) and set request `kind='cancel'` correctly.
+- Empty-state illustrations for pets, bookings, invoices, documents.
+
+## What I need from you
+
+1. Approve the plan or tell me to reorder / drop items.
+2. Then we walk through **Phase A together on the preview** — I'll drive with a fresh test customer and we tick items off. Anything that fails moves into Phase B and gets built.
