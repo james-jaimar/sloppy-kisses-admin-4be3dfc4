@@ -73,6 +73,11 @@ interface Props {
     grooming: Partial<GroomingDetails>;
     hotel: Partial<HotelDetails>;
     transport: Partial<TransportDetails>;
+    grooming_instructions: {
+      selections: Record<string, any>;
+      medical_flags: string[];
+      notes: string;
+    } | null;
   }>;
 }
 
