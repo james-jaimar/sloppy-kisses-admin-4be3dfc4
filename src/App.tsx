@@ -190,6 +190,7 @@ const App = () => (
                 <Route path="/admin/settings" element={<SettingsIndexPage />} />
                 <Route path="/admin/settings/resources" element={<ResourcesPage />} />
                 <Route path="/admin/settings/grooming-packages" element={<GroomingPackagesPage />} />
+                <Route path="/admin/settings/dog-breeds" element={<DogBreedsPage />} />
                 <Route path="/admin/settings/grooming-addons" element={<GroomingAddonsPage />} />
                 <Route path="/admin/settings/hotel-workflow" element={<HotelWorkflowPage />} />
                 <Route path="/admin/settings/hotel-rates" element={<HotelRatesPage />} />

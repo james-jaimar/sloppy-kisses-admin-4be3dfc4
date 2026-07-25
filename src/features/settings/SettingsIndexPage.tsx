@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server, FileUp } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server, FileUp, Dog } from "lucide-react";
 import { Archive } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
@@ -37,6 +37,13 @@ const SECTIONS = [
     label: "Grooming instructions",
     description: "Catalog of Shampoo / Head / Body / Legs / Accessories / Medical flags for staff and customer selection.",
     icon: Scissors,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/dog-breeds",
+    label: "Dog breeds",
+    description: "Master list of breeds with size band. Auto-fills a pet's size when a breed is picked.",
+    icon: Dog,
     ready: true,
   },
   {
