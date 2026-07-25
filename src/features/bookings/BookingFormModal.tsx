@@ -217,7 +217,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const instrCatalogQ = useInstructionCatalog(tenantId);
 
   // Auto-add priced add-ons when an instruction option carries an addon_code.
-  // Auto-added addons carry qty 1; users can still tick/untick manually in the extras panel.
+  // Instructions are the source of truth for any add-on that has a linked
+  // instruction option: we add when triggered AND remove when un-ticked so the
+  // two panels can't disagree. Standalone add-ons (travel, pickup, Stay & Play,
+  // toothbrush purchase) are untouched here.
   useEffect(() => {
     const cat = instrCatalogQ.data;
     const addons = addonsCatalogQ.data;
@@ -243,18 +246,29 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         }
       }
     }
-    // Resolve codes → addon ids
-    const ids = new Set<string>();
+    // Build the full set of codes that can ever be linked to an instruction option.
+    const linkedCodes = new Set<string>();
+    for (const o of cat.options) if (o.addon_code) linkedCodes.add(o.addon_code);
+    linkedCodes.add("hand_strip");
+    // Resolve triggered codes → addon ids, and linked codes → addon ids.
+    const triggeredIds = new Set<string>();
     for (const code of triggered) {
       const a = addons.find((x) => x.code === code);
-      if (a) ids.add(a.id);
+      if (a) triggeredIds.add(a.id);
     }
-    // Merge: keep existing selections, ensure triggered ids are present.
+    const linkedIds = new Set<string>();
+    for (const code of linkedCodes) {
+      const a = addons.find((x) => x.code === code);
+      if (a) linkedIds.add(a.id);
+    }
     setGroomingAddons((prev) => {
-      const have = new Set(prev.map((s) => s.addon_id));
+      // Drop any linked addon that is no longer triggered; keep everything else.
+      const kept = prev.filter((s) => !linkedIds.has(s.addon_id) || triggeredIds.has(s.addon_id));
+      const have = new Set(kept.map((s) => s.addon_id));
       const additions: GroomingAddonSelection[] = [];
-      for (const id of ids) if (!have.has(id)) additions.push({ addon_id: id, qty: 1 });
-      return additions.length ? [...prev, ...additions] : prev;
+      for (const id of triggeredIds) if (!have.has(id)) additions.push({ addon_id: id, qty: 1 });
+      if (kept.length === prev.length && additions.length === 0) return prev;
+      return [...kept, ...additions];
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groomingInstructions.selections, instrCatalogQ.data, addonsCatalogQ.data]);
