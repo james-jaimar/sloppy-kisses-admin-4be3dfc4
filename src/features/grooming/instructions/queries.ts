@@ -23,6 +23,7 @@ export interface InstructionOption {
   sort_order: number;
   active: boolean;
   is_alert: boolean;
+  addon_code: string | null;
 }
 
 export type Selections = Record<string, string | string[] | number | boolean | null>;
