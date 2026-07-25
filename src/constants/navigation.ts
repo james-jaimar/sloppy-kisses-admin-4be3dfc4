@@ -30,9 +30,11 @@ export const customerNav = [
   { to: "/customer/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/customer/pets", label: "My Pets", icon: PawPrint },
   { to: "/customer/bookings", label: "Bookings", icon: CalendarCheck },
+  { to: "/customer/requests", label: "Requests", icon: Inbox },
   { to: "/customer/documents", label: "Documents", icon: FileText },
   { to: "/customer/invoices", label: "Invoices", icon: Receipt },
   { to: "/customer/payments", label: "Payments", icon: CreditCard },
+  { to: "/customer/messages", label: "Messages", icon: MessageSquare },
   { to: "/customer/profile", label: "Profile", icon: User },
 ] as const;
 

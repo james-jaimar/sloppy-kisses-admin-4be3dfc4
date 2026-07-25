@@ -14,7 +14,7 @@ export default function MyDocumentsPage() {
       const { data, error } = await supabase
         .from("documents")
         .select("id, type, file_name, file_path, status, created_at, pet:pets(name)")
-        .or(`customer_id.eq.${cust.data!.id},pet_id.not.is.null`)
+        .eq("tenant_id", cust.data!.tenant_id)
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
