@@ -30,6 +30,7 @@ import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQ
 import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtrasPanel";
 import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries";
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
+import { useGroomingPackages } from "@/features/settings/groomingRateCardQueries";
 import { BookingGroomingInstructionsPanel } from "@/features/grooming/instructions/BookingGroomingInstructionsPanel";
 import { useSaveBookingInstructions } from "@/features/grooming/instructions/queries";
 import { useInstructionCatalog } from "@/features/grooming/instructions/queries";
@@ -45,6 +46,32 @@ const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: Resourc
   { value: "pickup_dropoff", label: "Pick up / drop-off", resourceType: "transport_vehicle" },
 ];
 
+const RESOURCE_LABELS: Record<ServiceType, string> = {
+  daycare: "Area",
+  daycare_assessment: "Area",
+  hotel_dog: "Kennel / suite",
+  hotel_cat: "Cattery unit",
+  grooming_inhouse: "Groomer / station",
+  grooming_mobile: "Van",
+  pickup_dropoff: "Vehicle",
+};
+
+/** Presets shown in the Duration select. `mins` null = "Custom…" */
+const DURATION_PRESETS: Record<ServiceType, { label: string; mins: number }[]> = {
+  daycare:            [{ label: "Full day (08:00–17:00)", mins: 540 }, { label: "Half day (4h)", mins: 240 }],
+  daycare_assessment: [{ label: "1 hour", mins: 60 }, { label: "90 min", mins: 90 }],
+  hotel_dog:          [], // uses nights
+  hotel_cat:          [], // uses nights
+  grooming_inhouse:   [{ label: "30 min", mins: 30 }, { label: "1 hour", mins: 60 }, { label: "90 min", mins: 90 }, { label: "2 hours", mins: 120 }, { label: "3 hours", mins: 180 }],
+  grooming_mobile:    [{ label: "30 min", mins: 30 }, { label: "1 hour", mins: 60 }, { label: "90 min", mins: 90 }, { label: "2 hours", mins: 120 }, { label: "3 hours", mins: 180 }],
+  pickup_dropoff:     [{ label: "15 min", mins: 15 }, { label: "30 min", mins: 30 }, { label: "1 hour", mins: 60 }],
+};
+
+const DEFAULT_DURATION: Record<ServiceType, number> = {
+  daycare: 540, daycare_assessment: 60, hotel_dog: 24 * 60, hotel_cat: 24 * 60,
+  grooming_inhouse: 90, grooming_mobile: 90, pickup_dropoff: 30,
+};
+
 const STATUSES: BookingStatus[] = [
   "draft", "requested", "needs_info", "approved", "confirmed",
   "checked_in", "in_progress", "ready", "checked_out", "completed", "cancelled", "no_show",
@@ -55,6 +82,11 @@ function toLocalInput(iso: string | null | undefined): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function diffMinutes(startIso: string | null | undefined, endIso: string | null | undefined): number | null {
+  if (!startIso || !endIso) return null;
+  return Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60000);
 }
 
 interface Props {
@@ -100,18 +132,37 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [startAt, setStartAt] = useState<string>(
     toLocalInput(booking?.start_at ?? prefill?.start_at ?? null),
   );
-  const [endAt, setEndAt] = useState<string>(toLocalInput(booking?.end_at ?? null));
-  useEffect(() => {
-    if (isEdit) return;
-    if (endAt) return;
-    if (prefill?.end_at) setEndAt(toLocalInput(prefill.end_at));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Duration (in minutes) drives end_at. For hotel we prefer nights.
+  const initialDurationMins =
+    diffMinutes(booking?.start_at, booking?.end_at) ??
+    diffMinutes(prefill?.start_at, prefill?.end_at) ??
+    DEFAULT_DURATION[booking?.service_type ?? prefill?.service_type ?? "daycare"];
+  const [durationMins, setDurationMins] = useState<number>(initialDurationMins);
+  const [customDuration, setCustomDuration] = useState<boolean>(() => {
+    const st = booking?.service_type ?? prefill?.service_type ?? "daycare";
+    const presets = DURATION_PRESETS[st] ?? [];
+    return presets.length > 0 && !presets.some((p) => p.mins === initialDurationMins);
+  });
   const [resourceId, setResourceId] = useState<string | null>(booking?.resource_id ?? null);
   const [notesInternal, setNotesInternal] = useState(booking?.notes_internal ?? "");
   const [notesCustomer, setNotesCustomer] = useState(
     booking?.notes_customer ?? prefill?.notes_customer ?? "",
   );
+
+  // When service type changes (new booking only), reset duration to that service's default.
+  useEffect(() => {
+    if (isEdit) return;
+    setDurationMins(DEFAULT_DURATION[serviceType]);
+    setCustomDuration(false);
+  }, [serviceType, isEdit]);
+
+  // Derived end iso string for downstream panels (hotel occupancy, conflicts).
+  const endAtLocal = useMemo(() => {
+    if (!startAt) return "";
+    const start = new Date(startAt);
+    const end = new Date(start.getTime() + durationMins * 60000);
+    return toLocalInput(end.toISOString());
+  }, [startAt, durationMins]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(customerSearch), 250);
@@ -133,6 +184,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId, petsQ.data, isEdit]);
   const resourcesQ = useResources(tenantId);
+  const packagesQ = useGroomingPackages(tenantId, { activeOnly: true });
   const create = useCreateBooking(tenantId);
   const update = useUpdateBooking(tenantId);
   const upsertDetails = useUpsertBookingDetails(tenantId);
@@ -222,7 +274,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
   // Resource conflict soft-check
   const startIso = startAt ? new Date(startAt).toISOString() : null;
-  const endIso = endAt ? new Date(endAt).toISOString() : null;
+  const endIso = endAtLocal ? new Date(endAtLocal).toISOString() : null;
   const conflictsQ = useResourceConflicts({
     tenantId,
     resourceId,
@@ -246,8 +298,9 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!customerId) return toast.error("Please select a customer");
-    if (!startAt || !endAt) return toast.error("Please pick a start and end time");
-    if (new Date(endAt) <= new Date(startAt)) return toast.error("End time must be after start time");
+    if (!startAt) return toast.error("Please pick a start time");
+    if (!durationMins || durationMins <= 0) return toast.error("Please set a duration");
+    const endComputed = new Date(new Date(startAt).getTime() + durationMins * 60000);
     if ((petsQ.data?.length ?? 0) > 0 && petIds.length === 0) {
       return toast.error("Select at least one pet for this booking");
     }
@@ -270,7 +323,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             service_type: serviceType,
             status,
             start_at: new Date(startAt).toISOString(),
-            end_at: new Date(endAt).toISOString(),
+            end_at: endComputed.toISOString(),
             resource_id: resourceId,
             notes_internal: notesInternal.trim() || null,
             notes_customer: notesCustomer.trim() || null,
@@ -292,7 +345,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             service_type: serviceType,
             status,
             start_at: new Date(startAt).toISOString(),
-            end_at: new Date(endAt).toISOString(),
+            end_at: endComputed.toISOString(),
             resource_id: resourceId,
             notes_internal: notesInternal.trim() || null,
             notes_customer: notesCustomer.trim() || null,
@@ -317,7 +370,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           service_type: serviceType,
           status,
           start_at: new Date(startAt).toISOString(),
-          end_at: new Date(endAt).toISOString(),
+          end_at: endComputed.toISOString(),
           resource_id: resourceId,
           notes_internal: notesInternal.trim() || null,
           notes_customer: notesCustomer.trim() || null,
@@ -338,12 +391,18 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
   async function saveDetails(bookingId: string) {
     if (kind === "grooming") {
+      // Source service_package label from selected rate-card package so we
+      // don't double-enter it on the form. Duration lives on the booking
+      // itself but we still stamp duration_minutes on the details row.
+      const pkg = (packagesQ.data ?? []).find((p) => p.id === grooming.package_id);
       await upsertDetails.mutateAsync({
         kind: "grooming",
         bookingId,
         data: {
           ...grooming,
           grooming_mode: serviceType === "grooming_mobile" ? "mobile" : "inhouse",
+          service_package: pkg?.name ?? grooming.service_package ?? null,
+          duration_minutes: durationMins,
         },
       });
     } else if (kind === "hotel") {
@@ -545,11 +604,67 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} className={inputCls} />
           </div>
           <div>
-            <div className="mb-1 text-sm font-medium">End</div>
-            <input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} className={inputCls} />
+            <div className="mb-1 text-sm font-medium">
+              {kind === "hotel" ? "Nights" : "Duration"}
+            </div>
+            {kind === "hotel" ? (
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={Math.max(1, Math.round(durationMins / (24 * 60)))}
+                onChange={(e) => setDurationMins(Math.max(1, Number(e.target.value)) * 24 * 60)}
+                className={inputCls}
+              />
+            ) : customDuration ? (
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min={5}
+                  step={5}
+                  value={durationMins}
+                  onChange={(e) => setDurationMins(Math.max(5, Number(e.target.value)))}
+                  className={inputCls}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomDuration(false);
+                    setDurationMins(DEFAULT_DURATION[serviceType]);
+                  }}
+                  className="h-10 shrink-0 rounded-lg border border-border px-3 text-xs font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Presets
+                </button>
+              </div>
+            ) : (
+              <select
+                value={String(durationMins)}
+                onChange={(e) => {
+                  if (e.target.value === "__custom__") {
+                    setCustomDuration(true);
+                    return;
+                  }
+                  setDurationMins(Number(e.target.value));
+                }}
+                className={inputCls}
+              >
+                {(DURATION_PRESETS[serviceType] ?? []).map((p) => (
+                  <option key={p.mins} value={p.mins}>{p.label}</option>
+                ))}
+                <option value="__custom__">Custom…</option>
+              </select>
+            )}
+            {startAt && (
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                Ends {new Date(new Date(startAt).getTime() + durationMins * 60000).toLocaleString("en-ZA", {
+                  weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
+                })}
+              </div>
+            )}
           </div>
           <div className="sm:col-span-2">
-            <div className="mb-1 text-sm font-medium">Resource</div>
+            <div className="mb-1 text-sm font-medium">{RESOURCE_LABELS[serviceType]}</div>
             <select
               value={resourceId ?? ""}
               onChange={(e) => setResourceId(e.target.value || null)}
@@ -622,7 +737,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             accommodationType={hotel.accommodation_type ?? ""}
             onAccommodationChange={(v) => setHotel((p) => ({ ...p, accommodation_type: v || null }))}
             startAt={startAt ? new Date(startAt).toISOString() : null}
-            endAt={endAt ? new Date(endAt).toISOString() : null}
+            endAt={endAtLocal ? new Date(endAtLocal).toISOString() : null}
             petCount={petIds.length || 1}
             selection={hotelSurcharges}
             onSelectionChange={setHotelSurcharges}
