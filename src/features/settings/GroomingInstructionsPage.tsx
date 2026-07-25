@@ -3,7 +3,7 @@ import { Plus, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
-import { useConfirm } from "@/components/ui/ConfirmDialog";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   useAllInstructionGroups,
   useAllInstructionOptions,
