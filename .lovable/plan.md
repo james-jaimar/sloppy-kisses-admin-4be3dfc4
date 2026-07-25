@@ -1,66 +1,69 @@
-# Customer Portal — QA pass + gap fixes
 
-The portal is fully scaffolded (dashboard, pets, bookings + 4 request wizards, invoices with PayFast pay, payments, documents, profile + password, notification prefs, auto-approve signup). Rather than rebuild, this plan is a structured **test pass** followed by a targeted **gap-fix sprint** for the things the walkthrough will expose.
+# Documents storage — S3 + customer uploads + retention
 
-## Phase A — Guided QA walkthrough (no code)
+Move all customer/pet documents off Supabase Storage onto a dedicated S3 bucket for Sloppy Kisses, let customers upload from the portal, and enforce a 3-year retention plus pet-deceased archive/delete.
 
-Together, in this order, on the live preview. Each step ends with pass / fail / note.
+## 1. S3 setup (new dedicated bucket)
 
-1. **Sign-up + first login** — `/customer/signup` → verify auto-login lands on `/customer/dashboard`, welcome data correct.
-2. **Profile & prefs** — edit contact, toggle email/SMS/WhatsApp, change password, log out + back in.
-3. **My Pets** — add a pet, edit, upload photo, add vaccinations (does the upload flow work end-to-end from portal?).
-4. **Bookings** — Upcoming / Past tabs, drill into a booking, `Request change` and `Cancel booking` — verify admin sees the request in the Booking Requests queue.
-5. **Request booking wizards** — walk through all four (Hotel, Daycare, Grooming in-house, Grooming mobile, Transport). Confirm the customer sees a **price preview** in each and the request lands in admin queue with the right payload.
-6. **Invoices** — list filters, drill in, download PDF, `Pay` button → PayFast redirect → success page → invoice marks paid.
-7. **Payments** — history renders, links back to invoices.
-8. **Documents** — vaccination certificates visible for the customer's pets only (see gap D1 below).
-9. **Mobile / tablet** — every page on 375px + 768px, sidebar → top bar, tables scroll cleanly.
+- Ask you to create a fresh AWS S3 bucket (e.g. `sloppykisses-docs`) in your preferred region, with:
+  - Block Public Access ON (all objects served via signed URLs)
+  - CORS allowing `PUT` and `GET` from the app + custom domain origins
+  - Lifecycle rule: transition to Glacier Instant Retrieval at 1 year (cost win)
+- Connect it via `standard_connectors--connect` with `connector_id: aws_s3` as a **new** connection (not reusing Printmypics), with `write` scope enabled.
+- Object key layout: `tenants/{tenant_id}/pets/{pet_id}/{doc_id}-{filename}` and `tenants/{tenant_id}/customers/{customer_id}/{doc_id}-{filename}`.
 
-## Phase B — Gap fixes (build after walkthrough)
+## 2. Schema changes (`documents` table)
 
-Everything below is either a known gap or something I expect the walkthrough to flag. Confirm/re-order after Phase A.
+Add:
+- `storage_provider text` ('s3' | 'supabase') — default 's3' going forward
+- `s3_bucket text`, `s3_key text`
+- `size_bytes bigint`, `content_type text`, `checksum text`
+- `uploaded_by_profile_id uuid`, `uploaded_via text` ('portal' | 'admin')
+- `expires_at date` (auto-set for vaccination_certificate = administered/issued + 3 years; nullable for others)
+- `archived_at timestamptz`, `archive_reason text` ('expired' | 'pet_deceased' | 'manual')
+- `deleted_at timestamptz` (soft delete before hard purge)
 
-### B1. Dashboard hero upgrades
-- Outstanding invoices list (top 3, "Pay" button inline).
-- "Pending requests" chip showing `booking_requests` where status ∈ (`pending_review`, `needs_info`) with a link.
-- Recent activity feed (last 5 events: booking confirmed, invoice sent, payment received) from `notification_events`.
+Keep existing `file_path` for legacy Supabase rows; reads branch on `storage_provider`.
 
-### B2. My Requests page (new)
-- New route `/customer/requests` and sidebar entry, showing every `booking_requests` row the customer submitted, current status, and admin reply. Today a customer submits a wizard and it disappears from view.
+## 3. Edge functions
 
-### B3. Booking detail — customer-friendly
-- Show price / balance for the linked booking + invoice, add-ons, vax status ("All up to date" / "Missing: rabies").
-- Hide staff-only fields (`resource.name`).
-- "Reschedule" wizard (opens the same service wizard prefilled) instead of a generic notes-only request.
+- `documents-sign-upload` — validates tenant/customer/pet access, size (<20 MB), mime whitelist (pdf/jpg/png/heic), inserts `documents` row in `pending` state, returns S3 signed PUT URL.
+- `documents-sign-download` — resolves row, checks RLS via caller, returns signed GET URL (5 min).
+- `documents-confirm-upload` — client calls after successful PUT; HEAD's the object to record size/checksum, flips row to `ready`.
+- `documents-purge` — scheduled daily via `pg_cron`:
+  - Archive rows past `expires_at` (set `archived_at`, keep object 90 days).
+  - Hard delete S3 object + row when `archived_at` older than 90 days.
+  - When a pet is marked deceased, mark all its docs `archived_at = now()`, `archive_reason='pet_deceased'` (grace 90 days then purge).
 
-### B4. Documents (D1 fix)
-- Current query `pet_id.not.is.null` leaks docs across customers. Restrict to `customer_id = me` OR `pet_id IN (my pets)`.
-- Add "Upload vaccination certificate" flow (pet picker + file → `documents` + link to `vaccinations` for admin verification). Portal-side counterpart to admin's vax gate.
+## 4. Retention & pet-deceased flow
 
-### B5. Invoices & Payments
-- **Statement** — download `Customer statement` PDF (reuse `/admin/customers/:id/statement`).
-- **Credit notes** — list under `/customer/invoices` with a "Credit notes" tab (read from `credit_notes` filtered by `customer_id`).
-- **Pay options** — also surface Yoco / Stripe once enabled in `payment_providers` (today only PayFast branch exists).
-- **Proof of payment upload** — for offline methods (EFT), let the customer attach POP against an invoice.
+- Add `pets.deceased_at date` + admin/customer toggle on pet detail (already partially there via status? — will verify and reuse if so).
+- Trigger `pets_deceased_archive_docs` on `pets` update: when `deceased_at` transitions from null → date, archive all documents for that pet.
+- Vaccination uploads: on insert, if `document_type='vaccination_certificate'` and linked `vaccinations.expiry_date` exists, set `documents.expires_at = expiry_date`; else default 3 years from `uploaded_at`.
 
-### B6. Comms inbox for the customer
-- New route `/customer/messages` reading `notification_events` where `customer_id = me` and status ∈ (`sent`, `queued`). Lets the customer re-read confirmations and reminders without hunting through email.
+## 5. Portal & admin UI
 
-### B7. Pricing confirmed everywhere
-- Sweep each of the four request wizards, confirm `HotelExtrasPanel` / `GroomingExtrasPanel` / transport suburb pricing render a live estimate before submit.
-- Add a "This is an estimate — final price on confirmation" microcopy line to avoid disputes.
+- **Customer portal — `MyPetDetailPage`**: "Upload vaccination certificate" button → picks type (rabies/5-in-1/kennel cough/other), date, file → uses signed upload flow → shows list of their pet's docs with expiry badge + download.
+- **Customer portal — `MyDocumentsPage`**: allow deleting own uploads before staff verify; show expiry.
+- **Admin — pet detail Documents tab**: same upload flow + "verify" toggle so admin can mark vaccination valid (feeds existing `hotel_can_confirm_booking` gate).
+- **Admin — customer detail Documents tab**: proof-of-payment uploads with link back to invoice.
+- **Settings — Documents**: retention days per type (default 1095), archive grace period (default 90), toggle to auto-purge or manual review queue.
 
-### B8. Responsive polish
-- Portal tables → cards on `<sm`.
-- Booking detail action bar becomes a sticky bottom bar on mobile.
-- Sidebar drawer close-on-navigate check across `MobileTopBar`.
+## 6. Migration of existing rows
 
-### B9. Small correctness items
-- `MyProfilePage.save` writes `notify_email/sms/whatsapp` — confirm those columns exist and RLS allows update (spot-check).
-- Booking `Cancel` should require a reason (currently just a notes field) and set request `kind='cancel'` correctly.
-- Empty-state illustrations for pets, bookings, invoices, documents.
+- Only Branding assets (logo/favicon) stay on Supabase Storage — those are not `documents` rows, so nothing to migrate today.
+- Add a one-off script placeholder for any legacy `documents.file_path` rows if they exist (will check count before running).
 
-## What I need from you
+## Technical details
 
-1. Approve the plan or tell me to reorder / drop items.
-2. Then we walk through **Phase A together on the preview** — I'll drive with a fresh test customer and we tick items off. Anything that fails moves into Phase B and gets built.
+- All S3 traffic server-side via Lovable connector gateway; `AWS_S3_API_KEY` + `LOVABLE_API_KEY` used only in edge functions.
+- Signed URL TTL: uploads 10 min, downloads 5 min.
+- RLS unchanged in principle: `documents` rows still guarded by tenant/customer/pet access helpers; portal signed-URL function re-checks before signing.
+- No public bucket policy; browser never talks to S3 without a signed URL.
+- File size ceiling 20 MB per doc (matches Lovable upload limit); larger PDFs rejected client-side with a clear error.
+- `documents-purge` runs 03:00 SAST daily; logs summary to `activity_log`.
+
+## Open items to confirm during build
+
+- Confirm the exact list of vaccination `document_type` values you want in the portal picker (rabies, 5-in-1, kennel cough, other?).
+- Confirm the AWS region for the bucket so CORS/latency are right.
