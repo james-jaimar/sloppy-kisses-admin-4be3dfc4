@@ -26,7 +26,7 @@ export default function MyMessagesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("notification_events")
-        .select("id, event_type, channel, status, subject, body, created_at, sent_at, booking_id, invoice_id")
+        .select("id, event_type, channel, status, subject, body_rendered, created_at, sent_at, booking_id, invoice_id")
         .eq("customer_id", cust.data!.id)
         .in("status", ["sent", "pending"])
         .order("created_at", { ascending: false })
@@ -57,7 +57,7 @@ export default function MyMessagesPage() {
                   <span className="ml-auto text-xs text-muted-foreground">{fmtDateTime(m.sent_at ?? m.created_at)}</span>
                 </div>
                 {m.subject && <div className="mt-2 text-sm font-medium">{m.subject}</div>}
-                {m.body && <div className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{m.body}</div>}
+                {m.body_rendered && <div className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{m.body_rendered}</div>}
                 <div className="mt-2 flex gap-3 text-xs">
                   {m.booking_id && <Link to={`/customer/bookings/${m.booking_id}`} className="font-medium text-sk-coral-dark hover:underline">View booking</Link>}
                   {m.invoice_id && <Link to={`/customer/invoices/${m.invoice_id}`} className="font-medium text-sk-coral-dark hover:underline">View invoice</Link>}
