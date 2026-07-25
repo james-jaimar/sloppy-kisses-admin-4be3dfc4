@@ -193,6 +193,7 @@ const App = () => (
                 <Route path="/admin/settings/hotel-workflow" element={<HotelWorkflowPage />} />
                 <Route path="/admin/settings/hotel-rates" element={<HotelRatesPage />} />
                 <Route path="/admin/settings/grooming-workflow" element={<GroomingWorkflowPage />} />
+                <Route path="/admin/settings/grooming-instructions" element={<GroomingInstructionsPage />} />
                 <Route path="/admin/settings/van-workflow" element={<VanWorkflowPage />} />
                 <Route path="/admin/settings/transport-workflow" element={<TransportWorkflowPage />} />
                 <Route path="/admin/settings/daycare-plans" element={<DaycarePlansPage />} />
