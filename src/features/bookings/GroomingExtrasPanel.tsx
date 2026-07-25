@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useGroomingPackages, useGroomingAddons, type GroomingAddon, type GroomingPackage } from "@/features/settings/groomingRateCardQueries";
 import { useGroomingWorkflowSettings, useBookingGroomingAddons } from "@/features/grooming/workflowQueries";
+import { useInstructionCatalog } from "@/features/grooming/instructions/queries";
 
 export interface GroomingAddonSelection {
   addon_id: string;
@@ -41,6 +42,24 @@ export function GroomingExtrasPanel({
   const addonsQ = useGroomingAddons(tenantId, { activeOnly: true });
   const wfQ = useGroomingWorkflowSettings(tenantId);
   const existingQ = useBookingGroomingAddons(bookingId);
+  const catalogQ = useInstructionCatalog(tenantId);
+
+  // Add-on codes that are already exposed through the Grooming instructions panel
+  // (e.g. Tick & Flea shampoo, Anal glands). We hide them from this checkbox list
+  // so there's one tick, one place. Standalone fees (travel, pickup, Stay & Play,
+  // toothbrush purchase, etc.) have no linked instruction option and stay here.
+  const linkedAddonCodes = useMemo(() => {
+    const set = new Set<string>();
+    const opts = catalogQ.data?.options ?? [];
+    for (const o of opts) if (o.addon_code) set.add(o.addon_code);
+    // hand_strip is triggered by the boolean instruction group of the same code.
+    set.add("hand_strip");
+    return set;
+  }, [catalogQ.data]);
+  const visibleAddons = useMemo(
+    () => (addonsQ.data ?? []).filter((a) => !linkedAddonCodes.has(a.code)),
+    [addonsQ.data, linkedAddonCodes],
+  );
 
   // Seed selection from existing addons in edit mode.
   useEffect(() => {
@@ -125,12 +144,15 @@ export function GroomingExtrasPanel({
       </div>
 
       <div className="mt-4">
-        <div className="mb-2 text-xs font-medium">Add-ons</div>
-        {(addonsQ.data ?? []).length === 0 ? (
-          <div className="text-[11px] text-muted-foreground">No add-ons configured.</div>
+        <div className="mb-2 text-xs font-medium">Extras & fees</div>
+        <div className="mb-2 text-[11px] text-muted-foreground">
+          Shampoo, teeth, ears, nails and other styling extras are picked in the Grooming instructions panel below.
+        </div>
+        {visibleAddons.length === 0 ? (
+          <div className="text-[11px] text-muted-foreground">No standalone fees configured.</div>
         ) : (
           <div className="space-y-2">
-            {(addonsQ.data ?? []).map((a) => {
+            {visibleAddons.map((a) => {
               const sel = addonSelection.find((s) => s.addon_id === a.id);
               return (
                 <div key={a.id} className="flex items-center gap-3 rounded-lg border border-border bg-white px-3 py-2 text-sm">

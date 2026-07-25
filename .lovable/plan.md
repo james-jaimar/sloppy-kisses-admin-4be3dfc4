@@ -1,40 +1,49 @@
+## Problem
+
+The New/Edit Booking modal shows two overlapping controls for grooming extras:
+
+- **Add-ons panel** — every row from `grooming_addons` (Tick & Flea shampoo, Anal glands, Ear cleaning, Teeth, De-shedding, Hypoallergenic, Travel, Pickup, Stay & Play…).
+- **Grooming instructions panel** — the catalog (Shampoo/Conditioner, Teeth, Ears, etc.) where several options are linked to those same add-ons via `grooming_instruction_options.addon_code`.
+
+Ticking "Tick & Flea" in Add-ons does not tick it under Shampoo/Conditioner in Instructions (and vice-versa), so groomers see conflicting info and the price preview can double-charge.
 
 ## Goal
-Make the New Booking modal fast and obvious. Fix the four things you called out on the Grooming (in-house) new-booking screen.
 
-## Changes
+One tick, one price, one source of truth — and the groomer view still shows everything they need.
 
-### 1. Smart start prefill on the calendar
-Today the calendar's "New booking" button opens the modal with no `start_at` unless the URL has `?newBooking=1&start=...`. Fix by:
-- Track the "focused slot" in `CalendarWeekView`: when the user clicks an empty cell in day/week view, remember `{ resourceId, startAt }` and open the modal.
-- The existing top-right "New booking" button falls back to the current view's anchor date at the next round hour (or 09:00 if viewing week/month) so there is always a sensible default.
-- Pass `start_at` (and `resource_id` when clicked from a resource lane) into `BookingFormModal` via the existing `prefill` prop.
+## Approach
 
-### 2. Replace "End" with "Duration"
-In `BookingFormModal`:
-- Drop the raw `End` datetime-local input.
-- Keep `Start` as a single datetime-local (browser-native picker — we don't need the custom double-column popover shown in the screenshot; that's the OS control on this browser, but the form itself will just be one field labelled Start, so it reads simpler).
-- Add a `Duration` control: a small select of common presets per service (`30 / 45 / 60 / 90 / 120 min` for grooming/transport, `full day` for daycare, `nights` counter for hotel) plus a "Custom…" option that reveals a minutes input.
-- Compute `end_at = start_at + duration` on submit. Defaults: grooming 90 min, transport 30 min, daycare uses tenant daycare hours (08:00–17:00), hotel uses one night (check-in 08:00 → next-day check-out 17:00) — matching what we already do elsewhere.
-- Edit mode: seed duration from `booking.end_at - booking.start_at`.
+Treat **grooming instructions as the source of truth for any add-on that belongs to a catalog group**. The Add-ons panel becomes a slim "extras & fees" list that only shows add-ons the catalog doesn't cover.
 
-### 3. Remove duplicate grooming fields
-`GroomingFields` currently duplicates things that `GroomingExtrasPanel` already owns properly (package, pensioner discount, travel fee, surcharge). For grooming bookings:
-- Remove the free-text `Service package`, `Duration (min)`, `Pensioner discount`, `Travel fee`, `Surcharge`, and `Recurring booking` inputs from `GroomingFields`.
-- Keep only: `Groomer` (free text override for who's doing it — separate from Resource, which is the station/van) and `Grooming notes`.
-- Package + add-ons + discounts + travel/matted/sedation stay in `GroomingExtrasPanel` (the panel already computes total).
-- On submit, still write `grooming_details` but source `service_package` from the selected rate-card package name, `pensioner_discount` from the extras panel checkbox, and `duration_minutes` from the new duration field. No user-visible duplication.
+### 1. Split add-ons into "catalog-linked" vs "standalone"
 
-### 4. Resource label tidy
-The "Resource" dropdown currently reads `— Unassigned —` then lists resources of the matching type (e.g. `In-house grooming`). Change the label to say what it's for so it doesn't read as a duplicate of the service type:
-- Rename the field to `Groomer / station` for grooming, `Van` for mobile grooming, `Kennel / suite` for hotel, `Vehicle` for transport, `Area` for daycare (driven off `serviceType`).
-- Keep "— Unassigned —" as the default.
-- No behavioural change; purely a label swap so the double-entry perception goes away.
+- Compute `linkedAddonCodes = new Set(instructionOptions.filter(o => o.addon_code).map(o => o.addon_code))`.
+- In `GroomingExtrasPanel`, filter the add-on checkbox list to **only** addons whose `code` is NOT in `linkedAddonCodes`. What remains: travel, pickup/drop-off, Stay & Play, matted/sedation surcharges, toothbrush purchase, and anything else that is a fee rather than a styling choice.
+- Price preview keeps summing both sources (already does).
 
-## Files touched
-- `src/features/calendar/CalendarWeekView.tsx` — slot-click state + prefill (`start_at`, `resource_id`).
-- `src/features/bookings/BookingFormModal.tsx` — duration field, resource label, remove end input, submit math, prefill support.
-- `src/features/bookings/BookingDetailsFields.tsx` — slim down `GroomingFields`.
+### 2. Instruction ticks drive add-on selection (already partly wired)
+
+- `BookingFormModal` already has a `useEffect` that adds priced add-ons when instruction options are ticked. Extend it to also **remove** add-ons whose linked instruction option was un-ticked, so the two panels stay perfectly in sync.
+- Result: ticking "Tick & Flea" under Shampoo/Conditioner adds the R60 to price preview and to the draft invoice — no separate Add-ons checkbox needed.
+
+### 3. Mirror customer-portal add-on picks back into instructions
+
+- In `src/features/bookingRequests/convert.ts`, when a request carries add-on codes that correspond to instruction options, seed those options into `grooming_booking_instructions` on conversion so the groomer's instruction sheet reflects what the customer requested.
+- Same mirroring in the customer portal `GroomingRequestWizard` — it already uses `GroomingInstructionsForm`; verify it does not additionally expose linked add-ons as separate pills.
+
+### 4. Groomer read-only summary
+
+- `BookingDetailPanel` already has `InstructionsSummary`. Confirm it lists every priced instruction with its add-on fee inline so groomers see a single unambiguous checklist (no separate "Add-ons" section duplicating the same items).
+
+## Files to touch
+
+- `src/features/bookings/GroomingExtrasPanel.tsx` — filter add-on list by `linkedAddonCodes`; fetch instruction options via existing `useAllInstructionOptions(tenantId)`.
+- `src/features/bookings/BookingFormModal.tsx` — extend the instructions→addons sync effect to also remove de-selected linked add-ons.
+- `src/features/bookings/BookingDetailPanel.tsx` — ensure `InstructionsSummary` renders linked prices; drop any duplicate add-on list for those items.
+- `src/features/bookingRequests/convert.ts` — mirror portal-selected add-on codes into instruction selections on convert.
+- `src/features/customerPortal/.../GroomingRequestWizard.tsx` — sanity-check that no linked-addon pills remain outside the instructions form.
 
 ## Out of scope
-Hotel nights UX, calendar drag-to-create, and any changes to the extras/instructions panels — this pass is only the "top of the form" cleanup you called out.
+
+- No schema changes. `grooming_instruction_options.addon_code` already exists and is the join key.
+- No changes to standalone fees (travel, pickup, Stay & Play, matted/sedation) — they stay in the Extras panel.
