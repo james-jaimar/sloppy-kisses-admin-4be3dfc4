@@ -24,11 +24,11 @@ export function GroomingFields({
 }: {
   value: Partial<GroomingDetails>;
   onChange: (patch: Partial<GroomingDetails>) => void;
-  mode: "in_house" | "mobile";
+  mode: "inhouse" | "mobile";
 }) {
   return (
     <div className="rounded-xl border border-border bg-sk-surface-muted p-4">
-      <SectionTitle>Grooming details ({mode === "in_house" ? "in-house" : "mobile"})</SectionTitle>
+      <SectionTitle>Grooming details ({mode === "inhouse" ? "in-house" : "mobile"})</SectionTitle>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <div className="mb-1 text-xs font-medium">Service package</div>

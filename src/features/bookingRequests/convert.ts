@@ -101,7 +101,7 @@ export function buildBookingPrefillFromRequest(
         ...base,
         grooming_instructions: instr,
         grooming: {
-          grooming_mode: mobile ? "mobile" : "in_house",
+          grooming_mode: mobile ? "mobile" : "inhouse",
           package_id: payload.package_id ?? null,
           service_package: null,
           groomer_name: null,
