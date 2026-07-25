@@ -28,7 +28,7 @@ export default function MyMessagesPage() {
         .from("notification_events")
         .select("id, event_type, channel, status, subject, body, created_at, sent_at, booking_id, invoice_id")
         .eq("customer_id", cust.data!.id)
-        .in("status", ["sent", "queued", "pending", "delivered"])
+        .in("status", ["sent", "pending"])
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) throw error;
