@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server, FileUp } from "lucide-react";
+import { Archive } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -155,6 +156,13 @@ const SECTIONS = [
     label: "Retail settings",
     description: "Default VAT, negative-stock rule, low-stock notifications.",
     icon: ShoppingBag,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/documents",
+    label: "Documents & retention",
+    description: "How long we keep vaccination certificates and other uploads, archive grace, nightly purge.",
+    icon: Archive,
     ready: true,
   },
   {
