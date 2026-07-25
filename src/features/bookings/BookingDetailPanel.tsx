@@ -10,6 +10,7 @@ import { BookingStatusChip } from "./statusMeta";
 import { useBookingServiceDetails } from "./detailsQueries";
 import { useCancelSeriesForward } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useBookingInstructions, useInstructionCatalog } from "@/features/grooming/instructions/queries";
 
 const STATUS_ACTIONS: { status: BookingStatus; label: string }[] = [
   { status: "confirmed", label: "Confirm" },
@@ -35,6 +36,9 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
   const cancelSeries = useCancelSeriesForward(tenantId);
   const notificationsQ = useBookingNotifications(booking.id, tenantId);
   const detailsQ = useBookingServiceDetails(booking.id, booking.service_type, tenantId);
+  const isGrooming = booking.service_type === "grooming_inhouse" || booking.service_type === "grooming_mobile";
+  const instrQ = useBookingInstructions(isGrooming ? booking.id : null);
+  const catalogQ = useInstructionCatalog(isGrooming ? tenantId : null);
 
   const start = booking.start_at ? new Date(booking.start_at) : null;
   const end = booking.end_at ? new Date(booking.end_at) : null;
@@ -200,6 +204,22 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
                     </div>
                   ))}
               </dl>
+            </section>
+          )}
+
+          {isGrooming && instrQ.data && catalogQ.data && (
+            <section>
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Grooming instructions
+              </div>
+              <InstructionsSummary
+                selections={instrQ.data.selections ?? {}}
+                medicalFlags={instrQ.data.medical_flags ?? []}
+                notes={instrQ.data.notes}
+                toldOfficeToCall={instrQ.data.told_office_to_call}
+                groups={catalogQ.data.groups}
+                byGroup={catalogQ.data.byGroup}
+              />
             </section>
           )}
 
