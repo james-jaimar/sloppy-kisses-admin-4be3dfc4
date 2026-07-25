@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { useCreatePet, useUpdatePet, type PetRow } from "@/features/customers/queries";
+import { BreedPicker } from "./BreedPicker";
 
 type Species = "dog" | "cat" | "other";
 type Sex = "male" | "female" | "unknown";
@@ -65,6 +66,10 @@ export function PetFormModal({ tenantId, customerId, pet, onClose, onSaved }: Pr
     if (!form.name.trim()) {
       toast.error("Pet name is required");
       return;
+    }
+    if (form.species === "dog") {
+      if (!form.breed.trim()) { toast.error("Breed is required for dogs"); return; }
+      if (!form.size) { toast.error("Size is required for dogs"); return; }
     }
     const payload: any = {
       name: form.name.trim(),
@@ -136,7 +141,16 @@ export function PetFormModal({ tenantId, customerId, pet, onClose, onSaved }: Pr
             />
           </Field>
           <Field label="Breed">
-            <TextInput value={form.breed} onChange={(v) => set("breed", v)} />
+            {form.species === "dog" ? (
+              <BreedPicker
+                value={form.breed}
+                onChange={(breed, size) =>
+                  setForm((f) => ({ ...f, breed, ...(size ? { size } : {}) }))
+                }
+              />
+            ) : (
+              <TextInput value={form.breed} onChange={(v) => set("breed", v)} />
+            )}
           </Field>
           <Field label="Sex">
             <Select
