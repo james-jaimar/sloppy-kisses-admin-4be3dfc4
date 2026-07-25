@@ -11,6 +11,7 @@ import { PetFormModal } from "./PetFormModal";
 import { PetVaccinationsPanel } from "./PetVaccinationsPanel";
 import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { PetGroomingDefaultsPanel } from "@/features/grooming/instructions/PetGroomingDefaultsPanel";
 
 export default function PetDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -186,6 +187,9 @@ export default function PetDetailPage() {
 
             {tenant && (
               <PetVaccinationsPanel tenantId={tenant.id} petId={pet.id} />
+            )}
+            {tenant && (
+              <PetGroomingDefaultsPanel tenantId={tenant.id} petId={pet.id} />
             )}
           </>
         )}

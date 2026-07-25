@@ -30,6 +30,9 @@ import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQ
 import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtrasPanel";
 import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries";
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
+import { BookingGroomingInstructionsPanel } from "@/features/grooming/instructions/BookingGroomingInstructionsPanel";
+import { useSaveBookingInstructions } from "@/features/grooming/instructions/queries";
+import type { GroomingInstructionsValue } from "@/features/grooming/instructions/GroomingInstructionsForm";
 
 const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: ResourceType }[] = [
   { value: "daycare", label: "Daycare", resourceType: "daycare_area" },
@@ -146,6 +149,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [groomingAddons, setGroomingAddons] = useState<GroomingAddonSelection[]>([]);
   const setBookingGroomingAddons = useSetBookingGroomingAddons(tenantId);
   const addonsCatalogQ = useGroomingAddons(tenantId, { activeOnly: true });
+  const [groomingInstructions, setGroomingInstructions] = useState<GroomingInstructionsValue>({
+    selections: {}, medical_flags: [], notes: "", told_office_to_call: "",
+  });
+  const saveInstructions = useSaveBookingInstructions(tenantId);
 
   // Load existing details when editing
   const detailsQ = useBookingServiceDetails(
@@ -220,6 +227,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         await saveDetails(booking.id);
         if (kind === "hotel") await persistSurcharges(booking.id);
         if (kind === "grooming") await persistGroomingAddons(booking.id);
+        if (kind === "grooming") await persistInstructions(booking.id);
         toast.success("Booking updated");
         onSaved?.(booking.id);
       } else {
@@ -243,6 +251,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             await saveDetails(b.id);
             if (kind === "hotel") await persistSurcharges(b.id);
             if (kind === "grooming") await persistGroomingAddons(b.id);
+            if (kind === "grooming") await persistInstructions(b.id);
           }
           toast.success(`Created ${res.bookings.length} bookings in series`);
           onSaved?.(res.bookings[0]?.id);
@@ -264,6 +273,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         await saveDetails(res.id);
         if (kind === "hotel") await persistSurcharges(res.id);
         if (kind === "grooming") await persistGroomingAddons(res.id);
+        if (kind === "grooming") await persistInstructions(res.id);
         toast.success(`Booking ${res.booking_number} created`);
         onSaved?.(res.id);
       }
@@ -321,6 +331,20 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       await setBookingGroomingAddons.mutateAsync({ bookingId, rows });
     } catch (err: any) {
       toast.error("Booking saved, but failed to save add-ons: " + (err?.message ?? "unknown error"));
+    }
+  }
+
+  async function persistInstructions(bookingId: string) {
+    try {
+      await saveInstructions.mutateAsync({
+        booking_id: bookingId,
+        selections: groomingInstructions.selections,
+        medical_flags: groomingInstructions.medical_flags,
+        notes: groomingInstructions.notes?.trim() || null,
+        told_office_to_call: groomingInstructions.told_office_to_call?.trim() || null,
+      });
+    } catch (err: any) {
+      toast.error("Booking saved, but failed to save instructions: " + (err?.message ?? "unknown error"));
     }
   }
 
@@ -519,6 +543,15 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             mattedSurchargeZar={grooming.matted_surcharge_zar ?? null}
             sedationSurchargeZar={grooming.sedation_surcharge_zar ?? null}
             travelFee={grooming.travel_fee ?? null}
+          />
+        )}
+        {kind === "grooming" && (
+          <BookingGroomingInstructionsPanel
+            tenantId={tenantId}
+            bookingId={booking?.id ?? null}
+            primaryPetId={petIds[0] ?? null}
+            value={groomingInstructions}
+            onChange={setGroomingInstructions}
           />
         )}
         {kind === "hotel" && (
