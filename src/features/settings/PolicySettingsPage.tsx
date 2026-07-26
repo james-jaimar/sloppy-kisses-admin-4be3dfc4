@@ -17,6 +17,7 @@ type Row = {
   daycare_notice_months: number;
   daycare_catchup_window_days: number;
   overdue_interest_percent_per_month: number;
+  consent_grace_days: number;
 };
 
 const DEFAULTS: Omit<Row, "tenant_id"> = {
@@ -29,6 +30,7 @@ const DEFAULTS: Omit<Row, "tenant_id"> = {
   daycare_notice_months: 1,
   daycare_catchup_window_days: 30,
   overdue_interest_percent_per_month: 3,
+  consent_grace_days: 30,
 };
 
 export default function PolicySettingsPage() {
@@ -133,6 +135,13 @@ export default function PolicySettingsPage() {
             <h2 className="text-base font-semibold">Accounts</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               {num("Overdue interest", "overdue_interest_percent_per_month", "Charged on overdue invoices", "% per month")}
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-base font-semibold">Portal registration</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {num("Consent grace period", "consent_grace_days", "Existing customers can dismiss the registration wizard for this long before it becomes blocking.", "days")}
             </div>
           </section>
 
