@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { MobileTopBar } from "./MobileTopBar";
 import { adminNav } from "@/constants/navigation";
+import { QuickAddProvider } from "@/components/quickAdd/QuickAddProvider";
 
 const STORAGE_KEY = "sk.sidebar.collapsed";
 
@@ -16,6 +17,7 @@ export default function AdminLayout() {
   }, [collapsed]);
 
   return (
+    <QuickAddProvider>
     <div className="flex min-h-screen w-full bg-sk-bg text-foreground">
       <AppSidebar
         items={adminNav}
@@ -28,5 +30,6 @@ export default function AdminLayout() {
         <Outlet />
       </div>
     </div>
+    </QuickAddProvider>
   );
 }

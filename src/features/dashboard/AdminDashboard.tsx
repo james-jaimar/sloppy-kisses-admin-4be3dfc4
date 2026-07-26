@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Scissors, Truck, Dog, Hotel, ArrowLeftRight, TrendingUp, TrendingDown, ChevronRight, Users, PawPrint } from "lucide-react";
+import { Scissors, Truck, Dog, Hotel, ArrowLeftRight, TrendingUp, TrendingDown, ChevronRight, ChevronLeft, Users, PawPrint } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import { useCustomerAndPetCounts } from "@/features/customers/queries";
@@ -37,14 +38,20 @@ function activityHref(a: { booking_id: string | null; customer_id: string | null
 }
 
 export default function AdminDashboard() {
-  const today = format(new Date(), "EEEE, d MMMM");
+  const [selectedDay, setSelectedDay] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const isToday = selectedDay.toDateString() === new Date().toDateString();
+  const dayLabel = format(selectedDay, "EEEE, d MMMM");
   const { profile, currentTenant } = useCurrentUser();
   const tenantId = currentTenant?.id ?? null;
   const firstName = (profile?.full_name ?? "").trim().split(/\s+/)[0] || "there";
   const { data: counts, isLoading: countsLoading } = useCustomerAndPetCounts();
-  const { data: statsData, isLoading: statsLoading } = useDashboardTodayStats(tenantId);
-  const { data: schedule, isLoading: scheduleLoading } = useTodaysSchedule(tenantId);
-  const { data: checkin, isLoading: checkinLoading } = useDaycareCheckinSummary(tenantId);
+  const { data: statsData, isLoading: statsLoading } = useDashboardTodayStats(tenantId, selectedDay);
+  const { data: schedule, isLoading: scheduleLoading } = useTodaysSchedule(tenantId, 8, selectedDay);
+  const { data: checkin, isLoading: checkinLoading } = useDaycareCheckinSummary(tenantId, selectedDay);
   const { data: activity, isLoading: activityLoading } = useRecentActivity(tenantId);
 
   const statCards = [
@@ -71,12 +78,48 @@ export default function AdminDashboard() {
     <>
       <AppHeader
         title="Dashboard"
-        subtitle={`Good morning, ${firstName} — here's what's happening ${today}.`}
+        subtitle={`Hi ${firstName} — here's what's happening on ${dayLabel}.`}
         actions={
-          <button className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-medium hover:bg-muted">
-            Today
-            <ChevronRight className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const d = new Date();
+                d.setHours(0, 0, 0, 0);
+                setSelectedDay(d);
+              }}
+              disabled={isToday}
+              className="h-9 rounded-lg border border-border bg-white px-3 text-sm font-medium hover:bg-sk-surface-muted disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Today
+            </button>
+            <div className="inline-flex overflow-hidden rounded-lg border border-border bg-white">
+              <button
+                onClick={() => {
+                  const d = new Date(selectedDay);
+                  d.setDate(d.getDate() - 1);
+                  setSelectedDay(d);
+                }}
+                className="grid h-9 w-9 place-items-center hover:bg-sk-surface-muted"
+                title="Previous day"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <div className="grid h-9 min-w-[180px] place-items-center border-x border-border px-3 text-sm font-semibold">
+                {format(selectedDay, "EEE, d MMM yyyy")}
+              </div>
+              <button
+                onClick={() => {
+                  const d = new Date(selectedDay);
+                  d.setDate(d.getDate() + 1);
+                  setSelectedDay(d);
+                }}
+                className="grid h-9 w-9 place-items-center hover:bg-sk-surface-muted"
+                title="Next day"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
         }
       />
       <div className="flex-1 space-y-6 p-6">
@@ -180,7 +223,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div>
                 <h2 className="text-base font-semibold">Daycare check-in</h2>
-                <p className="text-xs text-muted-foreground">Live count for today</p>
+                <p className="text-xs text-muted-foreground">{isToday ? "Live count for today" : `Count for ${format(selectedDay, "d MMM")}`}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 p-5">
