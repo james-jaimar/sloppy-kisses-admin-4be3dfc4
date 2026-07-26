@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server, FileUp, Dog } from "lucide-react";
+import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server, FileUp, Dog, FileText, Gavel } from "lucide-react";
 import { Archive } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
@@ -177,6 +177,20 @@ const SECTIONS = [
     label: "Documents & retention",
     description: "How long we keep vaccination certificates and other uploads, archive grace, nightly purge.",
     icon: Archive,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/policies",
+    label: "Policies",
+    description: "Deposits, cancellation windows, notice periods and overdue interest applied across bookings and invoices.",
+    icon: Gavel,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/terms",
+    label: "Terms & Registration",
+    description: "Versioned Terms & Conditions and daycare registration text customers accept on portal login.",
+    icon: FileText,
     ready: true,
   },
   {
