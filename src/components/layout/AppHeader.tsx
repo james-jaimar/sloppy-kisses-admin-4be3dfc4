@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, KeyRound, LogOut, MessageSquare, Plus, Search, ShieldCheck } from "lucide-react";
+import { Bell, KeyRound, LogOut, MessageSquare, Plus, Search, ShieldCheck, CalendarPlus, UserPlus, Dog, FileText, ChevronDown } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { useQuickAdd, type QuickAddKind } from "@/components/quickAdd/QuickAddProvider";
 
 interface Props {
   title?: string;
@@ -34,6 +35,9 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
     : (roles[0]?.label ?? (profile?.user_type ? profile.user_type : ""));
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const addRef = useRef<HTMLDivElement>(null);
+  const quickAdd = useQuickAdd();
   useEffect(() => {
     if (!menuOpen) return;
     const onDoc = (e: MouseEvent) => {
@@ -42,6 +46,21 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [menuOpen]);
+  useEffect(() => {
+    if (!addOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (addRef.current && !addRef.current.contains(e.target as Node)) setAddOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [addOpen]);
+
+  const quickAddItems: { kind: QuickAddKind; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { kind: "booking", label: "New booking", icon: CalendarPlus },
+    { kind: "customer", label: "New customer", icon: UserPlus },
+    { kind: "enrolment", label: "New daycare enrolment", icon: Dog },
+    { kind: "invoice", label: "New invoice", icon: FileText },
+  ];
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-sk-surface/85 backdrop-blur">
@@ -54,10 +73,33 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
             className="h-10 w-full rounded-xl border border-border bg-sk-surface-muted pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sk-coral/40"
           />
         </div>
-        <button className="hidden md:inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark transition-colors">
-          <Plus className="h-4 w-4" />
-          Quick add
-        </button>
+        <div className="relative hidden md:block" ref={addRef}>
+          <button
+            onClick={() => setAddOpen((v) => !v)}
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Quick add
+            <ChevronDown className="h-4 w-4 opacity-80" />
+          </button>
+          {addOpen && (
+            <div className="absolute right-0 top-12 z-40 w-60 rounded-xl border border-border bg-white p-1 shadow-lg">
+              {quickAddItems.map((it) => {
+                const Icon = it.icon;
+                return (
+                  <button
+                    key={it.kind}
+                    onClick={() => { setAddOpen(false); quickAdd.open(it.kind); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-muted"
+                  >
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    {it.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
         {isPlatform && (
           <Link
             to={inPlatform ? "/admin/dashboard" : "/platform"}
