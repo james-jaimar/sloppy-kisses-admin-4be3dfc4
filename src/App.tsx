@@ -255,6 +255,7 @@ const App = () => (
                 <Route path="/customer/invoices/:id" element={<MyInvoiceDetailPage />} />
                 <Route path="/customer/payments" element={<MyPaymentsPage />} />
                 <Route path="/customer/messages" element={<MyMessagesPage />} />
+                <Route path="/customer/registration" element={<RegistrationPage />} />
               </Route>
               </Route>
 
