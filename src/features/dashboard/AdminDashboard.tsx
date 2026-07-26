@@ -223,7 +223,7 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div>
                 <h2 className="text-base font-semibold">Daycare check-in</h2>
-                <p className="text-xs text-muted-foreground">Live count for today</p>
+                <p className="text-xs text-muted-foreground">{isToday ? "Live count for today" : `Count for ${format(selectedDay, "d MMM")}`}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 p-5">
