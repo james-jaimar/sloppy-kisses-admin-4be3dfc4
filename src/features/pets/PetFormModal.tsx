@@ -32,6 +32,13 @@ interface FormState {
   status: Status;
   medical_notes: string;
   behaviour_notes: string;
+  is_spayed_neutered: boolean | null;
+  behaviour_barker: boolean;
+  behaviour_jumps: boolean;
+  behaviour_nervous: boolean;
+  behaviour_social: boolean;
+  medical_aid_provider: string;
+  medical_aid_number: string;
 }
 
 function fromPet(p?: PetRow | null): FormState {
@@ -48,6 +55,13 @@ function fromPet(p?: PetRow | null): FormState {
     status: (p?.status as Status) ?? "active",
     medical_notes: p?.medical_notes ?? "",
     behaviour_notes: p?.behaviour_notes ?? "",
+    is_spayed_neutered: (p as any)?.is_spayed_neutered ?? null,
+    behaviour_barker: Boolean((p as any)?.behaviour_barker),
+    behaviour_jumps: Boolean((p as any)?.behaviour_jumps),
+    behaviour_nervous: Boolean((p as any)?.behaviour_nervous),
+    behaviour_social: Boolean((p as any)?.behaviour_social),
+    medical_aid_provider: (p as any)?.medical_aid_provider ?? "",
+    medical_aid_number: (p as any)?.medical_aid_number ?? "",
   };
 }
 
@@ -85,6 +99,13 @@ export function PetFormModal({ tenantId, customerId, pet, onClose, onSaved }: Pr
       status: form.status,
       medical_notes: form.medical_notes.trim() || null,
       behaviour_notes: form.behaviour_notes.trim() || null,
+      is_spayed_neutered: form.is_spayed_neutered,
+      behaviour_barker: form.behaviour_barker,
+      behaviour_jumps: form.behaviour_jumps,
+      behaviour_nervous: form.behaviour_nervous,
+      behaviour_social: form.behaviour_social,
+      medical_aid_provider: form.medical_aid_provider.trim() || null,
+      medical_aid_number: form.medical_aid_number.trim() || null,
     };
 
     try {
@@ -221,6 +242,49 @@ export function PetFormModal({ tenantId, customerId, pet, onClose, onSaved }: Pr
         <Field label="Behaviour notes">
           <TextArea value={form.behaviour_notes} onChange={(v) => set("behaviour_notes", v)} />
         </Field>
+        <div className="border-t border-border pt-4">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Behaviour flags
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {(
+              [
+                ["behaviour_social", "Sociable with other dogs"],
+                ["behaviour_barker", "Barks a lot"],
+                ["behaviour_jumps", "Jumps fences / escapes"],
+                ["behaviour_nervous", "Nervous / anxious"],
+              ] as const
+            ).map(([k, label]) => (
+              <label key={k} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form[k] as boolean}
+                  onChange={(e) => set(k, e.target.checked as any)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
+        <div className="border-t border-border pt-4">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Pet medical aid (optional)
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Provider">
+              <TextInput
+                value={form.medical_aid_provider}
+                onChange={(v) => set("medical_aid_provider", v)}
+              />
+            </Field>
+            <Field label="Policy number">
+              <TextInput
+                value={form.medical_aid_number}
+                onChange={(v) => set("medical_aid_number", v)}
+              />
+            </Field>
+          </div>
+        </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
           <button
