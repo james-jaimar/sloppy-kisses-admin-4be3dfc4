@@ -196,7 +196,7 @@ export default function TermsVersionsPage() {
                       description:
                         "Deleting a version does not revoke customer signatures — those are preserved by version label.",
                       confirmLabel: "Delete",
-                      destructive: true,
+                      tone: "destructive",
                     });
                     if (ok) del.mutate(r);
                   }}
