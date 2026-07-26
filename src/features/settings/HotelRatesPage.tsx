@@ -59,7 +59,6 @@ export default function HotelRatesPage() {
   );
 }
 
-function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | null; canManage: boolean; confirm: ReturnType<typeof useConfirm> }) {
 function SizeBandRangeEditor({ min, max, onChange }: { min: PetSizeBand | null; max: PetSizeBand | null; onChange: (min: PetSizeBand | null, max: PetSizeBand | null) => void }) {
   return (
     <div className="flex items-center gap-1">
@@ -78,8 +77,6 @@ function SizeBandRangeEditor({ min, max, onChange }: { min: PetSizeBand | null; 
   );
 }
 
-function RateCardsTable_placeholder() { return null; }
-// original RateCardsTable follows
 function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | null; canManage: boolean; confirm: ReturnType<typeof useConfirm> }) {
   const listQ = useHotelRateCards(tenantId);
   const create = useCreateHotelRateCard(tenantId ?? "");
