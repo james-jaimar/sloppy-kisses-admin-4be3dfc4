@@ -46,7 +46,7 @@ export function QuickAddProvider({ children }: { children: ReactNode }) {
         />
       )}
       {active === "enrolment" && tenantId && (
-        <EnrolmentDrawer tenantId={tenantId} open onOpenChange={(o) => { if (!o) close(); }} />
+        <EnrolmentDrawer tenantId={tenantId} open onOpenChange={(o) => { if (!o) close(); }} editing={null} />
       )}
       {active === "invoice" && tenantId && (
         <NewInvoiceDrawer
