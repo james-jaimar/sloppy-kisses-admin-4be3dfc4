@@ -1014,6 +1014,7 @@ export type Database = {
           address_line_1: string | null
           address_line_2: string | null
           city: string | null
+          consent_prompted_at: string | null
           created_at: string
           created_by: string | null
           customer_number: string
@@ -1059,6 +1060,7 @@ export type Database = {
           address_line_1?: string | null
           address_line_2?: string | null
           city?: string | null
+          consent_prompted_at?: string | null
           created_at?: string
           created_by?: string | null
           customer_number: string
@@ -1104,6 +1106,7 @@ export type Database = {
           address_line_1?: string | null
           address_line_2?: string | null
           city?: string | null
+          consent_prompted_at?: string | null
           created_at?: string
           created_by?: string | null
           customer_number?: string
@@ -4546,6 +4549,7 @@ export type Database = {
       }
       policy_settings: {
         Row: {
+          consent_grace_days: number
           created_at: string
           daycare_catchup_window_days: number
           daycare_notice_months: number
@@ -4560,6 +4564,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          consent_grace_days?: number
           created_at?: string
           daycare_catchup_window_days?: number
           daycare_notice_months?: number
@@ -4574,6 +4579,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          consent_grace_days?: number
           created_at?: string
           daycare_catchup_window_days?: number
           daycare_notice_months?: number
