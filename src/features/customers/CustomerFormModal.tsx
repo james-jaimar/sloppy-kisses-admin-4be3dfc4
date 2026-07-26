@@ -31,6 +31,14 @@ interface FormState {
   postcode: string;
   status: Status;
   notes_internal: string;
+  id_number: string;
+  employer: string;
+  emergency_contact_name: string;
+  emergency_contact_mobile: string;
+  emergency_contact_relationship: string;
+  vet_clinic_name: string;
+  vet_clinic_contact: string;
+  vet_clinic_address: string;
 }
 
 function fromCustomer(c?: CustomerRow | null): FormState {
@@ -49,6 +57,14 @@ function fromCustomer(c?: CustomerRow | null): FormState {
     postcode: c?.postcode ?? "",
     status: (c?.status as Status) ?? "active",
     notes_internal: c?.notes_internal ?? "",
+    id_number: (c as any)?.id_number ?? "",
+    employer: (c as any)?.employer ?? "",
+    emergency_contact_name: (c as any)?.emergency_contact_name ?? "",
+    emergency_contact_mobile: (c as any)?.emergency_contact_mobile ?? "",
+    emergency_contact_relationship: (c as any)?.emergency_contact_relationship ?? "",
+    vet_clinic_name: (c as any)?.vet_clinic_name ?? "",
+    vet_clinic_contact: (c as any)?.vet_clinic_contact ?? "",
+    vet_clinic_address: (c as any)?.vet_clinic_address ?? "",
   };
 }
 
@@ -92,6 +108,14 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
       postcode: form.postcode.trim() || null,
       status: form.status,
       notes_internal: form.notes_internal.trim() || null,
+      id_number: form.id_number.trim() || null,
+      employer: form.employer.trim() || null,
+      emergency_contact_name: form.emergency_contact_name.trim() || null,
+      emergency_contact_mobile: form.emergency_contact_mobile.trim() || null,
+      emergency_contact_relationship: form.emergency_contact_relationship.trim() || null,
+      vet_clinic_name: form.vet_clinic_name.trim() || null,
+      vet_clinic_contact: form.vet_clinic_contact.trim() || null,
+      vet_clinic_address: form.vet_clinic_address.trim() || null,
     };
 
     if (!payload.first_name && !payload.last_name && payload.full_name === "Unnamed") {
@@ -221,6 +245,53 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
             <option value="archived">Archived</option>
           </select>
         </Field>
+        <div className="border-t border-border pt-4">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Registration details
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="SA ID / passport number">
+              <Input value={form.id_number} onChange={(v) => set("id_number", v)} />
+            </Field>
+            <Field label="Employer / workplace">
+              <Input value={form.employer} onChange={(v) => set("employer", v)} />
+            </Field>
+          </div>
+        </div>
+        <div className="border-t border-border pt-4">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Emergency contact
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Name">
+              <Input value={form.emergency_contact_name} onChange={(v) => set("emergency_contact_name", v)} />
+            </Field>
+            <Field label="Mobile">
+              <Input value={form.emergency_contact_mobile} onChange={(v) => set("emergency_contact_mobile", v)} />
+            </Field>
+            <Field label="Relationship">
+              <Input value={form.emergency_contact_relationship} onChange={(v) => set("emergency_contact_relationship", v)} />
+            </Field>
+          </div>
+        </div>
+        <div className="border-t border-border pt-4">
+          <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Vet
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Clinic name">
+              <Input value={form.vet_clinic_name} onChange={(v) => set("vet_clinic_name", v)} />
+            </Field>
+            <Field label="Clinic phone">
+              <Input value={form.vet_clinic_contact} onChange={(v) => set("vet_clinic_contact", v)} />
+            </Field>
+          </div>
+          <div className="mt-4">
+            <Field label="Clinic address">
+              <Input value={form.vet_clinic_address} onChange={(v) => set("vet_clinic_address", v)} />
+            </Field>
+          </div>
+        </div>
         <Field label="Internal notes">
           <textarea
             value={form.notes_internal}
