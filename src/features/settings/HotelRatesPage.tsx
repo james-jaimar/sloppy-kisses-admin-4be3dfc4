@@ -60,6 +60,27 @@ export default function HotelRatesPage() {
 }
 
 function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | null; canManage: boolean; confirm: ReturnType<typeof useConfirm> }) {
+function SizeBandRangeEditor({ min, max, onChange }: { min: PetSizeBand | null; max: PetSizeBand | null; onChange: (min: PetSizeBand | null, max: PetSizeBand | null) => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      <select value={min ?? ""} onChange={(e) => onChange((e.target.value || null) as PetSizeBand | null, max)}
+        className="h-8 rounded border border-border bg-white px-1 text-xs">
+        <option value="">any</option>
+        {SIZE_BAND_ORDER.map((s) => <option key={s} value={s}>{SIZE_BAND_LABEL[s]}</option>)}
+      </select>
+      <span className="text-xs text-muted-foreground">→</span>
+      <select value={max ?? ""} onChange={(e) => onChange(min, (e.target.value || null) as PetSizeBand | null)}
+        className="h-8 rounded border border-border bg-white px-1 text-xs">
+        <option value="">any</option>
+        {SIZE_BAND_ORDER.map((s) => <option key={s} value={s}>{SIZE_BAND_LABEL[s]}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function RateCardsTable_placeholder() { return null; }
+// original RateCardsTable follows
+function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | null; canManage: boolean; confirm: ReturnType<typeof useConfirm> }) {
   const listQ = useHotelRateCards(tenantId);
   const create = useCreateHotelRateCard(tenantId ?? "");
   const update = useUpdateHotelRateCard(tenantId ?? "");
