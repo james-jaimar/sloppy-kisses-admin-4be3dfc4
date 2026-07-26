@@ -1,49 +1,40 @@
-# Grooming booking cleanup
+## Confirmed current state
 
-Three fixes, one migration + focused UI edits.
+- `AdminDashboard.tsx` renders a "Today ›" button with no `onClick` handler — it's a placeholder.
+- All dashboard queries (`useDashboardTodayStats`, `useTodaysSchedule`, daycare check-in) are hardcoded to "today" with no date parameter.
+- `AppHeader.tsx` renders a "Quick add" button (line 57) with no `onClick` — placeholder everywhere the header appears.
 
-## 1. Duration presets → 1 hour standard
+## Plan
 
-In `src/features/bookings/BookingFormModal.tsx`:
+### 1. Dashboard date navigator
+- Replace the placeholder "Today" button with a real date picker in `AdminDashboard.tsx`:
+  - Prev day / date label / Next day chevrons, plus a "Today" reset (matching the pattern used on `GroomingBoardPage` and `HotelBoardPage` for consistency).
+  - Local `selectedDate` state.
+- Add a `date?: Date` param to `useDashboardTodayStats`, `useTodaysSchedule`, and the daycare check-in query in `src/features/dashboard/queries.ts`. Default to today when omitted. Include the date in the query key so cache is per-day.
+- Update the greeting subtitle to say "Good morning …" only when the selected day is today; otherwise show e.g. "Showing Tue, 28 Jul 2026".
+- Update the "Daycare check-in" card heading from "Live count for today" to reflect the selected day.
 
-- `DURATION_PRESETS.grooming_inhouse` and `grooming_mobile` become:
-  `[{ label: "15 min", mins: 15 }, { label: "1 hour", mins: 60 }]` (15 min is for single individual-treatment bookings; the "Custom…" option stays for edge cases).
-- `DEFAULT_DURATION.grooming_inhouse` and `grooming_mobile` change from `90` → `60`.
-- When an individual-treatment-only booking is detected (no package, only individual add-ons selected), auto-suggest 15 min. User can override.
+### 2. Quick add menu (global header)
+- Turn the "Quick add" button in `AppHeader.tsx` into a dropdown (same click-outside pattern already used for the profile menu).
+- Menu items (permission-gated via existing `Can`/`hasPermission`):
+  - New booking → open `NewBookingModal`
+  - New customer → open `CustomerFormModal`
+  - New pet → open `PetFormModal`
+  - New invoice → navigate to `/admin/invoices` and trigger `NewInvoiceDrawer` (or route with `?new=1`)
+  - New daycare enrolment → open `EnrolmentDrawer`
+- Since `AppHeader` is presentational, wire the modals via a small `QuickAddProvider` context (mounted in `AdminLayout.tsx`) that exposes `openQuickAdd(kind)`; the header calls into it. This keeps the header reusable and avoids duplicating modal state per page.
+- Hide the menu entirely in Platform/Customer layouts (or show a reduced set) — Quick add is admin-only.
 
-## 2. Deduplicate the rate card
-
-The `grooming_packages` table has two parallel sets of dog rows (e.g. `dog_full_medium` "Dog Full Package — Medium" **and** `dog_medium_full` "Medium dog — Full groom") at the same price. Same for Express. Migration will:
-
-- Deactivate the older `dog_<size>_full` / `dog_<size>_express` rows (keep the "Dog Full Package — <Size>" / "Dog Express Wash & Dry — <Size>" naming — matches the PDF wording best).
-- Standardise `expected_minutes` to 60 for all dog Full and Express packages (Charlotte confirms sessions are 1 hr).
-- Rename cat/rabbit `standard` duplicates the same way (keep one row per species).
-
-No data loss — deactivated rows stay for historical bookings; dropdowns filter by `active`.
-
-## 3. "No package — individual treatments only" flow
-
-Today the Package dropdown is effectively required for pricing. Change:
-
-- In `BookingFormModal.tsx` grooming section, when Package = "— Select package —" (empty), keep the booking valid and show the Extras & fees list **including** the individual-treatment add-ons (Teeth gel, Teeth + toothpaste, Nail trimming, Ear cleaning, Hand stripping, Anal gland express).
-- When a **Full** package is selected, hide the individual treatments that are already bundled (teeth gel, nail trim, ear clean, anal gland) from Extras — they're included. Show only true upsells (teeth + toothpaste upgrade, hand stripping, shampoo upgrades, travel/pickup, Stay & Play).
-- When an **Express** package (wash & dry only) is selected, show all individual treatments as available add-ons (nothing bundled).
-- Price preview sums correctly in all three modes (no package / express / full).
-
-Bundled-in-full list is hard-coded by add-on `code`: `teeth_gel`, `nails_trim`, `ear_clean`, `anal_gland`. Everything else stays purchasable.
-
-## 4. Portal parity
-
-Apply the same "no package" option and 1-hour default to `GroomingRequestWizard.tsx` (customer portal), so customers can request just a nail trim.
+### 3. Out of scope
+- No changes to the underlying booking/customer/pet form components; only their open triggers.
+- No changes to search input (still placeholder — separate task).
 
 ## Technical notes
 
-- Files touched: `BookingFormModal.tsx`, `GroomingExtrasPanel.tsx` (bundled-in-full filter), `GroomingRequestWizard.tsx`, one SQL migration for `grooming_packages` cleanup + duration normalisation.
-- No schema changes — only data updates and UI logic.
-- Instructions panel (styling picks) is untouched; this only affects the priced Extras panel and Package dropdown.
-
-## Out of scope
-
-- Rebuilding the grooming instructions catalog.
-- Changing the mobile-van scheduling rules.
-- Any pricing changes beyond the duplicates.
+- Files touched:
+  - `src/features/dashboard/AdminDashboard.tsx` — date state + navigator UI.
+  - `src/features/dashboard/queries.ts` — accept `date` param; adjust SQL date filters to `[startOfDay(date), endOfDay(date))`.
+  - `src/components/layout/AppHeader.tsx` — replace static button with dropdown wired to context.
+  - `src/components/layout/AdminLayout.tsx` — mount `QuickAddProvider` + hosted modals.
+  - New `src/components/quickAdd/QuickAddProvider.tsx`.
+- Permissions used: `bookings.create`, `customers.manage`, `pets.manage`, `invoices.create`, `daycare.manage` (fall back gracefully if a permission helper doesn't exist — verify in `permissions.ts` during build).
