@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 
-function todayRange() {
-  const start = new Date();
+function dayRange(date?: Date) {
+  const start = date ? new Date(date) : new Date();
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
@@ -13,7 +13,7 @@ function todayRange() {
     endISO: end.toISOString(),
     ydayStartISO: yStart.toISOString(),
     ydayEndISO: start.toISOString(),
-    dateStr: start.toISOString().slice(0, 10),
+    dateStr: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`,
   };
 }
 
@@ -56,13 +56,14 @@ export interface DashboardTodayStats {
   transport: { today: number; yday: number };
 }
 
-export function useDashboardTodayStats(tenantId: string | null | undefined) {
+export function useDashboardTodayStats(tenantId: string | null | undefined, date?: Date) {
+  const dateKey = date ? date.toISOString().slice(0, 10) : "today";
   return useQuery({
-    queryKey: ["dashboard", "today-stats", tenantId],
+    queryKey: ["dashboard", "today-stats", tenantId, dateKey],
     enabled: Boolean(tenantId),
     queryFn: async (): Promise<DashboardTodayStats> => {
       const t = tenantId as string;
-      const { startISO, endISO, ydayStartISO, ydayEndISO } = todayRange();
+      const { startISO, endISO, ydayStartISO, ydayEndISO } = dayRange(date);
 
       const [gT, gY, mT, mY, dT, dY, hT, hY, pT, pY] = await Promise.all([
         countBookings(t, startISO, endISO, ["grooming_inhouse"]),
@@ -98,12 +99,13 @@ export interface ScheduleRow {
   booking_pets: { pet: { name: string | null } | null }[];
 }
 
-export function useTodaysSchedule(tenantId: string | null | undefined, limit = 8) {
+export function useTodaysSchedule(tenantId: string | null | undefined, limit = 8, date?: Date) {
+  const dateKey = date ? date.toISOString().slice(0, 10) : "today";
   return useQuery({
-    queryKey: ["dashboard", "today-schedule", tenantId, limit],
+    queryKey: ["dashboard", "today-schedule", tenantId, limit, dateKey],
     enabled: Boolean(tenantId),
     queryFn: async (): Promise<ScheduleRow[]> => {
-      const { startISO, endISO } = todayRange();
+      const { startISO, endISO } = dayRange(date);
       const { data, error } = await supabase
         .from("bookings")
         .select(
@@ -128,12 +130,13 @@ export interface DaycareCheckinSummary {
   walkIns: number;
 }
 
-export function useDaycareCheckinSummary(tenantId: string | null | undefined) {
+export function useDaycareCheckinSummary(tenantId: string | null | undefined, date?: Date) {
+  const dateKey = date ? date.toISOString().slice(0, 10) : "today";
   return useQuery({
-    queryKey: ["dashboard", "daycare-checkin", tenantId],
+    queryKey: ["dashboard", "daycare-checkin", tenantId, dateKey],
     enabled: Boolean(tenantId),
     queryFn: async (): Promise<DaycareCheckinSummary> => {
-      const { dateStr } = todayRange();
+      const { dateStr } = dayRange(date);
       const { data, error } = await supabase
         .from("daycare_attendance")
         .select("id, expected, status, checked_in_at")
