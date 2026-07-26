@@ -194,6 +194,13 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/consent-status",
+    label: "Registration status",
+    description: "See which customers have completed the digital registration, who's still in the grace window, and who's overdue.",
+    icon: FileText,
+    ready: true,
+  },
+  {
     to: "/admin/users",
     label: "Users & roles",
     description: "Staff accounts, roles and permissions.",

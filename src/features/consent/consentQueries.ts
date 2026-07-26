@@ -37,6 +37,10 @@ export type ConsentStatus = {
   acceptedVersionIds: Set<string>;
   missingFields: string[];
   needsWizard: boolean;
+  promptedAt: string | null;
+  graceDays: number;
+  daysRemaining: number | null;
+  mode: "none" | "soft" | "hard";
 };
 
 const REQUIRED_FIELDS: (keyof ConsentCustomer)[] = [
@@ -61,7 +65,7 @@ export function useConsentStatus() {
       const { data: cust, error: e1 } = await supabase
         .from("customers")
         .select(
-          "id, tenant_id, first_name, last_name, full_name, mobile, address_line_1, suburb, city, id_number, employer, emergency_contact_name, emergency_contact_mobile, emergency_contact_relationship, vet_clinic_name, vet_clinic_contact, vet_clinic_address",
+          "id, tenant_id, first_name, last_name, full_name, mobile, address_line_1, suburb, city, id_number, employer, emergency_contact_name, emergency_contact_mobile, emergency_contact_relationship, vet_clinic_name, vet_clinic_contact, vet_clinic_address, consent_prompted_at",
         )
         .eq("linked_profile_id", profile!.id)
         .eq("portal_access_enabled", true)
@@ -69,7 +73,8 @@ export function useConsentStatus() {
         .limit(1)
         .maybeSingle();
       if (e1) throw e1;
-      const customer = (cust ?? null) as ConsentCustomer | null;
+      const custRow = (cust ?? null) as (ConsentCustomer & { consent_prompted_at: string | null }) | null;
+      const customer = custRow;
       if (!customer) {
         return {
           customer: null,
@@ -77,6 +82,10 @@ export function useConsentStatus() {
           acceptedVersionIds: new Set(),
           missingFields: [],
           needsWizard: false,
+          promptedAt: null,
+          graceDays: 30,
+          daysRemaining: null,
+          mode: "none",
         };
       }
 
@@ -107,12 +116,48 @@ export function useConsentStatus() {
       const outstandingConsents = currentVersions.filter((v) => !accepted.has(v.id));
       const needsWizard = outstandingConsents.length > 0 || missingFields.length > 0;
 
+      // Grace period lookup
+      const { data: policy } = await supabase
+        .from("policy_settings")
+        .select("consent_grace_days")
+        .eq("tenant_id", customer.tenant_id)
+        .maybeSingle();
+      const graceDays = Number((policy as any)?.consent_grace_days ?? 30);
+
+      // First-prompt stamp: if outstanding and never prompted, record now.
+      let promptedAt = custRow?.consent_prompted_at ?? null;
+      if (needsWizard && !promptedAt) {
+        const nowIso = new Date().toISOString();
+        const { error: e4 } = await supabase
+          .from("customers")
+          .update({ consent_prompted_at: nowIso })
+          .eq("id", customer.id);
+        if (!e4) promptedAt = nowIso;
+      }
+
+      let daysRemaining: number | null = null;
+      let mode: "none" | "soft" | "hard" = "none";
+      if (needsWizard) {
+        if (promptedAt) {
+          const elapsedMs = Date.now() - new Date(promptedAt).getTime();
+          const elapsedDays = Math.floor(elapsedMs / (1000 * 60 * 60 * 24));
+          daysRemaining = graceDays - elapsedDays;
+        } else {
+          daysRemaining = graceDays;
+        }
+        mode = (daysRemaining ?? 0) > 0 ? "soft" : "hard";
+      }
+
       return {
         customer,
         currentVersions,
         acceptedVersionIds: accepted,
         missingFields,
         needsWizard,
+        promptedAt,
+        graceDays,
+        daysRemaining,
+        mode,
       };
     },
   });
