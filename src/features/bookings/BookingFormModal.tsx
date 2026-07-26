@@ -62,14 +62,14 @@ const DURATION_PRESETS: Record<ServiceType, { label: string; mins: number }[]> =
   daycare_assessment: [{ label: "1 hour", mins: 60 }, { label: "90 min", mins: 90 }],
   hotel_dog:          [], // uses nights
   hotel_cat:          [], // uses nights
-  grooming_inhouse:   [{ label: "30 min", mins: 30 }, { label: "1 hour", mins: 60 }, { label: "90 min", mins: 90 }, { label: "2 hours", mins: 120 }, { label: "3 hours", mins: 180 }],
-  grooming_mobile:    [{ label: "30 min", mins: 30 }, { label: "1 hour", mins: 60 }, { label: "90 min", mins: 90 }, { label: "2 hours", mins: 120 }, { label: "3 hours", mins: 180 }],
+  grooming_inhouse:   [{ label: "15 min", mins: 15 }, { label: "1 hour", mins: 60 }],
+  grooming_mobile:    [{ label: "15 min", mins: 15 }, { label: "1 hour", mins: 60 }],
   pickup_dropoff:     [{ label: "15 min", mins: 15 }, { label: "30 min", mins: 30 }, { label: "1 hour", mins: 60 }],
 };
 
 const DEFAULT_DURATION: Record<ServiceType, number> = {
   daycare: 540, daycare_assessment: 60, hotel_dog: 24 * 60, hotel_cat: 24 * 60,
-  grooming_inhouse: 90, grooming_mobile: 90, pickup_dropoff: 30,
+  grooming_inhouse: 60, grooming_mobile: 60, pickup_dropoff: 30,
 };
 
 const STATUSES: BookingStatus[] = [

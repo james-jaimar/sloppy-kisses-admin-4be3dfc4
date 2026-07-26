@@ -56,9 +56,24 @@ export function GroomingExtrasPanel({
     set.add("hand_strip");
     return set;
   }, [catalogQ.data]);
+
+  // Add-on codes that are already INCLUDED in the "Full" package (per the PDF):
+  // teeth cleaning (gel), nail trimming, ear cleaning, anal gland express.
+  // Hide these from Extras when the customer picks a Full package so we don't
+  // double-charge. They stay available for Express or "no package" bookings.
+  const BUNDLED_IN_FULL = new Set(["teeth_gel", "nails_trim", "ear_clean", "anal_gland"]);
+
+  const speciesPackagesAll = (packagesQ.data ?? []).filter((p: GroomingPackage) => p.species === species);
+  const activePkgEarly = speciesPackagesAll.find((p) => p.id === packageId) ?? null;
+  const isFullPackage = activePkgEarly?.package_type === "full";
+
   const visibleAddons = useMemo(
-    () => (addonsQ.data ?? []).filter((a) => !linkedAddonCodes.has(a.code)),
-    [addonsQ.data, linkedAddonCodes],
+    () => (addonsQ.data ?? []).filter((a) => {
+      if (linkedAddonCodes.has(a.code)) return false;
+      if (isFullPackage && BUNDLED_IN_FULL.has(a.code)) return false;
+      return true;
+    }),
+    [addonsQ.data, linkedAddonCodes, isFullPackage],
   );
 
   // Seed selection from existing addons in edit mode.
@@ -70,8 +85,8 @@ export function GroomingExtrasPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId, existingQ.data]);
 
-  const speciesPackages = (packagesQ.data ?? []).filter((p: GroomingPackage) => p.species === species);
-  const activePkg = speciesPackages.find((p) => p.id === packageId) ?? null;
+  const speciesPackages = speciesPackagesAll;
+  const activePkg = activePkgEarly;
   const discountPct = Number(wfQ.data?.pensioner_discount_pct ?? 0);
 
   const preview = useMemo(() => {
@@ -179,11 +194,15 @@ export function GroomingExtrasPanel({
         )}
       </div>
 
-      {activePkg && (
+      {(activePkg || preview.addonTotal > 0 || preview.travel > 0 || preview.matted > 0 || preview.sedation > 0) && (
         <div className="mt-4 rounded-lg border border-border bg-sk-surface-muted p-3 text-sm">
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Price preview</div>
           <div className="space-y-1">
-            <Row label={`Package · ${activePkg.name}`} value={fmtZar(preview.base)} />
+            {activePkg ? (
+              <Row label={`Package · ${activePkg.name}`} value={fmtZar(preview.base)} />
+            ) : (
+              <Row label="Individual treatments only" value={fmtZar(0)} />
+            )}
             {preview.discountAmt > 0 && (
               <Row label={`Pensioner discount (${discountPct}%)`} value={"− " + fmtZar(preview.discountAmt)} />
             )}
