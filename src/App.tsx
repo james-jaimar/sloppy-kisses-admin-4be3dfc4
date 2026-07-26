@@ -215,6 +215,8 @@ const App = () => (
                 <Route path="/admin/settings/stock-locations" element={<StockLocationsPage />} />
                 <Route path="/admin/settings/retail" element={<RetailSettingsPage />} />
                 <Route path="/admin/settings/documents" element={<DocumentRetentionPage />} />
+                <Route path="/admin/settings/policies" element={<PolicySettingsPage />} />
+                <Route path="/admin/settings/terms" element={<TermsVersionsPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>
