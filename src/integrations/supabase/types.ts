@@ -2975,6 +2975,8 @@ export type Database = {
           display_name: string
           extra_pet_rate_zar: number
           id: string
+          max_size_band: Database["public"]["Enums"]["pet_size"] | null
+          min_size_band: Database["public"]["Enums"]["pet_size"] | null
           nightly_rate_zar: number
           peak_uplift_pct: number
           sort_order: number
@@ -2989,6 +2991,8 @@ export type Database = {
           display_name: string
           extra_pet_rate_zar?: number
           id?: string
+          max_size_band?: Database["public"]["Enums"]["pet_size"] | null
+          min_size_band?: Database["public"]["Enums"]["pet_size"] | null
           nightly_rate_zar?: number
           peak_uplift_pct?: number
           sort_order?: number
@@ -3003,6 +3007,8 @@ export type Database = {
           display_name?: string
           extra_pet_rate_zar?: number
           id?: string
+          max_size_band?: Database["public"]["Enums"]["pet_size"] | null
+          min_size_band?: Database["public"]["Enums"]["pet_size"] | null
           nightly_rate_zar?: number
           peak_uplift_pct?: number
           sort_order?: number
