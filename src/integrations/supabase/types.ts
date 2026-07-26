@@ -793,6 +793,70 @@ export type Database = {
           },
         ]
       }
+      customer_consents: {
+        Row: {
+          accepted_at: string
+          created_at: string
+          customer_id: string
+          id: string
+          ip_address: unknown
+          kind: string
+          signature_name: string
+          tenant_id: string
+          user_agent: string | null
+          version_id: string
+          version_label: string
+        }
+        Insert: {
+          accepted_at?: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          ip_address?: unknown
+          kind: string
+          signature_name: string
+          tenant_id: string
+          user_agent?: string | null
+          version_id: string
+          version_label: string
+        }
+        Update: {
+          accepted_at?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          ip_address?: unknown
+          kind?: string
+          signature_name?: string
+          tenant_id?: string
+          user_agent?: string | null
+          version_id?: string
+          version_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_consents_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_consents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_consents_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_terms_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_credit_ledger: {
         Row: {
           amount: number
@@ -954,6 +1018,9 @@ export type Database = {
           created_by: string | null
           customer_number: string
           email: string | null
+          emergency_contact_mobile: string | null
+          emergency_contact_name: string | null
+          emergency_contact_relationship: string | null
           employer: string | null
           first_name: string | null
           full_name: string
@@ -982,6 +1049,9 @@ export type Database = {
           tenant_id: string
           updated_at: string
           updated_by: string | null
+          vet_clinic_address: string | null
+          vet_clinic_contact: string | null
+          vet_clinic_name: string | null
           work_address: string | null
           xero_customer_id: string | null
         }
@@ -993,6 +1063,9 @@ export type Database = {
           created_by?: string | null
           customer_number: string
           email?: string | null
+          emergency_contact_mobile?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_relationship?: string | null
           employer?: string | null
           first_name?: string | null
           full_name: string
@@ -1021,6 +1094,9 @@ export type Database = {
           tenant_id: string
           updated_at?: string
           updated_by?: string | null
+          vet_clinic_address?: string | null
+          vet_clinic_contact?: string | null
+          vet_clinic_name?: string | null
           work_address?: string | null
           xero_customer_id?: string | null
         }
@@ -1032,6 +1108,9 @@ export type Database = {
           created_by?: string | null
           customer_number?: string
           email?: string | null
+          emergency_contact_mobile?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_relationship?: string | null
           employer?: string | null
           first_name?: string | null
           full_name?: string
@@ -1060,6 +1139,9 @@ export type Database = {
           tenant_id?: string
           updated_at?: string
           updated_by?: string | null
+          vet_clinic_address?: string | null
+          vet_clinic_contact?: string | null
+          vet_clinic_name?: string | null
           work_address?: string | null
           xero_customer_id?: string | null
         }
@@ -4140,12 +4222,74 @@ export type Database = {
           },
         ]
       }
+      pet_parasite_treatments: {
+        Row: {
+          administered_on: string
+          created_at: string
+          id: string
+          kind: string
+          next_due_date: string | null
+          notes: string | null
+          pet_id: string
+          product_name: string | null
+          recorded_by: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          administered_on: string
+          created_at?: string
+          id?: string
+          kind: string
+          next_due_date?: string | null
+          notes?: string | null
+          pet_id: string
+          product_name?: string | null
+          recorded_by?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          administered_on?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          next_due_date?: string | null
+          notes?: string | null
+          pet_id?: string
+          product_name?: string | null
+          recorded_by?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pet_parasite_treatments_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_parasite_treatments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pets: {
         Row: {
           age_years: number | null
           aggression_flag: boolean
           barker: boolean
+          behaviour_aggressive_history: boolean
+          behaviour_barker: boolean
+          behaviour_jumps: boolean
+          behaviour_nervous: boolean
           behaviour_notes: string | null
+          behaviour_social: boolean
           breed: string | null
           created_at: string
           created_by: string | null
@@ -4158,9 +4302,13 @@ export type Database = {
           imported_at: string | null
           insurance_number: string | null
           insurance_provider: string | null
+          is_power_breed: boolean
+          is_spayed_neutered: boolean | null
           jumper: boolean
           legacy_customer_number: string | null
           marks_colour: string | null
+          medical_aid_number: string | null
+          medical_aid_provider: string | null
           medical_notes: string | null
           microchip_number: string | null
           microchipped: boolean
@@ -4187,7 +4335,12 @@ export type Database = {
           age_years?: number | null
           aggression_flag?: boolean
           barker?: boolean
+          behaviour_aggressive_history?: boolean
+          behaviour_barker?: boolean
+          behaviour_jumps?: boolean
+          behaviour_nervous?: boolean
           behaviour_notes?: string | null
+          behaviour_social?: boolean
           breed?: string | null
           created_at?: string
           created_by?: string | null
@@ -4200,9 +4353,13 @@ export type Database = {
           imported_at?: string | null
           insurance_number?: string | null
           insurance_provider?: string | null
+          is_power_breed?: boolean
+          is_spayed_neutered?: boolean | null
           jumper?: boolean
           legacy_customer_number?: string | null
           marks_colour?: string | null
+          medical_aid_number?: string | null
+          medical_aid_provider?: string | null
           medical_notes?: string | null
           microchip_number?: string | null
           microchipped?: boolean
@@ -4229,7 +4386,12 @@ export type Database = {
           age_years?: number | null
           aggression_flag?: boolean
           barker?: boolean
+          behaviour_aggressive_history?: boolean
+          behaviour_barker?: boolean
+          behaviour_jumps?: boolean
+          behaviour_nervous?: boolean
           behaviour_notes?: string | null
+          behaviour_social?: boolean
           breed?: string | null
           created_at?: string
           created_by?: string | null
@@ -4242,9 +4404,13 @@ export type Database = {
           imported_at?: string | null
           insurance_number?: string | null
           insurance_provider?: string | null
+          is_power_breed?: boolean
+          is_spayed_neutered?: boolean | null
           jumper?: boolean
           legacy_customer_number?: string | null
           marks_colour?: string | null
+          medical_aid_number?: string | null
+          medical_aid_provider?: string | null
           medical_notes?: string | null
           microchip_number?: string | null
           microchipped?: boolean
@@ -4374,6 +4540,59 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      policy_settings: {
+        Row: {
+          created_at: string
+          daycare_catchup_window_days: number
+          daycare_notice_months: number
+          grooming_cancellation_hours: number
+          hotel_amendment_fee: number
+          hotel_balance_due_days_before: number
+          hotel_cancellation_cutoff_days: number
+          hotel_deposit_percent: number
+          hotel_free_amendments: number
+          overdue_interest_percent_per_month: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          daycare_catchup_window_days?: number
+          daycare_notice_months?: number
+          grooming_cancellation_hours?: number
+          hotel_amendment_fee?: number
+          hotel_balance_due_days_before?: number
+          hotel_cancellation_cutoff_days?: number
+          hotel_deposit_percent?: number
+          hotel_free_amendments?: number
+          overdue_interest_percent_per_month?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          daycare_catchup_window_days?: number
+          daycare_notice_months?: number
+          grooming_cancellation_hours?: number
+          hotel_amendment_fee?: number
+          hotel_balance_due_days_before?: number
+          hotel_cancellation_cutoff_days?: number
+          hotel_deposit_percent?: number
+          hotel_free_amendments?: number
+          overdue_interest_percent_per_month?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "policy_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -4856,6 +5075,66 @@ export type Database = {
           },
         ]
       }
+      tenant_terms_versions: {
+        Row: {
+          body_markdown: string | null
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          id: string
+          is_current: boolean
+          kind: string
+          pdf_document_id: string | null
+          tenant_id: string
+          title: string | null
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          body_markdown?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          is_current?: boolean
+          kind: string
+          pdf_document_id?: string | null
+          tenant_id: string
+          title?: string | null
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          body_markdown?: string | null
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          is_current?: boolean
+          kind?: string
+          pdf_document_id?: string | null
+          tenant_id?: string
+          title?: string | null
+          updated_at?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_terms_versions_pdf_document_id_fkey"
+            columns: ["pdf_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_terms_versions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_users: {
         Row: {
           created_at: string
@@ -5166,10 +5445,12 @@ export type Database = {
       vaccinations: {
         Row: {
           administered_date: string | null
+          card_document_id: string | null
           created_at: string
           document_id: string | null
           expiry_date: string | null
           id: string
+          next_due_date: string | null
           notes: string | null
           pet_id: string
           product_name: string | null
@@ -5182,10 +5463,12 @@ export type Database = {
         }
         Insert: {
           administered_date?: string | null
+          card_document_id?: string | null
           created_at?: string
           document_id?: string | null
           expiry_date?: string | null
           id?: string
+          next_due_date?: string | null
           notes?: string | null
           pet_id: string
           product_name?: string | null
@@ -5198,10 +5481,12 @@ export type Database = {
         }
         Update: {
           administered_date?: string | null
+          card_document_id?: string | null
           created_at?: string
           document_id?: string | null
           expiry_date?: string | null
           id?: string
+          next_due_date?: string | null
           notes?: string | null
           pet_id?: string
           product_name?: string | null
@@ -5213,6 +5498,13 @@ export type Database = {
           verified_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "vaccinations_card_document_id_fkey"
+            columns: ["card_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vaccinations_document_id_fkey"
             columns: ["document_id"]
