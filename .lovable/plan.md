@@ -1,39 +1,49 @@
-# Breed catalog → auto-size, mandatory selection
+# Grooming booking cleanup
 
-Capture the Sloppy Kisses website's dog-breed-by-size list as a seeded catalog, then wire the pet form so choosing a breed auto-sets the size band. Breed and size become mandatory for dogs.
+Three fixes, one migration + focused UI edits.
 
-## 1. Seed catalog (DB)
+## 1. Duration presets → 1 hour standard
 
-New table `dog_breeds` (global, not per-tenant — same list for everyone; can be overridden later):
+In `src/features/bookings/BookingFormModal.tsx`:
 
-- `name` (unique, text)
-- `size_band` — `small | medium | large | xl | xxl` (matches `grooming_size_band` values)
-- `active` (bool, default true)
-- `sort_order` (int)
+- `DURATION_PRESETS.grooming_inhouse` and `grooming_mobile` become:
+  `[{ label: "15 min", mins: 15 }, { label: "1 hour", mins: 60 }]` (15 min is for single individual-treatment bookings; the "Custom…" option stays for edge cases).
+- `DEFAULT_DURATION.grooming_inhouse` and `grooming_mobile` change from `90` → `60`.
+- When an individual-treatment-only booking is detected (no package, only individual add-ons selected), auto-suggest 15 min. User can override.
 
-Seed rows from the 5 uploaded screenshots (Small 17, Medium 25, Large 25, XL 13, XXL 11). Where a breed appears in two bands (e.g. Dutch Shepherd, Great Pyrenees, Irish Wolfhound), keep the **larger** band — safer for booking length/pricing defaults.
+## 2. Deduplicate the rate card
 
-Grants: `SELECT` to `anon, authenticated`; `ALL` to `service_role`. RLS: read-only for everyone, no write policy (managed via migrations / future Settings screen).
+The `grooming_packages` table has two parallel sets of dog rows (e.g. `dog_full_medium` "Dog Full Package — Medium" **and** `dog_medium_full` "Medium dog — Full groom") at the same price. Same for Express. Migration will:
 
-## 2. Settings screen (settings-first rule)
+- Deactivate the older `dog_<size>_full` / `dog_<size>_express` rows (keep the "Dog Full Package — <Size>" / "Dog Express Wash & Dry — <Size>" naming — matches the PDF wording best).
+- Standardise `expected_minutes` to 60 for all dog Full and Express packages (Charlotte confirms sessions are 1 hr).
+- Rename cat/rabbit `standard` duplicates the same way (keep one row per species).
 
-`Admin → Settings → Dog breeds` — simple table: name, size, active, sort. Full CRUD gated by an existing catalog permission code (reuse `settings.grooming.manage` or similar — will confirm from `permissions.ts` at build time). This lets Charlotte tweak the list without a developer.
+No data loss — deactivated rows stay for historical bookings; dropdowns filter by `active`.
 
-## 3. Pet form UX (admin + portal)
+## 3. "No package — individual treatments only" flow
 
-Both `src/features/pets/PetFormModal.tsx` and `src/features/customerPortal/pets/MyPetFormModal.tsx`:
+Today the Package dropdown is effectively required for pricing. Change:
 
-- Replace the free-text **Breed** input with a searchable combobox sourced from `dog_breeds` (only when `species = dog`). Allow "Other / not listed" → falls back to free text + manual size.
-- On breed pick, auto-fill **Size** with the mapped band and lock it (with a small "change" link to override manually if needed).
-- Validation: for dogs, **breed** and **size** are required (block submit + toast). Cats/other keep current optional behaviour.
-- Keep existing `pets.breed` (text) column — we store the chosen name; optionally add `breed_id uuid` FK for analytics later (nice-to-have, not required for v1).
+- In `BookingFormModal.tsx` grooming section, when Package = "— Select package —" (empty), keep the booking valid and show the Extras & fees list **including** the individual-treatment add-ons (Teeth gel, Teeth + toothpaste, Nail trimming, Ear cleaning, Hand stripping, Anal gland express).
+- When a **Full** package is selected, hide the individual treatments that are already bundled (teeth gel, nail trim, ear clean, anal gland) from Extras — they're included. Show only true upsells (teeth + toothpaste upgrade, hand stripping, shampoo upgrades, travel/pickup, Stay & Play).
+- When an **Express** package (wash & dry only) is selected, show all individual treatments as available add-ons (nothing bundled).
+- Price preview sums correctly in all three modes (no package / express / full).
 
-## 4. Where size flows
+Bundled-in-full list is hard-coded by add-on `code`: `teeth_gel`, `nails_trim`, `ear_clean`, `anal_gland`. Everything else stays purchasable.
 
-Size band already drives grooming rate cards, hotel rates, and add-on pricing — no changes needed downstream; this just guarantees the field is populated correctly from day one.
+## 4. Portal parity
 
-## Out of scope (ask if wanted)
+Apply the same "no package" option and 1-hour default to `GroomingRequestWizard.tsx` (customer portal), so customers can request just a nail trim.
 
-- Cat breed list (site doesn't publish one)
-- Backfilling size on existing pets from their current free-text breed (can be a one-off script later)
-- Per-tenant breed overrides
+## Technical notes
+
+- Files touched: `BookingFormModal.tsx`, `GroomingExtrasPanel.tsx` (bundled-in-full filter), `GroomingRequestWizard.tsx`, one SQL migration for `grooming_packages` cleanup + duration normalisation.
+- No schema changes — only data updates and UI logic.
+- Instructions panel (styling picks) is untouched; this only affects the priced Extras panel and Package dropdown.
+
+## Out of scope
+
+- Rebuilding the grooming instructions catalog.
+- Changing the mobile-van scheduling rules.
+- Any pricing changes beyond the duplicates.
