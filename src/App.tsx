@@ -85,6 +85,7 @@ import RolesPermissionsPage from "@/features/settings/RolesPermissionsPage";
 import DocumentRetentionPage from "@/features/settings/DocumentRetentionPage";
 import PolicySettingsPage from "@/features/settings/PolicySettingsPage";
 import TermsVersionsPage from "@/features/settings/TermsVersionsPage";
+import ConsentStatusPage from "@/features/settings/ConsentStatusPage";
 import UsersPage from "@/features/users/UsersPage";
 import { RequirePermission } from "@/components/auth/Can";
 import RequirePlatform from "@/components/auth/RequirePlatform";
@@ -218,6 +219,7 @@ const App = () => (
                 <Route path="/admin/settings/documents" element={<DocumentRetentionPage />} />
                 <Route path="/admin/settings/policies" element={<PolicySettingsPage />} />
                 <Route path="/admin/settings/terms" element={<TermsVersionsPage />} />
+                <Route path="/admin/settings/consent-status" element={<ConsentStatusPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
               </Route>
