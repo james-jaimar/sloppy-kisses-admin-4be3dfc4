@@ -6,11 +6,14 @@ import { useCurrentCustomer } from "./hooks";
 import { SERVICE_LABEL, fmtDateTime, statusTone } from "./portalCommon";
 import { PawPrint, CalendarPlus, Receipt, Upload, Loader2, Inbox } from "lucide-react";
 import { fmtZar, effectiveInvoiceStatus, InvoiceStatusChip } from "@/features/invoices/status";
+import { useConsentStatus } from "@/features/consent/consentQueries";
+import { ClipboardCheck, ArrowRight } from "lucide-react";
 
 export default function CustomerDashboard() {
   const cust = useCurrentCustomer();
   const customerId = cust.data?.id ?? null;
   const tenantId = cust.data?.tenant_id ?? null;
+  const consent = useConsentStatus();
 
   const upcoming = useQuery({
     queryKey: ["portal_dash_upcoming", customerId],
@@ -94,6 +97,36 @@ export default function CustomerDashboard() {
     <>
       <AppHeader title={`Welcome back, ${first} 👋`} subtitle={cust.data.email ?? ""} />
       <div className="flex-1 space-y-6 p-6">
+        {consent.data?.needsWizard && (
+          <Link
+            to="/customer/registration"
+            className={`sk-card flex flex-col gap-3 border-l-4 p-5 transition-colors sm:flex-row sm:items-center ${
+              consent.data.mode === "hard"
+                ? "border-l-sk-coral bg-sk-coral-soft/30 hover:bg-sk-coral-soft/50"
+                : "border-l-sk-turquoise bg-sk-turquoise-soft/40 hover:bg-sk-turquoise-soft/60"
+            }`}
+          >
+            <span className={`grid h-11 w-11 place-items-center rounded-xl ${consent.data.mode === "hard" ? "bg-sk-coral text-white" : "bg-sk-turquoise-dark text-white"}`}>
+              <ClipboardCheck className="h-5 w-5" />
+            </span>
+            <div className="flex-1">
+              <div className="text-sm font-semibold">
+                {consent.data.mode === "hard"
+                  ? "Please complete your digital registration"
+                  : "Finish your digital registration"}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {consent.data.mode === "hard"
+                  ? "This is required to keep booking with us."
+                  : `Takes about 3–4 minutes. ${consent.data.daysRemaining} day${consent.data.daysRemaining === 1 ? "" : "s"} left in your grace period.`}
+              </div>
+            </div>
+            <span className="inline-flex items-center gap-1 text-sm font-semibold text-sk-coral-dark">
+              Start now <ArrowRight className="h-4 w-4" />
+            </span>
+          </Link>
+        )}
+
         <div className="grid gap-4 md:grid-cols-4">
           <div className="sk-card p-5">
             <div className="sk-stat-label">Upcoming bookings</div>
