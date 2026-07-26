@@ -1,9 +1,13 @@
 import { useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase/client";
 import {
   useHotelRateCards,
   useHotelSurcharges,
   useBookingHotelSurcharges,
   type HotelSpecies,
+  type PetSizeBand,
+  SIZE_BAND_ORDER,
 } from "@/features/settings/hotelRateCardQueries";
 import { useHotelWorkflowSettings } from "@/features/hotelCattery/queries";
 
@@ -43,6 +47,7 @@ export function HotelExtrasPanel({
   startAt,
   endAt,
   petCount,
+  petIds,
   selection,
   onSelectionChange,
 }: {
@@ -54,6 +59,7 @@ export function HotelExtrasPanel({
   startAt: string | null;
   endAt: string | null;
   petCount: number;
+  petIds?: string[];
   selection: SurchargeSelection[];
   onSelectionChange: (rows: SurchargeSelection[]) => void;
 }) {
@@ -61,6 +67,15 @@ export function HotelExtrasPanel({
   const surchargesQ = useHotelSurcharges(tenantId, { activeOnly: true });
   const wfQ = useHotelWorkflowSettings(tenantId);
   const existingQ = useBookingHotelSurcharges(bookingId);
+  const petSizesQ = useQuery({
+    queryKey: ["hotel_extras_pet_sizes", petIds?.join(",") ?? ""],
+    enabled: !!petIds && petIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("pets").select("id, name, size").in("id", petIds!);
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string; size: PetSizeBand | null }[];
+    },
+  });
 
   // On first load in edit mode, seed selection from existing rows.
   useEffect(() => {
@@ -75,6 +90,26 @@ export function HotelExtrasPanel({
 
   const species_rates = (ratesQ.data ?? []).filter((r) => r.species === species);
   const activeRate = species_rates.find((r) => r.accommodation_type === accommodationType) ?? null;
+
+  const pets = petSizesQ.data ?? [];
+  function bandIndex(b: PetSizeBand | null | undefined) {
+    return b ? SIZE_BAND_ORDER.indexOf(b) : -1;
+  }
+  function rateAllowsPet(r: { min_size_band: PetSizeBand | null; max_size_band: PetSizeBand | null }, size: PetSizeBand | null) {
+    if (!r.min_size_band && !r.max_size_band) return true;
+    if (!size) return false; // pet size unknown but rate is restricted
+    const idx = bandIndex(size);
+    const lo = r.min_size_band ? bandIndex(r.min_size_band) : 0;
+    const hi = r.max_size_band ? bandIndex(r.max_size_band) : SIZE_BAND_ORDER.length - 1;
+    return idx >= lo && idx <= hi;
+  }
+  function rateBlockReason(r: { min_size_band: PetSizeBand | null; max_size_band: PetSizeBand | null; display_name: string }) {
+    if (pets.length === 0) return null;
+    const bad = pets.filter((p) => !rateAllowsPet(r, p.size));
+    if (bad.length === 0) return null;
+    const names = bad.map((p) => `${p.name}${p.size ? ` (${p.size})` : " (no size set)"}`).join(", ");
+    return `Not available for: ${names}`;
+  }
 
   const nights = nightsBetween(startAt, endAt);
   const peak = activeRate && startAt && endAt && Number(activeRate.peak_uplift_pct) > 0
@@ -132,12 +167,21 @@ export function HotelExtrasPanel({
             onChange={(e) => onAccommodationChange(e.target.value)}
           >
             <option value="">— Select accommodation —</option>
-            {species_rates.map((r) => (
-              <option key={r.id} value={r.accommodation_type}>
-                {r.display_name} · {fmtZar(Number(r.nightly_rate_zar))}/night
-              </option>
-            ))}
+            {species_rates.map((r) => {
+              const blocked = rateBlockReason(r);
+              return (
+                <option key={r.id} value={r.accommodation_type} disabled={!!blocked}>
+                  {r.display_name} · {fmtZar(Number(r.nightly_rate_zar))}/night
+                  {blocked ? ` — ${blocked}` : ""}
+                </option>
+              );
+            })}
           </select>
+          {activeRate && rateBlockReason(activeRate) && (
+            <div className="mt-1 text-[11px] font-medium text-sk-coral-dark">
+              ⚠ {rateBlockReason(activeRate)}. This area is size-restricted.
+            </div>
+          )}
           {species_rates.length === 0 && (
             <div className="mt-1 text-[11px] text-sk-orange">
               No rate cards configured for {species === "cat" ? "cats" : "dogs"}. Set them up in Settings → Hotel & Cattery rates.

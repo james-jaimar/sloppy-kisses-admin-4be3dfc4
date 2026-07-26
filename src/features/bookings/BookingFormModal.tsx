@@ -753,6 +753,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             startAt={startAt ? new Date(startAt).toISOString() : null}
             endAt={endAtLocal ? new Date(endAtLocal).toISOString() : null}
             petCount={petIds.length || 1}
+            petIds={petIds}
             selection={hotelSurcharges}
             onSelectionChange={setHotelSurcharges}
           />

@@ -2,6 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 
 export type HotelSpecies = "dog" | "cat";
+export type PetSizeBand = "xsmall" | "small" | "medium" | "large" | "xlarge" | "xxlarge";
+export const SIZE_BAND_ORDER: PetSizeBand[] = ["xsmall", "small", "medium", "large", "xlarge", "xxlarge"];
+export const SIZE_BAND_LABEL: Record<PetSizeBand, string> = {
+  xsmall: "X-Small", small: "Small", medium: "Medium", large: "Large", xlarge: "X-Large", xxlarge: "XX-Large",
+};
 
 export interface HotelRateCard {
   id: string;
@@ -14,6 +19,8 @@ export interface HotelRateCard {
   extra_pet_rate_zar: number;
   active: boolean;
   sort_order: number;
+  min_size_band: PetSizeBand | null;
+  max_size_band: PetSizeBand | null;
 }
 
 export interface HotelSurcharge {

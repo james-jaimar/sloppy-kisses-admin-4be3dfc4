@@ -9,6 +9,7 @@ import {
   useHotelRateCards, useCreateHotelRateCard, useUpdateHotelRateCard, useDeleteHotelRateCard,
   useHotelSurcharges, useCreateHotelSurcharge, useUpdateHotelSurcharge, useDeleteHotelSurcharge,
   type HotelRateCard, type HotelSurcharge, type HotelSpecies,
+  type PetSizeBand, SIZE_BAND_ORDER, SIZE_BAND_LABEL,
 } from "./hotelRateCardQueries";
 
 const PERMISSION = "settings.hotel.manage";
@@ -17,7 +18,7 @@ type RCDraft = Partial<HotelRateCard> & { active?: boolean };
 type SDraft = Partial<HotelSurcharge> & { active?: boolean };
 
 function emptyRate(): RCDraft {
-  return { species: "dog", accommodation_type: "standard", display_name: "", nightly_rate_zar: 0, peak_uplift_pct: 0, extra_pet_rate_zar: 0, active: true, sort_order: 100 };
+  return { species: "dog", accommodation_type: "standard", display_name: "", nightly_rate_zar: 0, peak_uplift_pct: 0, extra_pet_rate_zar: 0, active: true, sort_order: 100, min_size_band: null, max_size_band: null };
 }
 function emptySurcharge(): SDraft {
   return { code: "", name: "", price_zar: 0, per_night: false, active: true, sort_order: 100 };
@@ -58,6 +59,24 @@ export default function HotelRatesPage() {
   );
 }
 
+function SizeBandRangeEditor({ min, max, onChange }: { min: PetSizeBand | null; max: PetSizeBand | null; onChange: (min: PetSizeBand | null, max: PetSizeBand | null) => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      <select value={min ?? ""} onChange={(e) => onChange((e.target.value || null) as PetSizeBand | null, max)}
+        className="h-8 rounded border border-border bg-white px-1 text-xs">
+        <option value="">any</option>
+        {SIZE_BAND_ORDER.map((s) => <option key={s} value={s}>{SIZE_BAND_LABEL[s]}</option>)}
+      </select>
+      <span className="text-xs text-muted-foreground">→</span>
+      <select value={max ?? ""} onChange={(e) => onChange(min, (e.target.value || null) as PetSizeBand | null)}
+        className="h-8 rounded border border-border bg-white px-1 text-xs">
+        <option value="">any</option>
+        {SIZE_BAND_ORDER.map((s) => <option key={s} value={s}>{SIZE_BAND_LABEL[s]}</option>)}
+      </select>
+    </div>
+  );
+}
+
 function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | null; canManage: boolean; confirm: ReturnType<typeof useConfirm> }) {
   const listQ = useHotelRateCards(tenantId);
   const create = useCreateHotelRateCard(tenantId ?? "");
@@ -82,6 +101,8 @@ function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | n
         extra_pet_rate_zar: Number(draft.extra_pet_rate_zar ?? 0),
         active: draft.active ?? true,
         sort_order: Number(draft.sort_order ?? 100),
+        min_size_band: (draft.min_size_band ?? null) as PetSizeBand | null,
+        max_size_band: (draft.max_size_band ?? null) as PetSizeBand | null,
       });
       toast.success("Rate created");
       setCreating(false); setDraft({});
@@ -98,6 +119,8 @@ function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | n
         extra_pet_rate_zar: Number(draft.extra_pet_rate_zar ?? 0),
         active: draft.active,
         sort_order: Number(draft.sort_order ?? 100),
+        min_size_band: (draft.min_size_band ?? null) as PetSizeBand | null,
+        max_size_band: (draft.max_size_band ?? null) as PetSizeBand | null,
       }});
       toast.success("Rate updated");
       setEditingId(null);
@@ -129,6 +152,7 @@ function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | n
               <th className="px-4 py-3 text-right">Nightly (ZAR)</th>
               <th className="px-4 py-3 text-right">Peak uplift %</th>
               <th className="px-4 py-3 text-right">Extra pet (ZAR)</th>
+              <th className="px-4 py-3">Size range</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
@@ -163,6 +187,13 @@ function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | n
                   <input type="number" value={draft.extra_pet_rate_zar ?? 0} onChange={(e) => setDraft({ ...draft, extra_pet_rate_zar: Number(e.target.value) })}
                     className="h-8 w-24 rounded border border-border bg-white px-2 text-right text-sm" />
                 </td>
+                <td className="px-4 py-2">
+                  <SizeBandRangeEditor
+                    min={draft.min_size_band ?? null}
+                    max={draft.max_size_band ?? null}
+                    onChange={(min, max) => setDraft({ ...draft, min_size_band: min, max_size_band: max })}
+                  />
+                </td>
                 <td className="px-4 py-2 text-muted-foreground">New</td>
                 <td className="px-4 py-2">
                   <div className="flex justify-end gap-1">
@@ -172,9 +203,9 @@ function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | n
                 </td>
               </tr>
             )}
-            {listQ.isLoading && <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">Loading…</td></tr>}
+            {listQ.isLoading && <tr><td colSpan={9} className="px-4 py-6 text-center text-muted-foreground">Loading…</td></tr>}
             {!listQ.isLoading && rows.length === 0 && !creating && (
-              <tr><td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">No rates configured yet.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-6 text-center text-muted-foreground">No rates configured yet.</td></tr>
             )}
             {rows.map((r) => {
               const isEditing = editingId === r.id;
@@ -205,6 +236,21 @@ function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | n
                       ? <input type="number" value={draft.extra_pet_rate_zar ?? 0} onChange={(e) => setDraft({ ...draft, extra_pet_rate_zar: Number(e.target.value) })}
                           className="h-8 w-24 rounded border border-border bg-white px-2 text-right text-sm" />
                       : `R ${r.extra_pet_rate_zar}`}
+                  </td>
+                  <td className="px-4 py-3">
+                    {isEditing ? (
+                      <SizeBandRangeEditor
+                        min={draft.min_size_band ?? null}
+                        max={draft.max_size_band ?? null}
+                        onChange={(min, max) => setDraft({ ...draft, min_size_band: min, max_size_band: max })}
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        {r.min_size_band || r.max_size_band
+                          ? `${r.min_size_band ? SIZE_BAND_LABEL[r.min_size_band] : "any"} → ${r.max_size_band ? SIZE_BAND_LABEL[r.max_size_band] : "any"}`
+                          : "All sizes"}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {isEditing ? (
