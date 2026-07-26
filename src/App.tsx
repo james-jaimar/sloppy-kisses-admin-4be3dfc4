@@ -114,6 +114,7 @@ import GroomingRequestWizard from "@/features/customerPortal/bookings/new/Groomi
 import TransportRequestWizard from "@/features/customerPortal/bookings/new/TransportRequestWizard";
 import MyRequestsPage from "@/features/customerPortal/requests/MyRequestsPage";
 import MyMessagesPage from "@/features/customerPortal/messages/MyMessagesPage";
+import RegistrationPage from "@/features/customerPortal/registration/RegistrationPage";
 import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
 import PublicInvoicePage from "@/features/invoices/PublicInvoicePage";
 import { PaySuccessPage, PayCancelPage } from "@/features/invoices/PayResultPages";
