@@ -9,6 +9,7 @@ import {
   useHotelRateCards, useCreateHotelRateCard, useUpdateHotelRateCard, useDeleteHotelRateCard,
   useHotelSurcharges, useCreateHotelSurcharge, useUpdateHotelSurcharge, useDeleteHotelSurcharge,
   type HotelRateCard, type HotelSurcharge, type HotelSpecies,
+  type PetSizeBand, SIZE_BAND_ORDER, SIZE_BAND_LABEL,
 } from "./hotelRateCardQueries";
 
 const PERMISSION = "settings.hotel.manage";
@@ -17,7 +18,7 @@ type RCDraft = Partial<HotelRateCard> & { active?: boolean };
 type SDraft = Partial<HotelSurcharge> & { active?: boolean };
 
 function emptyRate(): RCDraft {
-  return { species: "dog", accommodation_type: "standard", display_name: "", nightly_rate_zar: 0, peak_uplift_pct: 0, extra_pet_rate_zar: 0, active: true, sort_order: 100 };
+  return { species: "dog", accommodation_type: "standard", display_name: "", nightly_rate_zar: 0, peak_uplift_pct: 0, extra_pet_rate_zar: 0, active: true, sort_order: 100, min_size_band: null, max_size_band: null };
 }
 function emptySurcharge(): SDraft {
   return { code: "", name: "", price_zar: 0, per_night: false, active: true, sort_order: 100 };
@@ -82,6 +83,8 @@ function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | n
         extra_pet_rate_zar: Number(draft.extra_pet_rate_zar ?? 0),
         active: draft.active ?? true,
         sort_order: Number(draft.sort_order ?? 100),
+        min_size_band: (draft.min_size_band ?? null) as PetSizeBand | null,
+        max_size_band: (draft.max_size_band ?? null) as PetSizeBand | null,
       });
       toast.success("Rate created");
       setCreating(false); setDraft({});
@@ -98,6 +101,8 @@ function RateCardsTable({ tenantId, canManage, confirm }: { tenantId: string | n
         extra_pet_rate_zar: Number(draft.extra_pet_rate_zar ?? 0),
         active: draft.active,
         sort_order: Number(draft.sort_order ?? 100),
+        min_size_band: (draft.min_size_band ?? null) as PetSizeBand | null,
+        max_size_band: (draft.max_size_band ?? null) as PetSizeBand | null,
       }});
       toast.success("Rate updated");
       setEditingId(null);
