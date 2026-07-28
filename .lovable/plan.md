@@ -1,48 +1,58 @@
-## Hotel & Cattery — Areas, Multi-Pet Pricing, Size Gating, Late Checkout
+# Grooming pass — portal instructions, calendar picker, size-driven packages, staff override
 
-Digitise Sloppy Kisses' Pet Hotel price list so bookings price themselves correctly for multiple pets, respect the "puppy & small breeds" size restriction, and support the R250 late-checkout / Stay & Play fee.
+Focused on grooming only. Four workstreams; they can ship in one sprint.
 
-### 1. Seed the current 2026 price list
+## 1. Grooming instructions live in the customer portal
 
-Populate `hotel_rate_cards` for tenant Sloppy Kisses with these five rows (nightly, ZAR):
+Goal: customer captures grooming preferences per dog once, reuses on every booking.
 
-| Species | Accommodation code | Display name | 1st pet | Extra pet |
-|---|---|---|---|---|
-| dog | puppy_small | Puppy & Small Breeds Area | 445 | 400 |
-| dog | hotel | Hotel | 560 | 460 |
-| dog | cabana | Cabanas | 460 | 445 |
-| cat | cattery | Cattery | 360 | 320 |
+- **New pet-level tab "Grooming preferences"** in `MyPetDetailPage`, reusing `GroomingInstructionsForm` + `pet_grooming_defaults` (already exists on admin side via `PetGroomingDefaultsPanel`). Save writes to `pet_grooming_defaults` for that pet.
+- **Portal dashboard prompt**: on `CustomerDashboard`, show a soft banner "Set grooming preferences for {petName}" for any dog with no `pet_grooming_defaults` row. Dismissable per session; disappears once saved. Not blocking.
+- **Booking wizard behaviour** (already seeds from defaults in `GroomingRequestWizard`): keep as-is; add a small inline note "Saved from {pet}'s profile — edits here apply to this booking only" and a checkbox "Also update {pet}'s default preferences" that writes back on submit.
 
-Add one entry to `hotel_surcharges`:
-- code `late_checkout`, name "Late Checkout / Stay & Play (16:00–16:30)", price R250, per_night = false.
+## 2. Calendar-aware date & time picker (portal + admin)
 
-### 2. Add size-band gating to rate cards (strict)
+Replace the current "date + morning/afternoon/any" dropdown with a real availability picker.
 
-Extend `hotel_rate_cards` with `min_size_band` and `max_size_band` (nullable, using the existing `small | medium | large | xl | xxl` enum used by grooming). Seed:
-- Puppy & Small Breeds → min `small`, max `small`
-- Hotel / Cabanas → no restriction
-- Cattery → cat-only (species already enforces)
+- **New component** `GroomingSlotPicker` used by both `GroomingRequestWizard` (portal) and `BookingFormModal` (admin, grooming service only).
+  - Month calendar on the left; day column on the right showing 15-min slots between grooming operating hours (from `grooming_workflow_settings`; fall back 08:00–17:00).
+  - Fetch existing grooming bookings for the chosen day + tenant (status not in `cancelled/no_show`) and mark overlapping slots as taken. Filter by resource if one is chosen; otherwise show taken if all groomer resources are busy.
+  - Slot duration = package duration (from selected package) or 60 min default. Only slots where the full duration fits are selectable.
+  - Portal never exposes staff/resource names; admin sees the resource pill.
+- **Data**: reuse `useResourceConflicts` pattern and a new `useDayGroomingBookings(date, tenantId)` query returning `{start_at, end_at, resource_id}` rows.
+- Submitted `preferredStartAt` becomes the exact slot; `preferredEndAt` = start + duration.
 
-Behaviour in the New/Edit Booking flow when service = Hotel:
-- Show all rate cards for the pet's species, but grey out any card whose size range excludes the pet's `size_band` and block selection with a tooltip: "This area is reserved for small breeds & puppies."
-- If the pet has no `size_band` set, prompt the user to set it on the pet before booking.
+## 3. Breed & size are mandatory + drive package visibility
 
-### 3. Multi-pet pricing on a single booking
+- **Pet form (portal + admin)**: breed already required for dogs via `BreedPicker`. Add: if breed's inferred size is missing OR breed is "Mixed / Cross-breed", show a mandatory "Adult size" radio (Small / Medium / Large / XL / XXL) — persisted to `pets.size`. Cannot save without it for dogs.
+- **Package selection** in `GroomingRequestWizard` and admin `BookingFormModal`:
+  - Filter `grooming_packages` by the pet's effective size (`size_band === pet.size`, plus packages with `size_band === null` = "any size").
+  - If no pet chosen yet, show all with a hint "Pick a pet to filter by size".
+  - Remove ability to select a mismatched package (do not just warn — hide).
 
-Today one `bookings` row already links to multiple pets via `booking_pets`. Update the hotel pricing calc so per-night cost = `nightly_rate_zar` + `extra_pet_rate_zar × (pet_count − 1)`, multiplied by nights. The peak uplift % stays as-is on top.
+## 4. Staff size override
 
-Auto-invoice trigger for hotel bookings is updated to write one invoice line per rate card + a single "Additional pets" line rather than a flat nightly figure, so the invoice is readable.
+Charlotte's example: bill a Large as XL for the head-heavy breed.
 
-### 4. Late checkout — manual toggle
+- **Schema**: add `size_override` (`pet_size` enum, nullable) + `size_override_reason` (text) + `size_override_by` (uuid) + `size_override_at` (timestamptz) to `pets`. Effective size = `size_override ?? size`. All package filtering, pricing, and defaults use effective size.
+- **Admin UI**: on `PetDetailPage`, add a small "Override grooming size" control (staff-only, permission-gated) with reason field. Clearing sets override back to null. Every change writes to `audit_log`.
+- **Visibility**: 
+  - Portal `MyPetDetailPage` shows a badge "Groomed as XL (override by staff)" and the reason.
+  - Admin pet cards, booking form pet pill, and grooming board card all show the override badge in place of the base size.
+- **Booking form**: when an override is active, the package list uses the overridden size and shows a callout at the top of the grooming section.
 
-Add a `late_checkout` boolean to `hotel_booking_details` (default false). In the booking form (admin + customer portal Hotel wizard), show a "Late checkout / Stay & Play (16:00–16:30) — R250" checkbox. When ticked, the invoice trigger inserts the surcharge line automatically; unticking removes it.
+## Sequenced tasks
 
-### 5. Settings screen polish
+1. Migration: add `size_override*` columns to `pets`; helper SQL to compute effective size in a view (optional).
+2. Update `pets` queries to expose `effective_size` alongside `size`.
+3. Portal: pet Grooming Preferences tab + dashboard banner + wizard "save back to defaults" checkbox.
+4. Shared `GroomingSlotPicker` + `useDayGroomingBookings`; wire into portal wizard and admin `BookingFormModal` (grooming only).
+5. Pet form updates (mandatory adult size for mixed / unknown-size breeds) — portal `MyPetFormModal` + admin `PetFormModal`.
+6. Package filtering by effective size in both wizards.
+7. Admin size-override UI on `PetDetailPage` + badges everywhere the pet is displayed (portal detail, admin detail, booking form, grooming board card).
 
-`HotelRatesPage` already exists — reorder columns to show `1st pet` and `Extra pet` side-by-side, add the Size band min/max inputs, and add a "Seed 2026 price list" one-click button (visible only when the table is empty) so Charlotte can restore defaults if she deletes something.
+## Out of scope (flag for later)
 
-### Technical notes
-
-- Migration: `ALTER TABLE hotel_rate_cards ADD COLUMN min_size_band size_band_enum, ADD COLUMN max_size_band size_band_enum;` and `ALTER TABLE hotel_booking_details ADD COLUMN late_checkout boolean NOT NULL DEFAULT false;`. Seed rows via the insert tool (not migration).
-- Pricing calc lives in the existing hotel invoice trigger — extend it to read `booking_pets` count and apply the extra-pet formula, and to append the late-checkout surcharge line when the flag is true.
-- Portal `HotelRequestWizard.tsx` gains the late-checkout checkbox and the size-filtered room dropdown so customers can't request a mismatched area.
+- Applying calendar picker to hotel/daycare/transport wizards (same pattern, but you asked for grooming only).
+- Groomer-specific slot picking (right now we treat all groomer resources as pooled availability).
+- Notifying admin when a customer changes defaults mid-booking cycle.
