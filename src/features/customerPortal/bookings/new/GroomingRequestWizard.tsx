@@ -3,9 +3,12 @@ import { Loader2 } from "lucide-react";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls, textareaCls } from "./WizardShell";
 import { usePortalPets, useGroomingPackages } from "./wizardHooks";
-import { dateToIso, useRequestSubmit } from "./useRequestSubmit";
+import { useRequestSubmit } from "./useRequestSubmit";
 import { GroomingInstructionsForm, type GroomingInstructionsValue } from "@/features/grooming/instructions/GroomingInstructionsForm";
 import { usePetGroomingDefaults } from "@/features/grooming/instructions/queries";
+import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
+import { effectivePetSize, petSizeToBand } from "@/features/pets/sizeUtils";
+import { SizeOverrideBadge } from "@/features/pets/SizeOverrideControl";
 
 interface Props { mode: "inhouse" | "mobile" }
 
@@ -16,8 +19,8 @@ export default function GroomingRequestWizard({ mode }: Props) {
   const submit = useRequestSubmit();
 
   const [petId, setPetId] = useState("");
-  const [date, setDate] = useState("");
-  const [window, setWindow] = useState<"morning" | "afternoon" | "any">("any");
+  const [slotStart, setSlotStart] = useState<string | null>(null);
+  const [slotEnd, setSlotEnd] = useState<string | null>(null);
   const [packageId, setPackageId] = useState("");
   const [addressLine, setAddressLine] = useState(cust.data?.address_line_1 ?? "");
   const [suburb, setSuburb] = useState(cust.data?.suburb ?? "");
@@ -27,6 +30,12 @@ export default function GroomingRequestWizard({ mode }: Props) {
     selections: {}, medical_flags: [], notes: "",
   });
   const defaultsQ = usePetGroomingDefaults(petId || null);
+  const selectedPet = (pets.data ?? []).find((p: any) => p.id === petId) ?? null;
+  const petBand = petSizeToBand(effectivePetSize(selectedPet as any));
+  const filteredPackages = (packages.data ?? []).filter((p: any) => {
+    if (!petBand) return true;
+    return !p.size_band || p.size_band === petBand;
+  });
 
   // Seed instructions from selected pet's saved defaults whenever the pet changes.
   useEffect(() => {
@@ -45,21 +54,19 @@ export default function GroomingRequestWizard({ mode }: Props) {
     }
   }, [petId, defaultsQ.data, defaultsQ.isFetched]);
 
-  const canSubmit = cust.data && petId && date && (mode === "inhouse" || (addressLine && suburb)) && !submit.isPending;
+  const canSubmit = Boolean(cust.data && petId && slotStart && (mode === "inhouse" || (addressLine && suburb))) && !submit.isPending;
 
   function onSubmit() {
-    if (!cust.data) return;
-    const startTime = window === "morning" ? "09:00" : window === "afternoon" ? "13:00" : "10:00";
+    if (!cust.data || !slotStart) return;
     submit.mutate({
       tenantId: cust.data.tenant_id,
       customerId: cust.data.id,
       serviceType: mode === "inhouse" ? "grooming_inhouse" : "grooming_mobile",
       petId,
-      preferredStartAt: dateToIso(date, startTime),
-      preferredEndAt: null,
+      preferredStartAt: new Date(slotStart).toISOString(),
+      preferredEndAt: slotEnd ? new Date(slotEnd).toISOString() : null,
       customerNotes: notes,
       requestPayload: {
-        time_window: window,
         package_id: packageId || null,
         instructions: {
           selections: instructions.selections,
@@ -94,26 +101,30 @@ export default function GroomingRequestWizard({ mode }: Props) {
           <option value="">Select pet…</option>
           {(pets.data ?? []).map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
+        {selectedPet && (selectedPet as any).size_override && (
+          <div className="mt-2"><SizeOverrideBadge pet={selectedPet as any} /></div>
+        )}
       </Field>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Preferred date"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} /></Field>
-        <Field label="Preferred time">
-          <select value={window} onChange={(e) => setWindow(e.target.value as any)} className={selectCls}>
-            <option value="any">Any time</option>
-            <option value="morning">Morning</option>
-            <option value="afternoon">Afternoon</option>
-          </select>
-        </Field>
-      </div>
+      <Field label="Pick a date & time">
+        <GroomingSlotPicker
+          tenantId={cust.data?.tenant_id ?? null}
+          value={slotStart}
+          durationMinutes={60}
+          onChange={(s, e) => { setSlotStart(s); setSlotEnd(e); }}
+        />
+      </Field>
 
-      <Field label="Package (optional)">
+      <Field label={petBand ? `Package for ${selectedPet?.name ?? "your pet"} (${petBand.toUpperCase()})` : "Package (optional)"}>
         <select value={packageId} onChange={(e) => setPackageId(e.target.value)} className={selectCls}>
           <option value="">Let staff recommend</option>
-          {(packages.data ?? []).map((p: any) => (
+          {filteredPackages.map((p: any) => (
             <option key={p.id} value={p.id}>{p.name} — R{Number(p.price_zar ?? 0).toFixed(2)}</option>
           ))}
         </select>
+        {petBand && filteredPackages.length === 0 && (
+          <div className="mt-1 text-[11px] text-sk-orange">No packages match {selectedPet?.name}'s size. Staff will confirm the right option.</div>
+        )}
       </Field>
 
       {petId && (
