@@ -32,7 +32,7 @@ export function SizeOverrideBadge({ pet }: { pet: Pick<PetLike, "size" | "size_o
 
 export function SizeOverrideControl({ pet }: { pet: PetLike }) {
   const qc = useQueryClient();
-  const { user } = useAuth();
+  const { authUser } = useAuth();
   const [override, setOverride] = useState<string>(pet.size_override ?? "");
   const [reason, setReason] = useState<string>(pet.size_override_reason ?? "");
   const dirty = (pet.size_override ?? "") !== override || (pet.size_override_reason ?? "") !== reason;
@@ -43,7 +43,7 @@ export function SizeOverrideControl({ pet }: { pet: PetLike }) {
         ? {
             size_override: override,
             size_override_reason: reason.trim() || null,
-            size_override_by: user?.id ?? null,
+            size_override_by: authUser?.id ?? null,
             size_override_at: new Date().toISOString(),
           }
         : {
