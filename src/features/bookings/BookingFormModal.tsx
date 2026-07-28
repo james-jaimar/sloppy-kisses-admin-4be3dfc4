@@ -28,6 +28,8 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { HotelExtrasPanel, type SurchargeSelection } from "./HotelExtrasPanel";
 import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQueries";
 import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtrasPanel";
+import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
+import { effectivePetSize } from "@/features/pets/sizeUtils";
 import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries";
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { useGroomingPackages } from "@/features/settings/groomingRateCardQueries";
@@ -725,6 +727,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             mattedSurchargeZar={grooming.matted_surcharge_zar ?? null}
             sedationSurchargeZar={grooming.sedation_surcharge_zar ?? null}
             travelFee={grooming.travel_fee ?? null}
+            petSize={effectivePetSize(petsQ.data?.find((p) => petIds.includes(p.id)) as any)}
           />
         )}
         {kind === "grooming" && (
