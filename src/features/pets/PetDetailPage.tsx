@@ -12,6 +12,7 @@ import { PetVaccinationsPanel } from "./PetVaccinationsPanel";
 import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PetGroomingDefaultsPanel } from "@/features/grooming/instructions/PetGroomingDefaultsPanel";
+import { SizeOverrideControl, SizeOverrideBadge } from "./SizeOverrideControl";
 
 export default function PetDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -109,6 +110,7 @@ export default function PetDetailPage() {
                         label={active ? "Active" : pet.status ?? "—"}
                         tone={active ? "green" : "orange"}
                       />
+                      <SizeOverrideBadge pet={pet as any} />
                     </div>
                   </div>
                 </div>
@@ -190,6 +192,9 @@ export default function PetDetailPage() {
             )}
             {tenant && (
               <PetGroomingDefaultsPanel tenantId={tenant.id} petId={pet.id} />
+            )}
+            {tenant && pet.species === "dog" && (
+              <SizeOverrideControl pet={pet as any} />
             )}
           </>
         )}

@@ -1,4 +1,6 @@
 import { useEffect, useMemo } from "react";
+import { petSizeToBand } from "@/features/pets/sizeUtils";
+import type { GroomingSizeBand } from "@/features/settings/groomingRateCardQueries";
 import { useGroomingPackages, useGroomingAddons, type GroomingAddon, type GroomingPackage } from "@/features/settings/groomingRateCardQueries";
 import { useGroomingWorkflowSettings, useBookingGroomingAddons } from "@/features/grooming/workflowQueries";
 import { useInstructionCatalog } from "@/features/grooming/instructions/queries";
@@ -24,6 +26,7 @@ export function GroomingExtrasPanel({
   mattedSurchargeZar,
   sedationSurchargeZar,
   travelFee,
+  petSize,
 }: {
   tenantId: string;
   bookingId: string | null;
@@ -37,6 +40,8 @@ export function GroomingExtrasPanel({
   mattedSurchargeZar: number | null;
   sedationSurchargeZar: number | null;
   travelFee: number | null;
+  /** Effective grooming size of the primary pet — filters packages to matching band. */
+  petSize?: string | null;
 }) {
   const packagesQ = useGroomingPackages(tenantId, { activeOnly: true });
   const addonsQ = useGroomingAddons(tenantId, { activeOnly: true });
@@ -64,6 +69,11 @@ export function GroomingExtrasPanel({
   const BUNDLED_IN_FULL = new Set(["teeth_gel", "nails_trim", "ear_clean", "anal_gland"]);
 
   const speciesPackagesAll = (packagesQ.data ?? []).filter((p: GroomingPackage) => p.species === species);
+  const petBand: GroomingSizeBand | null = petSizeToBand(petSize);
+  // Filter by size band: keep packages that either target this band or are size-agnostic (null band).
+  const filteredBySize = petBand
+    ? speciesPackagesAll.filter((p) => p.size_band === petBand || p.size_band == null)
+    : speciesPackagesAll;
   const activePkgEarly = speciesPackagesAll.find((p) => p.id === packageId) ?? null;
   const isFullPackage = activePkgEarly?.package_type === "full";
 
@@ -85,7 +95,7 @@ export function GroomingExtrasPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId, existingQ.data]);
 
-  const speciesPackages = speciesPackagesAll;
+  const speciesPackages = filteredBySize;
   const activePkg = activePkgEarly;
   const discountPct = Number(wfQ.data?.pensioner_discount_pct ?? 0);
 
@@ -140,7 +150,9 @@ export function GroomingExtrasPanel({
           </select>
           {speciesPackages.length === 0 && (
             <div className="mt-1 text-[11px] text-sk-orange">
-              No packages configured for this species. Set them up in Settings → Grooming rate card.
+              {petBand
+                ? "No packages match this pet's size. Adjust the pet's size, apply a grooming size override, or add packages in Settings → Grooming rate card."
+                : "No packages configured for this species. Set them up in Settings → Grooming rate card."}
             </div>
           )}
         </div>

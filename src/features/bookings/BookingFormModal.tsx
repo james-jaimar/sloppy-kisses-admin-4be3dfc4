@@ -28,6 +28,8 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { HotelExtrasPanel, type SurchargeSelection } from "./HotelExtrasPanel";
 import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQueries";
 import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtrasPanel";
+import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
+import { effectivePetSize } from "@/features/pets/sizeUtils";
 import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries";
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { useGroomingPackages } from "@/features/settings/groomingRateCardQueries";
@@ -705,6 +707,22 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         </div>
 
         {kind === "grooming" && (
+          <div className="mt-2">
+            <div className="mb-1 text-sm font-medium">Pick a slot</div>
+            <GroomingSlotPicker
+              tenantId={tenantId}
+              value={startAt || null}
+              durationMinutes={durationMins}
+              resourceId={resourceId}
+              excludeBookingId={booking?.id ?? null}
+              onChange={(startLocal, endLocal) => {
+                if (startLocal) setStartAt(startLocal);
+              }}
+            />
+          </div>
+        )}
+
+        {kind === "grooming" && (
           <GroomingFields
             value={grooming}
             onChange={(patch) => setGrooming((p) => ({ ...p, ...patch }))}
@@ -725,6 +743,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             mattedSurchargeZar={grooming.matted_surcharge_zar ?? null}
             sedationSurchargeZar={grooming.sedation_surcharge_zar ?? null}
             travelFee={grooming.travel_fee ?? null}
+            petSize={effectivePetSize(petsQ.data?.find((p) => petIds.includes(p.id)) as any)}
           />
         )}
         {kind === "grooming" && (

@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import { PetVaccinationsPanel } from "@/features/pets/PetVaccinationsPanel";
 import { DocumentsPanel } from "@/features/documents/DocumentsPanel";
 import { PetGroomingDefaultsPanel } from "@/features/grooming/instructions/PetGroomingDefaultsPanel";
+import { SizeOverrideBadge } from "@/features/pets/SizeOverrideControl";
 import { useCurrentCustomer } from "../hooks";
 import { MyPetFormModal } from "./MyPetFormModal";
 
@@ -21,7 +22,7 @@ export default function MyPetDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pets")
-        .select("id, tenant_id, customer_id, name, species, breed, size, sex, date_of_birth, microchip_number, medical_notes, behaviour_notes, photo_url")
+        .select("id, tenant_id, customer_id, name, species, breed, size, size_override, size_override_reason, sex, date_of_birth, microchip_number, medical_notes, behaviour_notes, photo_url")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
@@ -50,6 +51,13 @@ export default function MyPetDetailPage() {
         <Link to="/customer/pets" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to pets
         </Link>
+
+        {(p as any).size_override && (
+          <div className="rounded-lg border border-sk-orange-soft bg-sk-orange-soft/40 p-3 text-xs text-sk-orange">
+            <SizeOverrideBadge pet={p as any} />
+            {(p as any).size_override_reason && <div className="mt-1 opacity-80">{(p as any).size_override_reason}</div>}
+          </div>
+        )}
 
         <div className="sk-card grid gap-4 p-6 md:grid-cols-2">
           <Field label="Name" value={p.name} />
