@@ -3,7 +3,6 @@ import { toast } from "sonner";
 import { AlertTriangle, Wand2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
-import { supabase as sb } from "@/lib/supabase/client";
 import { PET_SIZE_LABEL, type PetSize } from "./sizeUtils";
 
 const SIZE_OPTIONS: PetSize[] = ["xsmall", "small", "medium", "large", "xlarge", "xxlarge"];
@@ -40,7 +39,7 @@ export function SizeOverrideControl({ pet }: { pet: PetLike }) {
     mutationFn: async () => {
       let profileId: string | null = null;
       if (override) {
-        const { data: prof } = await sb.rpc("current_profile_id");
+        const { data: prof } = await supabase.rpc("current_profile_id");
         profileId = (prof as string | null) ?? null;
       }
       const patch: any = override
