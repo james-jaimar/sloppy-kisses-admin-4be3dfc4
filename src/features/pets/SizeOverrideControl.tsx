@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Wand2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
-import { useAuth } from "@/lib/auth/AuthContext";
+import { supabase as sb } from "@/lib/supabase/client";
 import { PET_SIZE_LABEL, type PetSize } from "./sizeUtils";
 
 const SIZE_OPTIONS: PetSize[] = ["xsmall", "small", "medium", "large", "xlarge", "xxlarge"];
@@ -32,18 +32,22 @@ export function SizeOverrideBadge({ pet }: { pet: Pick<PetLike, "size" | "size_o
 
 export function SizeOverrideControl({ pet }: { pet: PetLike }) {
   const qc = useQueryClient();
-  const { authUser } = useAuth();
   const [override, setOverride] = useState<string>(pet.size_override ?? "");
   const [reason, setReason] = useState<string>(pet.size_override_reason ?? "");
   const dirty = (pet.size_override ?? "") !== override || (pet.size_override_reason ?? "") !== reason;
 
   const save = useMutation({
     mutationFn: async () => {
+      let profileId: string | null = null;
+      if (override) {
+        const { data: prof } = await sb.rpc("current_profile_id");
+        profileId = (prof as string | null) ?? null;
+      }
       const patch: any = override
         ? {
             size_override: override,
             size_override_reason: reason.trim() || null,
-            size_override_by: authUser?.id ?? null,
+            size_override_by: profileId,
             size_override_at: new Date().toISOString(),
           }
         : {
