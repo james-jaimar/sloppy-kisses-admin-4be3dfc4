@@ -707,6 +707,22 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         </div>
 
         {kind === "grooming" && (
+          <div className="mt-2">
+            <div className="mb-1 text-sm font-medium">Pick a slot</div>
+            <GroomingSlotPicker
+              tenantId={tenantId}
+              value={startAt || null}
+              durationMinutes={durationMins}
+              resourceId={resourceId}
+              excludeBookingId={booking?.id ?? null}
+              onChange={(startLocal, endLocal) => {
+                if (startLocal) setStartAt(startLocal);
+              }}
+            />
+          </div>
+        )}
+
+        {kind === "grooming" && (
           <GroomingFields
             value={grooming}
             onChange={(patch) => setGrooming((p) => ({ ...p, ...patch }))}
