@@ -8,7 +8,7 @@ export function usePortalPets(customerId: string | null | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("pets")
-        .select("id, name, species, breed")
+        .select("id, name, species, breed, size, size_override, size_override_reason")
         .eq("customer_id", customerId!)
         .eq("status", "active")
         .order("name");
