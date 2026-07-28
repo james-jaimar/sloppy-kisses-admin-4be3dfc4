@@ -4331,6 +4331,10 @@ export type Database = {
           raw_vaccinated_label: string | null
           sex: Database["public"]["Enums"]["pet_sex"]
           size: Database["public"]["Enums"]["pet_size"] | null
+          size_override: Database["public"]["Enums"]["pet_size"] | null
+          size_override_at: string | null
+          size_override_by: string | null
+          size_override_reason: string | null
           social: boolean | null
           special_handling_flag: boolean
           species: Database["public"]["Enums"]["pet_species"]
@@ -4382,6 +4386,10 @@ export type Database = {
           raw_vaccinated_label?: string | null
           sex?: Database["public"]["Enums"]["pet_sex"]
           size?: Database["public"]["Enums"]["pet_size"] | null
+          size_override?: Database["public"]["Enums"]["pet_size"] | null
+          size_override_at?: string | null
+          size_override_by?: string | null
+          size_override_reason?: string | null
           social?: boolean | null
           special_handling_flag?: boolean
           species: Database["public"]["Enums"]["pet_species"]
@@ -4433,6 +4441,10 @@ export type Database = {
           raw_vaccinated_label?: string | null
           sex?: Database["public"]["Enums"]["pet_sex"]
           size?: Database["public"]["Enums"]["pet_size"] | null
+          size_override?: Database["public"]["Enums"]["pet_size"] | null
+          size_override_at?: string | null
+          size_override_by?: string | null
+          size_override_reason?: string | null
           social?: boolean | null
           special_handling_flag?: boolean
           species?: Database["public"]["Enums"]["pet_species"]
@@ -4455,6 +4467,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pets_size_override_by_fkey"
+            columns: ["size_override_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
