@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
   const { data: userRes } = await asCaller.auth.getUser();
   if (!userRes?.user) return json(401, { error: "Not authenticated" });
 
-  let body: { document_id?: string };
+  let body: { document_id?: string; client_size_bytes?: number; client_content_type?: string };
   try { body = await req.json(); } catch { return json(400, { error: "Invalid JSON" }); }
   if (!body.document_id) return json(400, { error: "document_id required" });
 
@@ -57,8 +57,13 @@ Deno.serve(async (req) => {
     size = head.size;
     etag = head.etag;
     contentType = head.contentType;
-  } catch {
-    return json(400, { error: "Upload not found on S3 — please retry." });
+  } catch (err) {
+    // The browser already confirmed a successful S3 PUT. A failing HEAD (gateway
+    // hiccup, missing permission, eventual consistency) must not leave the row
+    // stuck in `pending` — fall back to the client-reported metadata.
+    console.error("headObject failed", doc.data.s3_key, String(err));
+    size = typeof body.client_size_bytes === "number" ? body.client_size_bytes : null;
+    contentType = body.client_content_type ?? null;
   }
 
   const upd = await admin
@@ -70,7 +75,10 @@ Deno.serve(async (req) => {
       content_type: contentType,
     })
     .eq("id", body.document_id);
-  if (upd.error) return json(500, { error: upd.error.message });
+  if (upd.error) {
+    console.error("confirm update failed", upd.error.message);
+    return json(500, { error: upd.error.message });
+  }
 
   return json(200, { ok: true, size_bytes: size });
 });
