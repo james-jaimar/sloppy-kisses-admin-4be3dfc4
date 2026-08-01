@@ -30,6 +30,13 @@ export default function MyPetDetailPage() {
     },
   });
 
+  const loaded = Boolean(pet.data);
+  useEffect(() => {
+    if (!loaded || window.location.hash !== "#grooming") return;
+    const el = document.getElementById("grooming");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [loaded]);
+
   if (pet.isLoading || cust.isLoading) {
     return <div className="grid flex-1 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
   }
@@ -73,7 +80,7 @@ export default function MyPetDetailPage() {
 
         <PetVaccinationsPanel tenantId={p.tenant_id} petId={p.id} canManage />
         {(p.species === "dog" || p.species === "cat") && (
-          <PetGroomingDefaultsPanel tenantId={p.tenant_id} petId={p.id} />
+          <PetGroomingDefaultsPanel tenantId={p.tenant_id} petId={p.id} variant="portal" petName={p.name} />
         )}
         <DocumentsPanel
           tenantId={p.tenant_id}
