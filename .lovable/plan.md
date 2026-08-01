@@ -1,38 +1,46 @@
-## Goal
 
-Give customers the same grooming experience staff get in the admin "New booking" modal: set preferences per dog, pick a real available slot, and see only packages that match their dog's (possibly overridden) size — with prices.
+## 1. Collapsible sections on the portal pet page
 
-## What I verified
+Add a small reusable `CollapsibleCard` (chevron + title, remembers open/closed per section) and wrap the three long panels on `/customer/pets/:id`:
 
-- The portal pet page (`/customer/pets/:id`) **does** already render `PetGroomingDefaultsPanel`, and the dashboard nudge links there. So "nothing to set" is not a missing component — something is rendering empty or invisible.
-- Database access is not the cause for the instruction catalog: `grooming_instruction_groups` / `grooming_instruction_options` have a policy that explicitly allows a signed-in customer of that tenant to read them (26 active groups, 101 active options), and `pet_grooming_defaults` has a customer-owned policy.
-- **Confirmed real gap:** `grooming_packages` and `grooming_addons` only allow `SELECT` where `user_has_tenant_access(tenant_id)` — that is staff-only. A logged-in customer reads **zero rows**, so in the portal booking wizard the package dropdown is empty and add-on price hints (`+R60`, `+R80`) never show. Admin sees them; customer never can.
+- Grooming preferences — collapsed by default once saved, open when "Not set yet" or when arriving via `#grooming`
+- Vaccinations — open when something is missing/expired, otherwise collapsed
+- Documents — collapsed by default
 
-So the diagnosis for the pet-page symptom is **unconfirmed** — step 1 is to reproduce it as a customer before changing that screen.
+Each header keeps its status chip visible while collapsed (e.g. "Saved", "2 required outstanding", "3 files"), so the customer sees state without expanding. Same treatment on the admin pet detail page for consistency.
 
-## Plan
+## 2. Admin-defined vaccine catalog
 
-**1. Reproduce as a customer (first step, no guessing)**
-Sign in to the portal as a test customer, open the dashboard nudge → pet page, and capture what actually renders in the grooming panel (loading spinner, "Failed to load instructions", empty fieldsets, or a panel pushed far below the fold). Fix whatever the reproduction shows.
+Today `vaccination_rules` stores per-service requirements (service, vaccine text, species, grace days, required) but vaccine names are free text, and the customer types the name by hand.
 
-**2. Read access for pricing catalogues**
-Migration to add a customer-read policy to `grooming_packages` and `grooming_addons` (active rows only), mirroring the existing pattern on the instruction tables, so the portal can show real packages and add-on prices.
+New tenant-scoped `vaccine_types` catalog table: code, display name, species, default validity (months), notes/help text, active, sort order. `vaccination_rules.vaccine_type` becomes a picker over this catalog instead of a free-text box.
 
-**3. Rebuild the portal "Grooming preferences" surface**
-Replace the plain card at the bottom of the pet page with a proper, prominent section matching the admin styling:
-- Grouped instruction chips (shampoo, face, teeth, eyes, coat, medical flags) with `+R` price hints now that add-ons are readable.
-- Sticky save bar, saved-state confirmation, and a "Not set yet" empty state with a call to action.
-- Read-only display of any staff size override, with the reason.
-- Reachable from a clear "Grooming preferences" entry on the pet card in `/customer/pets`, not just deep in the detail page.
+Settings → Vaccination rules gets a second section "Vaccine types" with full CRUD, gated by the existing `settings.vaccination.manage` permission. Existing free-text values are seeded into the catalog so nothing is lost.
 
-**4. Align the portal booking wizard with the admin modal**
-- Size-filtered package list showing name + price (works once step 2 lands).
-- Add-on / instruction chips with price hints, pre-filled from the dog's saved defaults, editable for this booking only.
-- Keep the existing `GroomingSlotPicker`; verify slot availability queries succeed under customer RLS (bookings/resources reads) and fix the policies if they don't.
-- Running estimate line so the customer sees roughly what the groom will cost before submitting.
+## 3. One modal: record vaccination + upload certificate
 
-## Technical notes
+Rewrite the vaccination modal (used on portal and admin pet pages) so it is a single flow:
 
-- Files: `src/features/customerPortal/pets/MyPetDetailPage.tsx`, `MyPetsPage.tsx`, `src/features/grooming/instructions/PetGroomingDefaultsPanel.tsx` (or a portal variant), `GroomingInstructionsForm.tsx`, `src/features/customerPortal/bookings/new/GroomingRequestWizard.tsx`, `wizardHooks.ts`.
-- One migration for the two new customer-read policies; no schema changes expected.
-- Estimate reuses `src/features/grooming/pricing.ts` so portal and admin never diverge.
+- Vaccine — dropdown of active catalog entries for the pet's species (plus "Other" with free text for staff)
+- Administered date; Expiry auto-filled from the catalog's default validity, still editable
+- Certificate — file picker inside the same modal; on save it uploads to S3 and links the resulting document to the vaccination row (`vaccinations.document_id`, already exists) with `type = 'vaccination'`
+- Save is one action: record + upload + link, with a single success/failure toast
+
+The pet's vaccination panel becomes a requirements checklist: every catalog vaccine that is required for the tenant's services shows a row with state — Missing / Awaiting certificate / Expiring soon / Expired / Valid — and a "Provide details" button opening the same modal. This gives the customer an explicit "you need to give us this" list rather than a blank Add button.
+
+Documents panel on the pet page then drops "Vaccination cert" from its type list (vaccination certs arrive via the vaccination modal) and keeps Medical / vet, Consent form, Other. Existing vaccination documents still list there.
+
+## 4. Upload error that still uploaded
+
+Confirmed state: the file you uploaded (`pic20.jpg`) is on S3 but its row is still `status = pending` with no size/checksum, so the final confirm step failed after a successful S3 PUT — hence "error, but it uploaded". Root cause is not yet proven: `documents-confirm-upload` responds (it is deployed) but produced no log line, and it calls a `HEAD` through the Lovable connector gateway which is the most likely failure point.
+
+Fix, in order:
+1. Add explicit logging to `documents-confirm-upload` and re-run one upload to capture the real error.
+2. Make confirm resilient: if the `HEAD` check fails but the browser reported a successful PUT, still mark the row `uploaded` using the client-reported size/content type, and record a `checksum = null` — never leave a successfully uploaded file stuck in `pending`.
+3. Surface the actual server error text in the toast (currently only the generic `FunctionsHttpError` message reaches the UI).
+4. Repair the existing stuck row so it shows as uploaded rather than PENDING.
+
+### Technical notes
+- New table: `public.vaccine_types` with tenant scoping, GRANTs, RLS (staff manage, authenticated customers read their tenant's active rows).
+- `vaccinations.document_id` already exists — no schema change needed for the certificate link.
+- Upload path stays sign → PUT → confirm; only the confirm step's error handling changes.
