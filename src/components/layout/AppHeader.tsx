@@ -133,7 +133,7 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
             <div className="grid h-10 w-10 place-items-center rounded-full bg-sk-turquoise-soft text-sk-turquoise-dark text-sm font-semibold">
               {initials}
             </div>
-            <div className="hidden xl:block leading-tight text-left">
+            <div className={(isPortal ? "hidden sm:block" : "hidden xl:block") + " leading-tight text-left"}>
               <div className="text-sm font-medium">{displayName || "\u2014"}</div>
               <div className="text-[11px] text-muted-foreground capitalize">{roleLabel || ""}</div>
             </div>
