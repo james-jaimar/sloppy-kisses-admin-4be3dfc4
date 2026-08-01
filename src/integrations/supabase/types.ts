@@ -5911,6 +5911,10 @@ export type Database = {
           vaccine_type: string
         }[]
       }
+      grooming_day_availability: {
+        Args: { p_day: string; p_tenant_id: string }
+        Returns: Json
+      }
       grooming_sync_instruction_addons: {
         Args: { p_booking_id: string }
         Returns: undefined
