@@ -1,58 +1,38 @@
-# Grooming pass — portal instructions, calendar picker, size-driven packages, staff override
+## Goal
 
-Focused on grooming only. Four workstreams; they can ship in one sprint.
+Give customers the same grooming experience staff get in the admin "New booking" modal: set preferences per dog, pick a real available slot, and see only packages that match their dog's (possibly overridden) size — with prices.
 
-## 1. Grooming instructions live in the customer portal
+## What I verified
 
-Goal: customer captures grooming preferences per dog once, reuses on every booking.
+- The portal pet page (`/customer/pets/:id`) **does** already render `PetGroomingDefaultsPanel`, and the dashboard nudge links there. So "nothing to set" is not a missing component — something is rendering empty or invisible.
+- Database access is not the cause for the instruction catalog: `grooming_instruction_groups` / `grooming_instruction_options` have a policy that explicitly allows a signed-in customer of that tenant to read them (26 active groups, 101 active options), and `pet_grooming_defaults` has a customer-owned policy.
+- **Confirmed real gap:** `grooming_packages` and `grooming_addons` only allow `SELECT` where `user_has_tenant_access(tenant_id)` — that is staff-only. A logged-in customer reads **zero rows**, so in the portal booking wizard the package dropdown is empty and add-on price hints (`+R60`, `+R80`) never show. Admin sees them; customer never can.
 
-- **New pet-level tab "Grooming preferences"** in `MyPetDetailPage`, reusing `GroomingInstructionsForm` + `pet_grooming_defaults` (already exists on admin side via `PetGroomingDefaultsPanel`). Save writes to `pet_grooming_defaults` for that pet.
-- **Portal dashboard prompt**: on `CustomerDashboard`, show a soft banner "Set grooming preferences for {petName}" for any dog with no `pet_grooming_defaults` row. Dismissable per session; disappears once saved. Not blocking.
-- **Booking wizard behaviour** (already seeds from defaults in `GroomingRequestWizard`): keep as-is; add a small inline note "Saved from {pet}'s profile — edits here apply to this booking only" and a checkbox "Also update {pet}'s default preferences" that writes back on submit.
+So the diagnosis for the pet-page symptom is **unconfirmed** — step 1 is to reproduce it as a customer before changing that screen.
 
-## 2. Calendar-aware date & time picker (portal + admin)
+## Plan
 
-Replace the current "date + morning/afternoon/any" dropdown with a real availability picker.
+**1. Reproduce as a customer (first step, no guessing)**
+Sign in to the portal as a test customer, open the dashboard nudge → pet page, and capture what actually renders in the grooming panel (loading spinner, "Failed to load instructions", empty fieldsets, or a panel pushed far below the fold). Fix whatever the reproduction shows.
 
-- **New component** `GroomingSlotPicker` used by both `GroomingRequestWizard` (portal) and `BookingFormModal` (admin, grooming service only).
-  - Month calendar on the left; day column on the right showing 15-min slots between grooming operating hours (from `grooming_workflow_settings`; fall back 08:00–17:00).
-  - Fetch existing grooming bookings for the chosen day + tenant (status not in `cancelled/no_show`) and mark overlapping slots as taken. Filter by resource if one is chosen; otherwise show taken if all groomer resources are busy.
-  - Slot duration = package duration (from selected package) or 60 min default. Only slots where the full duration fits are selectable.
-  - Portal never exposes staff/resource names; admin sees the resource pill.
-- **Data**: reuse `useResourceConflicts` pattern and a new `useDayGroomingBookings(date, tenantId)` query returning `{start_at, end_at, resource_id}` rows.
-- Submitted `preferredStartAt` becomes the exact slot; `preferredEndAt` = start + duration.
+**2. Read access for pricing catalogues**
+Migration to add a customer-read policy to `grooming_packages` and `grooming_addons` (active rows only), mirroring the existing pattern on the instruction tables, so the portal can show real packages and add-on prices.
 
-## 3. Breed & size are mandatory + drive package visibility
+**3. Rebuild the portal "Grooming preferences" surface**
+Replace the plain card at the bottom of the pet page with a proper, prominent section matching the admin styling:
+- Grouped instruction chips (shampoo, face, teeth, eyes, coat, medical flags) with `+R` price hints now that add-ons are readable.
+- Sticky save bar, saved-state confirmation, and a "Not set yet" empty state with a call to action.
+- Read-only display of any staff size override, with the reason.
+- Reachable from a clear "Grooming preferences" entry on the pet card in `/customer/pets`, not just deep in the detail page.
 
-- **Pet form (portal + admin)**: breed already required for dogs via `BreedPicker`. Add: if breed's inferred size is missing OR breed is "Mixed / Cross-breed", show a mandatory "Adult size" radio (Small / Medium / Large / XL / XXL) — persisted to `pets.size`. Cannot save without it for dogs.
-- **Package selection** in `GroomingRequestWizard` and admin `BookingFormModal`:
-  - Filter `grooming_packages` by the pet's effective size (`size_band === pet.size`, plus packages with `size_band === null` = "any size").
-  - If no pet chosen yet, show all with a hint "Pick a pet to filter by size".
-  - Remove ability to select a mismatched package (do not just warn — hide).
+**4. Align the portal booking wizard with the admin modal**
+- Size-filtered package list showing name + price (works once step 2 lands).
+- Add-on / instruction chips with price hints, pre-filled from the dog's saved defaults, editable for this booking only.
+- Keep the existing `GroomingSlotPicker`; verify slot availability queries succeed under customer RLS (bookings/resources reads) and fix the policies if they don't.
+- Running estimate line so the customer sees roughly what the groom will cost before submitting.
 
-## 4. Staff size override
+## Technical notes
 
-Charlotte's example: bill a Large as XL for the head-heavy breed.
-
-- **Schema**: add `size_override` (`pet_size` enum, nullable) + `size_override_reason` (text) + `size_override_by` (uuid) + `size_override_at` (timestamptz) to `pets`. Effective size = `size_override ?? size`. All package filtering, pricing, and defaults use effective size.
-- **Admin UI**: on `PetDetailPage`, add a small "Override grooming size" control (staff-only, permission-gated) with reason field. Clearing sets override back to null. Every change writes to `audit_log`.
-- **Visibility**: 
-  - Portal `MyPetDetailPage` shows a badge "Groomed as XL (override by staff)" and the reason.
-  - Admin pet cards, booking form pet pill, and grooming board card all show the override badge in place of the base size.
-- **Booking form**: when an override is active, the package list uses the overridden size and shows a callout at the top of the grooming section.
-
-## Sequenced tasks
-
-1. Migration: add `size_override*` columns to `pets`; helper SQL to compute effective size in a view (optional).
-2. Update `pets` queries to expose `effective_size` alongside `size`.
-3. Portal: pet Grooming Preferences tab + dashboard banner + wizard "save back to defaults" checkbox.
-4. Shared `GroomingSlotPicker` + `useDayGroomingBookings`; wire into portal wizard and admin `BookingFormModal` (grooming only).
-5. Pet form updates (mandatory adult size for mixed / unknown-size breeds) — portal `MyPetFormModal` + admin `PetFormModal`.
-6. Package filtering by effective size in both wizards.
-7. Admin size-override UI on `PetDetailPage` + badges everywhere the pet is displayed (portal detail, admin detail, booking form, grooming board card).
-
-## Out of scope (flag for later)
-
-- Applying calendar picker to hotel/daycare/transport wizards (same pattern, but you asked for grooming only).
-- Groomer-specific slot picking (right now we treat all groomer resources as pooled availability).
-- Notifying admin when a customer changes defaults mid-booking cycle.
+- Files: `src/features/customerPortal/pets/MyPetDetailPage.tsx`, `MyPetsPage.tsx`, `src/features/grooming/instructions/PetGroomingDefaultsPanel.tsx` (or a portal variant), `GroomingInstructionsForm.tsx`, `src/features/customerPortal/bookings/new/GroomingRequestWizard.tsx`, `wizardHooks.ts`.
+- One migration for the two new customer-read policies; no schema changes expected.
+- Estimate reuses `src/features/grooming/pricing.ts` so portal and admin never diverge.
