@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Calendar, Users, PawPrint, Inbox, CalendarCheck, Dog, Hotel,
-  Scissors, Truck, ArrowLeftRight, Receipt, ShoppingBag, BarChart3, Settings,
+  Scissors, Truck, ArrowLeftRight, ReceiptText, ShoppingBag, BarChart3, Settings,
   FileText, CreditCard, User, MessageSquare, Building2, ShieldCheck, Flag,
   History, Activity, Database, FileMinus,
 } from "lucide-react";
@@ -17,7 +17,7 @@ export const adminNav = [
   { to: "/admin/grooming", label: "Grooming", icon: Scissors, code: "grooming.view" },
   { to: "/admin/mobile-vans", label: "Mobile Vans", icon: Truck, code: "grooming.view" },
   { to: "/admin/pickup-dropoff", label: "Pick Up / Drop Off", icon: ArrowLeftRight, code: "transport.view" },
-  { to: "/admin/invoices", label: "Invoices & Payments", icon: Receipt, code: "invoices.view" },
+  { to: "/admin/invoices", label: "Invoices & Payments", icon: ReceiptText, code: "invoices.view" },
   { to: "/admin/credit-notes", label: "Credit notes", icon: FileMinus, code: "credit_notes.view" },
   { to: "/admin/comms", label: "Comms", icon: MessageSquare, code: "comms.view" },
   { to: "/admin/shop-stock", label: "Shop & Stock", icon: ShoppingBag, code: "products.view" },
@@ -32,7 +32,7 @@ export const customerNav = [
   { to: "/customer/bookings", label: "Bookings", icon: CalendarCheck },
   { to: "/customer/requests", label: "Requests", icon: Inbox },
   { to: "/customer/documents", label: "Documents", icon: FileText },
-  { to: "/customer/invoices", label: "Invoices", icon: Receipt },
+  { to: "/customer/invoices", label: "Invoices", icon: ReceiptText },
   { to: "/customer/payments", label: "Payments", icon: CreditCard },
   { to: "/customer/messages", label: "Messages", icon: MessageSquare },
   { to: "/customer/profile", label: "Profile", icon: User },
