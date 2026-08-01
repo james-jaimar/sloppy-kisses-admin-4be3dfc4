@@ -14,19 +14,31 @@ type Props = {
   uploadedVia?: "portal" | "admin";
   allowUpload?: boolean;
   title?: string;
+  /** Restrict the upload type dropdown. Defaults to all types. */
+  docTypes?: { value: string; label: string }[];
+  /** Render without the card chrome (e.g. inside a CollapsibleCard). */
+  bare?: boolean;
 };
+
+const DEFAULT_DOC_TYPES = [
+  { value: "vaccination", label: "Vaccination cert" },
+  { value: "medical", label: "Medical / vet" },
+  { value: "consent", label: "Consent form" },
+  { value: "other", label: "Other" },
+];
 
 // Shared documents list + upload widget, used in customer portal and admin panels.
 // Files live on S3; RLS on `documents` controls who sees what.
 export function DocumentsPanel({
   tenantId, petId = null, customerId = null,
   uploadedVia = "admin", allowUpload = true, title = "Documents",
+  docTypes = DEFAULT_DOC_TYPES, bare = false,
 }: Props) {
   const qc = useQueryClient();
   const confirm = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [docType, setDocType] = useState("vaccination");
+  const [docType, setDocType] = useState(docTypes[0]?.value ?? "other");
 
   const key = ["documents_panel", tenantId, petId, customerId];
   const q = useQuery({
@@ -83,9 +95,9 @@ export function DocumentsPanel({
   }
 
   return (
-    <div className="sk-card p-5">
+    <div className={bare ? "p-5" : "sk-card p-5"}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm font-semibold">{title}</div>
+        {bare ? <div /> : <div className="text-sm font-semibold">{title}</div>}
         {allowUpload && (
           <div className="flex items-center gap-2">
             <select
@@ -93,10 +105,9 @@ export function DocumentsPanel({
               onChange={(e) => setDocType(e.target.value)}
               className="rounded-lg border border-border bg-background px-2 py-1.5 text-xs"
             >
-              <option value="vaccination">Vaccination cert</option>
-              <option value="medical">Medical / vet</option>
-              <option value="consent">Consent form</option>
-              <option value="other">Other</option>
+              {docTypes.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
             </select>
             <input ref={fileRef} type="file" className="hidden" onChange={handleFile} />
             <button

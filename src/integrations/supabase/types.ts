@@ -5566,6 +5566,56 @@ export type Database = {
           },
         ]
       }
+      vaccine_types: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          default_validity_months: number
+          help_text: string | null
+          id: string
+          name: string
+          sort_order: number
+          species: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          default_validity_months?: number
+          help_text?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          species?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          default_validity_months?: number
+          help_text?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          species?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaccine_types_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       van_workflow_settings: {
         Row: {
           created_at: string

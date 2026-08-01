@@ -42,9 +42,18 @@ export async function uploadDocumentToS3(input: DocumentUploadInput) {
   }
 
   const confirm = await supabase.functions.invoke("documents-confirm-upload", {
-    body: { document_id },
+    body: {
+      document_id,
+      client_size_bytes: input.file.size,
+      client_content_type: input.file.type || "application/octet-stream",
+    },
   });
-  if (confirm.error) throw new Error(confirm.error.message);
+  if (confirm.error) {
+    const details = (confirm.error as any)?.context
+      ? await (confirm.error as any).context.text?.().catch(() => null)
+      : null;
+    throw new Error(details || confirm.error.message);
+  }
 
   return { document_id };
 }

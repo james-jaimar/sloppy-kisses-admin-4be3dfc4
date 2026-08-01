@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Check, Scissors } from "lucide-react";
+import { Check, Scissors, ChevronDown } from "lucide-react";
 import { GroomingInstructionsForm, type GroomingInstructionsValue } from "./GroomingInstructionsForm";
 import { usePetGroomingDefaults, useSavePetGroomingDefaults } from "./queries";
 
@@ -12,13 +12,19 @@ interface Props {
   /** Customer-facing copy + sticky save bar for the portal. */
   variant?: "admin" | "portal";
   petName?: string | null;
+  /** Portal: collapse the (long) form behind a header toggle. */
+  collapsible?: boolean;
+  defaultOpen?: boolean;
 }
 
-export function PetGroomingDefaultsPanel({ tenantId, petId, variant = "admin", petName }: Props) {
+export function PetGroomingDefaultsPanel({ tenantId, petId, variant = "admin", petName, collapsible = false, defaultOpen = false }: Props) {
   const q = usePetGroomingDefaults(petId);
   const save = useSavePetGroomingDefaults(tenantId);
   const [value, setValue] = useState<GroomingInstructionsValue>(EMPTY);
   const [dirty, setDirty] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
+
+  useEffect(() => { if (defaultOpen) setOpen(true); }, [defaultOpen]);
 
   useEffect(() => {
     if (q.data) {
@@ -50,10 +56,18 @@ export function PetGroomingDefaultsPanel({ tenantId, petId, variant = "admin", p
 
   const portal = variant === "portal";
   const isSet = Boolean(q.data);
+  const bodyVisible = !collapsible || open;
 
   return (
-    <div id="grooming" className={portal ? "sk-card overflow-hidden p-0 scroll-mt-24" : "sk-card p-6"}>
-      <div className={portal ? "flex flex-wrap items-start justify-between gap-3 border-b border-border bg-sk-coral-soft/50 p-5" : "mb-3 flex items-center justify-between"}>
+    <div className={portal ? "sk-card overflow-hidden p-0 scroll-mt-24" : "sk-card p-6"}>
+      <div
+        onClick={collapsible ? () => setOpen((v) => !v) : undefined}
+        className={
+          (portal ? "flex flex-wrap items-start justify-between gap-3 bg-sk-coral-soft/50 p-5" : "mb-3 flex items-center justify-between") +
+          (portal && bodyVisible ? " border-b border-border" : "") +
+          (collapsible ? " cursor-pointer" : "")
+        }
+      >
         <div className="flex items-start gap-3">
           {portal && (
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-sk-coral text-white">
@@ -81,6 +95,9 @@ export function PetGroomingDefaultsPanel({ tenantId, petId, variant = "admin", p
             )}
           </div>
         </div>
+        {collapsible && (
+          <ChevronDown className={"h-4 w-4 shrink-0 text-muted-foreground transition-transform " + (open ? "rotate-180" : "")} />
+        )}
         {!portal && (
           <button
             type="button"
@@ -92,6 +109,7 @@ export function PetGroomingDefaultsPanel({ tenantId, petId, variant = "admin", p
           </button>
         )}
       </div>
+      {bodyVisible && (
       <div className={portal ? "p-5" : ""}>
         <GroomingInstructionsForm
           tenantId={tenantId}
@@ -99,7 +117,8 @@ export function PetGroomingDefaultsPanel({ tenantId, petId, variant = "admin", p
           onChange={(v) => { setValue(v); setDirty(true); }}
         />
       </div>
-      {portal && (
+      )}
+      {portal && bodyVisible && (
         <div className="sticky bottom-0 flex items-center justify-between gap-3 border-t border-border bg-white/95 p-4 backdrop-blur">
           <span className="text-xs text-muted-foreground">
             {dirty ? "You have unsaved changes." : isSet ? "All changes saved." : "Nothing saved yet."}

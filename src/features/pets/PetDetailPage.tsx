@@ -9,6 +9,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { PetFormModal } from "./PetFormModal";
 import { PetVaccinationsPanel } from "./PetVaccinationsPanel";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PetGroomingDefaultsPanel } from "@/features/grooming/instructions/PetGroomingDefaultsPanel";
@@ -188,10 +189,16 @@ export default function PetDetailPage() {
             </div>
 
             {tenant && (
-              <PetVaccinationsPanel tenantId={tenant.id} petId={pet.id} />
+              <CollapsibleCard title="Vaccinations" subtitle="Dates, certificates and requirement status." storageKey={`admin-vax-${pet.id}`} defaultOpen>
+                <PetVaccinationsPanel tenantId={tenant.id} petId={pet.id} species={pet.species as any} />
+              </CollapsibleCard>
             )}
             {tenant && (
-              <PetGroomingDefaultsPanel tenantId={tenant.id} petId={pet.id} />
+              <CollapsibleCard title="Grooming defaults" subtitle="Prefilled onto every grooming booking for this pet." storageKey={`admin-groom-${pet.id}`}>
+                <div className="p-1">
+                  <PetGroomingDefaultsPanel tenantId={tenant.id} petId={pet.id} />
+                </div>
+              </CollapsibleCard>
             )}
             {tenant && pet.species === "dog" && (
               <SizeOverrideControl pet={pet as any} />

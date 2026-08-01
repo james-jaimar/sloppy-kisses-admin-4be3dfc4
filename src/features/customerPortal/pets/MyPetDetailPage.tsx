@@ -4,10 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Pencil } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
-import { PetVaccinationsPanel } from "@/features/pets/PetVaccinationsPanel";
+import { PetVaccinationsPanel, useVaccinationChecklist } from "@/features/pets/PetVaccinationsPanel";
 import { DocumentsPanel } from "@/features/documents/DocumentsPanel";
 import { PetGroomingDefaultsPanel } from "@/features/grooming/instructions/PetGroomingDefaultsPanel";
 import { SizeOverrideBadge } from "@/features/pets/SizeOverrideControl";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { Syringe, FileText } from "lucide-react";
 import { useCurrentCustomer } from "../hooks";
 import { MyPetFormModal } from "./MyPetFormModal";
 
@@ -15,6 +17,7 @@ export default function MyPetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const cust = useCurrentCustomer();
   const [editOpen, setEditOpen] = useState(false);
+  const [wantsGrooming, setWantsGrooming] = useState(false);
 
   const pet = useQuery({
     queryKey: ["portal_pet", id],
@@ -33,6 +36,7 @@ export default function MyPetDetailPage() {
   const loaded = Boolean(pet.data);
   useEffect(() => {
     if (!loaded || window.location.hash !== "#grooming") return;
+    setWantsGrooming(true);
     const el = document.getElementById("grooming");
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [loaded]);
@@ -43,6 +47,13 @@ export default function MyPetDetailPage() {
   if (!pet.data) return <div className="p-6 text-sm text-muted-foreground">Pet not found.</div>;
 
   const p = pet.data;
+  return (
+    <PetDetailBody p={p} editOpen={editOpen} setEditOpen={setEditOpen} wantsGrooming={wantsGrooming} />
+  );
+}
+
+function PetDetailBody({ p, editOpen, setEditOpen, wantsGrooming }: { p: any; editOpen: boolean; setEditOpen: (v: boolean) => void; wantsGrooming: boolean }) {
+  const vax = useVaccinationChecklist(p.tenant_id, p.id, p.species);
   return (
     <>
       <AppHeader
@@ -79,15 +90,44 @@ export default function MyPetDetailPage() {
         </div>
 
         {(p.species === "dog" || p.species === "cat") && (
-          <PetGroomingDefaultsPanel tenantId={p.tenant_id} petId={p.id} variant="portal" petName={p.name} />
+          <div id="grooming">
+            <PetGroomingDefaultsPanel tenantId={p.tenant_id} petId={p.id} variant="portal" petName={p.name} collapsible defaultOpen={wantsGrooming} />
+          </div>
         )}
-        <PetVaccinationsPanel tenantId={p.tenant_id} petId={p.id} canManage />
-        <DocumentsPanel
-          tenantId={p.tenant_id}
-          petId={p.id}
-          uploadedVia="portal"
-          title={`${p.name ?? "Pet"} — documents`}
-        />
+
+        <CollapsibleCard
+          title="Vaccinations"
+          icon={<span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-sk-turquoise-soft text-sk-turquoise-dark"><Syringe className="h-4 w-4" /></span>}
+          subtitle="Dates and certificates we need on file."
+          badge={
+            <span className={"rounded-full px-2 py-0.5 text-[11px] font-semibold " + (vax.outstanding ? "bg-sk-coral-soft text-sk-coral-dark" : "bg-sk-turquoise-soft text-sk-turquoise-dark")}>
+              {vax.outstanding ? `${vax.outstanding} outstanding` : "All up to date"}
+            </span>
+          }
+          storageKey={`vax-${p.id}`}
+          defaultOpen={vax.outstanding > 0}
+        >
+          <PetVaccinationsPanel tenantId={p.tenant_id} petId={p.id} species={p.species} canManage uploadedVia="portal" />
+        </CollapsibleCard>
+
+        <CollapsibleCard
+          title={`${p.name ?? "Pet"} — other documents`}
+          icon={<span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground"><FileText className="h-4 w-4" /></span>}
+          subtitle="Vet letters, consent forms and anything else."
+          storageKey={`docs-${p.id}`}
+        >
+          <DocumentsPanel
+            tenantId={p.tenant_id}
+            petId={p.id}
+            uploadedVia="portal"
+            bare
+            docTypes={[
+              { value: "medical", label: "Medical / vet" },
+              { value: "consent", label: "Consent form" },
+              { value: "other", label: "Other" },
+            ]}
+          />
+        </CollapsibleCard>
       </div>
 
       {editOpen && (
