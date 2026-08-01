@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { PawPrint, Plus, Loader2 } from "lucide-react";
+import { PawPrint, Plus, Loader2, Scissors } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { useCurrentCustomer } from "../hooks";
