@@ -6120,7 +6120,12 @@ export type Database = {
         | "allocation"
         | "refund_out"
       customer_status: "active" | "inactive" | "archived"
-      document_status: "pending" | "verified" | "rejected" | "expired"
+      document_status:
+        | "pending"
+        | "uploaded"
+        | "verified"
+        | "rejected"
+        | "expired"
       email_status: "queued" | "sent" | "failed"
       notification_event_type:
         | "booking_created"
@@ -6365,7 +6370,13 @@ export const Constants = {
         "refund_out",
       ],
       customer_status: ["active", "inactive", "archived"],
-      document_status: ["pending", "verified", "rejected", "expired"],
+      document_status: [
+        "pending",
+        "uploaded",
+        "verified",
+        "rejected",
+        "expired",
+      ],
       email_status: ["queued", "sent", "failed"],
       notification_event_type: [
         "booking_created",
