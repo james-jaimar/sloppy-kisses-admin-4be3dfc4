@@ -18,7 +18,8 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
   const location = useLocation();
   const isPlatform = profile?.user_type === "platform";
   const inPlatform = location.pathname.startsWith("/platform");
-  const passwordPath = location.pathname.startsWith("/customer")
+  const isPortal = location.pathname.startsWith("/customer");
+  const passwordPath = isPortal
     ? "/customer/profile/password"
     : "/admin/settings/password";
   const displayName = profile?.full_name ?? authUser?.email ?? "";
@@ -65,6 +66,10 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-sk-surface/85 backdrop-blur">
       <div className="flex h-16 items-center gap-2 px-3 sm:gap-3 sm:px-6">
+        {isPortal ? (
+          <div className="flex-1" />
+        ) : (
+        <>
         <div className="relative flex-1 max-w-xl min-w-0">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -118,6 +123,8 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
           <Bell className="h-[18px] w-[18px]" />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-sk-coral" />
         </button>
+        </>
+        )}
         <div className="relative flex items-center gap-2 pl-1 sm:pl-2 shrink-0" ref={menuRef}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
@@ -126,7 +133,7 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
             <div className="grid h-10 w-10 place-items-center rounded-full bg-sk-turquoise-soft text-sk-turquoise-dark text-sm font-semibold">
               {initials}
             </div>
-            <div className="hidden xl:block leading-tight text-left">
+            <div className={(isPortal ? "hidden sm:block" : "hidden xl:block") + " leading-tight text-left"}>
               <div className="text-sm font-medium">{displayName || "\u2014"}</div>
               <div className="text-[11px] text-muted-foreground capitalize">{roleLabel || ""}</div>
             </div>

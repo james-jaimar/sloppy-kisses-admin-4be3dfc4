@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { useCurrentCustomer } from "./hooks";
 import { SERVICE_LABEL, fmtDateTime, statusTone } from "./portalCommon";
-import { PawPrint, CalendarPlus, Receipt, Upload, Loader2, Inbox, Scissors } from "lucide-react";
+import { PawPrint, CalendarPlus, ReceiptText, Upload, Loader2, Inbox, Scissors } from "lucide-react";
 import { fmtZar, effectiveInvoiceStatus, InvoiceStatusChip } from "@/features/invoices/status";
 import { useConsentStatus } from "@/features/consent/consentQueries";
 import { ClipboardCheck, ArrowRight } from "lucide-react";
@@ -205,7 +205,7 @@ export default function CustomerDashboard() {
               {outstandingInvoices.map((i: any) => (
                 <li key={i.id}>
                   <Link to={`/customer/invoices/${i.id}`} className="flex items-center gap-4 px-5 py-4 hover:bg-sk-surface-muted">
-                    <div className="grid h-11 w-11 place-items-center rounded-xl bg-sk-orange-soft text-sk-orange"><Receipt className="h-4 w-4" /></div>
+                    <div className="grid h-11 w-11 place-items-center rounded-xl bg-sk-orange-soft text-sk-orange"><ReceiptText className="h-4 w-4" /></div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-semibold">{i.invoice_number}</div>
                       <div className="text-xs text-muted-foreground">Due {i.due_date ?? "—"}</div>
@@ -268,7 +268,7 @@ export default function CustomerDashboard() {
                 <span className="text-sm font-medium">Upload vaccine</span>
               </Link>
               <Link to="/customer/invoices" className="flex flex-col items-start gap-2 rounded-xl border border-border p-3 text-left hover:bg-sk-surface-muted">
-                <span className="grid h-9 w-9 place-items-center rounded-lg bg-sk-orange-soft text-sk-orange"><Receipt className="h-4 w-4" /></span>
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-sk-orange-soft text-sk-orange"><ReceiptText className="h-4 w-4" /></span>
                 <span className="text-sm font-medium">View invoices</span>
               </Link>
             </div>
