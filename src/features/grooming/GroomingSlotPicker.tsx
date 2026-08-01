@@ -3,41 +3,28 @@ import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 
-/** Fetch grooming bookings for a given local date (in tenant/local browser time). */
-function useDayGroomingBookings(tenantId: string | null | undefined, date: string) {
-  return useQuery({
-    queryKey: ["day_grooming_bookings", tenantId, date],
-    enabled: Boolean(tenantId && date),
-    queryFn: async () => {
-      const start = new Date(`${date}T00:00:00`);
-      const end = new Date(`${date}T23:59:59.999`);
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("id, start_at, end_at, resource_id, service_type, status")
-        .eq("tenant_id", tenantId as string)
-        .in("service_type", ["grooming_inhouse", "grooming_mobile"])
-        .not("status", "in", "(cancelled,no_show)")
-        .gte("start_at", start.toISOString())
-        .lte("start_at", end.toISOString());
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+interface DayAvailability {
+  pool: number;
+  busy: { start_at: string; end_at: string | null; resource_id: string | null }[];
 }
 
-function useGroomingResourceCount(tenantId: string | null | undefined) {
+/**
+ * Day availability via a security-definer RPC so both staff and portal customers
+ * get the same view. Customers cannot read `bookings`/`resources` directly, and the
+ * RPC returns only anonymous busy intervals — no customer or pet details.
+ */
+function useDayAvailability(tenantId: string | null | undefined, date: string) {
   return useQuery({
-    queryKey: ["grooming_resource_count", tenantId],
-    enabled: Boolean(tenantId),
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("resources")
-        .select("id", { count: "exact", head: true })
-        .eq("tenant_id", tenantId as string)
-        .in("type", ["inhouse_grooming", "mobile_van"])
-        .eq("active", true);
+    queryKey: ["grooming_day_availability", tenantId, date],
+    enabled: Boolean(tenantId && date),
+    queryFn: async (): Promise<DayAvailability> => {
+      const { data, error } = await supabase.rpc("grooming_day_availability" as any, {
+        p_tenant_id: tenantId as string,
+        p_day: date,
+      });
       if (error) throw error;
-      return Math.max(1, count ?? 1);
+      const row = (data ?? {}) as any;
+      return { pool: Math.max(1, Number(row.pool ?? 1)), busy: (row.busy ?? []) as DayAvailability["busy"] };
     },
   });
 }
@@ -82,9 +69,8 @@ export function GroomingSlotPicker({
   const [selectedDate, setSelectedDate] = useState<Date>(initial);
   const dateKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
 
-  const bookingsQ = useDayGroomingBookings(tenantId, dateKey);
-  const poolQ = useGroomingResourceCount(tenantId);
-  const poolSize = poolQ.data ?? 1;
+  const availabilityQ = useDayAvailability(tenantId, dateKey);
+  const poolSize = availabilityQ.data?.pool ?? 1;
 
   // Compute all 15-min slots for the day between open/close.
   const slots = useMemo(() => {
@@ -106,14 +92,14 @@ export function GroomingSlotPicker({
 
   // For each slot: how many concurrent bookings overlap.
   function slotIsFull(start: Date, end: Date) {
-    const rows = (bookingsQ.data ?? []).filter((b: any) => (excludeBookingId ? b.id !== excludeBookingId : true));
-    const overlapping = rows.filter((b: any) => {
+    const rows = availabilityQ.data?.busy ?? [];
+    const overlapping = rows.filter((b) => {
       const bStart = new Date(b.start_at);
-      const bEnd = new Date(b.end_at);
+      const bEnd = b.end_at ? new Date(b.end_at) : new Date(bStart.getTime() + 60 * 60000);
       return bStart < end && bEnd > start;
     });
     if (resourceId) {
-      return overlapping.some((b: any) => b.resource_id === resourceId);
+      return overlapping.some((b) => b.resource_id === resourceId);
     }
     return overlapping.length >= poolSize;
   }
@@ -195,7 +181,7 @@ export function GroomingSlotPicker({
             </div>
             <div className="text-[10px] text-muted-foreground">{durationMinutes} min slots</div>
           </div>
-          {bookingsQ.isLoading ? (
+          {availabilityQ.isLoading ? (
             <div className="grid grid-cols-4 gap-1.5">{Array.from({ length: 20 }).map((_, i) => <div key={i} className="h-8 animate-pulse rounded-md bg-muted" />)}</div>
           ) : (
             <div className="grid grid-cols-4 gap-1.5 md:grid-cols-5">
