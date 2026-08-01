@@ -78,10 +78,10 @@ export default function MyPetDetailPage() {
           <Field label="Behaviour notes" value={p.behaviour_notes} full />
         </div>
 
-        <PetVaccinationsPanel tenantId={p.tenant_id} petId={p.id} canManage />
         {(p.species === "dog" || p.species === "cat") && (
           <PetGroomingDefaultsPanel tenantId={p.tenant_id} petId={p.id} variant="portal" petName={p.name} />
         )}
+        <PetVaccinationsPanel tenantId={p.tenant_id} petId={p.id} canManage />
         <DocumentsPanel
           tenantId={p.tenant_id}
           petId={p.id}
