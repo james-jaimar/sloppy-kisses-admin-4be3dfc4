@@ -153,7 +153,7 @@ export default function CustomerDashboard() {
 
         {(groomingGap.data?.missing.length ?? 0) > 0 && (
           <Link
-            to={`/customer/pets/${groomingGap.data!.missing[0].id}`}
+            to={`/customer/pets/${groomingGap.data!.missing[0].id}#grooming`}
             className="sk-card flex flex-col gap-3 border-l-4 border-l-sk-turquoise bg-sk-turquoise-soft/30 p-5 transition-colors hover:bg-sk-turquoise-soft/50 sm:flex-row sm:items-center"
           >
             <span className="grid h-11 w-11 place-items-center rounded-xl bg-sk-turquoise-dark text-white">

@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase/client";
 
 interface DayAvailability {
   pool: number;
-  busy: { start_at: string; end_at: string | null; resource_id: string | null }[];
+  busy: { id: string; start_at: string; end_at: string | null; resource_id: string | null }[];
 }
 
 /**
@@ -92,7 +92,7 @@ export function GroomingSlotPicker({
 
   // For each slot: how many concurrent bookings overlap.
   function slotIsFull(start: Date, end: Date) {
-    const rows = availabilityQ.data?.busy ?? [];
+    const rows = (availabilityQ.data?.busy ?? []).filter((b) => (excludeBookingId ? b.id !== excludeBookingId : true));
     const overlapping = rows.filter((b) => {
       const bStart = new Date(b.start_at);
       const bEnd = b.end_at ? new Date(b.end_at) : new Date(bStart.getTime() + 60 * 60000);

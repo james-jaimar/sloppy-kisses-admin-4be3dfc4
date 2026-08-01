@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, Pencil } from "lucide-react";
@@ -29,6 +29,13 @@ export default function MyPetDetailPage() {
       return data;
     },
   });
+
+  const loaded = Boolean(pet.data);
+  useEffect(() => {
+    if (!loaded || window.location.hash !== "#grooming") return;
+    const el = document.getElementById("grooming");
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [loaded]);
 
   if (pet.isLoading || cust.isLoading) {
     return <div className="grid flex-1 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
@@ -71,10 +78,10 @@ export default function MyPetDetailPage() {
           <Field label="Behaviour notes" value={p.behaviour_notes} full />
         </div>
 
-        <PetVaccinationsPanel tenantId={p.tenant_id} petId={p.id} canManage />
         {(p.species === "dog" || p.species === "cat") && (
-          <PetGroomingDefaultsPanel tenantId={p.tenant_id} petId={p.id} />
+          <PetGroomingDefaultsPanel tenantId={p.tenant_id} petId={p.id} variant="portal" petName={p.name} />
         )}
+        <PetVaccinationsPanel tenantId={p.tenant_id} petId={p.id} canManage />
         <DocumentsPanel
           tenantId={p.tenant_id}
           petId={p.id}
