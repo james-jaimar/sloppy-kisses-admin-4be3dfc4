@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls, textareaCls } from "./WizardShell";
 import { usePortalPets, useGroomingPackages } from "./wizardHooks";
 import { useRequestSubmit } from "./useRequestSubmit";
 import { GroomingInstructionsForm, type GroomingInstructionsValue } from "@/features/grooming/instructions/GroomingInstructionsForm";
-import { usePetGroomingDefaults } from "@/features/grooming/instructions/queries";
+import { usePetGroomingDefaults, useInstructionCatalog } from "@/features/grooming/instructions/queries";
+import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
 import { effectivePetSize, petSizeToBand } from "@/features/pets/sizeUtils";
 import { SizeOverrideBadge } from "@/features/pets/SizeOverrideControl";
@@ -30,6 +31,8 @@ export default function GroomingRequestWizard({ mode }: Props) {
     selections: {}, medical_flags: [], notes: "",
   });
   const defaultsQ = usePetGroomingDefaults(petId || null);
+  const catalogQ = useInstructionCatalog(cust.data?.tenant_id ?? null);
+  const addonsQ = useGroomingAddons(cust.data?.tenant_id ?? undefined, { activeOnly: true });
   const selectedPet = (pets.data ?? []).find((p: any) => p.id === petId) ?? null;
   const petBand = petSizeToBand(effectivePetSize(selectedPet as any));
   const filteredPackages = (packages.data ?? []).filter((p: any) => {
@@ -53,6 +56,28 @@ export default function GroomingRequestWizard({ mode }: Props) {
       setInstructions({ selections: {}, medical_flags: [], notes: "" });
     }
   }, [petId, defaultsQ.data, defaultsQ.isFetched]);
+
+  // Running estimate: package price + any add-ons triggered by the chosen instructions.
+  const estimate = useMemo(() => {
+    const pkg = filteredPackages.find((p: any) => p.id === packageId);
+    const base = Number(pkg?.price_zar ?? 0);
+    const priceByCode = new Map<string, number>();
+    for (const a of addonsQ.data ?? []) priceByCode.set(a.code, Number(a.price_zar));
+    const options = catalogQ.data?.options ?? [];
+    const groups = catalogQ.data?.groups ?? [];
+    const extras: { label: string; price: number }[] = [];
+    for (const g of groups) {
+      const val = instructions.selections[g.code];
+      const codes = Array.isArray(val) ? (val as string[]) : typeof val === "string" ? [val] : [];
+      for (const code of codes) {
+        const opt = options.find((o) => o.group_id === g.id && o.code === code);
+        const price = opt?.addon_code ? priceByCode.get(opt.addon_code) ?? 0 : 0;
+        if (price > 0) extras.push({ label: opt!.label, price });
+      }
+    }
+    const extrasTotal = extras.reduce((s, e) => s + e.price, 0);
+    return { base, extras, total: base + extrasTotal, hasPackage: Boolean(pkg) };
+  }, [filteredPackages, packageId, addonsQ.data, catalogQ.data, instructions.selections]);
 
   const canSubmit = Boolean(cust.data && petId && slotStart && (mode === "inhouse" || (addressLine && suburb))) && !submit.isPending;
 
@@ -154,6 +179,26 @@ export default function GroomingRequestWizard({ mode }: Props) {
       )}
 
       <Field label="Notes for our team"><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={textareaCls} /></Field>
+
+      {(estimate.hasPackage || estimate.extras.length > 0) && (
+        <div className="rounded-lg border border-sk-coral-soft bg-sk-coral-soft/40 p-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-sk-coral-dark">Estimated total</div>
+          <div className="mt-2 space-y-1 text-sm">
+            {estimate.hasPackage && (
+              <div className="flex justify-between"><span>Package</span><span>R{estimate.base.toFixed(2)}</span></div>
+            )}
+            {estimate.extras.map((e, i) => (
+              <div key={i} className="flex justify-between text-muted-foreground"><span>{e.label}</span><span>+R{e.price.toFixed(2)}</span></div>
+            ))}
+            <div className="flex justify-between border-t border-sk-coral-soft pt-1 font-semibold">
+              <span>Total</span><span>R{estimate.total.toFixed(2)}</span>
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Estimate only — final pricing is confirmed by our team (coat condition, size overrides and travel may apply).
+          </p>
+        </div>
+      )}
     </WizardShell>
   );
 }
