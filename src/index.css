@@ -63,6 +63,10 @@
 
     --radius: 12px;
 
+    /* Soft, layered elevation for iOS-style controls */
+    --shadow-ios: 0 1px 1px hsl(25 10% 20% / 0.05), 0 6px 16px -6px hsl(25 10% 20% / 0.12);
+    --shadow-ios-hover: 0 1px 1px hsl(25 10% 20% / 0.05), 0 14px 30px -10px hsl(25 10% 20% / 0.18);
+
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: var(--sk-text);
     --sidebar-primary: var(--sk-coral);
