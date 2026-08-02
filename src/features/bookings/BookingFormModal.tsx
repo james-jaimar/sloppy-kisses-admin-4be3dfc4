@@ -102,7 +102,6 @@ interface Props {
     service_type: ServiceType;
     start_at: string;
     end_at: string;
-    booking_request_id: string;
     notes_customer: string | null;
     grooming: Partial<GroomingDetails>;
     hotel: Partial<HotelDetails>;
@@ -365,7 +364,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             resource_id: resourceId,
             notes_internal: notesInternal.trim() || null,
             notes_customer: notesCustomer.trim() || null,
-            booking_request_id: prefill?.booking_request_id ?? null,
             rule,
           });
           // Persist service-typed details for every occurrence.
@@ -390,7 +388,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           resource_id: resourceId,
           notes_internal: notesInternal.trim() || null,
           notes_customer: notesCustomer.trim() || null,
-          booking_request_id: prefill?.booking_request_id ?? null,
         });
         await saveDetails(res.id);
         if (kind === "hotel") await persistSurcharges(res.id);
