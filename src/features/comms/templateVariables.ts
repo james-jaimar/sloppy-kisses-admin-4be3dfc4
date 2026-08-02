@@ -37,8 +37,6 @@ export const TEMPLATE_VARIABLE_MAP: Record<string, TemplateVariable[]> = {
   booking_cancelled: [...CUSTOMER_VARS, ...BOOKING_VARS],
   booking_rescheduled: [...CUSTOMER_VARS, ...BOOKING_VARS],
   booking_status_changed: [...CUSTOMER_VARS, ...BOOKING_VARS],
-  booking_request_created: [...CUSTOMER_VARS, ...BOOKING_VARS],
-  booking_request_status_changed: [...CUSTOMER_VARS, ...BOOKING_VARS],
   invoice_issued: [...CUSTOMER_VARS, ...INVOICE_VARS],
   invoice_reminder: [...CUSTOMER_VARS, ...INVOICE_VARS],
   invoice_paid: [...CUSTOMER_VARS, ...INVOICE_VARS],

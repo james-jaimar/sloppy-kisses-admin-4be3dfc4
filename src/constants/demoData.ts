@@ -20,14 +20,6 @@ export const demoTodayGrooming = [
   { id: "b5", time: "13:00", pet: "Charlie",owner: "Thabo Mokoena", service: "Nail Trim",   groomer: "Kagiso",  status: "confirmed" },
 ];
 
-export const demoBookingRequests = [
-  { id: "r1", createdAt: "2h ago",  customer: "Amelia Roberts", pet: "Milo (French Bulldog)", service: "Mobile Grooming", preferred: "Thu 10 Jul, 09:00-11:00", status: "pending_review" as const, hasDocs: false },
-  { id: "r2", createdAt: "5h ago",  customer: "James O'Neill",  pet: "Ziggy (Border Collie)",  service: "Daycare Assessment", preferred: "Mon 14 Jul", status: "pending_review" as const, hasDocs: true },
-  { id: "r3", createdAt: "yesterday", customer: "Rethabile Dube", pet: "Kiara (Poodle)",       service: "Hotel Stay 4 nights", preferred: "20-24 Jul", status: "needs_info"   as const, hasDocs: true },
-  { id: "r4", createdAt: "2d ago",  customer: "Sarah Johnson",  pet: "Bella (Cavoodle)",       service: "Pick Up / Drop Off", preferred: "Fri 11 Jul, 07:30", status: "approved" as const, hasDocs: true },
-  { id: "r5", createdAt: "3d ago",  customer: "Priya Naidoo",   pet: "Luna (British Shorthair)", service: "Cattery 6 nights", preferred: "1-7 Aug", status: "pending_review" as const, hasDocs: false },
-  { id: "r6", createdAt: "4d ago",  customer: "Michael Chen",   pet: "Rocky (Boxer)",          service: "In-House Grooming",  preferred: "Sat 12 Jul, 11:00", status: "declined" as const, hasDocs: true },
-];
 
 export const demoDaycareList = [
   { id: "d1", pet: "Max",     owner: "Sarah Johnson", plan: "3-day plan",   daysBookedThisMonth: 12, status: "checked_in" as const, arrival: "07:42", notes: "Feed at noon" },

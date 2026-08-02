@@ -60,20 +60,6 @@ export default function CustomerDashboard() {
     },
   });
 
-  const pendingRequests = useQuery({
-    queryKey: ["portal_dash_requests", customerId],
-    enabled: !!customerId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("booking_requests")
-        .select("id, status")
-        .eq("customer_id", customerId!)
-        .in("status", ["pending_review", "needs_info"]);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
   // Detect dogs that don't yet have saved grooming preferences.
   const groomingGap = useQuery({
     queryKey: ["portal_dash_grooming_gap", customerId],
@@ -115,7 +101,6 @@ export default function CustomerDashboard() {
   const balance = (invoices.data ?? []).reduce((s, i: any) => s + Number(i.balance_due ?? 0), 0);
   const outstandingCount = (invoices.data ?? []).filter((i: any) => Number(i.balance_due ?? 0) > 0).length;
   const outstandingInvoices = (invoices.data ?? []).filter((i: any) => Number(i.balance_due ?? 0) > 0).slice(0, 3);
-  const pendingCount = pendingRequests.data?.length ?? 0;
 
   return (
     <>
@@ -184,9 +169,9 @@ export default function CustomerDashboard() {
             </Link>
           </div>
           <div className="sk-card p-5">
-            <div className="sk-stat-label">Pending requests</div>
-            <div className="mt-2 sk-stat-value">{pendingCount}</div>
-            <Link to="/customer/requests" className="mt-1 inline-block text-xs font-medium text-sk-turquoise-dark hover:underline">View requests</Link>
+            <div className="sk-stat-label">Unpaid invoices</div>
+            <div className="mt-2 sk-stat-value">{outstandingCount}</div>
+            <Link to="/customer/invoices" className="mt-1 inline-block text-xs font-medium text-sk-turquoise-dark hover:underline">View invoices</Link>
           </div>
           <div className="sk-card p-5">
             <div className="sk-stat-label">My pets</div>
