@@ -70,7 +70,19 @@ export function VaxWaiverBanner({ petId, canManage }: { petId: string; canManage
       ) : null}
 
       {open && (
-        <ModalShell title="Waive vaccination requirements" onClose={() => setOpen(false)}>
+        <ModalShell
+          title="Waive vaccination requirements"
+          onClose={() => setOpen(false)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setOpen(false)} className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted">Cancel</button>
+              <button onClick={() => submit(false)} disabled={save.isPending || !until}
+                className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
+                {save.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Save waiver
+              </button>
+            </div>
+          }
+        >
           <div className="space-y-4 p-5 text-sm">
             <p className="text-xs text-muted-foreground">
               While the waiver is active this pet passes every vaccination gate. Use it for pets whose
@@ -87,13 +99,6 @@ export function VaxWaiverBanner({ petId, canManage }: { petId: string; canManage
               <textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)}
                 className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm" />
             </label>
-          </div>
-          <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
-            <button onClick={() => setOpen(false)} className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-muted">Cancel</button>
-            <button onClick={() => submit(false)} disabled={save.isPending || !until}
-              className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
-              {save.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Save waiver
-            </button>
           </div>
         </ModalShell>
       )}
