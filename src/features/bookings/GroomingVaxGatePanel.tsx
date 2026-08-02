@@ -1,5 +1,6 @@
 import { AlertTriangle, CheckCircle2, ShieldAlert } from "lucide-react";
 import { useGroomingVaccinationGate, useGroomingWorkflowSettings } from "@/features/grooming/workflowQueries";
+import { VaxWaiverQuickAction } from "@/features/pets/VaxWaiverQuickAction";
 
 const STATUS_LABEL: Record<string, string> = {
   missing: "Missing",
@@ -23,10 +24,11 @@ export function GroomingVaxGatePanel({ tenantId, bookingId }: { tenantId: string
 
   if (issues.length === 0) {
     const waivedUntil = waived.map((r) => r.expiry_date).filter(Boolean).sort()[0] ?? null;
+    const waivedPets = [...new Map(waived.map((r) => [r.pet_id, r])).values()];
     return (
       <div className="sk-card flex items-start gap-3 border-sk-green/40 bg-sk-green-soft/40 p-4 text-sm">
         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-sk-green" />
-        <div>
+        <div className="min-w-0 flex-1">
           <div className="font-semibold text-sk-green">
             {waived.length ? "Vaccinations OK (waiver in place)" : "Vaccinations OK"}
           </div>
@@ -35,6 +37,13 @@ export function GroomingVaxGatePanel({ tenantId, bookingId }: { tenantId: string
               ? `An admin waiver covers ${[...new Set(waived.map((r) => r.pet_name))].join(", ")}${waivedUntil ? ` until ${waivedUntil}` : ""}.`
               : "All required vaccinations are on file and valid."}
           </div>
+          {waivedPets.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2 text-sk-green">
+              {waivedPets.map((r) => (
+                <VaxWaiverQuickAction key={r.pet_id} petId={r.pet_id} petName={r.pet_name} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -67,6 +76,7 @@ export function GroomingVaxGatePanel({ tenantId, bookingId }: { tenantId: string
             <span>{r.vaccine_type}</span>
             <span className="rounded bg-white px-2 py-0.5 font-semibold">{STATUS_LABEL[r.status] ?? r.status}</span>
             <span className="text-muted-foreground">{r.expiry_date ?? "—"}</span>
+            <VaxWaiverQuickAction petId={r.pet_id} petName={r.pet_name} />
           </li>
         ))}
       </ul>
