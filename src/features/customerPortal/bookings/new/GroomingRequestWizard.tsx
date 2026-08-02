@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls, textareaCls } from "./WizardShell";
 import { usePortalPets, useGroomingPackages } from "./wizardHooks";
-import { useRequestSubmit } from "./useRequestSubmit";
+import { useCreatePortalBooking } from "./useBookingSubmit";
 import { GroomingInstructionsForm, type GroomingInstructionsValue } from "@/features/grooming/instructions/GroomingInstructionsForm";
 import { usePetGroomingDefaults, useInstructionCatalog } from "@/features/grooming/instructions/queries";
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
@@ -17,7 +17,7 @@ export default function GroomingRequestWizard({ mode }: Props) {
   const cust = useCurrentCustomer();
   const pets = usePortalPets(cust.data?.id);
   const packages = useGroomingPackages(cust.data?.tenant_id);
-  const submit = useRequestSubmit();
+  const submit = useCreatePortalBooking();
 
   const [petId, setPetId] = useState("");
   const [slotStart, setSlotStart] = useState<string | null>(null);
@@ -79,20 +79,25 @@ export default function GroomingRequestWizard({ mode }: Props) {
     return { base, extras, total: base + extrasTotal, hasPackage: Boolean(pkg) };
   }, [filteredPackages, packageId, addonsQ.data, catalogQ.data, instructions.selections]);
 
-  const canSubmit = Boolean(cust.data && petId && slotStart && (mode === "inhouse" || (addressLine && suburb))) && !submit.isPending;
+  const packageRequired = filteredPackages.length > 0;
+  const canSubmit =
+    Boolean(
+      cust.data && petId && slotStart &&
+      (!packageRequired || packageId) &&
+      (mode === "inhouse" || (addressLine && suburb)),
+    ) && !submit.isPending;
 
   function onSubmit() {
     if (!cust.data || !slotStart) return;
     submit.mutate({
-      tenantId: cust.data.tenant_id,
-      customerId: cust.data.id,
       serviceType: mode === "inhouse" ? "grooming_inhouse" : "grooming_mobile",
-      petId,
-      preferredStartAt: new Date(slotStart).toISOString(),
-      preferredEndAt: slotEnd ? new Date(slotEnd).toISOString() : null,
-      customerNotes: notes,
-      requestPayload: {
+      petIds: [petId],
+      startAt: new Date(slotStart).toISOString(),
+      endAt: slotEnd ? new Date(slotEnd).toISOString() : null,
+      notes,
+      grooming: {
         package_id: packageId || null,
+        duration_minutes: 60,
         instructions: {
           selections: instructions.selections,
           medical_flags: instructions.medical_flags,
@@ -113,11 +118,11 @@ export default function GroomingRequestWizard({ mode }: Props) {
 
   return (
     <WizardShell
-      title={mode === "inhouse" ? "In-house grooming request" : "Mobile grooming request"}
+      title={mode === "inhouse" ? "Book in-house grooming" : "Book mobile grooming"}
       subtitle={mode === "inhouse" ? "Spa day at the salon." : "We bring the van to your door."}
       footer={
         <button onClick={onSubmit} disabled={!canSubmit} className="rounded-lg bg-sk-coral px-5 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
-          {submit.isPending ? "Sending…" : "Send request"}
+          {submit.isPending ? "Booking…" : "Confirm booking"}
         </button>
       }
     >
@@ -140,9 +145,9 @@ export default function GroomingRequestWizard({ mode }: Props) {
         />
       </Field>
 
-      <Field label={petBand ? `Package for ${selectedPet?.name ?? "your pet"} (${petBand.toUpperCase()})` : "Package (optional)"}>
+      <Field label={petBand ? `Package for ${selectedPet?.name ?? "your pet"} (${petBand.toUpperCase()})` : "Package"}>
         <select value={packageId} onChange={(e) => setPackageId(e.target.value)} className={selectCls}>
-          <option value="">Let staff recommend</option>
+          <option value="">Select a package…</option>
           {filteredPackages.map((p: any) => (
             <option key={p.id} value={p.id}>{p.name} — R{Number(p.price_zar ?? 0).toFixed(2)}</option>
           ))}
@@ -195,7 +200,8 @@ export default function GroomingRequestWizard({ mode }: Props) {
             </div>
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Estimate only — final pricing is confirmed by our team (coat condition, size overrides and travel may apply).
+            Your invoice is issued as soon as the booking is confirmed. Extras such as matting or
+            sedation are added by our team on the day if needed.
           </p>
         </div>
       )}
