@@ -159,7 +159,14 @@ Deno.serve(async (req) => {
           await logEmail(sb, ev.tenant_id, recipient, subject ?? "(no subject)", "failed", errMsg, `notify.${ev.event_type}`);
           continue;
         }
-        const result = await sendMail(transport, recipient, subject, body, html);
+        const result = await sendMail(transport, recipient, subject, body, html, {
+          admin: sb,
+          tenantId: ev.tenant_id,
+          templateCode: `notify.${ev.event_type}`,
+          customerId: ev.customer_id ?? null,
+          bookingId: ev.booking_id ?? null,
+          invoiceId: ev.invoice_id ?? null,
+        });
         if (result.ok) {
           sent++;
           await sb.from("notification_events").update({
@@ -168,6 +175,14 @@ Deno.serve(async (req) => {
             provider_message_id: null, attempts: (ev.attempts ?? 0) + 1,
           }).eq("id", ev.id);
           await logEmail(sb, ev.tenant_id, recipient, subject, "sent", null, `notify.${ev.event_type}`);
+        } else if ((result as { blocked?: boolean }).blocked) {
+          // Global send lock is on and this recipient is not allowlisted.
+          // Record it as blocked (not failed) so it is never silently retried.
+          skipped++;
+          await sb.from("notification_events").update({
+            status: "blocked", error: result.error, subject, body_rendered: body,
+            recipient_email: recipient, attempts: (ev.attempts ?? 0) + 1,
+          }).eq("id", ev.id);
         } else {
           failed++;
           await sb.from("notification_events").update({
