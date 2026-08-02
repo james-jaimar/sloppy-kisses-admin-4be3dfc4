@@ -6113,6 +6113,14 @@ export type Database = {
         }
         Returns: string
       }
+      portal_cancel_booking: {
+        Args: { p_booking_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      portal_reschedule_booking: {
+        Args: { p_booking_id: string; p_end_at?: string; p_start_at: string }
+        Returns: undefined
+      }
       record_manual_refund: {
         Args: {
           p_amount: number

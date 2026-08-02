@@ -71,7 +71,6 @@ export function useCreateRecurringBooking(tenantId: string) {
         resource_id: input.resource_id ?? null,
         notes_internal: input.notes_internal ?? null,
         notes_customer: input.notes_customer ?? null,
-        booking_request_id: input.booking_request_id ?? null,
         requires_transport: input.requires_transport ?? false,
         requires_grooming: input.requires_grooming ?? false,
         recurring_rule_id: rule_id,

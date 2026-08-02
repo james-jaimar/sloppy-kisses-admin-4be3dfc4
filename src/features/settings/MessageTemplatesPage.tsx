@@ -10,7 +10,6 @@ import { buildSampleContext, getVariablesFor, renderTemplate } from "@/features/
 
 const EVENT_CODES = [
   "booking_created","booking_reminder_24h","booking_rescheduled","booking_cancelled","booking_status_changed",
-  "booking_request_created","booking_request_status_changed",
   "invoice_issued","invoice_reminder","invoice_paid",
   "vax_expiring_30d","vax_expiring_7d","vax_expired","manual_message",
 ];

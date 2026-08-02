@@ -229,7 +229,6 @@ export interface CreateBookingInput {
   notes_internal?: string | null;
   notes_customer?: string | null;
   source?: "website_form" | "customer_portal" | "staff_capture" | "email" | "phone" | "whatsapp" | null;
-  booking_request_id?: string | null;
   requires_transport?: boolean;
   requires_grooming?: boolean;
 }
@@ -264,7 +263,6 @@ export function useCreateBooking(tenantId: string) {
           resource_id: input.resource_id ?? null,
           notes_internal: input.notes_internal ?? null,
           notes_customer: input.notes_customer ?? null,
-          booking_request_id: input.booking_request_id ?? null,
           requires_transport: input.requires_transport ?? false,
           requires_grooming: input.requires_grooming ?? false,
         })

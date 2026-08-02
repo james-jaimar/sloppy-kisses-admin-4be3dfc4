@@ -9,7 +9,9 @@ export type PortalService =
   | "grooming_mobile"
   | "hotel_dog"
   | "hotel_cat"
-  | "pickup_dropoff";
+  | "pickup_dropoff"
+  | "daycare"
+  | "daycare_assessment";
 
 export interface CreateBookingArgs {
   serviceType: PortalService;
@@ -20,11 +22,13 @@ export interface CreateBookingArgs {
   grooming?: Record<string, unknown>;
   hotel?: Record<string, unknown>;
   transport?: Record<string, unknown>;
+  daycare?: Record<string, unknown>;
 }
 
 export interface CreateBookingResult {
-  booking_id: string;
-  booking_number: string;
+  booking_id?: string;
+  booking_number?: string;
+  enrolment_ids?: string[];
   invoice_id: string | null;
   balance_due: number;
   short_notice: boolean;
@@ -55,6 +59,7 @@ export function useCreatePortalBooking() {
           grooming: args.grooming,
           hotel: args.hotel,
           transport: args.transport,
+          daycare: args.daycare,
         },
       });
       const payload: any = data ?? {};
@@ -69,11 +74,17 @@ export function useCreatePortalBooking() {
       return payload as CreateBookingResult;
     },
     onSuccess: (res) => {
-      toast.success(`Booking ${res.booking_number} confirmed`);
       qc.invalidateQueries({ queryKey: ["portal_bookings"] });
       qc.invalidateQueries({ queryKey: ["portal_dash_upcoming"] });
       qc.invalidateQueries({ queryKey: ["portal_invoices"] });
-      navigate(`/customer/bookings/${res.booking_id}?created=1`);
+      qc.invalidateQueries({ queryKey: ["portal_enrolments"] });
+      if (res.booking_id) {
+        toast.success(`Booking ${res.booking_number} confirmed`);
+        navigate(`/customer/bookings/${res.booking_id}?created=1`);
+      } else {
+        toast.success("Daycare enrolment confirmed");
+        navigate("/customer/bookings");
+      }
     },
     onError: (e: any) => toast.error(e?.message ?? "Failed to create booking"),
   });

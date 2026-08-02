@@ -97,7 +97,6 @@ import FeatureFlagsPage from "@/features/platform/FeatureFlagsPage";
 import AuditViewerPage from "@/features/platform/AuditViewerPage";
 import ActivityPage from "@/features/platform/ActivityPage";
 import SystemPage from "@/features/platform/SystemPage";
-import BookingRequestQueue from "@/features/bookingRequests/BookingRequestQueue";
 import CustomerDashboard from "@/features/customerPortal/CustomerDashboard";
 import MyPetsPage from "@/features/customerPortal/pets/MyPetsPage";
 import MyPetDetailPage from "@/features/customerPortal/pets/MyPetDetailPage";
@@ -113,7 +112,6 @@ import HotelRequestWizard from "@/features/customerPortal/bookings/new/HotelRequ
 import DaycareRequestWizard from "@/features/customerPortal/bookings/new/DaycareRequestWizard";
 import GroomingRequestWizard from "@/features/customerPortal/bookings/new/GroomingRequestWizard";
 import TransportRequestWizard from "@/features/customerPortal/bookings/new/TransportRequestWizard";
-import MyRequestsPage from "@/features/customerPortal/requests/MyRequestsPage";
 import MyMessagesPage from "@/features/customerPortal/messages/MyMessagesPage";
 import RegistrationPage from "@/features/customerPortal/registration/RegistrationPage";
 import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
@@ -157,7 +155,6 @@ const App = () => (
                 <Route path="/admin/customers/:id/statement" element={<CustomerStatementPage />} />
                 <Route path="/admin/pets" element={<PetsPage />} />
                 <Route path="/admin/pets/:id" element={<PetDetailPage />} />
-                <Route path="/admin/booking-requests" element={<BookingRequestQueue />} />
                 <Route path="/admin/bookings" element={<BookingsPage />} />
                 <Route path="/admin/bookings/:id" element={<BookingDetailPage />} />
                 <Route path="/admin/daycare" element={<DaycareBoardPage />} />
@@ -251,7 +248,6 @@ const App = () => (
                 <Route path="/customer/bookings/new/grooming-mobile" element={<GroomingRequestWizard mode="mobile" />} />
                 <Route path="/customer/bookings/new/transport" element={<TransportRequestWizard />} />
                 <Route path="/customer/bookings/:id" element={<MyBookingDetailPage />} />
-                <Route path="/customer/requests" element={<MyRequestsPage />} />
                 <Route path="/customer/documents" element={<MyDocumentsPage />} />
                 <Route path="/customer/invoices" element={<MyInvoicesPage />} />
                 <Route path="/customer/invoices/:id" element={<MyInvoiceDetailPage />} />

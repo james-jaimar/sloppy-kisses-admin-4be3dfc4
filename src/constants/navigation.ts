@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Calendar, Users, PawPrint, Inbox, CalendarCheck, Dog, Hotel,
+  LayoutDashboard, Calendar, Users, PawPrint, CalendarCheck, Dog, Hotel,
   Scissors, Truck, ArrowLeftRight, ReceiptText, ShoppingBag, BarChart3, Settings,
   FileText, CreditCard, User, MessageSquare, Building2, ShieldCheck, Flag,
   History, Activity, Database, FileMinus,
@@ -10,7 +10,6 @@ export const adminNav = [
   { to: "/admin/calendar", label: "Calendar", icon: Calendar, code: "calendar.view" },
   { to: "/admin/customers", label: "Customers", icon: Users, code: "customers.view" },
   { to: "/admin/pets", label: "Pets", icon: PawPrint, code: "pets.view" },
-  { to: "/admin/booking-requests", label: "Booking Requests", icon: Inbox, code: "booking_requests.view" },
   { to: "/admin/bookings", label: "Bookings", icon: CalendarCheck, code: "bookings.view" },
   { to: "/admin/daycare", label: "Daycare", icon: Dog, code: "daycare.view" },
   { to: "/admin/hotel-cattery", label: "Hotel & Cattery", icon: Hotel, code: "hotel.view" },
@@ -30,7 +29,6 @@ export const customerNav = [
   { to: "/customer/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/customer/pets", label: "My Pets", icon: PawPrint },
   { to: "/customer/bookings", label: "Bookings", icon: CalendarCheck },
-  { to: "/customer/requests", label: "Requests", icon: Inbox },
   { to: "/customer/documents", label: "Documents", icon: FileText },
   { to: "/customer/invoices", label: "Invoices", icon: ReceiptText },
   { to: "/customer/payments", label: "Payments", icon: CreditCard },
