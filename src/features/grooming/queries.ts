@@ -39,7 +39,8 @@ export interface GroomingBoardCard {
   } | null;
 }
 
-const GROOMING_SERVICE_TYPES: ServiceType[] = ["grooming_inhouse", "grooming_mobile"];
+// The grooming board is in-house salon only. Mobile van grooms live on the Mobile Vans board.
+const GROOMING_SERVICE_TYPES: ServiceType[] = ["grooming_inhouse"];
 
 /**
  * All grooming bookings that intersect the given day.
