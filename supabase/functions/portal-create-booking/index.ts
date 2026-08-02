@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
   // --- Pets must belong to this customer --------------------------------
   const { data: pets } = await admin
     .from("pets")
-    .select("id, name, species")
+    .select("id, name, species, vax_waived_until")
     .eq("customer_id", customer.id)
     .in("id", body.pet_ids);
   if (!pets || pets.length !== body.pet_ids.length) return json({ error: "invalid_pets" }, 403);
@@ -214,6 +214,9 @@ Deno.serve(async (req) => {
         .in("pet_id", body.pet_ids);
       const missing: string[] = [];
       for (const p of pets) {
+        // Admin waiver: pet passes the gate while the waiver covers the booking date.
+        const waivedUntil = (p as any).vax_waived_until as string | null;
+        if (waivedUntil && new Date(waivedUntil + "T23:59:59Z").getTime() >= start.getTime()) continue;
         for (const r of rules) {
           if (r.species !== "any" && r.species !== (p as any).species) continue;
           const rec = (vax ?? []).find(

@@ -6,6 +6,7 @@ const STATUS_LABEL: Record<string, string> = {
   no_expiry: "No expiry recorded",
   expired: "Expired",
   unverified: "Unverified",
+  waived: "Waived",
   ok: "OK",
 };
 
@@ -17,15 +18,23 @@ export function GroomingVaxGatePanel({ tenantId, bookingId }: { tenantId: string
   if (mode === "off") return null;
   if (gateQ.isLoading) return null;
   const rows = gateQ.data ?? [];
-  const issues = rows.filter((r) => r.status !== "ok");
+  const waived = rows.filter((r) => r.status === "waived");
+  const issues = rows.filter((r) => r.status !== "ok" && r.status !== "waived");
 
   if (issues.length === 0) {
+    const waivedUntil = waived.map((r) => r.expiry_date).filter(Boolean).sort()[0] ?? null;
     return (
       <div className="sk-card flex items-start gap-3 border-sk-green/40 bg-sk-green-soft/40 p-4 text-sm">
         <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-sk-green" />
         <div>
-          <div className="font-semibold text-sk-green">Vaccinations OK</div>
-          <div className="text-xs text-muted-foreground">All required vaccinations are on file and valid.</div>
+          <div className="font-semibold text-sk-green">
+            {waived.length ? "Vaccinations OK (waiver in place)" : "Vaccinations OK"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {waived.length
+              ? `An admin waiver covers ${[...new Set(waived.map((r) => r.pet_name))].join(", ")}${waivedUntil ? ` until ${waivedUntil}` : ""}.`
+              : "All required vaccinations are on file and valid."}
+          </div>
         </div>
       </div>
     );

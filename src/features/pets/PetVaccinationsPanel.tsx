@@ -8,6 +8,7 @@ import { useVaccineTypes, type VaccineType } from "./vaccineTypeQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { supabase } from "@/lib/supabase/client";
 import { uploadDocumentToS3, getDocumentDownloadUrl } from "@/features/documents/uploadDocument";
+import { VaxWaiverBanner } from "./VaxWaiverBanner";
 
 interface Props {
   tenantId: string;
@@ -142,6 +143,8 @@ export function PetVaccinationsPanel({ tenantId, petId, species = null, canManag
           </button>
         )}
       </div>
+
+      <VaxWaiverBanner petId={petId} canManage={canManage && uploadedVia === "admin"} />
 
       {isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
       {!isLoading && !rows.length && <div className="text-sm text-muted-foreground">No vaccine types configured yet.</div>}

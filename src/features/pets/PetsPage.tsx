@@ -18,6 +18,7 @@ export default function PetsPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [waivedOnly, setWaivedOnly] = useState(false);
   const [sortColumn, setSortColumn] = useState<SortCol>("name");
   const [sortAscending, setSortAscending] = useState(true);
   const handleSort = (col: SortCol) => {
@@ -41,6 +42,7 @@ export default function PetsPage() {
     search,
     page,
     pageSize: PAGE_SIZE,
+    waivedOnly,
     // owner name lives on the joined customers table — sort client-side
     sortColumn: sortColumn === "owner" ? "name" : sortColumn,
     sortAscending: sortColumn === "owner" ? true : sortAscending,
@@ -75,6 +77,17 @@ export default function PetsPage() {
             />
           </div>
           <div className="text-xs text-muted-foreground tabular-nums">
+            <button
+              onClick={() => { setWaivedOnly((v) => !v); setPage(0); }}
+              className={
+                "mr-3 rounded-lg border px-3 py-1.5 text-xs font-medium " +
+                (waivedOnly
+                  ? "border-sk-orange bg-sk-orange-soft text-sk-orange"
+                  : "border-border bg-white hover:bg-muted")
+              }
+            >
+              Vax waived
+            </button>
             {isLoading ? "Loading…" : `${total.toLocaleString()} pets`}
             {isFetching && !isLoading ? " · refreshing…" : ""}
           </div>
@@ -112,7 +125,14 @@ export default function PetsPage() {
                     >
                       <td className="px-5 py-3">
                         <div className="font-medium">{p.name}</div>
-                        <div className="text-xs text-muted-foreground">{p.pet_number ?? "—"}</div>
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          {p.pet_number ?? "—"}
+                          {p.vax_waived_until && p.vax_waived_until >= new Date().toISOString().slice(0, 10) && (
+                            <span className="rounded-full bg-sk-orange-soft px-2 py-0.5 text-[10px] font-semibold uppercase text-sk-orange">
+                              Vax waived
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-5 py-3">
                         {p.breed ?? <span className="text-muted-foreground">—</span>}
