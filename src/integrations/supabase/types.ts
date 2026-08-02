@@ -140,6 +140,69 @@ export type Database = {
           },
         ]
       }
+      billing_runs: {
+        Row: {
+          created_at: string
+          id: string
+          invoices_created: number
+          invoices_updated: number
+          issued_count: number
+          notes: string | null
+          period_end: string
+          period_start: string
+          run_by: string | null
+          service: string
+          tenant_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invoices_created?: number
+          invoices_updated?: number
+          issued_count?: number
+          notes?: string | null
+          period_end: string
+          period_start: string
+          run_by?: string | null
+          service?: string
+          tenant_id: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invoices_created?: number
+          invoices_updated?: number
+          issued_count?: number
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          run_by?: string | null
+          service?: string
+          tenant_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_runs_run_by_fkey"
+            columns: ["run_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_pets: {
         Row: {
           booking_id: string
@@ -2781,11 +2844,13 @@ export type Database = {
           default_mobile_travel_fee_zar: number
           id: string
           matted_rate_per_15min_zar: number
+          min_lead_hours: number
           overtime_threshold_minutes: number
           pensioner_discount_days: number[]
           pensioner_discount_pct: number
           pickup_dropoff_fee_zar: number
           puppy_half_price_max_months: number
+          require_prepayment_short_notice: boolean
           sedation_default_fee_zar: number
           sedation_enabled: boolean
           tenant_id: string
@@ -2800,11 +2865,13 @@ export type Database = {
           default_mobile_travel_fee_zar?: number
           id?: string
           matted_rate_per_15min_zar?: number
+          min_lead_hours?: number
           overtime_threshold_minutes?: number
           pensioner_discount_days?: number[]
           pensioner_discount_pct?: number
           pickup_dropoff_fee_zar?: number
           puppy_half_price_max_months?: number
+          require_prepayment_short_notice?: boolean
           sedation_default_fee_zar?: number
           sedation_enabled?: boolean
           tenant_id: string
@@ -2819,11 +2886,13 @@ export type Database = {
           default_mobile_travel_fee_zar?: number
           id?: string
           matted_rate_per_15min_zar?: number
+          min_lead_hours?: number
           overtime_threshold_minutes?: number
           pensioner_discount_days?: number[]
           pensioner_discount_pct?: number
           pickup_dropoff_fee_zar?: number
           puppy_half_price_max_months?: number
+          require_prepayment_short_notice?: boolean
           sedation_default_fee_zar?: number
           sedation_enabled?: boolean
           tenant_id?: string
@@ -3081,8 +3150,10 @@ export type Database = {
           created_at: string
           id: string
           late_checkout_fee_zar: number
+          min_lead_hours: number
           peak_end_month_day: string | null
           peak_start_month_day: string | null
+          require_prepayment_short_notice: boolean
           tenant_id: string
           updated_at: string
           vax_gate_mode: string
@@ -3094,8 +3165,10 @@ export type Database = {
           created_at?: string
           id?: string
           late_checkout_fee_zar?: number
+          min_lead_hours?: number
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
+          require_prepayment_short_notice?: boolean
           tenant_id: string
           updated_at?: string
           vax_gate_mode?: string
@@ -3107,8 +3180,10 @@ export type Database = {
           created_at?: string
           id?: string
           late_checkout_fee_zar?: number
+          min_lead_hours?: number
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
+          require_prepayment_short_notice?: boolean
           tenant_id?: string
           updated_at?: string
           vax_gate_mode?: string
@@ -5347,7 +5422,9 @@ export type Database = {
           default_pickup_lead_minutes: number
           id: string
           max_leg_gap_minutes: number
+          min_lead_hours: number
           min_leg_gap_minutes: number
+          require_prepayment_short_notice: boolean
           round_trip_multiplier: number
           suburb_fees: Json
           tenant_id: string
@@ -5362,7 +5439,9 @@ export type Database = {
           default_pickup_lead_minutes?: number
           id?: string
           max_leg_gap_minutes?: number
+          min_lead_hours?: number
           min_leg_gap_minutes?: number
+          require_prepayment_short_notice?: boolean
           round_trip_multiplier?: number
           suburb_fees?: Json
           tenant_id: string
@@ -5377,7 +5456,9 @@ export type Database = {
           default_pickup_lead_minutes?: number
           id?: string
           max_leg_gap_minutes?: number
+          min_lead_hours?: number
           min_leg_gap_minutes?: number
+          require_prepayment_short_notice?: boolean
           round_trip_multiplier?: number
           suburb_fees?: Json
           tenant_id?: string
