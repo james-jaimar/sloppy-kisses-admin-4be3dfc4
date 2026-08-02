@@ -1,75 +1,45 @@
+## Goal
 
-# Instant bookings, immediate invoicing, and the monthly daycare run
+Delete the "booking request" intermediate step from the whole product. Admins and customers create real bookings directly. Customers can cancel or move their own bookings from the portal, with a warning (not a block) when they are inside the notice window.
 
-Goal: customers book directly (no "request" middle step), the booking is confirmed on the spot, an invoice is issued immediately, and they either pay online via PayFast or by EFT with a proof-of-payment upload. Daycare stays on the monthly prepaid cycle with an admin-run billing batch.
+## 1. Remove Booking Requests from the admin
 
-## What's already there (verified)
+- Drop the **Booking Requests** item from the admin sidebar (`src/constants/navigation.ts`) and the `/admin/booking-requests` route in `src/App.tsx`.
+- Delete `src/features/bookingRequests/` (queue page, form modal, convert helper, queries).
+- Remove the requests badge from `src/components/layout/useNavBadges.ts`.
+- Remove the "View booking requests" button and the `?request=` deep-link handling from the calendar empty state (`src/features/calendar/CalendarWeekView.tsx`).
+- Strip the now-dead `booking_request_id` plumbing from `src/features/bookings/BookingFormModal.tsx`, `bookings/queries.ts`, `bookings/recurringQueries.ts`, and the demo fixture in `src/constants/demoData.ts`.
 
-- `booking_requests` table + portal wizards (hotel, daycare, grooming in-house/mobile, transport) that all write a `pending_review` request, plus the admin queue and `convert.ts` mapper.
-- Auto-invoice triggers per service (`grooming_details_auto_invoice`, `hotel_details_auto_invoice`, `transport_details_auto_invoice`, `daycare_enrolments_auto_invoice`) writing into an open **draft** invoice via `ensure_draft_invoice`.
-- `generate_monthly_daycare_invoices(tenant_id, period_start)` RPC, currently triggered from a button on the Invoicing settings page.
-- PayFast checkout (`portal-invoice-checkout`) + webhook, and per-tenant credentials in `payment_providers`.
-- `documents` already has `booking_id`, so proof of payment can attach to a booking.
-- `GroomingSlotPicker` + `grooming_day_availability` RPC for real availability.
+Admins already create bookings through the calendar "New booking" flow and Quick Add, so nothing replaces the queue.
 
-## 1. Booking flow: request → real booking
+## 2. Remove Requests from the customer portal
 
-Portal wizards stop writing `booking_requests`. Each wizard calls a new `portal-create-booking` edge function that, in one transaction:
+- Drop the **Requests** sidebar item and the `/customer/requests` route.
+- Delete `MyRequestsPage.tsx`, `NewBookingRequestModal.tsx` and `bookings/new/useRequestSubmit.ts`.
+- Remove the "Pending requests" tile from the portal dashboard and replace it with an "Unpaid invoices" tile (balance owing + link to invoices), which is what actually needs the customer's attention now.
+- `DaycareRequestWizard` is the last screen still writing a request. It will submit through the same edge function as the other services, creating the daycare **enrolment** for the next billing month directly (the existing enrolment trigger raises the invoice). Wording changes from "Send request" to "Confirm enrolment".
 
-1. Re-validates lead time, pet ownership, vaccination gate and (grooming) slot availability server-side.
-2. Creates the `bookings` row with `status = 'confirmed'` and `source = 'customer_portal'`, plus the typed `*_booking_details` row.
-3. Prices it from the existing rate cards / packages / add-ons and issues an invoice (status `issued`, not draft) for that booking.
-4. Returns `{ booking_id, invoice_id }` so the portal lands the customer straight on a "Booking confirmed — pay now" screen.
+## 3. Customer cancel and reschedule (direct, no approval step)
 
-Per service:
+Two new security-definer database functions, both restricted to the signed-in customer who owns the booking:
 
-- **Grooming (in-house + mobile)** — slot picker, package, instructions, add-ons; priced exactly as the admin modal does today. Mobile adds the suburb travel fee.
-- **Hotel / cattery** — dates, pets, accommodation type; priced from `hotel_rate_cards` with multi-pet and size gating; surcharges (e.g. late checkout) added as selected.
-- **Pickup / drop-off** — priced from transport workflow settings, one-way vs round trip.
-- **Daycare** — a portal submission creates the **enrolment** (not a per-day booking), start date defaulted to the 1st of the next billing month. It is **not** invoiced immediately; it flows into the monthly run below. This is the one service where "book now, pay now" doesn't apply because it's a recurring monthly product.
+- `portal_cancel_booking(booking_id, reason)` — refuses if already cancelled/completed/checked-out, otherwise sets the booking to cancelled and appends an internal note recording that the customer cancelled and why.
+- `portal_reschedule_booking(booking_id, new_start, new_end)` — refuses past dates and closed bookings, otherwise moves the booking in place, keeping the same booking number and invoice, and logging the old times in the internal notes.
 
-`booking_requests` is retired: the sidebar entry, badge, admin queue, portal "Requests" page and `convert.ts` are removed; the table stays in the database (read-only history) so existing rows aren't lost. Cancellation/change requests move to a simple "Request a change" action on the booking that raises a comms message to staff instead of a queue item.
+The existing `bookings_notify_changes` trigger already queues `booking_cancelled` and `booking_rescheduled` notifications, so staff and customer comms fire automatically.
 
-## 2. Payment state on a booking
+### Portal UI (`MyBookingDetailPage`)
 
-Booking is confirmed straight away; payment is tracked separately and shown clearly.
+- **Cancel booking** opens a confirm dialog. If the booking starts inside the notice window (grooming hours / hotel days from Policy settings), the dialog shows an amber warning: "This is inside our X notice period — a cancellation fee may apply and our team will be in touch." It still lets them proceed.
+- **Move booking** opens a reschedule dialog. Grooming uses the existing availability slot picker; hotel and transport use date/time fields. The same late-change warning appears when applicable.
+- Both actions are hidden once a booking is cancelled, completed or checked out.
 
-- Add a derived **payment badge** on every booking (admin + portal) driven by the linked invoice: `Unpaid` / `Proof uploaded` / `Part paid` / `Paid`. Unpaid bookings past their start date show an amber warning on the board.
-- Portal booking detail gets a **Pay now** button (PayFast, reusing `portal-invoice-checkout`) and, alongside it, EFT banking details from `payment_methods`.
-- **Proof of payment upload** — new document type `proof_of_payment`, uploaded from the portal booking/invoice page, attached to both `booking_id` and `invoice_id`. Uploading sets the booking's payment badge to "Proof uploaded" and raises a notification event for the accounts inbox. Admin reviews it on the invoice page and either records the payment (existing Record payment dialog) or rejects it with a reason.
-- PayFast success continues to write the payment through the webhook, which flips the badge to Paid automatically.
+## 4. Comms templates
 
-## 3. Settings-driven lead time
-
-New per-service workflow setting **Minimum booking lead time (hours)**, default 24, editable on each existing workflow settings page (Grooming, Hotel, Transport). Effects:
-
-- The portal slot picker / date picker refuses anything inside the window.
-- The edge function re-checks it (client can't bypass).
-- Admin booking modal is exempt but shows a "short notice" hint.
-- Second setting per service: **Require payment or proof of payment for bookings inside the lead window** (default on). When on, a short-notice portal booking must complete PayFast or upload proof before submit; otherwise it can't be created.
-
-## 4. Daycare monthly billing run
-
-New admin screen **Invoices → Billing run** (permission-gated), replacing the bare button on the Invoicing settings page:
-
-1. Pick the billing period (defaults to next month, following `billing_run_day` = 22 and `billing_due_day` = 1).
-2. **Preview** — table of every active enrolment: customer, pets, plan, days/week, computed amount, and whether an open draft already exists for that period. Totals at the top. Rows can be excluded from this run.
-3. **Generate** — runs `generate_monthly_daycare_invoices` for the selected rows, then shows the created/updated invoices.
-4. **Issue & send** — bulk-issue the batch (status `issued`, due date = the 1st) and email them with the pay link, reusing the existing invoice email + reminder pipeline.
-5. Run history so it's obvious the 22nd was done.
+Keep the historic `booking_request_created` / `booking_request_status_changed` template codes out of the pickers in Message templates and the variable catalog, and add `booking_rescheduled` where it is missing.
 
 ## Technical notes
 
-- Database: add `min_lead_hours` + `require_prepayment_short_notice` to `grooming_workflow_settings`, `hotel_workflow_settings`, `transport_workflow_settings`; add `proof_of_payment` to the document type list; add a `payment_status` view/helper joining bookings to their invoice; add a `billing_runs` table for run history. Auto-invoice trigger functions get a flag so portal-created bookings issue their invoice instead of appending to a draft.
-- New edge function `portal-create-booking` (JWT-validated, Zod-validated body, service-role writes) holds all pricing/validation so the portal can't set its own price.
-- Existing draft-invoice behaviour for **admin-created** bookings is unchanged — only portal bookings issue immediately.
-- Every new setting ships with its Settings CRUD screen, per the settings-first rule.
-
-## Suggested build order
-
-1. Settings + schema (lead time, prepayment flag, proof-of-payment type, billing_runs).
-2. `portal-create-booking` with grooming first, portal grooming wizard switched over end to end (book → invoice → PayFast → confirmed).
-3. Hotel and transport wizards onto the same function; daycare wizard → enrolment.
-4. Proof-of-payment upload + admin review; payment badges on boards.
-5. Billing run screen.
-6. Retire the booking-request UI once nothing writes to it.
+- The `booking_requests` table and its existing rows are left in place — nothing in the app reads or writes it after this change, so no data is destroyed and the audit trail survives.
+- Cancellation fees are **not** auto-charged; staff apply them from the invoice as they do today.
+- The cancel/reschedule functions are granted to `authenticated` only, and ownership is checked with `current_customer_id(tenant_id)` so one customer can never touch another's booking.
