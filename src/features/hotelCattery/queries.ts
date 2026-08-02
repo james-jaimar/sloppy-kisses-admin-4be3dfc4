@@ -124,25 +124,27 @@ export interface VaxCheck { ok: boolean; missing: string[]; expired: string[]; }
 export async function checkVaccinations(petIds: string[]): Promise<VaxCheck> {
   if (!petIds.length) return { ok: true, missing: [], expired: [] };
   const [{ data: pets, error: pErr }, { data: vaxx, error: vErr }] = await Promise.all([
-    supabase.from("pets").select("id, name").in("id", petIds),
-    supabase.from("vaccinations").select("pet_id, expires_on").in("pet_id", petIds),
+    supabase.from("pets").select("id, name, vax_waived_until").in("id", petIds),
+    supabase.from("vaccinations").select("pet_id, expiry_date").in("pet_id", petIds),
   ]);
   if (pErr) throw pErr;
   if (vErr) throw vErr;
   const now = new Date();
   const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  const byPet = new Map<string, { expires_on: string | null }[]>();
+  const byPet = new Map<string, (string | null)[]>();
   for (const v of vaxx ?? []) {
     const arr = byPet.get((v as any).pet_id) ?? [];
-    arr.push({ expires_on: (v as any).expires_on });
+    arr.push((v as any).expiry_date);
     byPet.set((v as any).pet_id, arr);
   }
   const missing: string[] = [];
   const expired: string[] = [];
   for (const p of pets ?? []) {
+    const waived = (p as any).vax_waived_until && (p as any).vax_waived_until >= today;
+    if (waived) continue;
     const list = byPet.get((p as any).id) ?? [];
     if (!list.length) { missing.push((p as any).name ?? "Unnamed pet"); continue; }
-    const hasValid = list.some((v) => !v.expires_on || v.expires_on >= today);
+    const hasValid = list.some((d) => !d || d >= today);
     if (!hasValid) expired.push((p as any).name ?? "Unnamed pet");
   }
   return { ok: !missing.length && !expired.length, missing, expired };
