@@ -203,6 +203,80 @@ export type Database = {
           },
         ]
       }
+      booking_checklist_items: {
+        Row: {
+          booking_id: string
+          created_at: string
+          done: boolean
+          done_at: string | null
+          done_by: string | null
+          id: string
+          label: string
+          note: string | null
+          sort_order: number
+          template_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          done_by?: string | null
+          id?: string
+          label: string
+          note?: string | null
+          sort_order?: number
+          template_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          done_by?: string | null
+          id?: string
+          label?: string
+          note?: string | null
+          sort_order?: number
+          template_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_checklist_items_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_checklist_items_done_by_fkey"
+            columns: ["done_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_checklist_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "job_checklist_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_checklist_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_pets: {
         Row: {
           booking_id: string
@@ -245,6 +319,81 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_photos: {
+        Row: {
+          booking_id: string
+          caption: string | null
+          created_at: string
+          document_id: string | null
+          id: string
+          kind: Database["public"]["Enums"]["booking_photo_kind"]
+          pet_id: string | null
+          tenant_id: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          booking_id: string
+          caption?: string | null
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["booking_photo_kind"]
+          pet_id?: string | null
+          tenant_id: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          booking_id?: string
+          caption?: string | null
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["booking_photo_kind"]
+          pet_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_photos_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_photos_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_photos_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_photos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_photos_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -380,6 +529,64 @@ export type Database = {
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_signoffs: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          profile_id: string | null
+          signed_at: string
+          signed_name: string
+          summary_note: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          profile_id?: string | null
+          signed_at?: string
+          signed_name: string
+          summary_note?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          profile_id?: string | null
+          signed_at?: string
+          signed_name?: string
+          summary_note?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_signoffs_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_signoffs_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_signoffs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -605,6 +812,77 @@ export type Database = {
             columns: ["vax_override_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      care_rounds: {
+        Row: {
+          booking_id: string
+          created_at: string
+          done_at: string
+          done_by: string | null
+          id: string
+          note: string | null
+          pet_id: string | null
+          round_date: string
+          round_kind: Database["public"]["Enums"]["care_round_kind"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          done_at?: string
+          done_by?: string | null
+          id?: string
+          note?: string | null
+          pet_id?: string | null
+          round_date?: string
+          round_kind: Database["public"]["Enums"]["care_round_kind"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          done_at?: string
+          done_by?: string | null
+          id?: string
+          note?: string | null
+          pet_id?: string | null
+          round_date?: string
+          round_kind?: Database["public"]["Enums"]["care_round_kind"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "care_rounds_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_rounds_done_by_fkey"
+            columns: ["done_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_rounds_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "care_rounds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -3331,6 +3609,152 @@ export type Database = {
         }
         Relationships: []
       }
+      incident_photos: {
+        Row: {
+          created_at: string
+          document_id: string | null
+          id: string
+          incident_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          incident_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          incident_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_photos_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_photos_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_photos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          booking_id: string | null
+          category: Database["public"]["Enums"]["incident_category"]
+          created_at: string
+          customer_id: string | null
+          description: string
+          id: string
+          pet_id: string | null
+          raised_by: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          severity: Database["public"]["Enums"]["incident_severity"]
+          state: Database["public"]["Enums"]["incident_state"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          booking_id?: string | null
+          category?: Database["public"]["Enums"]["incident_category"]
+          created_at?: string
+          customer_id?: string | null
+          description: string
+          id?: string
+          pet_id?: string | null
+          raised_by?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["incident_severity"]
+          state?: Database["public"]["Enums"]["incident_state"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          booking_id?: string | null
+          category?: Database["public"]["Enums"]["incident_category"]
+          created_at?: string
+          customer_id?: string | null
+          description?: string
+          id?: string
+          pet_id?: string | null
+          raised_by?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["incident_severity"]
+          state?: Database["public"]["Enums"]["incident_state"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_raised_by_fkey"
+            columns: ["raised_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_events: {
         Row: {
           actor_label: string | null
@@ -3712,6 +4136,53 @@ export type Database = {
             foreignKeyName: "invoicing_settings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_checklist_templates: {
+        Row: {
+          created_at: string
+          icon_key: string | null
+          id: string
+          is_active: boolean
+          label: string
+          requires_note: boolean
+          service_type: Database["public"]["Enums"]["service_type"]
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          icon_key?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          requires_note?: boolean
+          service_type: Database["public"]["Enums"]["service_type"]
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          icon_key?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          requires_note?: boolean
+          service_type?: Database["public"]["Enums"]["service_type"]
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_checklist_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -6202,6 +6673,7 @@ export type Database = {
         | "overdue"
         | "cancelled"
         | "expired"
+      booking_photo_kind: "before" | "after" | "incident" | "general"
       booking_request_kind: "new" | "change" | "cancel"
       booking_request_status:
         | "pending_review"
@@ -6230,6 +6702,14 @@ export type Database = {
         | "cancelled"
         | "no_show"
         | "grooming"
+      care_round_kind:
+        | "fed_am"
+        | "fed_pm"
+        | "meds"
+        | "walk"
+        | "play"
+        | "crate_clean"
+        | "other"
       comms_channel: "email" | "whatsapp" | "sms"
       credit_note_status: "draft" | "issued" | "applied" | "cancelled"
       customer_credit_entry_type:
@@ -6246,6 +6726,15 @@ export type Database = {
         | "rejected"
         | "expired"
       email_status: "queued" | "sent" | "failed"
+      incident_category:
+        | "vet"
+        | "injury"
+        | "escape"
+        | "behaviour"
+        | "illness"
+        | "other"
+      incident_severity: "note" | "concern" | "urgent"
+      incident_state: "open" | "acknowledged" | "resolved"
       notification_event_type:
         | "booking_created"
         | "booking_rescheduled"
@@ -6266,6 +6755,7 @@ export type Database = {
         | "booking_cancellation_requested"
         | "booking_reminder_24h"
         | "payment_proof_uploaded"
+        | "incident_raised"
       notification_status: "pending" | "sent" | "failed" | "skipped"
       payment_method: "eft" | "cash" | "card" | "yoko" | "payfast" | "other"
       payment_provider_mode: "test" | "live"
@@ -6449,6 +6939,7 @@ export const Constants = {
         "cancelled",
         "expired",
       ],
+      booking_photo_kind: ["before", "after", "incident", "general"],
       booking_request_kind: ["new", "change", "cancel"],
       booking_request_status: [
         "pending_review",
@@ -6480,6 +6971,15 @@ export const Constants = {
         "no_show",
         "grooming",
       ],
+      care_round_kind: [
+        "fed_am",
+        "fed_pm",
+        "meds",
+        "walk",
+        "play",
+        "crate_clean",
+        "other",
+      ],
       comms_channel: ["email", "whatsapp", "sms"],
       credit_note_status: ["draft", "issued", "applied", "cancelled"],
       customer_credit_entry_type: [
@@ -6498,6 +6998,16 @@ export const Constants = {
         "expired",
       ],
       email_status: ["queued", "sent", "failed"],
+      incident_category: [
+        "vet",
+        "injury",
+        "escape",
+        "behaviour",
+        "illness",
+        "other",
+      ],
+      incident_severity: ["note", "concern", "urgent"],
+      incident_state: ["open", "acknowledged", "resolved"],
       notification_event_type: [
         "booking_created",
         "booking_rescheduled",
@@ -6518,6 +7028,7 @@ export const Constants = {
         "booking_cancellation_requested",
         "booking_reminder_24h",
         "payment_proof_uploaded",
+        "incident_raised",
       ],
       notification_status: ["pending", "sent", "failed", "skipped"],
       payment_method: ["eft", "cash", "card", "yoko", "payfast", "other"],
