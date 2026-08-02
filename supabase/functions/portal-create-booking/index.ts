@@ -1,0 +1,299 @@
+// Creates a real, confirmed booking from the customer portal and issues its invoice
+// immediately. All pricing happens server-side through the existing auto-invoice
+// triggers, so the client can never dictate an amount.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { z } from "https://esm.sh/zod@3.23.8";
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...cors, "Content-Type": "application/json" },
+  });
+}
+
+const SERVICES = [
+  "grooming_inhouse",
+  "grooming_mobile",
+  "hotel_dog",
+  "hotel_cat",
+  "pickup_dropoff",
+] as const;
+
+const BodySchema = z.object({
+  service_type: z.enum(SERVICES),
+  pet_ids: z.array(z.string().uuid()).min(1).max(10),
+  start_at: z.string().min(1),
+  end_at: z.string().nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+  grooming: z
+    .object({
+      package_id: z.string().uuid().nullable().optional(),
+      duration_minutes: z.number().int().min(15).max(600).nullable().optional(),
+      instructions: z
+        .object({
+          selections: z.record(z.any()).default({}),
+          medical_flags: z.array(z.string()).default([]),
+          notes: z.string().max(2000).nullable().optional(),
+        })
+        .optional(),
+      service_address: z
+        .object({ line_1: z.string().max(200), suburb: z.string().max(120) })
+        .optional(),
+      access_notes: z.string().max(1000).nullable().optional(),
+    })
+    .optional(),
+  hotel: z
+    .object({
+      accommodation_type: z.string().max(80).nullable().optional(),
+      feeding_instructions: z.string().max(2000).nullable().optional(),
+      medication_instructions: z.string().max(2000).nullable().optional(),
+      belongings_notes: z.string().max(2000).nullable().optional(),
+      pickup_required: z.boolean().optional(),
+      dropoff_required: z.boolean().optional(),
+    })
+    .optional(),
+  transport: z
+    .object({
+      direction: z.enum(["pickup", "dropoff", "round_trip"]).default("pickup"),
+      pickup_address: z.string().max(300).nullable().optional(),
+      dropoff_address: z.string().max(300).nullable().optional(),
+      suburb: z.string().max(120).nullable().optional(),
+      gate_code: z.string().max(80).nullable().optional(),
+    })
+    .optional(),
+});
+
+type Body = z.infer<typeof BodySchema>;
+
+function serviceGroup(s: Body["service_type"]) {
+  if (s.startsWith("grooming")) return "grooming" as const;
+  if (s.startsWith("hotel")) return "hotel" as const;
+  return "transport" as const;
+}
+
+const SETTINGS_TABLE = {
+  grooming: "grooming_workflow_settings",
+  hotel: "hotel_workflow_settings",
+  transport: "transport_workflow_settings",
+} as const;
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+
+  const authHeader = req.headers.get("Authorization") ?? "";
+  if (!authHeader) return json({ error: "not_authenticated" }, 401);
+
+  const asCaller = createClient(SUPABASE_URL, ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+
+  const { data: userRes, error: userErr } = await asCaller.auth.getUser();
+  if (userErr || !userRes?.user) return json({ error: "not_authenticated" }, 401);
+
+  let raw: unknown;
+  try { raw = await req.json(); } catch { return json({ error: "bad_json" }, 400); }
+  const parsed = BodySchema.safeParse(raw);
+  if (!parsed.success) return json({ error: "invalid_request", details: parsed.error.flatten().fieldErrors }, 400);
+  const body = parsed.data;
+
+  // --- Who is calling ---------------------------------------------------
+  const { data: profile } = await admin
+    .from("profiles").select("id").eq("auth_user_id", userRes.user.id).maybeSingle();
+  if (!profile) return json({ error: "no_profile" }, 403);
+
+  const { data: customer } = await admin
+    .from("customers")
+    .select("id, tenant_id, full_name, address_line_1, suburb")
+    .eq("linked_profile_id", profile.id)
+    .eq("portal_access_enabled", true)
+    .maybeSingle();
+  if (!customer) return json({ error: "forbidden" }, 403);
+
+  const tenantId = customer.tenant_id as string;
+  const group = serviceGroup(body.service_type);
+
+  // --- Pets must belong to this customer --------------------------------
+  const { data: pets } = await admin
+    .from("pets")
+    .select("id, name, species")
+    .eq("customer_id", customer.id)
+    .in("id", body.pet_ids);
+  if (!pets || pets.length !== body.pet_ids.length) return json({ error: "invalid_pets" }, 403);
+
+  // --- Lead time --------------------------------------------------------
+  const start = new Date(body.start_at);
+  if (isNaN(start.getTime())) return json({ error: "invalid_start_at" }, 400);
+
+  const { data: settings } = await admin
+    .from(SETTINGS_TABLE[group])
+    .select("min_lead_hours, require_prepayment_short_notice, vax_gate_mode")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  const minLead = Number((settings as any)?.min_lead_hours ?? 24);
+  const requirePrepay = (settings as any)?.require_prepayment_short_notice ?? true;
+  const hoursAhead = (start.getTime() - Date.now()) / 3_600_000;
+  const shortNotice = hoursAhead < minLead;
+  if (hoursAhead < 0) return json({ error: "start_in_past" }, 400);
+  if (shortNotice && requirePrepay === false && minLead > 0) {
+    return json({ error: "lead_time", min_lead_hours: minLead }, 400);
+  }
+
+  // --- Vaccination gate -------------------------------------------------
+  const gateMode = (settings as any)?.vax_gate_mode ?? "soft";
+  if (gateMode === "hard") {
+    const { data: rules } = await admin
+      .from("vaccination_rules")
+      .select("vaccine_type, species, grace_days, required")
+      .eq("tenant_id", tenantId)
+      .eq("service_type", body.service_type)
+      .eq("required", true);
+    if (rules?.length) {
+      const { data: vax } = await admin
+        .from("vaccinations")
+        .select("pet_id, vaccination_type, expiry_date")
+        .in("pet_id", body.pet_ids);
+      const missing: string[] = [];
+      for (const p of pets) {
+        for (const r of rules) {
+          if (r.species !== "any" && r.species !== (p as any).species) continue;
+          const rec = (vax ?? []).find(
+            (v: any) => v.pet_id === p.id && v.vaccination_type === r.vaccine_type,
+          );
+          const graceMs = Number(r.grace_days ?? 0) * 86_400_000;
+          const ok = rec?.expiry_date && new Date(rec.expiry_date).getTime() + graceMs >= start.getTime();
+          if (!ok) missing.push(`${(p as any).name}: ${r.vaccine_type}`);
+        }
+      }
+      if (missing.length) return json({ error: "vaccinations_required", missing }, 400);
+    }
+  }
+
+  // --- Create the booking ----------------------------------------------
+  const { data: numRes, error: numErr } = await admin.rpc("next_booking_number", {
+    target_tenant_id: tenantId,
+  });
+  if (numErr) return json({ error: numErr.message }, 500);
+
+  const endAt = body.end_at
+    ? new Date(body.end_at).toISOString()
+    : group === "grooming"
+      ? new Date(start.getTime() + (body.grooming?.duration_minutes ?? 60) * 60_000).toISOString()
+      : null;
+
+  const { data: booking, error: bErr } = await admin
+    .from("bookings")
+    .insert({
+      tenant_id: tenantId,
+      customer_id: customer.id,
+      booking_number: numRes as unknown as string,
+      service_type: body.service_type,
+      status: "confirmed",
+      source: "customer_portal",
+      start_at: start.toISOString(),
+      end_at: endAt,
+      start_date: start.toISOString().slice(0, 10),
+      end_date: endAt ? endAt.slice(0, 10) : null,
+      notes_customer: body.notes?.trim() || null,
+      requires_transport: group === "transport" || Boolean(body.hotel?.pickup_required || body.hotel?.dropoff_required),
+    })
+    .select("id, booking_number")
+    .single();
+  if (bErr) return json({ error: bErr.message }, 500);
+
+  const bookingId = booking.id as string;
+
+  const cleanup = async (message: string, status = 500) => {
+    await admin.from("bookings").delete().eq("id", bookingId);
+    return json({ error: message }, status);
+  };
+
+  const { error: bpErr } = await admin.from("booking_pets").insert(
+    body.pet_ids.map((pid) => ({ tenant_id: tenantId, booking_id: bookingId, pet_id: pid })),
+  );
+  if (bpErr) return cleanup(bpErr.message);
+
+  // --- Service details (these triggers do the pricing) ------------------
+  if (group === "grooming") {
+    const g = body.grooming ?? {};
+    const { error } = await admin.from("grooming_booking_details").insert({
+      tenant_id: tenantId,
+      booking_id: bookingId,
+      grooming_mode: body.service_type === "grooming_inhouse" ? "in_house" : "mobile",
+      package_id: g.package_id ?? null,
+      duration_minutes: g.duration_minutes ?? 60,
+      grooming_notes: g.access_notes ?? null,
+    });
+    if (error) return cleanup(error.message);
+
+    if (g.instructions) {
+      await admin.from("grooming_booking_instructions").insert({
+        tenant_id: tenantId,
+        booking_id: bookingId,
+        selections: g.instructions.selections ?? {},
+        medical_flags: g.instructions.medical_flags ?? [],
+        notes: g.instructions.notes ?? null,
+      });
+    }
+  } else if (group === "hotel") {
+    const h = body.hotel ?? {};
+    const { error } = await admin.from("hotel_booking_details").insert({
+      tenant_id: tenantId,
+      booking_id: bookingId,
+      accommodation_type: h.accommodation_type ?? null,
+      feeding_instructions: h.feeding_instructions ?? null,
+      medication_instructions: h.medication_instructions ?? null,
+      belongings_notes: h.belongings_notes ?? null,
+      pickup_required: h.pickup_required ?? false,
+      dropoff_required: h.dropoff_required ?? false,
+    });
+    if (error) return cleanup(error.message);
+  } else {
+    const t = body.transport ?? { direction: "pickup" as const };
+    const { error } = await admin.from("transport_details").insert({
+      tenant_id: tenantId,
+      booking_id: bookingId,
+      direction: t.direction ?? "pickup",
+      pickup_address: t.pickup_address ?? customer.address_line_1 ?? null,
+      dropoff_address: t.dropoff_address ?? null,
+      suburb: t.suburb ?? customer.suburb ?? null,
+      gate_code: t.gate_code ?? null,
+      planned_window_start: start.toISOString(),
+    });
+    if (error) return cleanup(error.message);
+  }
+
+  // --- Issue the invoice ------------------------------------------------
+  const { data: invoiceId, error: invErr } = await admin.rpc("issue_booking_invoice", {
+    p_booking_id: bookingId,
+  });
+  if (invErr) return json({ error: invErr.message, booking_id: bookingId }, 500);
+
+  let balance = 0;
+  if (invoiceId) {
+    const { data: inv } = await admin
+      .from("invoices").select("balance_due").eq("id", invoiceId as string).maybeSingle();
+    balance = Number(inv?.balance_due ?? 0);
+  }
+
+  return json({
+    booking_id: bookingId,
+    booking_number: booking.booking_number,
+    invoice_id: invoiceId ?? null,
+    balance_due: balance,
+    short_notice: shortNotice,
+    payment_required_now: shortNotice && requirePrepay,
+  });
+});
