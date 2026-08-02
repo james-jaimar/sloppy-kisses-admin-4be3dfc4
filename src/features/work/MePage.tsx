@@ -38,7 +38,7 @@ export default function MePage() {
           </dl>
         </div>
 
-        <BigButton tone="neutral" onClick={() => navigate("/admin/dashboard")}>
+        <BigButton tone="neutral" onClick={() => navigate("/admin/home")}>
           Open full admin app
         </BigButton>
         <BigButton

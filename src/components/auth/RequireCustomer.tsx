@@ -21,7 +21,7 @@ export default function RequireCustomer() {
   }
 
   if (profile && profile.user_type !== "customer") {
-    return <Navigate to="/admin/dashboard" replace />;
+    return <Navigate to="/admin/home" replace />;
   }
 
   return <Outlet />;

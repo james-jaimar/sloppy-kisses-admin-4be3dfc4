@@ -7,7 +7,7 @@ import { Logo } from "@/components/layout/Logo";
 function homeFor(userType: string | null | undefined): string {
   if (userType === "customer") return "/customer/dashboard";
   if (userType === "platform") return "/platform";
-  return "/admin/dashboard";
+  return "/admin/home";
 }
 
 export default function ResetPassword() {

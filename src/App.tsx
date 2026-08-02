@@ -32,7 +32,7 @@ function HomeRedirect() {
   if (!authUser) return <Navigate to="/login" replace />;
   if (profile?.user_type === "customer") return <Navigate to="/customer/dashboard" replace />;
   if (profile?.user_type === "platform") return <Navigate to="/platform" replace />;
-  return <Navigate to="/admin/dashboard" replace />;
+  return <Navigate to="/admin/home" replace />;
 }
 import Login from "@/pages/Login";
 import CustomerSignup from "@/pages/CustomerSignup";
@@ -56,6 +56,7 @@ import VanWorkflowPage from "@/features/settings/VanWorkflowPage";
 import TransportBoardPage from "@/features/transport/TransportBoardPage";
 import TransportWorkflowPage from "@/features/settings/TransportWorkflowPage";
 import AdminDashboard from "@/features/dashboard/AdminDashboard";
+import HomePage from "@/features/home/HomePage";
 import CalendarWeekView from "@/features/calendar/CalendarWeekView";
 import CustomersPage from "@/features/customers/CustomersPage";
 import CustomerDetailPage from "@/features/customers/CustomerDetailPage";
@@ -156,6 +157,7 @@ const App = () => (
 
               <Route element={<RequireAdmin />}>
               <Route element={<AdminLayout />}>
+                <Route path="/admin/home" element={<HomePage />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
                 <Route path="/admin/calendar" element={<CalendarWeekView />} />
                 <Route path="/admin/customers" element={<CustomersPage />} />

@@ -62,7 +62,7 @@ export function RequirePermission({ code, any }: RequirePermissionProps) {
           <p className="mt-3 text-xs text-muted-foreground">
             From <span className="font-mono">{location.pathname}</span>
           </p>
-          <Navigate to="/admin/dashboard" replace />
+          <Navigate to="/admin/home" replace />
         </div>
       </div>
     );
