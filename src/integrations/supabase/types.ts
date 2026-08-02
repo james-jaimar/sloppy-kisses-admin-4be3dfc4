@@ -895,9 +895,11 @@ export type Database = {
           quiet_end: string
           quiet_start: string
           reply_to: string | null
+          sending_enabled: boolean
           sms_from: string | null
           tenant_id: string
           test_recipient: string | null
+          test_recipient_allowlist: string[]
           timezone: string
           updated_at: string
           whatsapp_from: string | null
@@ -909,9 +911,11 @@ export type Database = {
           quiet_end?: string
           quiet_start?: string
           reply_to?: string | null
+          sending_enabled?: boolean
           sms_from?: string | null
           tenant_id: string
           test_recipient?: string | null
+          test_recipient_allowlist?: string[]
           timezone?: string
           updated_at?: string
           whatsapp_from?: string | null
@@ -923,9 +927,11 @@ export type Database = {
           quiet_end?: string
           quiet_start?: string
           reply_to?: string | null
+          sending_enabled?: boolean
           sms_from?: string | null
           tenant_id?: string
           test_recipient?: string | null
+          test_recipient_allowlist?: string[]
           timezone?: string
           updated_at?: string
           whatsapp_from?: string | null
@@ -6725,7 +6731,7 @@ export type Database = {
         | "verified"
         | "rejected"
         | "expired"
-      email_status: "queued" | "sent" | "failed"
+      email_status: "queued" | "sent" | "failed" | "blocked"
       incident_category:
         | "vet"
         | "injury"
@@ -6756,7 +6762,7 @@ export type Database = {
         | "booking_reminder_24h"
         | "payment_proof_uploaded"
         | "incident_raised"
-      notification_status: "pending" | "sent" | "failed" | "skipped"
+      notification_status: "pending" | "sent" | "failed" | "skipped" | "blocked"
       payment_method: "eft" | "cash" | "card" | "yoko" | "payfast" | "other"
       payment_provider_mode: "test" | "live"
       payment_refund_state: "none" | "partial" | "full"
@@ -6997,7 +7003,7 @@ export const Constants = {
         "rejected",
         "expired",
       ],
-      email_status: ["queued", "sent", "failed"],
+      email_status: ["queued", "sent", "failed", "blocked"],
       incident_category: [
         "vet",
         "injury",
@@ -7030,7 +7036,7 @@ export const Constants = {
         "payment_proof_uploaded",
         "incident_raised",
       ],
-      notification_status: ["pending", "sent", "failed", "skipped"],
+      notification_status: ["pending", "sent", "failed", "skipped", "blocked"],
       payment_method: ["eft", "cash", "card", "yoko", "payfast", "other"],
       payment_provider_mode: ["test", "live"],
       payment_refund_state: ["none", "partial", "full"],
