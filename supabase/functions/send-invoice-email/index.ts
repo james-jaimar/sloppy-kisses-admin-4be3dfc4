@@ -3,6 +3,7 @@
 // reminder cron (kind="reminder"). Logs to email_log + invoice_events.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { guardSend } from "../_shared/send-guard.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -136,6 +137,21 @@ Deno.serve(async (req) => {
   let ok = false;
   let error: string | null = null;
   let providerId: string | null = null;
+
+  // GLOBAL SEND LOCK — evaluated immediately before the SMTP handshake.
+  const gate = await guardSend(admin, {
+    tenantId: inv.tenant_id,
+    recipient,
+    subject,
+    templateCode: kind === "reminder" ? "invoice_reminder" : "invoice_send",
+    customerId: inv.customer_id ?? null,
+    invoiceId: inv.id,
+  });
+  if (!gate.allowed) {
+    // guardSend already wrote the [BLOCKED] email_log row.
+    return j(200, { ok: false, blocked: true, error: gate.reason });
+  }
+
   try {
     const client = new SMTPClient({
       connection: {
