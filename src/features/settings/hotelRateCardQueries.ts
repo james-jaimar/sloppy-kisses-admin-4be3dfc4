@@ -184,7 +184,7 @@ export interface HotelVaxRow {
   pet_id: string;
   pet_name: string;
   vaccine_type: string;
-  status: "missing" | "no_expiry" | "expired" | "unverified" | "ok";
+  status: "missing" | "no_expiry" | "expired" | "unverified" | "waived" | "ok";
   expiry_date: string | null;
 }
 
