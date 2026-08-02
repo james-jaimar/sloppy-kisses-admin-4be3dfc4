@@ -1,33 +1,33 @@
 ## Goal
-Make the staff home launcher feel more "Apple/iOS" — softer, more tactile tiles — plus fix the cramped edges and the greeting name. Grooming board stays as-is (you said it's fine).
 
-## 1. Page padding / breathing room
-`AdminLayout` renders `<Outlet />` with no padding, so `HomePage` sits flush against the sidebar and the top of the viewport.
+Give the Home launcher tiles real iOS-style depth: frosted glass surface, crisp inner white edge, layered ambient shadow, and springier press/hover — without changing content, grid, palette, or typography.
 
-- Wrap the `Outlet` in a `<main className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">`.
-- Check the department/board pages that already add their own padding and strip the duplicate so nothing gains double margins (grooming, hotel, daycare, vans, transport, bookings, invoices, dashboard, settings). Only the ones that visibly double up get touched.
+## Changes
 
-## 2. Greeting
-`HomePage` currently does `full_name.split(" ")[0]` → "Hi Front". Use the full name (`profile.full_name`), falling back to the first name only if no surname exists, then "there".
+**1. `src/index.css` — rework `.sk-tile` and `.sk-tile-icon`**
 
-## 3. iOS-flavoured tiles
-Applied inside `HomePage` + a couple of tokens in `src/index.css` — no new libraries.
+- `.sk-tile`
+  - Translucent surface: `hsl(var(--sk-surface) / 0.72)` plus `backdrop-filter: blur(14px) saturate(1.4)`, brightening to ~0.92 opacity on hover.
+  - Replace the flat border with a layered box-shadow stack (no visible 1px grey border):
+    - `inset 0 0 0 1px hsl(0 0% 100% / 0.85)` — bright glass rim
+    - `inset 0 1px 0 hsl(0 0% 100% / 0.9)` — top light catch
+    - `inset 0 -1px 0 hsl(25 10% 20% / 0.05)` — bottom shade so the tile reads domed
+    - `0 1px 2px hsl(25 10% 20% / 0.05)`, `0 6px 16px -6px hsl(25 10% 20% / 0.12)` — contact + ambient
+  - Hover: lift `translateY(-3px)` and swap ambient for `0 20px 40px -12px hsl(25 10% 20% / 0.16)`.
+  - Press: `scale(0.975)` with the shadow collapsing to the contact layer, using a spring easing `cubic-bezier(0.34, 1.56, 0.64, 1)` on transform and 300ms ease on shadow.
+  - Add a faint top-down sheen via a `::before` overlay (`linear-gradient(180deg, white/55%, transparent 45%)`, `pointer-events-none`, inherits the 22px radius) so the surface looks glass rather than paint.
+  - Keep the existing focus-visible ring.
+- `.sk-tile-icon`
+  - Squircle-ish `rounded-[16px]`, add `ring`-style inner tint + inner shadow: `inset 0 1px 0 hsl(0 0% 100% / 0.75)`, `inset 0 -1px 2px hsl(25 10% 20% / 0.06)`, `0 1px 2px hsl(25 10% 20% / 0.08)` so the chip sits in a shallow well.
+- Add `@media (prefers-reduced-motion: reduce)` to drop the transforms.
 
-- **Shape**: bump tile radius to iOS-continuous feel (`rounded-[22px]`), icon chips to `rounded-[18px]`.
-- **Surface**: replace the flat card shadow with a two-layer soft shadow (tight 1px hairline + wide diffuse) and a very subtle top-to-bottom gradient on the tile so it reads as a raised control rather than a flat box.
-- **Press feedback**: `active:scale-[0.97]` with a short spring-ish transition (`transition-transform duration-150 ease-out`), hover lifts slightly less than now so it feels less "web card".
-- **Typography**: tighter label tracking, slightly heavier count numerals, `tabular-nums` retained.
-- **Accent chips**: keep the existing tone palette, add a soft inner highlight so the icon squares look like iOS app icons.
-- **Focus ring**: proper `focus-visible` ring using `--ring` for keyboard/tablet accessibility.
+**2. `src/features/home/HomePage.tsx` — minimal touch-ups only**
 
-New reusable tokens in `index.css`: `--shadow-ios`, `--shadow-ios-hover`, and a `.sk-tile` component class so other screens can adopt the same look later.
+- Remove the hardcoded `border-border/70` reliance now that the rim comes from the shadow stack (class list on the tile stays otherwise identical).
+- No changes to tiles data, counts, hints, or the alert pill.
 
-## 4. Responsive check
-Verify the tile grid at 1280 / 1024 / 768 / 390 px with a browser pass and screenshot, confirming padding and tap targets hold up on tablet.
+## Notes
 
-## Out of scope
-- Grooming board layout (leaving as the current column/stacked view).
-- Any data, permission or query changes.
-
-## Technical notes
-All changes are presentational: `src/components/layout/AdminLayout.tsx`, `src/features/home/HomePage.tsx`, `src/index.css`, plus padding cleanup in any page that ends up doubled.
+- All new values are tokenised in `index.css` (new `--shadow-tile*` variables); components keep using `.sk-tile` / `.sk-tile-icon`, so no hardcoded colours land in TSX.
+- Because the tile is translucent, the warm `--sk-bg` shows through slightly — that's what sells the glass. Contrast for label/hint text is unaffected.
+- Same classes are used only on the Home launcher, so nothing else in the app shifts.
