@@ -3,7 +3,10 @@ import { Lock, LockOpen, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useCommsSettings, useUpdateCommsSettings } from "./queries";
-import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const PERMISSION = "comms.sending.toggle";
 
@@ -127,15 +130,23 @@ export function SendLockCard() {
         )}
       </div>
 
-      <ConfirmDialog
-        open={confirmGoLive}
-        onOpenChange={setConfirmGoLive}
-        title="Turn on live email sending?"
-        description="Real customers will start receiving invoices, reminders and notifications immediately. Make sure any test data has been cleaned up first."
-        confirmLabel="Yes, go live"
-        destructive
-        onConfirm={() => { setConfirmGoLive(false); void setEnabled(true); }}
-      />
+      <AlertDialog open={confirmGoLive} onOpenChange={setConfirmGoLive}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Turn on live email sending?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Real customers will start receiving invoices, reminders and notifications immediately.
+              Make sure any test data has been cleaned up first.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setConfirmGoLive(false); void setEnabled(true); }}>
+              Yes, go live
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
