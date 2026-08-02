@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
   // --- Pets must belong to this customer --------------------------------
   const { data: pets } = await admin
     .from("pets")
-    .select("id, name, species")
+    .select("id, name, species, vax_waived_until")
     .eq("customer_id", customer.id)
     .in("id", body.pet_ids);
   if (!pets || pets.length !== body.pet_ids.length) return json({ error: "invalid_pets" }, 403);
