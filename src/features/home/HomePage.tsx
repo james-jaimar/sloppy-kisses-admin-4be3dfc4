@@ -1,12 +1,12 @@
-import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import {
   Dog, Hotel, Scissors, Truck, ArrowLeftRight, Users, PawPrint, CalendarCheck,
-  LayoutDashboard, MessageSquare, ReceiptText, Loader2, AlertCircle,
+  LayoutDashboard, MessageSquare, ReceiptText, AlertCircle,
 } from "lucide-react";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useDashboardTodayStats } from "@/features/dashboard/queries";
 import { useHomeAttention } from "./queries";
+import { SoftDashboardTile, type SoftTileTone } from "@/components/ui/SoftDashboardTile";
 
 interface Tile {
   to: string;
@@ -33,11 +33,11 @@ const TILES: Tile[] = [
   { to: "/admin/dashboard", label: "Dashboard", hint: "The full picture", icon: LayoutDashboard, tone: "green" },
 ];
 
-const TONES: Record<Tile["tone"], string> = {
-  coral: "bg-sk-coral-soft text-sk-coral-dark",
-  turquoise: "bg-sk-turquoise-soft text-sk-turquoise-dark",
-  green: "bg-sk-green-soft text-sk-green",
-  orange: "bg-sk-orange-soft text-sk-orange",
+const TONES: Record<Tile["tone"], SoftTileTone> = {
+  coral: "coral",
+  turquoise: "cyan",
+  green: "green",
+  orange: "orange",
 };
 
 export default function HomePage() {
@@ -59,42 +59,30 @@ export default function HomePage() {
         </p>
       </header>
 
-      <div className="grid grid-cols-2 gap-3.5 sm:gap-5 md:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 xl:grid-cols-4">
         {tiles.map((tile) => {
           const Icon = tile.icon;
           const count = tile.countKey ? statsQ.data?.[tile.countKey]?.today : undefined;
           const alerts = tile.attentionKey ? (attention.data?.[tile.attentionKey] ?? 0) : 0;
           return (
-            <Link
+            <SoftDashboardTile
               key={tile.to + tile.label}
               to={tile.to}
-              className="sk-tile group flex min-h-[140px] flex-col justify-between p-4 sm:min-h-[160px] sm:p-5"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <span className={`sk-tile-icon h-12 w-12 sm:h-14 sm:w-14 ${TONES[tile.tone]}`}>
-                  <Icon className="h-6 w-6 sm:h-7 sm:w-7" />
-                </span>
-                {tile.countKey && (
-                  <span className="text-3xl font-semibold tabular-nums tracking-[-0.03em] sm:text-[40px] sm:leading-none">
-                    {statsQ.isLoading ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    ) : (
-                      (count ?? 0)
-                    )}
-                  </span>
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate text-base font-semibold tracking-[-0.01em] sm:text-[17px]">{tile.label}</p>
-                <p className="truncate text-xs text-muted-foreground sm:text-[13px]">{tile.hint}</p>
-                {alerts > 0 && (
+              title={tile.label}
+              subtitle={tile.hint}
+              tone={TONES[tile.tone]}
+              icon={<Icon className="h-6 w-6 sm:h-7 sm:w-7" />}
+              loading={Boolean(tile.countKey) && statsQ.isLoading}
+              value={tile.countKey ? (count ?? 0) : undefined}
+              alert={
+                alerts > 0 ? (
                   <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive">
                     <AlertCircle className="h-3 w-3" />
                     {tile.attentionKey === "unpaidToday" ? `${alerts} unpaid today` : `${alerts} unassigned`}
                   </span>
-                )}
-              </div>
-            </Link>
+                ) : undefined
+              }
+            />
           );
         })}
       </div>
