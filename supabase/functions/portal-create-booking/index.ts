@@ -181,11 +181,13 @@ Deno.serve(async (req) => {
   const start = new Date(body.start_at);
   if (isNaN(start.getTime())) return json({ error: "invalid_start_at" }, 400);
 
-  const { data: settings } = await admin
-    .from(SETTINGS_TABLE[group])
-    .select("min_lead_hours, require_prepayment_short_notice, vax_gate_mode")
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
+  const settings = group === "daycare"
+    ? null
+    : (await admin
+        .from(SETTINGS_TABLE[group])
+        .select("min_lead_hours, require_prepayment_short_notice, vax_gate_mode")
+        .eq("tenant_id", tenantId)
+        .maybeSingle()).data;
 
   const minLead = Number((settings as any)?.min_lead_hours ?? 24);
   const requirePrepay = (settings as any)?.require_prepayment_short_notice ?? true;
@@ -271,7 +273,9 @@ Deno.serve(async (req) => {
   if (bpErr) return cleanup(bpErr.message);
 
   // --- Service details (these triggers do the pricing) ------------------
-  if (group === "grooming") {
+  if (group === "daycare") {
+    // daycare_assessment: a plain booking, priced by staff.
+  } else if (group === "grooming") {
     const g = body.grooming ?? {};
     const { error } = await admin.from("grooming_booking_details").insert({
       tenant_id: tenantId,
