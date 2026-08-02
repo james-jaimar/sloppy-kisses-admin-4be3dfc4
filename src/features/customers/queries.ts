@@ -161,10 +161,12 @@ export function useTenantPets(params: {
   pageSize?: number;
   sortColumn?: "name" | "breed" | "species" | "status" | "pet_number";
   sortAscending?: boolean;
+  /** Only pets with an active admin vaccination waiver. */
+  waivedOnly?: boolean;
 }) {
-  const { tenantId, search = "", page = 0, pageSize = 50, sortColumn = "name", sortAscending = true } = params;
+  const { tenantId, search = "", page = 0, pageSize = 50, sortColumn = "name", sortAscending = true, waivedOnly = false } = params;
   return useQuery({
-    queryKey: ["pets", "tenantList", tenantId, search, page, pageSize, sortColumn, sortAscending],
+    queryKey: ["pets", "tenantList", tenantId, search, page, pageSize, sortColumn, sortAscending, waivedOnly],
     enabled: Boolean(tenantId),
     queryFn: async (): Promise<PetsPage> => {
       const from = page * pageSize;
@@ -193,12 +195,16 @@ export function useTenantPets(params: {
       let query = supabase
         .from("pets")
         .select(
-          "id, pet_number, name, species, breed, sex, size, status, customer_id, customers(id, customer_number, full_name)",
+          "id, pet_number, name, species, breed, sex, size, status, customer_id, vax_waived_until, customers(id, customer_number, full_name)",
           { count: "exact" },
         )
         .eq("tenant_id", tenantId as string)
         .order(sortColumn, { ascending: sortAscending, nullsFirst: false })
         .range(from, to);
+
+      if (waivedOnly) {
+        query = query.gte("vax_waived_until", new Date().toISOString().slice(0, 10));
+      }
 
       if (s) {
         const tokens = s.split(/\s+/).filter(Boolean);
