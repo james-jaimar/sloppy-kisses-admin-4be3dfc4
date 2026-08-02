@@ -4,6 +4,7 @@
 
 import { type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { guardSend } from "./send-guard.ts";
 
 export interface Transport {
   smtp_host: string;
@@ -79,13 +80,41 @@ export function renderBrandedHtml(brand: TenantBrand | null, tenantName: string,
   </td></tr></table></body></html>`;
 }
 
+/**
+ * Context required by the global outbound send lock. Mandatory — every send
+ * must declare which tenant it belongs to so the lock can be evaluated.
+ */
+export interface SendContext {
+  admin: SupabaseClient;
+  tenantId: string;
+  templateCode?: string | null;
+  customerId?: string | null;
+  invoiceId?: string | null;
+  bookingId?: string | null;
+}
+
 export async function sendMail(
   t: Transport,
   to: string,
   subject: string,
   text: string,
   html: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+  ctx: SendContext,
+): Promise<{ ok: true } | { ok: false; error: string; blocked?: boolean }> {
+  // GLOBAL SEND LOCK — nothing reaches SMTP without passing this.
+  const gate = await guardSend(ctx.admin, {
+    tenantId: ctx.tenantId,
+    recipient: to,
+    subject,
+    templateCode: ctx.templateCode ?? null,
+    customerId: ctx.customerId ?? null,
+    invoiceId: ctx.invoiceId ?? null,
+    bookingId: ctx.bookingId ?? null,
+  });
+  if (!gate.allowed) {
+    return { ok: false, error: gate.reason ?? "Outbound email is locked", blocked: true };
+  }
+
   const client = new SMTPClient({
     connection: {
       hostname: t.smtp_host,
