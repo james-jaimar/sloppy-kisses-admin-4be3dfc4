@@ -2,6 +2,7 @@
 // record the outcome on email_transport_settings.last_test_*.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { guardSend } from "../_shared/send-guard.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -51,6 +52,18 @@ Deno.serve(async (req) => {
   const secure = s.smtp_secure ?? "starttls";
   let ok = false;
   let err: string | null = null;
+
+  // GLOBAL SEND LOCK — even the SMTP connectivity test must respect it.
+  const gate = await guardSend(admin, {
+    tenantId,
+    recipient,
+    subject: "Sloppy Kisses — SMTP test",
+    templateCode: "smtp.test",
+  });
+  if (!gate.allowed) {
+    return j(200, { ok: false, blocked: true, error: gate.reason });
+  }
+
   try {
     const client = new SMTPClient({
       connection: {

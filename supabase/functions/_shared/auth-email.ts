@@ -4,6 +4,7 @@
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { guardSend } from "./send-guard.ts";
 
 export type AuthEmailAction = "invite" | "recovery" | "magiclink";
 
@@ -51,6 +52,18 @@ export async function sendAuthEmail(args: SendAuthEmailArgs): Promise<{ ok: true
       actionUrl,
       inviterName: inviterName ?? null,
     });
+
+    // GLOBAL SEND LOCK — auth mail is still mail.
+    const gate = await guardSend(admin, {
+      tenantId,
+      recipient,
+      subject,
+      templateCode: `auth.${action}`,
+    });
+    if (!gate.allowed) {
+      return { ok: false, error: gate.reason ?? "Outbound email is locked" };
+    }
+
     await sendMail(transport, recipient, subject, html, text);
     await logEmail(admin, tenantId, recipient, subject, "sent", null, action);
     return { ok: true };

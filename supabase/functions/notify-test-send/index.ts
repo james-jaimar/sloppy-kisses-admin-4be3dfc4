@@ -57,7 +57,15 @@ Deno.serve(async (req) => {
   const text = render(bodyTpl, ctx);
   const html = renderBrandedHtml(brand, brand?.name ?? "Sloppy Kisses", text);
 
-  const result = await sendMail(transport, recipient, `[TEST] ${subject}`, text, html);
+  const result = await sendMail(transport, recipient, `[TEST] ${subject}`, text, html, {
+    admin,
+    tenantId: tenant_id,
+    templateCode: `test.${event_code ?? "manual"}`,
+  });
+  if (!result.ok && (result as { blocked?: boolean }).blocked) {
+    // guardSend already wrote the [BLOCKED] email_log row.
+    return j(200, { ok: false, blocked: true, recipient, error: result.error });
+  }
   await admin.from("email_log").insert({
     tenant_id, to_email: recipient, subject: `[TEST] ${subject}`,
     status: result.ok ? "sent" : "failed",
