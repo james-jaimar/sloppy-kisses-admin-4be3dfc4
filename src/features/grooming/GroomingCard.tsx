@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, Clock, PawPrint, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { BookingStatusChip } from "@/features/bookings/statusMeta";
+import { PaymentChip } from "@/features/shared/payments/paymentFlags";
 import type { GroomingBoardCard } from "./queries";
 
 function fmtTime(iso: string | null): string {
@@ -94,6 +95,7 @@ export function GroomingCard({
             {card.resource.name}
           </span>
         )}
+        <PaymentChip bookingId={card.id} />
         {card.details?.actual_start_at && !card.details?.actual_end_at && (
           <Timer startIso={card.details.actual_start_at} expectedMinutes={expectedMinutes} />
         )}

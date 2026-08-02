@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { MapPin, PawPrint, StickyNote, User, KeyRound } from "lucide-react";
 import { BookingStatusChip } from "@/features/bookings/statusMeta";
+import { PaymentChip } from "@/features/shared/payments/paymentFlags";
 import type { TransportLeg } from "./queries";
 
 function fmtTime(iso: string | null): string {
@@ -60,6 +61,7 @@ export function TransportCard({ leg }: { leg: TransportLeg }) {
         {dir === "round_trip" && (
           <span className="rounded bg-sk-orange-soft px-1.5 py-0.5 text-sk-orange">Round trip</span>
         )}
+        <PaymentChip bookingId={leg.id} />
         {leg.details?.gate_code && (
           <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
             <KeyRound className="h-3 w-3" /> {leg.details.gate_code}
