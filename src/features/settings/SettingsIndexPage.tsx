@@ -232,13 +232,69 @@ const SECTIONS = [
   },
 ];
 
+const GROUPS: { id: string; label: string; members: string[] }[] = [
+  {
+    id: "operations",
+    label: "Operations",
+    members: ["Resources", "Daycare plans", "Daycare workflow", "Import daycare register", "Hotel & Cattery workflow", "Mobile van workflow", "Transport workflow"],
+  },
+  {
+    id: "grooming",
+    label: "Grooming",
+    members: ["Grooming rate card", "Grooming add-ons", "Grooming workflow", "Grooming instructions", "Dog breeds"],
+  },
+  {
+    id: "pricing",
+    label: "Pricing & billing",
+    members: ["Hotel & Cattery rates", "Invoicing", "Payment methods", "Payment providers"],
+  },
+  {
+    id: "comms",
+    label: "Comms",
+    members: ["Message templates", "Comms settings", "Email server"],
+  },
+  {
+    id: "compliance",
+    label: "Compliance",
+    members: ["Vaccination rules", "Documents & retention", "Policies", "Terms & Registration", "Registration status"],
+  },
+  {
+    id: "retail",
+    label: "Retail",
+    members: ["Product categories", "Stock locations", "Retail settings"],
+  },
+  {
+    id: "admin",
+    label: "Business & access",
+    members: ["Branding", "Users & roles", "Roles & permissions", "Change password", "Branch details"],
+  },
+];
+
 export default function SettingsIndexPage() {
-  return (
-    <>
-      <AppHeader title="Settings" subtitle="Configure the business." />
-      <div className="flex-1 p-6">
-        <div className="grid gap-3 sm:grid-cols-2">
-          {SECTIONS.map((s) => {
+  const [q, setQ] = useState("");
+  const query = q.trim().toLowerCase();
+
+  const groups = useMemo(() => {
+    const byLabel = new Map(SECTIONS.map((s) => [s.label, s] as const));
+    return GROUPS.map((g) => ({
+      ...g,
+      items: g.members
+        .map((m) => byLabel.get(m))
+        .filter(Boolean)
+        .filter((s) =>
+          !query ||
+          s!.label.toLowerCase().includes(query) ||
+          s!.description.toLowerCase().includes(query),
+        ) as typeof SECTIONS,
+    }));
+  }, [query]);
+
+  const visibleGroups = query ? groups.filter((g) => g.items.length > 0) : groups;
+
+  function renderGrid(items: typeof SECTIONS) {
+    return (
+      <div className="grid gap-3 sm:grid-cols-2">
+        {items.map((s) => {
             const Icon = s.icon;
             const content = (
               <div className="sk-card flex items-center gap-4 p-5 transition-colors hover:border-sk-coral">
@@ -264,8 +320,54 @@ export default function SettingsIndexPage() {
             ) : (
               <div key={s.label} className="cursor-not-allowed opacity-60">{content}</div>
             );
-          })}
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <AppHeader title="Settings" subtitle="Configure the business." />
+      <div className="flex-1 p-6">
+        <div className="relative mb-4 max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search settings…"
+            className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm"
+          />
         </div>
+
+        {query ? (
+          <div className="space-y-6">
+            {visibleGroups.length === 0 && (
+              <div className="text-sm text-muted-foreground">No settings match “{q}”.</div>
+            )}
+            {visibleGroups.map((g) => (
+              <section key={g.id}>
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g.label}</h2>
+                {renderGrid(g.items)}
+              </section>
+            ))}
+          </div>
+        ) : (
+          <Tabs defaultValue={GROUPS[0].id}>
+            <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-1">
+              {groups.map((g) => (
+                <TabsTrigger key={g.id} value={g.id} className="text-xs sm:text-sm">
+                  {g.label}
+                  <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{g.items.length}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {groups.map((g) => (
+              <TabsContent key={g.id} value={g.id} className="mt-0">
+                {renderGrid(g.items)}
+              </TabsContent>
+            ))}
+          </Tabs>
+        )}
       </div>
     </>
   );
