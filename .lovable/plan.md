@@ -1,36 +1,45 @@
-## Goal
+## Confirmed first: nothing was sent to clients
 
-Add a reusable `SoftDashboardTile` component with a soft, tactile, tablet-friendly tile style, and use it for the Front Desk home launcher only. Nothing else in the app changes.
+Verified against the database before writing this plan:
 
-## Changes
+- `email_log` (the record of every actual SMTP hand-off) holds 12 rows for the entire life of the project. Every recipient is you, Charlotte, `admin@jaimar.dev`, `hello@document-centre.com`, or `jimmybhawkins@gmail.com`. No client address.
+- The 158 `booking_created` / `booking_rescheduled` events from the seed run are all `pending` with `sent_at = NULL`; 76 more are `skipped`.
+- `cron.job` contains three jobs only: `send-invoice-reminders-daily`, `queue-booking-reminders-daily`, `documents-purge-nightly`. Nothing invokes the notification dispatcher, so the pending queue had no route out.
+- The single reminder-eligible invoice (`INV00097`, due 03 Aug) belongs to a test customer on your own gmail.
 
-**1. `src/index.css` — add a `soft-*` component layer**
+The risk is not what happened — it's that 158 queued events point at 97 real customer addresses and one keystroke could dispatch them.
 
-Add the supplied classes under `@layer components`, with two adjustments so they respect the Sloppy Kisses design system:
+## What to build
 
-- Neutrals (`slate-200/60`, `slate-950`, `slate-500`, `rgba(15,23,42,...)`) map to existing tokens: `border-border`, `text-foreground`, `text-muted-foreground`, and a shared `--shadow-soft-*` ink colour based on the warm `hsl(25 10% 20%)` already used for `--shadow-ios`.
-- Icon/value tones (`emerald / rose / cyan / orange`) map to the SK palette: `sk-green-soft` + `sk-green`, `sk-coral-soft` + `sk-coral-dark`, `sk-turquoise-soft` + `sk-turquoise-dark`, `sk-orange-soft` + `sk-orange`. Glow values become `hsl(var(--sk-*-soft) / 0.9)`.
+### 1. Global outbound send lock (belt)
 
-Everything else — 30px radius, three-layer ambient shadow + inset top highlight, radial corner sheen via `::before`, hover `translateY(-3px)`, active `translateY(-1px) scale(0.995)` with inset sunken shadow, 180ms transitions, `soft-icon-tile`, `soft-chevron`, title/subtitle/value type scale — stays exactly as specified. Adds a `prefers-reduced-motion` block to drop the transforms.
+Add a tenant-level comms safety switch, defaulting to **locked**:
 
-**2. New `src/components/ui/SoftDashboardTile.tsx`**
+- New columns on `comms_settings`: `sending_enabled boolean not null default false` and `test_recipient_allowlist text[] not null default '{}'`.
+- Every server-side send path gains one shared guard helper in `supabase/functions/_shared/`:
+  - if `sending_enabled` is false **and** the recipient is not in the allowlist → do not send; write an `email_log` row with status `blocked` and a reason, and return success to the caller so nothing errors out.
+  - if the recipient is in the allowlist → send normally, regardless of the switch.
+- Wire the guard into every function that can put mail on the wire: `send-notifications`, `send-invoice-email`, `send-invoice-reminders`, `invite-user`, `customer-portal-invite`, `customer-portal-reset`, `request-password-reset`, `notify-test-send`, `send-test-email`.
+- The guard is the *last* thing before the SMTP call, so no future code path can slip past it.
 
-The component as specified (`title`, `subtitle`, `value`, `icon`, `tone`, `onClick`, `--tile-glow` inline var), plus:
+### 2. Pause the schedulers (braces)
 
-- Optional `to?: string` — renders a react-router `Link` instead of a `button` when provided, since the home tiles are navigation, not actions. Keeps `onClick`/`button` support for reuse elsewhere.
-- Optional `alert?: React.ReactNode` slot rendered under the subtitle, so the existing "N unpaid today" / "N unassigned" pill survives.
-- Optional `loading?: boolean` to show the spinner in place of the value (current behaviour while stats load).
-- `focus-visible` ring using `ring-ring`.
+- Deactivate `send-invoice-reminders-daily` and `queue-booking-reminders-daily` (leave the rows in place so they can be switched back on at go-live). `documents-purge-nightly` sends no mail and stays active.
 
-**3. `src/features/home/HomePage.tsx`**
+### 3. Neutralise the seeded queue
 
-- Replace the inline `<Link className="sk-tile ...">` markup with `<SoftDashboardTile ... />`, passing `to`, `label` → title, `hint` → subtitle, the count, the lucide icon, tone, and the attention pill as `alert`.
-- Tone mapping unchanged (`coral | turquoise | green | orange` → `coral | cyan | green | orange`).
-- Grid gets slightly larger gaps to suit the bigger 170px-min tiles; columns stay `2 / md:3 / xl:4`.
-- No changes to tile data, permissions filtering, or the queries.
+- Set the 158 `pending` notification events created during seeding to `blocked`, with a note recording why. They stay visible in the Comms inbox for audit but no dispatcher will ever pick them up.
+- Pause reminders on `INV00097` so tomorrow morning's job has nothing at all to act on even before the lock takes effect.
 
-## Notes
+### 4. Make the state impossible to miss
 
-- `.sk-tile` / `.sk-tile-icon` stay in `index.css` untouched for now — the Home page just stops using them. They can be removed once nothing references them.
-- No new dependencies; no animation library.
-- Tokenising the colours means the tiles keep the exact look described while staying themable and passing the project's "no hardcoded colour utilities" rule.
+- A **Comms safety** card at the top of Settings → Email: a large red/green status banner reading "Outbound email is LOCKED — only allowlisted addresses receive mail" or "LIVE — all customers receive mail", the allowlist editor, and a confirm dialog on unlocking that states how many customers become reachable.
+- A persistent amber strip in the admin header while the lock is on, so nobody forgets.
+- Gate the toggle behind an admin-only permission code.
+
+## Technical notes
+
+- Migration: two columns on `comms_settings` with safe defaults; no data loss. Cron deactivation and the queue update run as data statements, not schema migrations.
+- Defaulting `sending_enabled` to `false` means the lock is on the instant it deploys — no window where it's live-but-unconfigured.
+- Blocked sends are logged rather than silently dropped, so testing still shows you exactly what *would* have gone out and to whom.
+- Go-live is then a deliberate two-step: clear the seed data, then flip the switch.
