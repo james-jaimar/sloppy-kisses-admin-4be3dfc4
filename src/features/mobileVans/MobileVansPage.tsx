@@ -6,6 +6,7 @@ import {
   useMobileBookingsForDay, useMobileVans, useVanWorkflowSettings,
 } from "./queries";
 import { VanTimeline } from "./VanTimeline";
+import { PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 import { RouteSummary } from "./RouteSummary";
 import { UnassignedStrip } from "./UnassignedStrip";
 
@@ -108,7 +109,9 @@ export default function MobileVansPage() {
             </div>
 
             <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-              <VanTimeline stops={stops} minGap={minGap} maxGap={maxGap} />
+              <PaymentFlagsProvider bookingIds={stops.map((s) => s.id)}>
+                <VanTimeline stops={stops} minGap={minGap} maxGap={maxGap} />
+              </PaymentFlagsProvider>
               <RouteSummary
                 tenantId={tenantId}
                 van={activeVan}
