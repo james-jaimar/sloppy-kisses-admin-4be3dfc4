@@ -14,6 +14,7 @@ import {
   type GroomingColumn,
 } from "./queries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 
 export function GroomingBoard({ day }: { day: Date }) {
   const { tenant } = useCurrentTenant();
@@ -77,6 +78,7 @@ export function GroomingBoard({ day }: { day: Date }) {
   }
 
   return (
+    <PaymentFlagsProvider bookingIds={(bookingsQ.data ?? []).map((c) => c.id)}>
     <div className="grid gap-4 lg:grid-cols-4">
       {GROOMING_COLUMNS.map((col) => {
         const cards = cardsByColumn[col.key];
@@ -134,5 +136,6 @@ export function GroomingBoard({ day }: { day: Date }) {
         );
       })}
     </div>
+    </PaymentFlagsProvider>
   );
 }
