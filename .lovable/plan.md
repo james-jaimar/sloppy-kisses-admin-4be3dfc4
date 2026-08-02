@@ -1,59 +1,33 @@
 ## Goal
+Make the staff home launcher feel more "Apple/iOS" — softer, more tactile tiles — plus fix the cramped edges and the greeting name. Grooming board stays as-is (you said it's fine).
 
-Build the Front Desk experience once, so each department day screen doubles as the screen that department's own staff see. Front Desk gets a big-icon home, department-first navigation, no calendar/credit notes/reports, and payment *flags* plus read-only invoice viewing.
+## 1. Page padding / breathing room
+`AdminLayout` renders `<Outlet />` with no padding, so `HomePage` sits flush against the sidebar and the top of the viewport.
 
-## 1. Home launcher
+- Wrap the `Outlet` in a `<main className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">`.
+- Check the department/board pages that already add their own padding and strip the duplicate so nothing gains double margins (grooming, hotel, daycare, vans, transport, bookings, invoices, dashboard, settings). Only the ones that visibly double up get touched.
 
-New route `/admin/home`, and post-login routing sends tenant staff there instead of `/admin/dashboard` (owner/admin roles can still pin the dashboard — the launcher links to it).
+## 2. Greeting
+`HomePage` currently does `full_name.split(" ")[0]` → "Hi Front". Use the full name (`profile.full_name`), falling back to the first name only if no surname exists, then "there".
 
-Layout: a responsive grid of large tap-friendly tiles (laptop and tablet), each showing icon, label and a live count for today:
+## 3. iOS-flavoured tiles
+Applied inside `HomePage` + a couple of tokens in `src/index.css` — no new libraries.
 
-```text
-[ Daycare 12 in ]  [ Hotel & Cattery 4 ]  [ Grooming 6 ]
-[ Mobile vans 3 ]  [ Pick up / Drop off 2 ]  [ Customers ]
-[ Pets ]           [ Bookings ]             [ Dashboard ]
-```
+- **Shape**: bump tile radius to iOS-continuous feel (`rounded-[22px]`), icon chips to `rounded-[18px]`.
+- **Surface**: replace the flat card shadow with a two-layer soft shadow (tight 1px hairline + wide diffuse) and a very subtle top-to-bottom gradient on the tile so it reads as a raised control rather than a flat box.
+- **Press feedback**: `active:scale-[0.97]` with a short spring-ish transition (`transition-transform duration-150 ease-out`), hover lifts slightly less than now so it feels less "web card".
+- **Typography**: tighter label tracking, slightly heavier count numerals, `tabular-nums` retained.
+- **Accent chips**: keep the existing tone palette, add a soft inner highlight so the icon squares look like iOS app icons.
+- **Focus ring**: proper `focus-visible` ring using `--ring` for keyboard/tablet accessibility.
 
-Tiles render only when the user has the matching `*.view` permission, so a groomer sees just Grooming, and Front Desk sees the set above. Attention badges (unpaid job today, missing vax, unassigned resource) surface on the tile as a coral dot with a count.
+New reusable tokens in `index.css`: `--shadow-ios`, `--shadow-ios-hover`, and a `.sk-tile` component class so other screens can adopt the same look later.
 
-## 2. Navigation clean-up
+## 4. Responsive check
+Verify the tile grid at 1280 / 1024 / 768 / 390 px with a browser pass and screenshot, confirming padding and tap targets hold up on tablet.
 
-- Hide Calendar from users without `calendar.view`; remove `calendar.view` from the Front Desk role so it disappears for them (route and page stay for admins/owner).
-- Add "Home" as the first sidebar item.
-- Front Desk role permissions: dashboard, customers, pets, bookings (view/create/update/cancel), daycare, hotel, grooming, transport, documents, comms, `invoices.view` + `payments.view`. Explicitly not: reports, credit notes, invoice create/update/send/void, payments.create, settings, users.
-
-## 3. Shared department day screen
-
-Each department already has an admin board (Daycare, Hotel & Cattery, Grooming, Mobile Vans, Pick up / Drop off). We standardise them into one shape and gate the actions:
-
-- Common header: day stepper, department name, search, status filter chips, attention counter.
-- Common row/card: pet + owner, time, status pill, and status chips for **Unpaid / Overdue / Vax missing / Unassigned**.
-- Action layer split by permission:
-  - `*.view` — read the day, open a booking.
-  - `bookings.create` / `bookings.update` — add, edit, reschedule, cancel (Front Desk).
-  - `work.*` — check-in / start / ready / sign-off, checklists, photos, incidents (floor staff, already built at `/work`).
-
-Front Desk gets both booking and floor actions on the same screen; a groomer opening the same screen sees the floor actions only. The existing `/work` tablet views remain the stripped-back phone-sized entry point and keep sharing the same queries.
-
-## 4. Payment flags + read-only invoices
-
-- Booking and department queries return `invoice_status` (none / draft / issued / overdue / paid) per booking so the boards can show a red "Unpaid" chip on today's and tomorrow's jobs.
-- Booking detail shows a payment strip: amount, status, due date, and "View invoice" if permitted.
-- With `invoices.view` but without `invoices.update|send|void|create` and without `payments.create`, the invoice detail page renders read-only: no edit, send, void, credit-note or record-payment buttons. Invoices & Payments stays out of the sidebar for Front Desk — they reach an invoice only from a booking or customer record.
-
-## 5. Order of work
-
-1. Permission/role updates + Front Desk role preset (migration) and nav gating.
-2. Home launcher page with permission-filtered tiles and live counts.
-3. Invoice status on booking queries + payment chips and booking payment strip.
-4. Read-only mode on the invoice detail page.
-5. Standardise the five department day screens on the shared header/row/action-gate pattern.
-6. Settings screen entry so the owner can adjust which tiles/permissions a role gets (per the settings-first rule).
+## Out of scope
+- Grooming board layout (leaving as the current column/stacked view).
+- Any data, permission or query changes.
 
 ## Technical notes
-
-- New `FrontDeskHome` under `src/features/home/`, tiles driven by a config array mirroring `src/constants/navigation.ts` with `code` gating via `hasPermission`.
-- Counts reuse existing per-department queries plus `useNavBadges` style aggregation; one batched query rather than one per tile.
-- Post-login branch in `src/pages/Index.tsx` / `Login.tsx` changes `/admin/dashboard` → `/admin/home`.
-- Shared board primitives (`DayHeader`, `JobRow`, `StatusChips`) in `src/features/shared/board/` so Daycare/Hotel/Grooming/Vans/Transport pages converge instead of each re-implementing.
-- Invoice read-only gating done in the page component from permissions; RLS already prevents writes server-side.
+All changes are presentational: `src/components/layout/AdminLayout.tsx`, `src/features/home/HomePage.tsx`, `src/index.css`, plus padding cleanup in any page that ends up doubled.
