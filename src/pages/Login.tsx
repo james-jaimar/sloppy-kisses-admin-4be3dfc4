@@ -17,7 +17,7 @@ export default function Login() {
   function homeFor(userType: string | undefined): string {
     if (userType === "customer") return "/customer/dashboard";
     if (userType === "platform") return "/platform";
-    return "/admin/dashboard";
+    return "/admin/home";
   }
   const home = homeFor(profile?.user_type);
   // Only honor `from` if it targets the user's own area

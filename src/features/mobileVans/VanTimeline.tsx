@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { AlertTriangle, Clock, MapPin, PawPrint, User } from "lucide-react";
 import { BookingStatusChip } from "@/features/bookings/statusMeta";
+import { PaymentChip } from "@/features/shared/payments/paymentFlags";
 import type { VanStop } from "./queries";
 
 function fmtTime(iso: string | null): string {
@@ -108,6 +109,7 @@ function StopCard({ stop }: { stop: VanStop }) {
                 {stop.package.name}
               </span>
             )}
+            <PaymentChip bookingId={stop.id} />
             {mins != null && (
               <span className="rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
                 {mins} min

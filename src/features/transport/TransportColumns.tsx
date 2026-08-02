@@ -1,6 +1,7 @@
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import type { TransportLeg } from "./queries";
 import { TransportCard } from "./TransportCard";
+import { PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 
 function isPickup(leg: TransportLeg): boolean {
   const d = leg.details?.direction;
@@ -15,6 +16,7 @@ export function TransportColumns({ legs }: { legs: TransportLeg[] }) {
   const pickups = legs.filter(isPickup);
   const dropoffs = legs.filter(isDropoff);
   return (
+    <PaymentFlagsProvider bookingIds={legs.map((l) => l.id)}>
     <div className="grid gap-4 md:grid-cols-2">
       <Column title="Pickups" count={pickups.length} icon={<ArrowRight className="h-4 w-4" />}>
         {pickups.length === 0 ? (
@@ -31,6 +33,7 @@ export function TransportColumns({ legs }: { legs: TransportLeg[] }) {
         )}
       </Column>
     </div>
+    </PaymentFlagsProvider>
   );
 }
 
