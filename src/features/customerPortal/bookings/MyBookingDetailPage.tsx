@@ -6,12 +6,13 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { SERVICE_LABEL, fmtDateTime, statusTone } from "../portalCommon";
 import { useCurrentCustomer } from "../hooks";
-import { NewBookingRequestModal } from "./NewBookingRequestModal";
+import { BookingChangeModal } from "./BookingChangeModal";
+import { useMinLeadHours } from "./new/useBookingSubmit";
 
 export default function MyBookingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const cust = useCurrentCustomer();
-  const [action, setAction] = useState<"change" | "cancel" | null>(null);
+  const [action, setAction] = useState<"reschedule" | "cancel" | null>(null);
 
   const q = useQuery({
     queryKey: ["portal_booking", id],
@@ -31,6 +32,12 @@ export default function MyBookingDetailPage() {
   if (!q.data) return <div className="p-6 text-sm text-muted-foreground">Booking not found.</div>;
 
   const b: any = q.data;
+  const group: "grooming" | "hotel" | "transport" =
+    String(b.service_type).startsWith("hotel")
+      ? "hotel"
+      : String(b.service_type).startsWith("grooming")
+        ? "grooming"
+        : "transport";
   const petNames = (b.booking_pets ?? []).map((bp: any) => bp.pet?.name).filter(Boolean).join(", ");
   const cancellable = !["cancelled", "completed", "checked_out", "no_show"].includes(b.status);
   const inv = b.invoice ?? null;
@@ -48,8 +55,8 @@ export default function MyBookingDetailPage() {
             <span className={"rounded-full px-2 py-0.5 text-xs font-medium " + statusTone(b.status)}>{b.status}</span>
             {cancellable && cust.data && (
               <div className="flex gap-2">
-                <button onClick={() => setAction("change")} className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted">
-                  <Edit3 className="h-3.5 w-3.5" /> Request change
+                <button onClick={() => setAction("reschedule")} className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted">
+                  <Edit3 className="h-3.5 w-3.5" /> Move booking
                 </button>
                 <button onClick={() => setAction("cancel")} className="inline-flex items-center gap-1 rounded-lg border border-sk-coral text-sk-coral-dark px-3 py-1.5 text-xs hover:bg-sk-coral-soft">
                   <X className="h-3.5 w-3.5" /> Cancel booking
@@ -82,15 +89,37 @@ export default function MyBookingDetailPage() {
       </div>
 
       {action && cust.data && (
-        <NewBookingRequestModal
-          customerId={cust.data.id}
-          tenantId={b.tenant_id}
-          relatedBookingId={b.id}
+        <BookingChangeModalWrapper
           kind={action}
+          booking={b}
+          group={group}
+          tenantId={b.tenant_id}
           onClose={() => setAction(null)}
         />
       )}
     </>
+  );
+}
+
+function BookingChangeModalWrapper({
+  kind, booking, group, tenantId, onClose,
+}: {
+  kind: "reschedule" | "cancel";
+  booking: any;
+  group: "grooming" | "hotel" | "transport";
+  tenantId: string;
+  onClose: () => void;
+}) {
+  const lead = useMinLeadHours(tenantId, group);
+  return (
+    <BookingChangeModal
+      kind={kind}
+      bookingId={booking.id}
+      startAt={booking.start_at}
+      endAt={booking.end_at}
+      noticeHours={lead.data ?? 24}
+      onClose={onClose}
+    />
   );
 }
 
