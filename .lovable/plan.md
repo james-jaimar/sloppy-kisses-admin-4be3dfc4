@@ -1,90 +1,59 @@
-# Staff Work Mode — job workflow for the people on the floor
+## Goal
 
-Everything so far has been admin-facing. This adds a real *doing* layer: a job has a start, a middle, notes/photos/checks, and a signed-off end — plus a separate, deliberately simple tablet interface at `/work` for groomers, hotel/cattery carers, daycare staff and van drivers.
+Build the Front Desk experience once, so each department day screen doubles as the screen that department's own staff see. Front Desk gets a big-icon home, department-first navigation, no calendar/credit notes/reports, and payment *flags* plus read-only invoice viewing.
 
-Front desk keeps the current admin UI and can open `/work` too.
+## 1. Home launcher
 
-## What exists already (verified)
+New route `/admin/home`, and post-login routing sends tenant staff there instead of `/admin/dashboard` (owner/admin roles can still pin the dashboard — the launcher links to it).
 
-- `bookings.status` enum already covers the whole lifecycle: `confirmed → checked_in → in_progress/grooming → ready → checked_out → completed`, plus `cancelled` / `no_show`.
-- `booking_status_events` already logs `from_status`, `to_status`, `actor_user_id`, `event_kind`, `note`.
-- Grooming board drag-and-drop already moves cards through Booked → Checked in → Grooming → Ready, and stamps `actual_start_at` / `actual_end_at`.
-- Hotel Today panel already has check-in / check-out buttons.
-- Daycare already has `daycare_attendance` with `checked_in_at` / `checked_out_at` / status.
-- Roles already exist for each department: Front Desk, Grooming, Hotel, Daycare, Driver, Accounts, Read Only.
+Layout: a responsive grid of large tap-friendly tiles (laptop and tablet), each showing icon, label and a live count for today:
 
-So the state machine is largely there. What's missing is: the worker-facing surface, the *record* of what was done (checklist, photos, notes, sign-off), incident logging, and per-role landing.
+```text
+[ Daycare 12 in ]  [ Hotel & Cattery 4 ]  [ Grooming 6 ]
+[ Mobile vans 3 ]  [ Pick up / Drop off 2 ]  [ Customers ]
+[ Pets ]           [ Bookings ]             [ Dashboard ]
+```
 
-## 1. Data layer
+Tiles render only when the user has the matching `*.view` permission, so a groomer sees just Grooming, and Front Desk sees the set above. Attention badges (unpaid job today, missing vax, unassigned resource) surface on the tile as a coral dot with a count.
 
-New tables (each with tenant scoping, GRANTs, RLS, timestamps):
+## 2. Navigation clean-up
 
-- **`job_checklist_templates`** — per tenant, per service type, ordered items (label, icon key, requires_note, active). Editable in Settings so Charlotte controls the list, not a developer.
-- **`booking_checklist_items`** — per booking: template item, done boolean, done_by, done_at, optional note. This is the tap-tap record.
-- **`booking_photos`** — per booking: kind (`before` / `after` / `incident` / `general`), pet_id, storage key (reuses the existing S3 documents pipeline + signed upload/download edge functions), uploaded_by, caption.
-- **`booking_signoffs`** — booking_id, staff profile_id, signed_name, signed_at, summary note. One per booking, editable until the booking is invoiced.
-- **`care_rounds`** — hotel/cattery daily care: booking_id, pet_id, round_date, round type (`fed_am`, `fed_pm`, `meds`, `walk`, `play`, `crate_clean`), done_at, staff, note.
-- **`incidents`** — booking_id (nullable), pet_id, severity (`note` / `concern` / `urgent`), category (vet, injury, escape, behaviour, illness, other), description, photo refs, raised_by, acknowledged_by/at. Urgent incidents write a `notification_events` row so front desk and admin see a badge.
+- Hide Calendar from users without `calendar.view`; remove `calendar.view` from the Front Desk role so it disappears for them (route and page stay for admins/owner).
+- Add "Home" as the first sidebar item.
+- Front Desk role permissions: dashboard, customers, pets, bookings (view/create/update/cancel), daycare, hotel, grooming, transport, documents, comms, `invoices.view` + `payments.view`. Explicitly not: reports, credit notes, invoice create/update/send/void, payments.create, settings, users.
 
-Job notes reuse `booking_status_events` (`event_kind = 'job_note'`) so the whole timeline stays in one place.
+## 3. Shared department day screen
 
-New permission codes, added to the roles matrix in Settings → Roles:
-`work.access`, `work.grooming`, `work.hotel`, `work.daycare`, `work.transport`, `work.signoff`, `incidents.raise`, `incidents.acknowledge`.
+Each department already has an admin board (Daycare, Hotel & Cattery, Grooming, Mobile Vans, Pick up / Drop off). We standardise them into one shape and gate the actions:
 
-## 2. The `/work` app
+- Common header: day stepper, department name, search, status filter chips, attention counter.
+- Common row/card: pet + owner, time, status pill, and status chips for **Unpaid / Overdue / Vax missing / Unassigned**.
+- Action layer split by permission:
+  - `*.view` — read the day, open a booking.
+  - `bookings.create` / `bookings.update` — add, edit, reschedule, cancel (Front Desk).
+  - `work.*` — check-in / start / ready / sign-off, checklists, photos, incidents (floor staff, already built at `/work`).
 
-New route tree under `/work` with its own layout (`WorkLayout`) — not the admin sidebar. Design rules, tuned for tablets and low-confidence users:
+Front Desk gets both booking and floor actions on the same screen; a groomer opening the same screen sees the floor actions only. The existing `/work` tablet views remain the stripped-back phone-sized entry point and keep sharing the same queries.
 
-- Minimum 56px tap targets, large type (18–20px base), high contrast, no dense tables anywhere.
-- Bottom tab bar (thumb reach on tablet/phone), max 4 tabs, icon + short word.
-- One screen = one decision. Big primary button per card. No dropdown menus; use full-screen sheets.
-- Every state change is a big button with an icon and colour: green Start, orange Pause, blue Ready, grey Done.
-- Confirmations only where a mistake is costly (complete, incident, no-show); everything else is instant with a toast + undo.
-- Uses existing semantic tokens (coral primary, turquoise, green, orange) — no new colour system.
+## 4. Payment flags + read-only invoices
 
-### Screens
+- Booking and department queries return `invoice_status` (none / draft / issued / overdue / paid) per booking so the boards can show a red "Unpaid" chip on today's and tomorrow's jobs.
+- Booking detail shows a payment strip: amount, status, due date, and "View invoice" if permitted.
+- With `invoices.view` but without `invoices.update|send|void|create` and without `payments.create`, the invoice detail page renders read-only: no edit, send, void, credit-note or record-payment buttons. Invoices & Payments stays out of the sidebar for Front Desk — they reach an invoice only from a booking or customer record.
 
-**`/work` — My day.** Auto-routes on role. A single vertical list of today's jobs for that person's department, big cards: pet photo/initial, pet name, owner surname, time, service, status colour bar, and one primary action button. A date strip at top (yesterday / today / tomorrow) — no calendar picker.
+## 5. Order of work
 
-**`/work/job/:bookingId` — Job screen.** The core of this build.
-- Header: pet name, breed/size, owner + one-tap call button, time, status pill.
-- Alerts band: vaccination warning (with the existing waive action if permitted), pinned customer notes, medical/behaviour flags.
-- Big action button that reflects the next state: **Start** → **Pause / Resume** → **Ready for collection** → **Complete & sign off**. Timer runs visibly while in progress and stamps the existing `actual_start_at` / `actual_end_at`.
-- Checklist: full-width tappable rows with a big tick. Long-press or an "Add note" chip attaches a note to an item.
-- Photos: two big buttons, "Before" and "After", opening the device camera directly. Thumbnails inline.
-- Notes: one tap opens a full-screen note sheet with large text area; saved notes list chronologically.
-- **Raise incident**: red outlined button, always visible; opens a sheet with severity, category, description, photo.
-- **Complete & sign off**: sheet confirms checklist coverage (warns if items unticked, doesn't block), captures the staff member's name pre-filled from their profile plus timestamp, then sets the booking to `completed`.
-
-**`/work/hotel` — Stays & rounds.** List of in-house pets. Each row = pet + run/room + a row of round chips (Fed AM, Fed PM, Meds, Walk, Play) that turn green as tapped; taps write `care_rounds`. Arrivals and departures for today sit in their own tabs with big Check in / Check out buttons.
-
-**`/work/daycare` — Attendance.** Reuses existing attendance data behind a big-tile grid: tap a pet tile to toggle checked in / out. Adds incident + note per pet, which today's board lacks.
-
-**`/work/vans` — Route.** Driver's stop list in order, each with Arrived / Collected / Dropped buttons and a call-owner button, mapped onto the existing transport leg statuses.
-
-**`/work/me`** — who I am, my jobs done today, sign out.
-
-## 3. Admin side
-
-- Booking detail gets a **Job activity** card: unified timeline of status changes, notes, checklist completion, photos, rounds, incidents, and the sign-off record.
-- New **Incidents** admin page (nav item, permission-gated) with open/acknowledged filters; urgent ones raise the sidebar badge via the existing `useNavBadges` hook.
-- Settings → new **Job checklists** screen (per service type, drag to reorder) and **Work mode** screen (which roles land where, whether photos are required before sign-off).
-- Login routing: staff whose only roles are department roles land on `/work`; front desk, admin and owner land on `/admin/dashboard` with a "Work mode" launcher button in the header.
-
-## 4. Order of work
-
-1. Migration: tables, grants, RLS, permissions, role grants.
-2. `WorkLayout` + `/work` My day + role-based routing.
-3. Job screen: status machine, timer, notes, checklist.
-4. Photos (before/after) on the existing S3 pipeline.
-5. Sign-off + completion.
-6. Hotel rounds screen + incidents (raise, list, acknowledge, notification).
-7. Daycare and vans work screens.
-8. Admin: Job activity timeline, Incidents page, Settings screens.
+1. Permission/role updates + Front Desk role preset (migration) and nav gating.
+2. Home launcher page with permission-filtered tiles and live counts.
+3. Invoice status on booking queries + payment chips and booking payment strip.
+4. Read-only mode on the invoice detail page.
+5. Standardise the five department day screens on the shared header/row/action-gate pattern.
+6. Settings screen entry so the owner can adjust which tiles/permissions a role gets (per the settings-first rule).
 
 ## Technical notes
 
-- No new booking tables — everything hangs off `bookings.id`, consistent with the one-row-per-booking rule.
-- Photos go through `documents-sign-upload` / `documents-sign-download` with a `booking_photo` document kind, so retention policy applies automatically.
-- All `/work` queries are date-scoped and department-scoped server-side via RLS, so a groomer can't page through hotel data.
-- Offline is out of scope for this pass; jobs are small writes and the site has wifi. If dropouts turn out to be a real problem we can add a retry queue later.
+- New `FrontDeskHome` under `src/features/home/`, tiles driven by a config array mirroring `src/constants/navigation.ts` with `code` gating via `hasPermission`.
+- Counts reuse existing per-department queries plus `useNavBadges` style aggregation; one batched query rather than one per tile.
+- Post-login branch in `src/pages/Index.tsx` / `Login.tsx` changes `/admin/dashboard` → `/admin/home`.
+- Shared board primitives (`DayHeader`, `JobRow`, `StatusChips`) in `src/features/shared/board/` so Daycare/Hotel/Grooming/Vans/Transport pages converge instead of each re-implementing.
+- Invoice read-only gating done in the page component from permissions; RLS already prevents writes server-side.
