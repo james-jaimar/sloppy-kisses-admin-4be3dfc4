@@ -214,6 +214,9 @@ Deno.serve(async (req) => {
         .in("pet_id", body.pet_ids);
       const missing: string[] = [];
       for (const p of pets) {
+        // Admin waiver: pet passes the gate while the waiver covers the booking date.
+        const waivedUntil = (p as any).vax_waived_until as string | null;
+        if (waivedUntil && new Date(waivedUntil + "T23:59:59Z").getTime() >= start.getTime()) continue;
         for (const r of rules) {
           if (r.species !== "any" && r.species !== (p as any).species) continue;
           const rec = (vax ?? []).find(
