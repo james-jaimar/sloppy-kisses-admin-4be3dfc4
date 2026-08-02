@@ -1717,6 +1717,7 @@ export type Database = {
           file_path: string | null
           file_size_bytes: number | null
           id: string
+          invoice_id: string | null
           mime_type: string | null
           notes: string | null
           pet_id: string | null
@@ -1749,6 +1750,7 @@ export type Database = {
           file_path?: string | null
           file_size_bytes?: number | null
           id?: string
+          invoice_id?: string | null
           mime_type?: string | null
           notes?: string | null
           pet_id?: string | null
@@ -1781,6 +1783,7 @@ export type Database = {
           file_path?: string | null
           file_size_bytes?: number | null
           id?: string
+          invoice_id?: string | null
           mime_type?: string | null
           notes?: string | null
           pet_id?: string | null
@@ -1818,6 +1821,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
@@ -6061,6 +6071,7 @@ export type Database = {
         }[]
       }
       is_platform_owner: { Args: never; Returns: boolean }
+      issue_booking_invoice: { Args: { p_booking_id: string }; Returns: string }
       log_invoice_event: {
         Args: {
           p_event_type: string
@@ -6227,6 +6238,7 @@ export type Database = {
         | "password_reset_requested"
         | "booking_cancellation_requested"
         | "booking_reminder_24h"
+        | "payment_proof_uploaded"
       notification_status: "pending" | "sent" | "failed" | "skipped"
       payment_method: "eft" | "cash" | "card" | "yoko" | "payfast" | "other"
       payment_provider_mode: "test" | "live"
@@ -6478,6 +6490,7 @@ export const Constants = {
         "password_reset_requested",
         "booking_cancellation_requested",
         "booking_reminder_24h",
+        "payment_proof_uploaded",
       ],
       notification_status: ["pending", "sent", "failed", "skipped"],
       payment_method: ["eft", "cash", "card", "yoko", "payfast", "other"],
