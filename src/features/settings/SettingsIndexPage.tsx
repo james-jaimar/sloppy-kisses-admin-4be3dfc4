@@ -246,6 +246,11 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
     members: ["Resources", "Daycare plans", "Daycare workflow", "Import daycare register", "Hotel & Cattery workflow", "Mobile van workflow", "Transport workflow"],
   },
   {
+    id: "work",
+    label: "Staff work mode",
+    members: ["Job checklists"],
+  },
+  {
     id: "grooming",
     label: "Grooming",
     members: ["Grooming rate card", "Grooming add-ons", "Grooming workflow", "Grooming instructions", "Dog breeds"],
