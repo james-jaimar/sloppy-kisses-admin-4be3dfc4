@@ -3,13 +3,13 @@ import { Loader2 } from "lucide-react";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls, textareaCls } from "./WizardShell";
 import { usePortalPets, useResources } from "./wizardHooks";
-import { dateToIso, useRequestSubmit } from "./useRequestSubmit";
+import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
 
 export default function HotelRequestWizard() {
   const cust = useCurrentCustomer();
   const pets = usePortalPets(cust.data?.id);
   const rooms = useResources(cust.data?.tenant_id, ["hotel_area", "cattery_area"]);
-  const submit = useRequestSubmit();
+  const submit = useCreatePortalBooking();
 
   const [petIds, setPetIds] = useState<string[]>([]);
   const [checkInDate, setCheckInDate] = useState("");
@@ -36,18 +36,17 @@ export default function HotelRequestWizard() {
 
   function onSubmit() {
     if (!cust.data) return;
+    const startAt = dateToIso(checkInDate, checkInTime);
+    if (!startAt) return;
     submit.mutate({
-      tenantId: cust.data.tenant_id,
-      customerId: cust.data.id,
-      serviceType,
-      petId: petIds[0] ?? null,
-      preferredStartAt: dateToIso(checkInDate, checkInTime),
-      preferredEndAt: dateToIso(checkOutDate, checkOutTime),
-      customerNotes: notes,
-      requestPayload: {
-        pet_ids: petIds,
-        room_preference: roomPref || null,
-        diet_medication: dietMeds || null,
+      serviceType: serviceType as any,
+      petIds,
+      startAt,
+      endAt: dateToIso(checkOutDate, checkOutTime),
+      notes,
+      hotel: {
+        accommodation_type: roomPref || null,
+        feeding_instructions: dietMeds || null,
       },
     });
   }
@@ -56,15 +55,15 @@ export default function HotelRequestWizard() {
 
   return (
     <WizardShell
-      title="Hotel & Cattery request"
-      subtitle="Tell us the dates and preferences — we'll confirm availability."
+      title="Book Hotel & Cattery"
+      subtitle="Pick your dates — your invoice is issued as soon as the stay is booked."
       footer={
         <button
           onClick={onSubmit}
           disabled={!canSubmit}
           className="rounded-lg bg-sk-coral px-5 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50"
         >
-          {submit.isPending ? "Sending…" : "Send request"}
+          {submit.isPending ? "Booking…" : "Confirm booking"}
         </button>
       }
     >
