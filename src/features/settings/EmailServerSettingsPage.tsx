@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { supabase } from "@/lib/supabase/client";
+import { SendLockCard } from "@/features/comms/SendLockCard";
 
 const PERMISSION = "settings.email.manage";
 
@@ -99,6 +100,7 @@ export default function EmailServerSettingsPage() {
       <AppHeader title="Email server" subtitle="SMTP credentials used to send outbound mail." />
       <div className="flex-1 p-6">
         <div className="sk-card max-w-3xl p-6 space-y-6">
+          <SendLockCard />
           <div className="rounded-lg border border-sk-coral/30 bg-sk-coral-soft/40 px-4 py-3 text-xs leading-relaxed text-foreground">
             These SMTP settings are used for <strong>every</strong> email your tenant sends — including
             account invites, password resets, magic sign-in links and email-verification messages. Recipients

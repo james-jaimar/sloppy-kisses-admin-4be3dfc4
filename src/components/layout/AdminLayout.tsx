@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { MobileTopBar } from "./MobileTopBar";
+import { SendLockBanner } from "./SendLockBanner";
 import { adminNav } from "@/constants/navigation";
 import { QuickAddProvider } from "@/components/quickAdd/QuickAddProvider";
 
@@ -27,6 +28,7 @@ export default function AdminLayout() {
       />
       <div className="flex-1 min-w-0 flex flex-col">
         <MobileTopBar items={adminNav} footerLabel="Sloppy Kisses · Bryanston" />
+        <SendLockBanner />
         <Outlet />
       </div>
     </div>
