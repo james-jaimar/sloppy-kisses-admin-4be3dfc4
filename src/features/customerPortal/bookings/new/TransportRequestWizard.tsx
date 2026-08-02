@@ -3,17 +3,17 @@ import { Loader2 } from "lucide-react";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls, textareaCls } from "./WizardShell";
 import { usePortalPets, useCustomerBookings } from "./wizardHooks";
-import { dateToIso, useRequestSubmit } from "./useRequestSubmit";
+import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
 
 export default function TransportRequestWizard() {
   const cust = useCurrentCustomer();
   const pets = usePortalPets(cust.data?.id);
   const bookings = useCustomerBookings(cust.data?.id);
-  const submit = useRequestSubmit();
+  const submit = useCreatePortalBooking();
 
   const [petIds, setPetIds] = useState<string[]>([]);
   const [linkedBookingId, setLinkedBookingId] = useState("");
-  const [direction, setDirection] = useState<"pickup" | "dropoff" | "both">("both");
+  const [direction, setDirection] = useState<"pickup" | "dropoff" | "round_trip">("round_trip");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("08:00");
   const [addressLine, setAddressLine] = useState(cust.data?.address_line_1 ?? "");
@@ -29,20 +29,17 @@ export default function TransportRequestWizard() {
 
   function onSubmit() {
     if (!cust.data) return;
+    const startAt = dateToIso(date, time);
+    if (!startAt) return;
     submit.mutate({
-      tenantId: cust.data.tenant_id,
-      customerId: cust.data.id,
       serviceType: "pickup_dropoff",
-      petId: petIds[0] ?? null,
-      preferredStartAt: dateToIso(date, time),
-      preferredEndAt: null,
-      customerNotes: notes,
-      requestPayload: {
-        pet_ids: petIds,
+      petIds,
+      startAt,
+      notes: [notes, accessNotes ? `Access: ${accessNotes}` : null].filter(Boolean).join("\n") || null,
+      transport: {
         direction,
-        linked_booking_id: linkedBookingId || null,
-        pickup_address: { line_1: addressLine, suburb },
-        access_notes: accessNotes || null,
+        pickup_address: addressLine || null,
+        suburb: suburb || null,
       },
     });
   }
@@ -51,11 +48,11 @@ export default function TransportRequestWizard() {
 
   return (
     <WizardShell
-      title="Pick up / Drop off request"
-      subtitle="Add transport to an existing booking, or request a standalone trip."
+      title="Book pick up / drop off"
+      subtitle="Add transport to an existing booking, or book a standalone trip."
       footer={
         <button onClick={onSubmit} disabled={!canSubmit} className="rounded-lg bg-sk-coral px-5 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
-          {submit.isPending ? "Sending…" : "Send request"}
+          {submit.isPending ? "Booking…" : "Confirm booking"}
         </button>
       }
     >
@@ -87,7 +84,7 @@ export default function TransportRequestWizard() {
           <select value={direction} onChange={(e) => setDirection(e.target.value as any)} className={selectCls}>
             <option value="pickup">Pickup only</option>
             <option value="dropoff">Drop-off only</option>
-            <option value="both">Both</option>
+            <option value="round_trip">Both ways</option>
           </select>
         </Field>
         <Field label="Preferred date"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} /></Field>
