@@ -1,7 +1,9 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Mail, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server, FileUp, Dog, FileText, Gavel } from "lucide-react";
+import { Sliders, Users, KeyRound, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server, FileUp, Dog, FileText, Gavel, Search } from "lucide-react";
 import { Archive } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const SECTIONS = [
   {
