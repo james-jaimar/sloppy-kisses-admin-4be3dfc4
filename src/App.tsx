@@ -14,6 +14,14 @@ import PublicFormLayout from "@/components/layout/PublicFormLayout";
 import PlaceholderPage from "@/components/layout/PlaceholderPage";
 import RequireAdmin from "@/components/auth/RequireAdmin";
 import RequireCustomer from "@/components/auth/RequireCustomer";
+import WorkLayout from "@/features/work/WorkLayout";
+import MyDayPage from "@/features/work/MyDayPage";
+import JobPage from "@/features/work/JobPage";
+import HotelRoundsPage from "@/features/work/HotelRoundsPage";
+import DaycareWorkPage from "@/features/work/DaycareWorkPage";
+import VansWorkPage from "@/features/work/VansWorkPage";
+import MePage from "@/features/work/MePage";
+import JobChecklistsPage from "@/features/settings/JobChecklistsPage";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 
@@ -217,8 +225,18 @@ const App = () => (
                 <Route path="/admin/settings/policies" element={<PolicySettingsPage />} />
                 <Route path="/admin/settings/terms" element={<TermsVersionsPage />} />
                 <Route path="/admin/settings/consent-status" element={<ConsentStatusPage />} />
+                <Route path="/admin/settings/job-checklists" element={<JobChecklistsPage />} />
                 <Route path="/admin/settings/password" element={<ChangePasswordPage />} />
               </Route>
+              </Route>
+
+              <Route element={<WorkLayout />}>
+                <Route path="/work" element={<MyDayPage />} />
+                <Route path="/work/job/:bookingId" element={<JobPage />} />
+                <Route path="/work/hotel" element={<HotelRoundsPage />} />
+                <Route path="/work/daycare" element={<DaycareWorkPage />} />
+                <Route path="/work/vans" element={<VansWorkPage />} />
+                <Route path="/work/me" element={<MePage />} />
               </Route>
 
               <Route element={<RequirePlatform />}>

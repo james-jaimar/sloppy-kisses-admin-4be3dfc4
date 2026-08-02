@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, KeyRound, LogOut, MessageSquare, Plus, Search, ShieldCheck, CalendarPlus, UserPlus, Dog, FileText, ChevronDown } from "lucide-react";
+import { Bell, KeyRound, LogOut, MessageSquare, Plus, Search, ShieldCheck, CalendarPlus, UserPlus, Dog, FileText, ChevronDown, HardHat } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useQuickAdd, type QuickAddKind } from "@/components/quickAdd/QuickAddProvider";
@@ -14,7 +14,8 @@ interface Props {
 
 export function AppHeader({ title, subtitle, tabs, actions }: Props) {
   const { authUser, signOut } = useAuth();
-  const { profile, roles } = useCurrentUser();
+  const { profile, roles, hasPermission } = useCurrentUser();
+  const canWorkMode = hasPermission("work.access");
   const location = useLocation();
   const isPlatform = profile?.user_type === "platform";
   const inPlatform = location.pathname.startsWith("/platform");
@@ -188,6 +189,15 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
                     <div className="text-xs text-muted-foreground truncate">{authUser?.email}</div>
                   </div>
                   <div className="my-1 h-px bg-border" />
+                  {canWorkMode && (
+                    <Link
+                      to="/work"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-muted"
+                    >
+                      <HardHat className="h-4 w-4" /> Work mode
+                    </Link>
+                  )}
                   <Link
                     to={passwordPath}
                     onClick={() => setMenuOpen(false)}

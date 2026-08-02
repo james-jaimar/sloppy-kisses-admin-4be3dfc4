@@ -182,6 +182,13 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/job-checklists",
+    label: "Job checklists",
+    description: "Steps staff tick off in Work mode for each service — grooming, hotel, cattery, daycare and transport.",
+    icon: Archive,
+    ready: true,
+  },
+  {
     to: "/admin/settings/policies",
     label: "Policies",
     description: "Deposits, cancellation windows, notice periods and overdue interest applied across bookings and invoices.",
@@ -237,6 +244,11 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
     id: "operations",
     label: "Operations",
     members: ["Resources", "Daycare plans", "Daycare workflow", "Import daycare register", "Hotel & Cattery workflow", "Mobile van workflow", "Transport workflow"],
+  },
+  {
+    id: "work",
+    label: "Staff work mode",
+    members: ["Job checklists"],
   },
   {
     id: "grooming",
