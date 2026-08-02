@@ -48,18 +48,18 @@ export default function HomePage() {
   const attention = useHomeAttention(tenantId);
 
   const tiles = TILES.filter((t) => !t.code || isPlatform || hasPermission(t.code));
-  const firstName = (profile?.full_name ?? "there").split(" ")[0];
+  const displayName = (profile?.full_name ?? "").trim() || "there";
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Hi {firstName}</h1>
-        <p className="text-sm text-muted-foreground">
+    <div className="flex-1 space-y-6 px-5 py-6 sm:px-7 sm:py-7 lg:px-9 lg:py-9">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-[-0.02em] sm:text-[34px] sm:leading-tight">Hi {displayName}</h1>
+        <p className="text-sm text-muted-foreground sm:text-[15px]">
           {format(new Date(), "EEEE, d MMMM yyyy")} — pick where you're working.
         </p>
       </header>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3.5 sm:gap-5 md:grid-cols-3 xl:grid-cols-4">
         {tiles.map((tile) => {
           const Icon = tile.icon;
           const count = tile.countKey ? statsQ.data?.[tile.countKey]?.today : undefined;
@@ -68,14 +68,14 @@ export default function HomePage() {
             <Link
               key={tile.to + tile.label}
               to={tile.to}
-              className="sk-card group relative flex min-h-[136px] flex-col justify-between p-4 transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 sm:min-h-[156px] sm:p-5"
+              className="sk-tile group flex min-h-[140px] flex-col justify-between p-4 sm:min-h-[160px] sm:p-5"
             >
               <div className="flex items-start justify-between gap-2">
-                <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl sm:h-14 sm:w-14 ${TONES[tile.tone]}`}>
+                <span className={`sk-tile-icon h-12 w-12 sm:h-14 sm:w-14 ${TONES[tile.tone]}`}>
                   <Icon className="h-6 w-6 sm:h-7 sm:w-7" />
                 </span>
                 {tile.countKey && (
-                  <span className="text-3xl font-bold tabular-nums sm:text-4xl">
+                  <span className="text-3xl font-semibold tabular-nums tracking-[-0.03em] sm:text-[40px] sm:leading-none">
                     {statsQ.isLoading ? (
                       <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                     ) : (
@@ -85,10 +85,10 @@ export default function HomePage() {
                 )}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-base font-semibold sm:text-lg">{tile.label}</p>
-                <p className="truncate text-xs text-muted-foreground">{tile.hint}</p>
+                <p className="truncate text-base font-semibold tracking-[-0.01em] sm:text-[17px]">{tile.label}</p>
+                <p className="truncate text-xs text-muted-foreground sm:text-[13px]">{tile.hint}</p>
                 {alerts > 0 && (
-                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-semibold text-destructive">
+                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive">
                     <AlertCircle className="h-3 w-3" />
                     {tile.attentionKey === "unpaidToday" ? `${alerts} unpaid today` : `${alerts} unassigned`}
                   </span>
