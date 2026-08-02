@@ -4428,6 +4428,10 @@ export type Database = {
           tenant_id: string
           updated_at: string
           updated_by: string | null
+          vax_waived_until: string | null
+          vax_waiver_at: string | null
+          vax_waiver_by: string | null
+          vax_waiver_reason: string | null
         }
         Insert: {
           age_years?: number | null
@@ -4483,6 +4487,10 @@ export type Database = {
           tenant_id: string
           updated_at?: string
           updated_by?: string | null
+          vax_waived_until?: string | null
+          vax_waiver_at?: string | null
+          vax_waiver_by?: string | null
+          vax_waiver_reason?: string | null
         }
         Update: {
           age_years?: number | null
@@ -4538,6 +4546,10 @@ export type Database = {
           tenant_id?: string
           updated_at?: string
           updated_by?: string | null
+          vax_waived_until?: string | null
+          vax_waiver_at?: string | null
+          vax_waiver_by?: string | null
+          vax_waiver_reason?: string | null
         }
         Relationships: [
           {
@@ -4571,6 +4583,13 @@ export type Database = {
           {
             foreignKeyName: "pets_updated_by_fkey"
             columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pets_vax_waiver_by_fkey"
+            columns: ["vax_waiver_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
