@@ -237,7 +237,8 @@ export default function CalendarWeekView() {
 
   const resourcesQ = useResources(tenantId);
 
-  // Handle deep-link from booking requests: /admin/calendar?newBooking=1&customer=...&service=...
+  // Handle deep-link into the new-booking modal:
+  // /admin/calendar?newBooking=1&customer=...&service=...
   useEffect(() => {
     if (searchParams.get("newBooking") === "1") {
       setShowNew(true);
@@ -246,14 +247,13 @@ export default function CalendarWeekView() {
 
   const prefill = useMemo(() => {
     if (!showNew) return undefined;
-    // From deep link (booking requests, etc.)
+    // From a deep link
     if (searchParams.get("newBooking") === "1") {
       return {
         customer_id: searchParams.get("customer") ?? undefined,
         pet_ids: searchParams.get("pet") ? [searchParams.get("pet") as string] : undefined,
         service_type: (searchParams.get("service") as ServiceType) ?? undefined,
         start_at: searchParams.get("start") ?? undefined,
-        booking_request_id: searchParams.get("request") ?? undefined,
       };
     }
     // From the calendar itself: seed start_at from the currently viewed day.
@@ -511,14 +511,11 @@ function EmptyState({ onNew }: { onNew: () => void }) {
     <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">
       <CalendarDays className="h-10 w-10 text-muted-foreground" />
       <div className="text-lg font-semibold">No bookings in this date range</div>
-      <div className="text-sm text-muted-foreground">Create a new booking or review booking requests.</div>
+      <div className="text-sm text-muted-foreground">Create a booking to get started.</div>
       <div className="mt-2 flex gap-2">
         <button onClick={onNew} className="inline-flex items-center gap-2 rounded-xl bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark">
           <Plus className="h-4 w-4" /> New booking
         </button>
-        <a href="/admin/booking-requests" className="rounded-xl border border-border px-4 py-2 text-sm font-medium hover:bg-muted">
-          View booking requests
-        </a>
       </div>
     </div>
   );
