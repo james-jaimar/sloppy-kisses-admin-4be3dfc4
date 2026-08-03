@@ -204,6 +204,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   );
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(DEFAULT_RECURRENCE);
   const [hotelSurcharges, setHotelSurcharges] = useState<SurchargeSelection[]>([]);
+  const [capacityIssue, setCapacityIssue] = useState<CapacityIssue | null>(null);
   const setBookingSurcharges = useSetBookingHotelSurcharges(tenantId);
   const [groomingAddons, setGroomingAddons] = useState<GroomingAddonSelection[]>([]);
   const setBookingGroomingAddons = useSetBookingGroomingAddons(tenantId);
