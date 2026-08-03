@@ -4084,6 +4084,7 @@ export type Database = {
           company_name: string | null
           created_at: string
           credit_note_prefix: string
+          daycare_prorata_enabled: boolean
           default_vat_rate: number
           footer_notes: string | null
           id: string
@@ -4110,6 +4111,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           credit_note_prefix?: string
+          daycare_prorata_enabled?: boolean
           default_vat_rate?: number
           footer_notes?: string | null
           id?: string
@@ -4136,6 +4138,7 @@ export type Database = {
           company_name?: string | null
           created_at?: string
           credit_note_prefix?: string
+          daycare_prorata_enabled?: boolean
           default_vat_rate?: number
           footer_notes?: string | null
           id?: string
@@ -6602,6 +6605,7 @@ export type Database = {
         Returns: string
       }
       current_profile_id: { Args: never; Returns: string }
+      daycare_prorata_quote: { Args: { p_enrolment_id: string }; Returns: Json }
       delete_booking: { Args: { p_booking_id: string }; Returns: undefined }
       delete_customer: { Args: { p_customer_id: string }; Returns: undefined }
       delete_daycare_enrolment: {
@@ -6615,6 +6619,10 @@ export type Database = {
       }
       ensure_booking_invoice: {
         Args: { p_booking_id: string }
+        Returns: string
+      }
+      ensure_daycare_prorata_invoice: {
+        Args: { p_enrolment_id: string }
         Returns: string
       }
       ensure_draft_invoice: {

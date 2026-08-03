@@ -28,6 +28,7 @@ export default function InvoicingSettingsPage() {
     auto_invoice_daycare: true, auto_invoice_hotel: true,
     auto_invoice_grooming: true, auto_invoice_transport: true,
     billing_cycle: "monthly_prepaid", billing_run_day: 22, billing_due_day: 1,
+    daycare_prorata_enabled: true,
   });
   const nextMonth = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1); return d.toISOString().slice(0, 10); })();
   const [runPeriod, setRunPeriod] = useState<string>(nextMonth);
@@ -57,6 +58,7 @@ export default function InvoicingSettingsPage() {
         billing_cycle: (d as any).billing_cycle ?? "monthly_prepaid",
         billing_run_day: Number((d as any).billing_run_day ?? 22),
         billing_due_day: Number((d as any).billing_due_day ?? 1),
+        daycare_prorata_enabled: (d as any).daycare_prorata_enabled ?? true,
       });
     }
   }, [settingsQ.data]);
@@ -84,6 +86,7 @@ export default function InvoicingSettingsPage() {
         billing_cycle: form.billing_cycle,
         billing_run_day: form.billing_run_day,
         billing_due_day: form.billing_due_day,
+        daycare_prorata_enabled: form.daycare_prorata_enabled,
       } as any);
       toast.success("Invoicing settings saved");
     } catch (err: any) { toast.error(err?.message ?? "Failed"); }
@@ -266,6 +269,19 @@ export default function InvoicingSettingsPage() {
                   className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
               </Field>
             </div>
+
+            <label className="mt-4 flex items-start justify-between gap-4 rounded-lg border border-border bg-white px-3 py-2 text-sm">
+              <span>
+                Pro-rata mid-month daycare enrolments
+                <span className="mt-0.5 block text-xs text-muted-foreground">
+                  When on, an enrolment starting after the 1st is invoiced immediately for only the
+                  remaining attendance days of that month. When off, mid-month joiners simply wait for the
+                  next monthly run.
+                </span>
+              </span>
+              <input type="checkbox" disabled={!canManage} checked={form.daycare_prorata_enabled}
+                onChange={(e) => setForm({ ...form, daycare_prorata_enabled: e.target.checked })} />
+            </label>
 
             <div className="mt-5 rounded-lg border border-dashed border-border bg-sk-surface-muted/30 p-4">
               <div className="mb-2 text-sm font-semibold">Run monthly daycare billing</div>

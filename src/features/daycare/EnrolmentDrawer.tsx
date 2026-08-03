@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Check, ChevronsUpDown, Search } from "lucide-react";
 import {
@@ -9,6 +9,9 @@ import {
   useCreateEnrolment, useDaycarePlans, useTenantPetsWithOwnersSearch, usePetWithOwner, useUpdateEnrolment,
   WEEKDAYS, WEEKDAY_LABEL, type DaycareEnrolment, type Weekday,
 } from "./queries";
+import { prorataQuote } from "./prorata";
+import { supabase } from "@/lib/supabase/client";
+import { emailIssuedInvoice } from "@/features/invoices/autoEmail";
 
 interface Props {
   tenantId: string;
@@ -60,6 +63,13 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
     setDays((cur) => cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d]);
   }
 
+  const selectedPlan = (plansQ.data ?? []).find((p) => p.id === planId) ?? null;
+  const quote = useMemo(
+    () => (editing ? null : prorataQuote(startDate, endDate || null, days, Number(selectedPlan?.price ?? 0))),
+    [editing, startDate, endDate, days, selectedPlan?.price],
+  );
+  const showProrata = !!quote?.isPartial && quote.amount > 0;
+
   async function save() {
     if (!petId || !startDate || days.length === 0) {
       toast.error("Pet, start date, and at least one weekday are required");
@@ -93,9 +103,24 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
           notes: notes || null,
           active,
         });
-        toast.success("Enrolment created · billed on the next monthly daycare run", {
-          description: "Daycare is invoiced once a month for the coming month.",
-        });
+        if (showProrata) {
+          // The DB trigger raises a standalone issued pro-rata invoice — email it.
+          const { data: item } = await supabase
+            .from("invoice_items")
+            .select("invoice_id")
+            .eq("source_type", "daycare_enrolment_prorata")
+            .eq("source_id", (created as any).id)
+            .maybeSingle();
+          const invoiceId = (item as any)?.invoice_id as string | undefined;
+          if (invoiceId) void emailIssuedInvoice(invoiceId);
+          toast.success("Enrolment created · pro-rata invoice issued and emailed", {
+            description: `${quote!.daysBilled} of ${quote!.daysTotal} days — R${quote!.amount.toFixed(2)}. Full months follow on the monthly run.`,
+          });
+        } else {
+          toast.success("Enrolment created · billed on the next monthly daycare run", {
+            description: "Daycare is invoiced once a month for the coming month.",
+          });
+        }
         onOpenChange(false);
         return;
       }
@@ -201,6 +226,12 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
                 className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
             </Field>
           </div>
+          {showProrata && (
+            <div className="rounded-lg border border-sk-turquoise/40 bg-sk-turquoise-soft/40 px-3 py-2 text-xs">
+              <span className="font-semibold">Pro-rata: {quote!.daysBilled} of {quote!.daysTotal} days — R{quote!.amount.toFixed(2)}</span>
+              {" "}invoiced now for the rest of this month. Full months are billed on the monthly run.
+            </div>
+          )}
           <Field label="Weekdays">
             <div className="flex flex-wrap gap-2">
               {WEEKDAYS.map((d) => {
