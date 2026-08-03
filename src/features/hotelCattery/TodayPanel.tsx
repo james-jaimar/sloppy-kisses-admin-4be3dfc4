@@ -8,6 +8,7 @@ import {
 } from "./queries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PaymentChip, PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
+import { StayPlayChip, StayPlayFlagsProvider } from "@/features/daycare/StayPlayBadge";
 
 function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
 function endOfDay(d: Date) { const c = new Date(d); c.setHours(23,59,59,999); return c; }
@@ -93,6 +94,7 @@ export function TodayPanel({
 
   return (
     <PaymentFlagsProvider bookingIds={[...arrivals, ...departures].map((b) => b.id)}>
+    <StayPlayFlagsProvider tenantId={tenantId} bookingIds={[...arrivals, ...departures].map((b) => b.id)}>
     <div className="space-y-4">
       {/* Utilisation card */}
       <div className="sk-card p-5">
@@ -154,6 +156,7 @@ export function TodayPanel({
         ))}
       </Panel>
     </div>
+    </StayPlayFlagsProvider>
     </PaymentFlagsProvider>
   );
 }
@@ -193,6 +196,7 @@ function BookingRow({ b, timeLabel, action }: { b: HotelBookingRow; timeLabel: s
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
           <span className="truncate">{b.resource?.name ?? "Unassigned"} · {b.booking_number}</span>
           <PaymentChip bookingId={b.id} />
+          <StayPlayChip bookingId={b.id} />
         </div>
       </div>
       {action}

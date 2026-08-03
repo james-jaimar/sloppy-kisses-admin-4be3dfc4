@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { BOOKING_STATUS_META } from "@/features/bookings/statusMeta";
+import { BookingStayPlayBadge } from "@/features/daycare/StayPlayBadge";
 import type { BookingStatus } from "@/features/bookings/queries";
 import { BigButton, WorkSheet } from "./WorkSheet";
 import { IncidentSheet } from "./IncidentSheet";
@@ -106,6 +107,9 @@ export default function JobPage() {
             <p className="truncate text-sm text-muted-foreground">
               {job.pets[0]?.breed ?? job.pets[0]?.species ?? "—"} · {job.customer?.full_name ?? "—"}
             </p>
+            <div className="mt-1">
+              <BookingStayPlayBadge tenantId={tenantId} bookingId={job.id} size="sm" />
+            </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-2">
               <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${meta.dot}`}>{meta.label}</span>
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">

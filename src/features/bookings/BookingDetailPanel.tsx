@@ -11,6 +11,7 @@ import { useBookingServiceDetails } from "./detailsQueries";
 import { useCancelSeriesForward } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useBookingInstructions, useInstructionCatalog } from "@/features/grooming/instructions/queries";
+import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
 
 const STATUS_ACTIONS: { status: BookingStatus; label: string }[] = [
   { status: "confirmed", label: "Confirm" },
@@ -85,7 +86,10 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
             <h2 className="mt-0.5 text-lg font-semibold">
               {booking.service_type.replace(/_/g, " ")}
             </h2>
-            <div className="mt-2"><BookingStatusChip status={booking.status} /></div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <BookingStatusChip status={booking.status} />
+              <BookingStayPlayBadge tenantId={tenantId} bookingId={booking.id} />
+            </div>
             {(booking as any).recurring_rule_id && (
               <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-sk-turquoise-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sk-turquoise-dark">
                 <Repeat className="h-3 w-3" /> Part of a series
@@ -117,6 +121,8 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
               </ul>
             </div>
           )}
+
+          <StayPlaySection tenantId={tenantId} bookingId={booking.id} />
 
           <section>
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">When</div>

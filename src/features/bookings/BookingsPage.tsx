@@ -7,6 +7,8 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { BookingFormModal } from "./BookingFormModal";
 import { BookingStatusChip } from "./statusMeta";
 import { useBookingsList, type BookingStatus, type ServiceType } from "./queries";
+import { StayPlayBadge } from "@/features/daycare/StayPlayBadge";
+import { useStayPlayFlags } from "@/features/daycare/stayPlayQueries";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -60,6 +62,7 @@ export default function BookingsPage() {
     status,
   });
   const rows = listQ.data ?? [];
+  const stayPlay = useStayPlayFlags(tenantId, rows.map((r) => r.id));
 
   return (
     <>
@@ -136,7 +139,14 @@ export default function BookingsPage() {
                       onClick={() => navigate(`/admin/bookings/${b.id}`)}
                       className="cursor-pointer hover:bg-sk-surface-muted/40"
                     >
-                      <td className="px-5 py-3 font-medium">{b.booking_number}</td>
+                      <td className="px-5 py-3 font-medium">
+                        <div>{b.booking_number}</div>
+                        <StayPlayBadge
+                          sessions={stayPlay.forBooking(b.id)}
+                          graceMinutes={stayPlay.graceMinutes}
+                          className="mt-1"
+                        />
+                      </td>
                       <td className="px-5 py-3 tabular-nums">
                         {start ? (
                           <>

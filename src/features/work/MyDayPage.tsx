@@ -6,6 +6,7 @@ import { WorkTopBar } from "./WorkTopBar";
 import { useWorkDepts } from "./useWorkDepts";
 import { DEPT_LABEL, useWorkJobs, type WorkJob } from "./queries";
 import { BOOKING_STATUS_META } from "@/features/bookings/statusMeta";
+import { StayPlayChip, StayPlayFlagsProvider } from "@/features/daycare/StayPlayBadge";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -43,6 +44,7 @@ export function JobRowCard({ job }: { job: WorkJob }) {
               {job.start_at ? format(new Date(job.start_at), "HH:mm") : "—"}
             </span>
             <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${meta.dot}`}>{meta.label}</span>
+            <StayPlayChip bookingId={job.id} size="sm" />
           </span>
         </span>
         <ChevronRight className="h-6 w-6 shrink-0 text-muted-foreground" />
@@ -67,6 +69,7 @@ export default function MyDayPage() {
         day={day}
         onDayChange={setDay}
       />
+      <StayPlayFlagsProvider tenantId={tenantId} bookingIds={jobs.map((j) => j.id)}>
       <div className="mx-auto max-w-3xl space-y-3 p-4">
         {jobsQ.isLoading && (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
@@ -92,6 +95,7 @@ export default function MyDayPage() {
           </>
         )}
       </div>
+      </StayPlayFlagsProvider>
     </>
   );
 }
