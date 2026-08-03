@@ -1,5 +1,5 @@
 import { AlarmClock, Sparkles } from "lucide-react";
-import { fmtCollectTime, overdueMinutes, type StayPlaySession } from "./stayPlayQueries";
+import { fmtCollectTime, overdueMinutes, useStayPlayFlags, type StayPlaySession } from "./stayPlayQueries";
 
 interface Props {
   /** Sessions attached to the thing being labelled. Renders nothing when empty. */
@@ -55,5 +55,78 @@ export function StayPlayBadge({ sessions, graceMinutes = 15, showTime = true, si
             : null}
       {rows.length > 1 && <span className="font-medium">· {rows.length} pets</span>}
     </span>
+  );
+}
+
+/** Self-fetching variant for single-booking screens (detail pages, portal). */
+export function BookingStayPlayBadge({
+  tenantId, bookingId, size = "sm", showTime = true, className,
+}: {
+  tenantId: string | null | undefined;
+  bookingId: string | null | undefined;
+  size?: "xs" | "sm";
+  showTime?: boolean;
+  className?: string;
+}) {
+  const flags = useStayPlayFlags(tenantId, bookingId ? [bookingId] : []);
+  return (
+    <StayPlayBadge
+      sessions={flags.forBooking(bookingId)}
+      graceMinutes={flags.graceMinutes}
+      size={size}
+      showTime={showTime}
+      className={className}
+    />
+  );
+}
+
+const ORIGIN_LABEL: Record<string, string> = { grooming: "After groom", hotel: "After hotel" };
+const STATUS_LABEL: Record<string, string> = {
+  awaiting: "Awaiting", in_care: "In care", collected: "Collected", no_show: "Not collected",
+};
+
+/** Detail card explaining the Stay & Play arrangement for one booking. */
+export function StayPlaySection({
+  tenantId, bookingId,
+}: { tenantId: string | null | undefined; bookingId: string | null | undefined }) {
+  const flags = useStayPlayFlags(tenantId, bookingId ? [bookingId] : []);
+  const rows = flags.forBooking(bookingId) ?? [];
+  if (rows.length === 0) return null;
+
+  return (
+    <section className="rounded-xl border border-sk-turquoise/40 bg-sk-turquoise-soft/40 p-4">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-sk-turquoise-dark">
+        <Sparkles className="h-3.5 w-3.5" /> Stay &amp; Play
+      </div>
+      <ul className="mt-2 space-y-1.5 text-sm">
+        {rows.map((s) => {
+          const late = overdueMinutes(s, flags.graceMinutes);
+          return (
+            <li key={s.id} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span className="font-medium">{s.pet?.name ?? "Pet"}</span>
+              <span className="text-xs text-muted-foreground">{ORIGIN_LABEL[s.origin] ?? s.origin}</span>
+              <span className="text-xs text-muted-foreground">
+                · collect {fmtCollectTime(s.expected_collect_at)}
+              </span>
+              <span
+                className={
+                  "rounded-full px-2 py-0.5 text-[11px] font-semibold " +
+                  (late != null
+                    ? "bg-destructive/10 text-destructive"
+                    : s.status === "collected"
+                      ? "bg-sk-green/10 text-sk-green"
+                      : "bg-white text-sk-turquoise-dark")
+                }
+              >
+                {late != null ? `Overdue ${late}m` : STATUS_LABEL[s.status] ?? s.status}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-2 text-[11px] text-sk-turquoise-dark">
+        These pets stay on in daycare after this booking — manage collection on the Daycare board.
+      </p>
+    </section>
   );
 }
