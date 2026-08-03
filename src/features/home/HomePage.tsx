@@ -16,11 +16,12 @@ interface Tile {
   code?: string;
   countKey?: "grooming" | "mobile" | "daycare" | "hotel" | "transport";
   attentionKey?: "unpaidToday" | "unassigned";
+  showStayPlay?: boolean;
   tone: "coral" | "turquoise" | "green" | "orange";
 }
 
 const TILES: Tile[] = [
-  { to: "/admin/daycare", label: "Daycare", hint: "Today's dogs", icon: Dog, code: "daycare.view", countKey: "daycare", tone: "green" },
+  { to: "/admin/daycare", label: "Daycare", hint: "Today's dogs", icon: Dog, code: "daycare.view", countKey: "daycare", tone: "green", showStayPlay: true },
   { to: "/admin/hotel-cattery", label: "Hotel & Cattery", hint: "In house today", icon: Hotel, code: "hotel.view", countKey: "hotel", tone: "turquoise" },
   { to: "/admin/grooming", label: "Grooming", hint: "Today's appointments", icon: Scissors, code: "grooming.view", countKey: "grooming", attentionKey: "unpaidToday", tone: "coral" },
   { to: "/admin/mobile-vans", label: "Mobile vans", hint: "Today's route", icon: Truck, code: "grooming.view", countKey: "mobile", tone: "orange" },
@@ -64,6 +65,8 @@ export default function HomePage() {
           const Icon = tile.icon;
           const count = tile.countKey ? statsQ.data?.[tile.countKey]?.today : undefined;
           const alerts = tile.attentionKey ? (attention.data?.[tile.attentionKey] ?? 0) : 0;
+          const sp = tile.showStayPlay ? (attention.data?.stayPlayToday ?? 0) : 0;
+          const spLate = tile.showStayPlay ? (attention.data?.stayPlayOverdue ?? 0) : 0;
           return (
             <SoftDashboardTile
               key={tile.to + tile.label}
@@ -75,10 +78,27 @@ export default function HomePage() {
               loading={Boolean(tile.countKey) && statsQ.isLoading}
               value={tile.countKey ? (count ?? 0) : undefined}
               alert={
-                alerts > 0 ? (
-                  <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive">
-                    <AlertCircle className="h-3 w-3" />
-                    {tile.attentionKey === "unpaidToday" ? `${alerts} unpaid today` : `${alerts} unassigned`}
+                alerts > 0 || sp > 0 ? (
+                  <span className="mt-2 flex flex-wrap gap-1.5">
+                    {alerts > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive">
+                        <AlertCircle className="h-3 w-3" />
+                        {tile.attentionKey === "unpaidToday" ? `${alerts} unpaid today` : `${alerts} unassigned`}
+                      </span>
+                    )}
+                    {sp > 0 && (
+                      <span
+                        className={
+                          "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold " +
+                          (spLate > 0
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-sk-turquoise-soft text-sk-turquoise-dark")
+                        }
+                      >
+                        <Sparkles className="h-3 w-3" />
+                        {spLate > 0 ? `${spLate} Stay & Play overdue` : `${sp} Stay & Play`}
+                      </span>
+                    )}
                   </span>
                 ) : undefined
               }
