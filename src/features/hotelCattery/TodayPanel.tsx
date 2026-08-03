@@ -156,6 +156,7 @@ export function TodayPanel({
         ))}
       </Panel>
     </div>
+    </StayPlayFlagsProvider>
     </PaymentFlagsProvider>
   );
 }
