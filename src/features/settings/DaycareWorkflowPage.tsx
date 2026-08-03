@@ -29,6 +29,9 @@ export default function DaycareWorkflowPage() {
     late_arrival_cutoff: "10:00",
     auto_checkout_time: "18:00",
     block_unvaccinated: false,
+    daily_capacity: "" as string,
+    stay_play_default_collect_time: "16:30",
+    stay_play_grace_minutes: 15,
   });
 
   useEffect(() => {
@@ -39,20 +42,27 @@ export default function DaycareWorkflowPage() {
         late_arrival_cutoff: trimTime(settingsQ.data.late_arrival_cutoff),
         auto_checkout_time: trimTime(settingsQ.data.auto_checkout_time),
         block_unvaccinated: settingsQ.data.block_unvaccinated,
+        daily_capacity: settingsQ.data.daily_capacity == null ? "" : String(settingsQ.data.daily_capacity),
+        stay_play_default_collect_time: trimTime(settingsQ.data.stay_play_default_collect_time) || "16:30",
+        stay_play_grace_minutes: Number(settingsQ.data.stay_play_grace_minutes ?? 15),
       });
     }
   }, [settingsQ.data]);
 
   async function save() {
     try {
-      await update.mutateAsync(form);
+      await update.mutateAsync({
+        ...form,
+        daily_capacity: form.daily_capacity === "" ? null : Number(form.daily_capacity),
+        stay_play_grace_minutes: Number(form.stay_play_grace_minutes) || 0,
+      } as any);
       toast.success("Daycare workflow settings saved");
     } catch (err: any) { toast.error(err?.message ?? "Failed to save"); }
   }
 
   return (
     <>
-      <AppHeader title="Daycare workflow" subtitle="Arrival window, late cutoff, auto-checkout." />
+      <AppHeader title="Daycare workflow" subtitle="Arrival window, late cutoff, capacity and Stay & Play." />
       <div className="flex-1 p-6">
         <div className="sk-card max-w-2xl p-6 space-y-6">
           {!canManage && (
@@ -89,6 +99,28 @@ export default function DaycareWorkflowPage() {
               onChange={(e) => setForm((f) => ({ ...f, block_unvaccinated: e.target.checked }))} />
             Block check-in for pets with missing or expired vaccinations
           </label>
+
+          <div className="border-t border-border pt-5">
+            <div className="mb-3 text-sm font-semibold">Capacity &amp; Stay &amp; Play</div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Daily capacity" hint="Total daycare spaces per day. Stay & Play pets count towards this.">
+                <input type="number" min={0} disabled={!canManage} value={form.daily_capacity}
+                  onChange={(e) => setForm((f) => ({ ...f, daily_capacity: e.target.value }))}
+                  placeholder="e.g. 40"
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+              </Field>
+              <Field label="Default collection time" hint="Used for new Stay & Play sessions.">
+                <input type="time" disabled={!canManage} value={form.stay_play_default_collect_time}
+                  onChange={(e) => setForm((f) => ({ ...f, stay_play_default_collect_time: e.target.value }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+              </Field>
+              <Field label="Overdue grace (minutes)" hint="How long after the collection time before a pet is flagged overdue.">
+                <input type="number" min={0} disabled={!canManage} value={form.stay_play_grace_minutes}
+                  onChange={(e) => setForm((f) => ({ ...f, stay_play_grace_minutes: Number(e.target.value) }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+              </Field>
+            </div>
+          </div>
 
           <div className="flex justify-end">
             <button disabled={!canManage || update.isPending} onClick={save}
