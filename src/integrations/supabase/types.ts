@@ -3445,6 +3445,7 @@ export type Database = {
           id: string
           late_checkout_fee_zar: number
           min_lead_hours: number
+          overbooking_mode: string
           peak_end_month_day: string | null
           peak_start_month_day: string | null
           require_prepayment_short_notice: boolean
@@ -3460,6 +3461,7 @@ export type Database = {
           id?: string
           late_checkout_fee_zar?: number
           min_lead_hours?: number
+          overbooking_mode?: string
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
           require_prepayment_short_notice?: boolean
@@ -3475,6 +3477,7 @@ export type Database = {
           id?: string
           late_checkout_fee_zar?: number
           min_lead_hours?: number
+          overbooking_mode?: string
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
           require_prepayment_short_notice?: boolean
@@ -6564,6 +6567,21 @@ export type Database = {
           pet_name: string
           status: string
           vaccine_type: string
+        }[]
+      }
+      hotel_day_availability: {
+        Args: {
+          p_end: string
+          p_exclude_booking_id?: string
+          p_start: string
+          p_tenant_id: string
+        }
+        Returns: {
+          capacity: number
+          day: string
+          resource_id: string
+          resource_name: string
+          used: number
         }[]
       }
       is_platform_owner: { Args: never; Returns: boolean }
