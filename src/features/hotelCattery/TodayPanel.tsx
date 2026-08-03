@@ -94,6 +94,7 @@ export function TodayPanel({
 
   return (
     <PaymentFlagsProvider bookingIds={[...arrivals, ...departures].map((b) => b.id)}>
+    <StayPlayFlagsProvider tenantId={tenantId} bookingIds={[...arrivals, ...departures].map((b) => b.id)}>
     <div className="space-y-4">
       {/* Utilisation card */}
       <div className="sk-card p-5">
