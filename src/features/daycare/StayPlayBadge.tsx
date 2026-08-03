@@ -59,6 +59,39 @@ export function StayPlayBadge({ sessions, graceMinutes = 15, showTime = true, si
   );
 }
 
+const StayPlayFlagsContext = createContext<{
+  byBooking: Record<string, StayPlaySession[]>;
+  graceMinutes: number;
+}>({ byBooking: {}, graceMinutes: 15 });
+
+/** Wrap a board so its cards can render Stay & Play chips from one query. */
+export function StayPlayFlagsProvider({
+  tenantId, bookingIds, children,
+}: { tenantId: string | null | undefined; bookingIds: string[]; children: ReactNode }) {
+  const flags = useStayPlayFlags(tenantId, bookingIds);
+  return (
+    <StayPlayFlagsContext.Provider value={{ byBooking: flags.byBooking, graceMinutes: flags.graceMinutes }}>
+      {children}
+    </StayPlayFlagsContext.Provider>
+  );
+}
+
+/** Board-card chip. Reads from the nearest StayPlayFlagsProvider. */
+export function StayPlayChip({
+  bookingId, showTime = true, size = "xs", className,
+}: { bookingId: string | null | undefined; showTime?: boolean; size?: "xs" | "sm"; className?: string }) {
+  const ctx = useContext(StayPlayFlagsContext);
+  return (
+    <StayPlayBadge
+      sessions={bookingId ? ctx.byBooking[bookingId] : undefined}
+      graceMinutes={ctx.graceMinutes}
+      showTime={showTime}
+      size={size}
+      className={className}
+    />
+  );
+}
+
 /** Self-fetching variant for single-booking screens (detail pages, portal). */
 export function BookingStayPlayBadge({
   tenantId, bookingId, size = "sm", showTime = true, className,
