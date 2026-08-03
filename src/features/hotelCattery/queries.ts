@@ -208,3 +208,48 @@ export function useUpdateHotelWorkflowSettings(tenantId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["hotel_workflow_settings"] }),
   });
 }
+
+// ---------- Occupancy / availability ----------
+
+export interface DayAvailabilityRow {
+  resource_id: string;
+  resource_name: string;
+  capacity: number | null;
+  day: string;   // 'YYYY-MM-DD'
+  used: number;
+}
+
+export function isoDate(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * Per-resource, per-night occupancy (pets, not bookings) for [start, end).
+ * Backed by the tenant-scoped `hotel_day_availability` RPC so both the board
+ * and the booking forms agree on what "full" means.
+ */
+export function useHotelDayAvailability(params: {
+  tenantId: string | null | undefined;
+  start: Date | null;
+  end: Date | null;
+  excludeBookingId?: string | null;
+  enabled?: boolean;
+}) {
+  const { tenantId, start, end, excludeBookingId = null, enabled = true } = params;
+  const s = start ? isoDate(start) : null;
+  const e = end ? isoDate(end) : null;
+  return useQuery({
+    queryKey: ["hotel_day_availability", tenantId, s, e, excludeBookingId],
+    enabled: Boolean(tenantId && s && e && enabled),
+    queryFn: async (): Promise<DayAvailabilityRow[]> => {
+      const { data, error } = await supabase.rpc("hotel_day_availability" as any, {
+        p_tenant_id: tenantId as string,
+        p_start: s as string,
+        p_end: e as string,
+        p_exclude_booking_id: excludeBookingId,
+      } as any);
+      if (error) throw error;
+      return (data ?? []) as DayAvailabilityRow[];
+    },
+  });
+}
