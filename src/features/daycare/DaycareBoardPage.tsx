@@ -10,6 +10,9 @@ import {
 } from "./queries";
 import { DaycarePetCard } from "./DaycarePetCard";
 import { DaycareListView } from "./DaycareListView";
+import { StayPlayLane } from "./StayPlayLane";
+import { useDaycareWorkflowSettings } from "./queries";
+import { useStayPlayForDay, overdueMinutes } from "./stayPlayQueries";
 
 function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
 function addDays(d: Date, n: number) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
@@ -27,6 +30,13 @@ export default function DaycareBoardPage() {
   const expected = useExpectedForDay(tenantId, day);
   const attendanceQ = useAttendanceForDay(tenantId, day);
   const attendance = attendanceQ.data ?? [];
+  const settingsQ = useDaycareWorkflowSettings(tenantId);
+  const grace = settingsQ.data?.stay_play_grace_minutes ?? 15;
+  const capacity = settingsQ.data?.daily_capacity ?? null;
+  const stayPlayQ = useStayPlayForDay(tenantId, day);
+  const stayPlay = stayPlayQ.data ?? [];
+  const stayPlayActive = stayPlay.filter((s) => s.status !== "no_show");
+  const overdueCount = stayPlay.filter((s) => overdueMinutes(s, grace) !== null).length;
 
   // View mode: default to list on tablet-and-under, board on wide screens.
   const [view, setView] = useState<"board" | "list">(() => {
@@ -112,12 +122,22 @@ export default function DaycareBoardPage() {
       />
       <div className="flex-1 space-y-6 p-4 sm:p-6">
         {/* Counters */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           <Stat label="Expected" value={totalExpected} tone="text-foreground" />
           <Stat label="Checked in" value={checkedIn.length} tone="text-sk-green" />
           <Stat label="No-shows" value={noShows} tone="text-sk-orange" />
           <Stat label="Walk-ins" value={walkIns} tone="text-sk-coral-dark" />
+          <Stat label="Stay &amp; Play" value={stayPlayActive.length} tone={overdueCount > 0 ? "text-destructive" : "text-sk-coral-dark"} />
         </div>
+
+        <div className="text-xs text-muted-foreground">
+          {capacity
+            ? `${new Set([...expected.items.map((i) => i.pet_id), ...attendance.filter((a) => a.status !== "not_arrived").map((a) => a.pet_id), ...stayPlayActive.map((s) => s.pet_id)]).size} / ${capacity} spaces used (${stayPlayActive.length} Stay & Play)`
+            : "No daily capacity set — add one in Settings → Daycare workflow."}
+          {overdueCount > 0 && <span className="ml-2 font-semibold text-destructive">{overdueCount} overdue collection{overdueCount === 1 ? "" : "s"}</span>}
+        </div>
+
+        {tenantId && <StayPlayLane tenantId={tenantId} day={day} graceMinutes={grace} />}
 
         {expected.items.length === 0 && attendance.length === 0 && (
           <div className="sk-card grid place-items-center gap-2 p-12 text-center text-sm text-muted-foreground">
