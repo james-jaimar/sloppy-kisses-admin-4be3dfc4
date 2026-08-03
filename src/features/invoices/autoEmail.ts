@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 
 /**
  * Booking invoices are created as full `issued` invoices by DB triggers.

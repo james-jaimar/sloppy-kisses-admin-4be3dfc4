@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import type { ServiceType } from "./queries";
+import { autoEmailBookingInvoice } from "@/features/invoices/autoEmail";
 
 // ---------- Grooming ----------
 export interface GroomingDetails {
