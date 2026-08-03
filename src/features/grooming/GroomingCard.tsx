@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Clock, PawPrint, Sparkles, User } from "lucide-react";
+import { AlertTriangle, Clock, PawPrint, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { PaymentChip } from "@/features/shared/payments/paymentFlags";
+import { StayPlayBadge } from "@/features/daycare/StayPlayBadge";
+import type { StayPlaySession } from "@/features/daycare/stayPlayQueries";
 import type { GroomingBoardCard } from "./queries";
 
 function fmtTime(iso: string | null): string {
@@ -39,12 +41,14 @@ export function GroomingCard({
   card,
   expectedMinutes,
   stayPlay,
+  stayPlayGraceMinutes,
   draggable,
   onDragStart,
 }: {
   card: GroomingBoardCard;
   expectedMinutes: number | null;
-  stayPlay?: boolean;
+  stayPlay?: StayPlaySession[];
+  stayPlayGraceMinutes?: number;
   draggable: boolean;
   onDragStart?: (e: React.DragEvent) => void;
 }) {
@@ -98,11 +102,7 @@ export function GroomingCard({
           </span>
         )}
         <PaymentChip bookingId={card.id} />
-        {stayPlay && (
-          <span className="inline-flex items-center gap-1 rounded bg-sk-coral-soft px-1.5 py-0.5 font-semibold text-sk-coral-dark">
-            <Sparkles className="h-3 w-3" /> Stay &amp; Play
-          </span>
-        )}
+        <StayPlayBadge sessions={stayPlay} graceMinutes={stayPlayGraceMinutes} />
         {card.details?.actual_start_at && !card.details?.actual_end_at && (
           <Timer startIso={card.details.actual_start_at} expectedMinutes={expectedMinutes} />
         )}
