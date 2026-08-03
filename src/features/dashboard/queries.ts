@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
+import { countDaycareExpected } from "@/features/daycare/queries";
 
 function dayRange(date?: Date) {
   const start = date ? new Date(date) : new Date();
@@ -64,14 +65,17 @@ export function useDashboardTodayStats(tenantId: string | null | undefined, date
     queryFn: async (): Promise<DashboardTodayStats> => {
       const t = tenantId as string;
       const { startISO, endISO, ydayStartISO, ydayEndISO } = dayRange(date);
+      const today = date ? new Date(date) : new Date();
+      const yday = new Date(today);
+      yday.setDate(yday.getDate() - 1);
 
       const [gT, gY, mT, mY, dT, dY, hT, hY, pT, pY] = await Promise.all([
         countBookings(t, startISO, endISO, ["grooming_inhouse"]),
         countBookings(t, ydayStartISO, ydayEndISO, ["grooming_inhouse"]),
         countBookings(t, startISO, endISO, ["grooming_mobile"]),
         countBookings(t, ydayStartISO, ydayEndISO, ["grooming_mobile"]),
-        countBookings(t, startISO, endISO, ["daycare", "daycare_assessment"]),
-        countBookings(t, ydayStartISO, ydayEndISO, ["daycare", "daycare_assessment"]),
+        countDaycareExpected(t, today),
+        countDaycareExpected(t, yday),
         countHotelOverlap(t, startISO, endISO),
         countHotelOverlap(t, ydayStartISO, ydayEndISO),
         countBookings(t, startISO, endISO, ["pickup_dropoff"]),

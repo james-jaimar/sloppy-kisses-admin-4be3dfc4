@@ -466,6 +466,64 @@ export function useExpectedForDay(tenantId: string | null | undefined, day: Date
 
 // -------------------- Pets/customers pickers --------------------
 
+/** Count of dogs expected at daycare on a given day — mirrors `useExpectedForDay`
+ *  (active enrolments for the weekday, minus swap-outs, plus swap-ins) and adds
+ *  walk-ins recorded in attendance that no enrolment covers. Plain async so
+ *  dashboards can call it inside Promise.all. */
+export async function countDaycareExpected(tenantId: string, day: Date): Promise<number> {
+  const dateIso = isoDate(day);
+  const wd = weekdayOf(day);
+
+  const [enrRes, swapRes, attRes] = await Promise.all([
+    supabase
+      .from("daycare_enrolments")
+      .select("id, pet_id, start_date, end_date, selected_days")
+      .eq("tenant_id", tenantId)
+      .eq("active", true),
+    supabase
+      .from("daycare_day_swaps")
+      .select("daycare_enrolment_id, original_date, new_date, status")
+      .eq("tenant_id", tenantId)
+      .or(`original_date.eq.${dateIso},new_date.eq.${dateIso}`),
+    supabase
+      .from("daycare_attendance")
+      .select("pet_id, expected, status")
+      .eq("tenant_id", tenantId)
+      .eq("attendance_date", dateIso),
+  ]);
+  if (enrRes.error) throw enrRes.error;
+  if (swapRes.error) throw swapRes.error;
+  if (attRes.error) throw attRes.error;
+
+  const enrolments = (enrRes.data ?? []) as { id: string; pet_id: string; start_date: string | null; end_date: string | null; selected_days: string[] | null }[];
+  const swaps = (swapRes.data ?? []) as { daycare_enrolment_id: string; original_date: string; new_date: string; status: string }[];
+
+  const swappedOut = new Set(
+    swaps.filter((s) => s.original_date === dateIso && s.status !== "cancelled").map((s) => s.daycare_enrolment_id),
+  );
+  const swappedIn = new Set(
+    swaps.filter((s) => s.new_date === dateIso && s.status !== "cancelled").map((s) => s.daycare_enrolment_id),
+  );
+
+  const pets = new Set<string>();
+  for (const e of enrolments) {
+    const normal =
+      Boolean(e.selected_days?.includes(wd)) &&
+      !(e.start_date && e.start_date > dateIso) &&
+      !(e.end_date && e.end_date < dateIso);
+    const attends = (normal && !swappedOut.has(e.id)) || swappedIn.has(e.id);
+    if (attends) pets.add(e.pet_id);
+  }
+
+  // Walk-ins / ad-hoc attendance not covered by an enrolment
+  for (const a of (attRes.data ?? []) as { pet_id: string; status: string }[]) {
+    if (a.status === "not_arrived") continue;
+    pets.add(a.pet_id);
+  }
+
+  return pets.size;
+}
+
 const PET_SELECT = "id, name, species, breed, customer_id, customer:customers!inner(id, full_name, first_name, last_name, customer_number, email, mobile, phone_alt)";
 
 /** Fetch every pet+owner in the tenant, paging past PostgREST's 1000-row cap. */
