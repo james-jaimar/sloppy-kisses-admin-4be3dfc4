@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Clock, PawPrint, User } from "lucide-react";
+import { AlertTriangle, Clock, PawPrint, Sparkles, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { PaymentChip } from "@/features/shared/payments/paymentFlags";
@@ -38,11 +38,13 @@ function Timer({ startIso, expectedMinutes }: { startIso: string; expectedMinute
 export function GroomingCard({
   card,
   expectedMinutes,
+  stayPlay,
   draggable,
   onDragStart,
 }: {
   card: GroomingBoardCard;
   expectedMinutes: number | null;
+  stayPlay?: boolean;
   draggable: boolean;
   onDragStart?: (e: React.DragEvent) => void;
 }) {
@@ -96,6 +98,11 @@ export function GroomingCard({
           </span>
         )}
         <PaymentChip bookingId={card.id} />
+        {stayPlay && (
+          <span className="inline-flex items-center gap-1 rounded bg-sk-coral-soft px-1.5 py-0.5 font-semibold text-sk-coral-dark">
+            <Sparkles className="h-3 w-3" /> Stay &amp; Play
+          </span>
+        )}
         {card.details?.actual_start_at && !card.details?.actual_end_at && (
           <Timer startIso={card.details.actual_start_at} expectedMinutes={expectedMinutes} />
         )}
