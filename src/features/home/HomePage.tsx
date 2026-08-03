@@ -2,6 +2,7 @@ import { format } from "date-fns";
 import {
   Dog, Hotel, Scissors, Truck, ArrowLeftRight, Users, PawPrint, CalendarCheck,
   LayoutDashboard, MessageSquare, ReceiptText, AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useDashboardTodayStats } from "@/features/dashboard/queries";
