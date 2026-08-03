@@ -12,11 +12,12 @@ function isDropoff(leg: TransportLeg): boolean {
   return d === "dropoff" || d === "round_trip";
 }
 
-export function TransportColumns({ legs }: { legs: TransportLeg[] }) {
+export function TransportColumns({ legs, tenantId }: { legs: TransportLeg[]; tenantId: string | null }) {
   const pickups = legs.filter(isPickup);
   const dropoffs = legs.filter(isDropoff);
   return (
     <PaymentFlagsProvider bookingIds={legs.map((l) => l.id)}>
+    <StayPlayFlagsProvider tenantId={tenantId} bookingIds={legs.map((l) => l.id)}>
     <div className="grid gap-4 md:grid-cols-2">
       <Column title="Pickups" count={pickups.length} icon={<ArrowRight className="h-4 w-4" />}>
         {pickups.length === 0 ? (
@@ -33,6 +34,7 @@ export function TransportColumns({ legs }: { legs: TransportLeg[] }) {
         )}
       </Column>
     </div>
+    </StayPlayFlagsProvider>
     </PaymentFlagsProvider>
   );
 }
