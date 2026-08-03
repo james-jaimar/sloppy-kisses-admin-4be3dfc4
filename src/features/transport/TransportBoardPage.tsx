@@ -108,7 +108,7 @@ export default function TransportBoardPage() {
             </div>
 
             <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-              <TransportColumns legs={legs} />
+              <TransportColumns legs={legs} tenantId={tenantId} />
               <TransportSummary
                 tenantId={tenantId}
                 vehicle={activeVehicle}

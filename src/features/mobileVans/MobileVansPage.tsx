@@ -110,7 +110,9 @@ export default function MobileVansPage() {
 
             <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
               <PaymentFlagsProvider bookingIds={stops.map((s) => s.id)}>
-                <VanTimeline stops={stops} minGap={minGap} maxGap={maxGap} />
+                <StayPlayFlagsProvider tenantId={tenantId} bookingIds={stops.map((s) => s.id)}>
+                  <VanTimeline stops={stops} minGap={minGap} maxGap={maxGap} />
+                </StayPlayFlagsProvider>
               </PaymentFlagsProvider>
               <RouteSummary
                 tenantId={tenantId}

@@ -1,6 +1,7 @@
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import type { TransportLeg } from "./queries";
 import { TransportCard } from "./TransportCard";
+import { StayPlayFlagsProvider } from "@/features/daycare/StayPlayBadge";
 import { PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 
 function isPickup(leg: TransportLeg): boolean {
