@@ -90,6 +90,39 @@ export function useUpdateStayPlaySession(tenantId: string) {
   });
 }
 
+/**
+ * Convenience for any list/board: gives a lookup of booking id -> sessions
+ * plus the tenant's configured grace period, ready for <StayPlayBadge />.
+ */
+export function useStayPlayFlags(tenantId: string | null | undefined, bookingIds: string[]) {
+  const q = useStayPlayForBookings(tenantId, bookingIds);
+  const settingsQ = useDaycareWorkflowSettings(tenantId);
+  const byBooking = q.data ?? {};
+  return {
+    byBooking,
+    graceMinutes: settingsQ.data?.stay_play_grace_minutes ?? 15,
+    forBooking: (id: string | null | undefined) => (id ? byBooking[id] : undefined),
+  };
+}
+
+function _unusedUpdateStayPlaySession(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<StayPlaySession> }) => {
+      const { error } = await supabase
+        .from("stay_play_sessions")
+        .update(patch as any)
+        .eq("id", id)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["stay_play_sessions"] });
+      qc.invalidateQueries({ queryKey: ["stay_play_by_booking"] });
+    },
+  });
+}
+
 /** Minutes past the expected collection time, or null when not overdue. */
 export function overdueMinutes(s: StayPlaySession, graceMinutes: number, now = new Date()): number | null {
   if (!s.expected_collect_at) return null;
