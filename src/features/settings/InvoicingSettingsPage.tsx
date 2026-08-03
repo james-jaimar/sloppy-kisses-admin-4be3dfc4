@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useInvoicingSettings, useUpdateInvoicingSettings } from "@/features/invoices/queries";
 import { supabase } from "@/integrations/supabase/client";
+import { emailIssuedInvoice } from "@/features/invoices/autoEmail";
 
 const PERMISSION = "settings.invoicing.manage";
 const RUN_PERMISSION = "invoicing.run_monthly";
