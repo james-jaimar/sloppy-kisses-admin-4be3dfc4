@@ -93,15 +93,11 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
           notes: notes || null,
           active,
         });
-        const invNum = created?.invoice?.invoice_number;
-        const invId = created?.invoice_id;
-        if (invNum && invId) {
-          toast.success(`Enrolment created · Draft invoice ${invNum}`, {
-            action: { label: "Open", onClick: () => window.location.assign(`/admin/invoices/${invId}`) },
-          });
-          onOpenChange(false);
-          return;
-        }
+        toast.success("Enrolment created · billed on the next monthly daycare run", {
+          description: "Daycare is invoiced once a month for the coming month.",
+        });
+        onOpenChange(false);
+        return;
       }
       toast.success(editing ? "Enrolment updated" : "Enrolment created");
       onOpenChange(false);
