@@ -52,6 +52,8 @@ export default function InvoiceDetailPage() {
 
   const inv = invQ.data;
   const isDraft = inv?.status === "draft";
+  // Issued-but-not-yet-sent invoices are still editable (booking edits re-price them).
+  const isEditable = inv?.status === "draft" || inv?.status === "issued";
   const balance = Number(inv?.balance_due ?? 0);
   const hasBeenSent = Boolean((inv as any)?.sent_at);
   const cnQ = useCreditNotesForInvoice(tenantId, inv?.id ?? null);
@@ -235,7 +237,7 @@ export default function InvoiceDetailPage() {
               <div className="sk-card overflow-hidden">
                 <div className="flex items-center justify-between border-b border-border px-5 py-3">
                   <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Line items</div>
-                  {isDraft && canUpdate && !adding && !editingId && (
+                  {isEditable && canUpdate && !adding && !editingId && (
                     <button onClick={() => { setAdding(true); setDraft({ description: "", quantity: 1, unit_price: 0, vat_rate: Number(settingsQ.data?.default_vat_rate ?? 15), discount_pct: 0, vat_inclusive: !!(settingsQ.data as any)?.prices_include_vat }); }}
                       className="inline-flex items-center gap-1 rounded-lg bg-sk-coral px-2.5 py-1 text-xs font-semibold text-white hover:bg-sk-coral-dark">
                       <Plus className="h-3.5 w-3.5" /> Add line
@@ -267,7 +269,7 @@ export default function InvoiceDetailPage() {
                         <td className="px-5 py-3 text-right tabular-nums text-xs text-muted-foreground">{Number((it as any).vat_rate ?? 0) || "—"}</td>
                         <td className="px-5 py-3 text-right tabular-nums font-semibold">{fmtZar(it.line_total)}</td>
                         <td className="px-5 py-3 text-right">
-                          {isDraft && canUpdate && (
+                          {isEditable && canUpdate && (
                             <div className="inline-flex gap-1">
                               <button onClick={() => { setEditingId(it.id); setDraft({ description: it.description, quantity: Number(it.quantity), unit_price: Number(it.unit_price), vat_rate: Number((it as any).vat_rate ?? settingsQ.data?.default_vat_rate ?? 15), discount_pct: Number((it as any).discount_pct ?? 0), vat_inclusive: !!(it as any).vat_inclusive }); }}
                                 className="rounded border border-border px-2 py-0.5 text-xs">Edit</button>
