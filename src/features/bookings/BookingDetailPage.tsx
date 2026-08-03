@@ -244,6 +244,8 @@ export default function BookingDetailPage() {
                 )}
               </div>
 
+              <StayPlaySection tenantId={tenantId} bookingId={b.id} />
+
               {tenantId && (
                 <BookingInvoicePanel tenantId={tenantId} bookingId={b.id} customerId={b.customer_id} />
               )}
