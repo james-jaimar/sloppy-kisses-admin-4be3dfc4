@@ -54,13 +54,12 @@ export function useStayPlayForBookings(tenantId: string | null | undefined, book
   const key = [...bookingIds].sort().join(",");
   return useQuery({
     queryKey: ["stay_play_by_booking", tenantId, key],
-    enabled: Boolean(tenantId) && bookingIds.length > 0,
+    // Portal screens have no tenant in context; RLS scopes rows to the customer.
+    enabled: bookingIds.length > 0,
     queryFn: async (): Promise<Record<string, StayPlaySession[]>> => {
-      const { data, error } = await supabase
-        .from("stay_play_sessions")
-        .select(SELECT)
-        .eq("tenant_id", tenantId as string)
-        .in("booking_id", bookingIds);
+      let query = supabase.from("stay_play_sessions").select(SELECT).in("booking_id", bookingIds);
+      if (tenantId) query = query.eq("tenant_id", tenantId);
+      const { data, error } = await query;
       if (error) throw error;
       const out: Record<string, StayPlaySession[]> = {};
       for (const row of (data ?? []) as any[]) {
