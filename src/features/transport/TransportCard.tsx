@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { MapPin, PawPrint, StickyNote, User, KeyRound } from "lucide-react";
 import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { PaymentChip } from "@/features/shared/payments/paymentFlags";
+import { StayPlayChip } from "@/features/daycare/StayPlayBadge";
 import type { TransportLeg } from "./queries";
 
 function fmtTime(iso: string | null): string {
