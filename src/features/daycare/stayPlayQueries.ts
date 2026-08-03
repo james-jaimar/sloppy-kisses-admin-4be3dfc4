@@ -105,24 +105,6 @@ export function useStayPlayFlags(tenantId: string | null | undefined, bookingIds
   };
 }
 
-function _unusedUpdateStayPlaySession(tenantId: string) {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<StayPlaySession> }) => {
-      const { error } = await supabase
-        .from("stay_play_sessions")
-        .update(patch as any)
-        .eq("id", id)
-        .eq("tenant_id", tenantId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["stay_play_sessions"] });
-      qc.invalidateQueries({ queryKey: ["stay_play_by_booking"] });
-    },
-  });
-}
-
 /** Minutes past the expected collection time, or null when not overdue. */
 export function overdueMinutes(s: StayPlaySession, graceMinutes: number, now = new Date()): number | null {
   if (!s.expected_collect_at) return null;
