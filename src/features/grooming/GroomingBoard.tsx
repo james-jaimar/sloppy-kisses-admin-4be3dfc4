@@ -15,6 +15,7 @@ import {
 } from "./queries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
+import { useStayPlayForBookings } from "@/features/daycare/stayPlayQueries";
 
 export function GroomingBoard({ day }: { day: Date }) {
   const { tenant } = useCurrentTenant();
@@ -24,6 +25,8 @@ export function GroomingBoard({ day }: { day: Date }) {
   const bookingsQ = useGroomingBoardBookings({ tenantId, day });
   const packagesQ = useGroomingPackages(tenantId, { activeOnly: true });
   const updateStatus = useUpdateGroomingStatus(tenantId ?? "");
+  const bookingIds = useMemo(() => (bookingsQ.data ?? []).map((c) => c.id), [bookingsQ.data]);
+  const stayPlayQ = useStayPlayForBookings(tenantId, bookingIds);
 
   const [dragId, setDragId] = useState<string | null>(null);
   const [hoverCol, setHoverCol] = useState<GroomingColumn | null>(null);
@@ -123,6 +126,7 @@ export function GroomingBoard({ day }: { day: Date }) {
                   key={c.id}
                   card={c}
                   expectedMinutes={c.details?.package_id ? (packagesById.get(c.details.package_id) ?? null) : null}
+                  stayPlay={Boolean(stayPlayQ.data?.[c.id]?.length)}
                   draggable
                   onDragStart={(e) => {
                     setDragId(c.id);

@@ -5,8 +5,10 @@ import { WorkTopBar } from "./WorkTopBar";
 import { useWorkDepts } from "./useWorkDepts";
 import {
   isoDate, useAttendanceForDay, useExpectedForDay, useUpsertAttendance,
+  useDaycareWorkflowSettings,
   type AttendanceRow,
 } from "@/features/daycare/queries";
+import { StayPlayLane } from "@/features/daycare/StayPlayLane";
 
 export default function DaycareWorkPage() {
   const { tenantId } = useWorkDepts();
@@ -16,6 +18,7 @@ export default function DaycareWorkPage() {
   const expected = useExpectedForDay(tenantId, day);
   const attendanceQ = useAttendanceForDay(tenantId, day);
   const upsert = useUpsertAttendance(tenantId ?? "");
+  const settingsQ = useDaycareWorkflowSettings(tenantId);
 
   const byPet = useMemo(() => {
     const m = new Map<string, AttendanceRow>();
@@ -71,6 +74,14 @@ export default function DaycareWorkPage() {
         onDayChange={setDay}
       />
       <div className="mx-auto max-w-3xl space-y-3 p-4">
+        {tenantId && (
+          <StayPlayLane
+            tenantId={tenantId}
+            day={day}
+            graceMinutes={settingsQ.data?.stay_play_grace_minutes ?? 15}
+            compact
+          />
+        )}
         {loading && (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" /> Loading…

@@ -27,12 +27,15 @@ export default function GroomingRequestWizard({ mode }: Props) {
   const [suburb, setSuburb] = useState(cust.data?.suburb ?? "");
   const [accessNotes, setAccessNotes] = useState("");
   const [notes, setNotes] = useState("");
+  const [stayPlay, setStayPlay] = useState(false);
+  const [collectTime, setCollectTime] = useState("16:30");
   const [instructions, setInstructions] = useState<GroomingInstructionsValue>({
     selections: {}, medical_flags: [], notes: "",
   });
   const defaultsQ = usePetGroomingDefaults(petId || null);
   const catalogQ = useInstructionCatalog(cust.data?.tenant_id ?? null);
   const addonsQ = useGroomingAddons(cust.data?.tenant_id ?? undefined, { activeOnly: true });
+  const stayPlayAddon = (addonsQ.data ?? []).find((a: any) => a.code === "stay_play_after") ?? null;
   const selectedPet = (pets.data ?? []).find((p: any) => p.id === petId) ?? null;
   const petBand = petSizeToBand(effectivePetSize(selectedPet as any));
   const filteredPackages = (packages.data ?? []).filter((p: any) => {
@@ -76,8 +79,10 @@ export default function GroomingRequestWizard({ mode }: Props) {
       }
     }
     const extrasTotal = extras.reduce((s, e) => s + e.price, 0);
-    return { base, extras, total: base + extrasTotal, hasPackage: Boolean(pkg) };
-  }, [filteredPackages, packageId, addonsQ.data, catalogQ.data, instructions.selections]);
+    const spPrice = stayPlay && stayPlayAddon ? Number(stayPlayAddon.price_zar) : 0;
+    if (spPrice > 0) extras.push({ label: stayPlayAddon!.name, price: spPrice });
+    return { base, extras, total: base + extrasTotal + spPrice, hasPackage: Boolean(pkg) };
+  }, [filteredPackages, packageId, addonsQ.data, catalogQ.data, instructions.selections, stayPlay, stayPlayAddon]);
 
   const packageRequired = filteredPackages.length > 0;
   const canSubmit =
@@ -110,6 +115,7 @@ export default function GroomingRequestWizard({ mode }: Props) {
           },
           access_notes: accessNotes || null,
         } : {}),
+        ...(mode === "inhouse" ? { stay_play: stayPlay, stay_play_collect_time: stayPlay ? collectTime : null } : {}),
       },
     });
   }
@@ -184,6 +190,27 @@ export default function GroomingRequestWizard({ mode }: Props) {
       )}
 
       <Field label="Notes for our team"><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={textareaCls} /></Field>
+
+      {mode === "inhouse" && stayPlayAddon && (
+        <Field label="After-groom Stay &amp; Play">
+          <label className="flex items-start gap-3 rounded-lg border border-border bg-white p-3 text-sm">
+            <input type="checkbox" checked={stayPlay} onChange={(e) => setStayPlay(e.target.checked)} className="mt-0.5" />
+            <span>
+              <span className="font-medium">Keep {selectedPet?.name ?? "my pet"} for Stay &amp; Play after the groom</span>
+              <span className="block text-xs text-muted-foreground">
+                Supervised play in daycare until you collect — R{Number(stayPlayAddon.price_zar).toFixed(2)}.
+              </span>
+            </span>
+          </label>
+          {stayPlay && (
+            <div className="mt-2 flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">Collection time</span>
+              <input type="time" value={collectTime} onChange={(e) => setCollectTime(e.target.value)}
+                className="h-9 rounded-lg border border-border px-2 text-sm" />
+            </div>
+          )}
+        </Field>
+      )}
 
       {(estimate.hasPackage || estimate.extras.length > 0) && (
         <div className="rounded-lg border border-sk-coral-soft bg-sk-coral-soft/40 p-4">

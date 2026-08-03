@@ -360,6 +360,9 @@ export interface DaycareWorkflowSettings {
   late_arrival_cutoff: string;
   auto_checkout_time: string;
   block_unvaccinated: boolean;
+  daily_capacity: number | null;
+  stay_play_default_collect_time: string;
+  stay_play_grace_minutes: number;
 }
 
 export function useDaycareWorkflowSettings(tenantId: string | null | undefined) {
@@ -474,7 +477,7 @@ export async function countDaycareExpected(tenantId: string, day: Date): Promise
   const dateIso = isoDate(day);
   const wd = weekdayOf(day);
 
-  const [enrRes, swapRes, attRes] = await Promise.all([
+  const [enrRes, swapRes, attRes, spRes] = await Promise.all([
     supabase
       .from("daycare_enrolments")
       .select("id, pet_id, start_date, end_date, selected_days")
@@ -490,10 +493,16 @@ export async function countDaycareExpected(tenantId: string, day: Date): Promise
       .select("pet_id, expected, status")
       .eq("tenant_id", tenantId)
       .eq("attendance_date", dateIso),
+    supabase
+      .from("stay_play_sessions")
+      .select("pet_id, status")
+      .eq("tenant_id", tenantId)
+      .eq("session_date", dateIso),
   ]);
   if (enrRes.error) throw enrRes.error;
   if (swapRes.error) throw swapRes.error;
   if (attRes.error) throw attRes.error;
+  if (spRes.error) throw spRes.error;
 
   const enrolments = (enrRes.data ?? []) as { id: string; pet_id: string; start_date: string | null; end_date: string | null; selected_days: string[] | null }[];
   const swaps = (swapRes.data ?? []) as { daycare_enrolment_id: string; original_date: string; new_date: string; status: string }[];
@@ -519,6 +528,12 @@ export async function countDaycareExpected(tenantId: string, day: Date): Promise
   for (const a of (attRes.data ?? []) as { pet_id: string; status: string }[]) {
     if (a.status === "not_arrived") continue;
     pets.add(a.pet_id);
+  }
+
+  // Stay & Play pets occupy a daycare space too
+  for (const s of (spRes.data ?? []) as { pet_id: string; status: string }[]) {
+    if (s.status === "no_show") continue;
+    pets.add(s.pet_id);
   }
 
   return pets.size;

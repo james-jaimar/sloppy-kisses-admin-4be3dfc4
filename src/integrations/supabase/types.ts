@@ -1910,8 +1910,11 @@ export type Database = {
           auto_checkout_time: string
           block_unvaccinated: boolean
           created_at: string
+          daily_capacity: number | null
           id: string
           late_arrival_cutoff: string
+          stay_play_default_collect_time: string
+          stay_play_grace_minutes: number
           tenant_id: string
           updated_at: string
         }
@@ -1921,8 +1924,11 @@ export type Database = {
           auto_checkout_time?: string
           block_unvaccinated?: boolean
           created_at?: string
+          daily_capacity?: number | null
           id?: string
           late_arrival_cutoff?: string
+          stay_play_default_collect_time?: string
+          stay_play_grace_minutes?: number
           tenant_id: string
           updated_at?: string
         }
@@ -1932,8 +1938,11 @@ export type Database = {
           auto_checkout_time?: string
           block_unvaccinated?: boolean
           created_at?: string
+          daily_capacity?: number | null
           id?: string
           late_arrival_cutoff?: string
+          stay_play_default_collect_time?: string
+          stay_play_grace_minutes?: number
           tenant_id?: string
           updated_at?: string
         }
@@ -5585,6 +5594,93 @@ export type Database = {
           },
         ]
       }
+      stay_play_sessions: {
+        Row: {
+          booking_id: string | null
+          collected_at: string | null
+          collected_by: string | null
+          created_at: string
+          customer_id: string | null
+          expected_collect_at: string | null
+          id: string
+          notes: string | null
+          origin: string
+          pet_id: string
+          session_date: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id?: string | null
+          collected_at?: string | null
+          collected_by?: string | null
+          created_at?: string
+          customer_id?: string | null
+          expected_collect_at?: string | null
+          id?: string
+          notes?: string | null
+          origin?: string
+          pet_id: string
+          session_date: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string | null
+          collected_at?: string | null
+          collected_by?: string | null
+          created_at?: string
+          customer_id?: string | null
+          expected_collect_at?: string | null
+          id?: string
+          notes?: string | null
+          origin?: string
+          pet_id?: string
+          session_date?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stay_play_sessions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stay_play_sessions_collected_by_fkey"
+            columns: ["collected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stay_play_sessions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stay_play_sessions_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stay_play_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_locations: {
         Row: {
           active: boolean
@@ -6649,6 +6745,10 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      stay_play_ensure_sessions: {
+        Args: { p_booking_id: string; p_origin: string }
+        Returns: undefined
+      }
       tenant_gateway_enabled: {
         Args: { target_provider: string; target_tenant_id: string }
         Returns: boolean
