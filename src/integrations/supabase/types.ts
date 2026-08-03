@@ -887,6 +887,53 @@ export type Database = {
           },
         ]
       }
+      closures: {
+        Row: {
+          bill_anyway: boolean
+          created_at: string
+          end_date: string
+          id: string
+          name: string
+          notes: string | null
+          services: string[]
+          start_date: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          bill_anyway?: boolean
+          created_at?: string
+          end_date: string
+          id?: string
+          name: string
+          notes?: string | null
+          services?: string[]
+          start_date: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          bill_anyway?: boolean
+          created_at?: string
+          end_date?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          services?: string[]
+          start_date?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "closures_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comms_settings: {
         Row: {
           created_at: string
@@ -6697,6 +6744,15 @@ export type Database = {
           resource_name: string
           used: number
         }[]
+      }
+      is_closed: {
+        Args: {
+          p_billable_only?: boolean
+          p_date: string
+          p_service?: string
+          p_tenant_id: string
+        }
+        Returns: boolean
       }
       is_platform_owner: { Args: never; Returns: boolean }
       issue_booking_invoice: { Args: { p_booking_id: string }; Returns: string }
