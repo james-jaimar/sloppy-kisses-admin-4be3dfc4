@@ -6560,6 +6560,7 @@ export type Database = {
         Args: { target_customer_id: string }
         Returns: Database["public"]["Enums"]["notification_status"]
       }
+      _invoice_locked: { Args: { p_invoice_id: string }; Returns: boolean }
       _period_bounds: {
         Args: { p_anchor: string }
         Returns: {
@@ -6612,6 +6613,10 @@ export type Database = {
         Args: { p_document_id: string }
         Returns: undefined
       }
+      ensure_booking_invoice: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       ensure_draft_invoice: {
         Args: {
           p_customer_id: string
@@ -6633,7 +6638,12 @@ export type Database = {
         }[]
       }
       generate_monthly_daycare_invoices: {
-        Args: { p_period_start: string; p_tenant_id: string }
+        Args: {
+          p_issue?: boolean
+          p_period_start: string
+          p_preview?: boolean
+          p_tenant_id: string
+        }
         Returns: Json
       }
       get_public_invoice: { Args: { p_token: string }; Returns: Json }
