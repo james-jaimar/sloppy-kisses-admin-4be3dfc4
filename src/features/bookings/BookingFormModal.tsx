@@ -26,6 +26,7 @@ import { RecurrenceFields, DEFAULT_RECURRENCE, toRule, type RecurrenceValue } fr
 import { useCreateRecurringBooking } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { HotelExtrasPanel, type SurchargeSelection } from "./HotelExtrasPanel";
+import { HotelCapacityNotice, type CapacityIssue } from "@/features/hotelCattery/HotelCapacityNotice";
 import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQueries";
 import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtrasPanel";
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
@@ -204,6 +205,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   );
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(DEFAULT_RECURRENCE);
   const [hotelSurcharges, setHotelSurcharges] = useState<SurchargeSelection[]>([]);
+  const [capacityIssue, setCapacityIssue] = useState<CapacityIssue | null>(null);
   const setBookingSurcharges = useSetBookingHotelSurcharges(tenantId);
   const [groomingAddons, setGroomingAddons] = useState<GroomingAddonSelection[]>([]);
   const setBookingGroomingAddons = useSetBookingGroomingAddons(tenantId);
@@ -324,6 +326,22 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       const proceed = await confirm({
         title: "Resource already booked in this window",
         description: `Overlaps with ${conflicts.map((c: any) => c.booking_number).join(", ")}. Save anyway?`,
+        confirmLabel: "Save anyway",
+        tone: "destructive",
+      });
+      if (!proceed) return;
+    }
+
+    if (kind === "hotel" && capacityIssue) {
+      const nights = capacityIssue.nights.length;
+      if (capacityIssue.mode === "block") {
+        return toast.error(
+          `${capacityIssue.resourceName} is full (${capacityIssue.capacity} spaces) on ${nights} ${nights === 1 ? "night" : "nights"}. Pick another area or change the dates.`,
+        );
+      }
+      const proceed = await confirm({
+        title: "Over capacity",
+        description: `${capacityIssue.resourceName} would exceed its ${capacityIssue.capacity} spaces on ${nights} ${nights === 1 ? "night" : "nights"}. Save anyway?`,
         confirmLabel: "Save anyway",
         tone: "destructive",
       });
@@ -699,6 +717,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                   . You can still save — you'll be asked to confirm.
                 </div>
               </div>
+            )}
+            {kind === "hotel" && (
+              <HotelCapacityNotice
+                tenantId={tenantId}
+                resourceId={resourceId}
+                startAt={startIso}
+                endAt={endIso}
+                petCount={petIds.length || 1}
+                excludeBookingId={booking?.id ?? null}
+                onIssueChange={setCapacityIssue}
+              />
             )}
           </div>
         </div>
