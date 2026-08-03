@@ -7,6 +7,7 @@ import {
 } from "./queries";
 import { VanTimeline } from "./VanTimeline";
 import { PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
+import { StayPlayFlagsProvider } from "@/features/daycare/StayPlayBadge";
 import { RouteSummary } from "./RouteSummary";
 import { UnassignedStrip } from "./UnassignedStrip";
 
