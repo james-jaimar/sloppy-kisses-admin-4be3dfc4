@@ -52,9 +52,11 @@ export default function MyBookingDetailPage() {
         </Link>
 
         <div className="sk-card space-y-4 p-6">
-          <div className="flex items-center justify-between">
-            <span className={"rounded-full px-2 py-0.5 text-xs font-medium " + statusTone(b.status)}>{b.status}</span>
-            <BookingStayPlayBadge tenantId={b.tenant_id} bookingId={b.id} size="sm" />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={"rounded-full px-2 py-0.5 text-xs font-medium " + statusTone(b.status)}>{b.status}</span>
+              <BookingStayPlayBadge tenantId={b.tenant_id} bookingId={b.id} size="sm" />
+            </div>
             {cancellable && cust.data && (
               <div className="flex gap-2">
                 <button onClick={() => setAction("reschedule")} className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted">
@@ -72,6 +74,7 @@ export default function MyBookingDetailPage() {
             <Field label="End" value={fmtDateTime(b.end_at)} />
             <Field label="Notes" value={b.notes_customer} full />
           </div>
+          <StayPlaySection tenantId={b.tenant_id} bookingId={b.id} />
           {inv && (
             <div className="rounded-xl border border-border bg-sk-surface-muted p-4">
               <div className="text-xs font-semibold uppercase text-muted-foreground">Invoice</div>
