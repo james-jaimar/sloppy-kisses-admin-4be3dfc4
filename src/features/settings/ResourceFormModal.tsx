@@ -91,15 +91,22 @@ export function ResourceFormModal({ tenantId, resource, onClose }: Props) {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <div className="mb-1 text-sm font-medium">Capacity</div>
+            <div className="mb-1 text-sm font-medium">
+              {type === "hotel_area" || type === "cattery_area" ? "Pens / spaces" : "Capacity"}
+            </div>
             <input
               type="number"
               min={0}
               value={capacity}
               onChange={(e) => setCapacity(e.target.value)}
-              placeholder="e.g. 24 for daycare"
+              placeholder={type === "hotel_area" || type === "cattery_area" ? "e.g. 12 pens" : "e.g. 24 for daycare"}
               className={inputCls}
             />
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              {type === "hotel_area" || type === "cattery_area"
+                ? "How many pets can stay here at once. Used for occupancy and overbooking checks."
+                : "Leave blank for no limit."}
+            </div>
           </div>
           <div>
             <div className="mb-1 text-sm font-medium">Sort order</div>
