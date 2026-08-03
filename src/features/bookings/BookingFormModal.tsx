@@ -332,6 +332,22 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       if (!proceed) return;
     }
 
+    if (kind === "hotel" && capacityIssue) {
+      const nights = capacityIssue.nights.length;
+      if (capacityIssue.mode === "block") {
+        return toast.error(
+          `${capacityIssue.resourceName} is full (${capacityIssue.capacity} spaces) on ${nights} ${nights === 1 ? "night" : "nights"}. Pick another area or change the dates.`,
+        );
+      }
+      const proceed = await confirm({
+        title: "Over capacity",
+        description: `${capacityIssue.resourceName} would exceed its ${capacityIssue.capacity} spaces on ${nights} ${nights === 1 ? "night" : "nights"}. Save anyway?`,
+        confirmLabel: "Save anyway",
+        tone: "destructive",
+      });
+      if (!proceed) return;
+    }
+
     try {
       if (isEdit && booking) {
         await update.mutateAsync({
