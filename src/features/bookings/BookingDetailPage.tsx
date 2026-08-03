@@ -90,7 +90,7 @@ export default function BookingDetailPage() {
             {b && (
               <button
                 onClick={async () => {
-                  if (!(await confirm({ title: `Delete booking ${b.booking_number}?`, description: "Any auto-created draft invoice lines will be removed.", confirmLabel: "Delete", tone: "destructive" }))) return;
+                  if (!(await confirm({ title: `Delete booking ${b.booking_number}?`, description: "Any auto-created invoice lines will be removed (only possible while the invoice is unsent).", confirmLabel: "Delete", tone: "destructive" }))) return;
                   try {
                     await del.mutateAsync(b.id);
                     toast.success("Booking deleted");

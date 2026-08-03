@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import type { ServiceType } from "./queries";
+import { autoEmailBookingInvoice } from "@/features/invoices/autoEmail";
 
 // ---------- Grooming ----------
 export interface GroomingDetails {
@@ -161,6 +162,12 @@ export function useUpsertBookingDetails(tenantId: string) {
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["booking-details", tenantId, vars.bookingId] });
+      // The DB triggers price the booking onto its own issued invoice — email it once.
+      if (vars.kind !== "none") {
+        void autoEmailBookingInvoice(vars.bookingId).then((sent) => {
+          if (sent) qc.invalidateQueries({ queryKey: ["invoices"] });
+        });
+      }
     },
   });
 }

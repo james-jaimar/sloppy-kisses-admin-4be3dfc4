@@ -402,6 +402,20 @@ Deno.serve(async (req) => {
     const { data: inv } = await admin
       .from("invoices").select("balance_due").eq("id", invoiceId as string).maybeSingle();
     balance = Number(inv?.balance_due ?? 0);
+
+    // Email the issued invoice to the customer (kill-switch aware inside the function).
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/send-invoice-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SERVICE_KEY}`,
+        },
+        body: JSON.stringify({ invoice_id: invoiceId, kind: "send" }),
+      });
+    } catch (e) {
+      console.error("portal-create-booking: invoice email failed", e);
+    }
   }
 
   return json({

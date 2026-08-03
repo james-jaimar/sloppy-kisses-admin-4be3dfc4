@@ -259,7 +259,7 @@ export function HotelExtrasPanel({
             </div>
           </div>
           <div className="mt-2 text-[11px] text-muted-foreground">
-            Draft invoice is regenerated automatically after save.
+            The booking's invoice is re-priced automatically after save (until it is sent or paid).
           </div>
         </div>
       )}
