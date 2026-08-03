@@ -52,6 +52,8 @@ const BodySchema = z.object({
         .object({ line_1: z.string().max(200), suburb: z.string().max(120) })
         .optional(),
       access_notes: z.string().max(1000).nullable().optional(),
+      stay_play: z.boolean().optional(),
+      stay_play_collect_time: z.string().regex(/^\d{2}:\d{2}$/).nullable().optional(),
     })
     .optional(),
   hotel: z
@@ -330,6 +332,36 @@ Deno.serve(async (req) => {
         medical_flags: g.instructions.medical_flags ?? [],
         notes: g.instructions.notes ?? null,
       });
+    }
+
+    // After-groom Stay & Play — billed as an add-on; a DB trigger opens the session.
+    if (g.stay_play) {
+      const { data: addon } = await admin
+        .from("grooming_addons")
+        .select("id, name, price_zar")
+        .eq("tenant_id", tenantId)
+        .eq("code", "stay_play_after")
+        .maybeSingle();
+      if (addon) {
+        await admin.from("grooming_booking_addons").insert({
+          tenant_id: tenantId,
+          booking_id: bookingId,
+          addon_id: addon.id,
+          addon_code: "stay_play_after",
+          addon_name: addon.name,
+          price_zar_snapshot: addon.price_zar,
+          qty: 1,
+        });
+        if (g.stay_play_collect_time) {
+          const [hh, mm] = g.stay_play_collect_time.split(":").map(Number);
+          const collect = new Date(start);
+          collect.setHours(hh, mm, 0, 0);
+          await admin
+            .from("stay_play_sessions")
+            .update({ expected_collect_at: collect.toISOString() })
+            .eq("booking_id", bookingId);
+        }
+      }
     }
   } else if (group === "hotel") {
     const h = body.hotel ?? {};
