@@ -164,11 +164,13 @@ export async function logVaccinationOverride(params: { tenantId: string; booking
 // ---------- Hotel workflow settings ----------
 
 export type VaxGateMode = "soft" | "hard" | "off";
+export type OverbookingMode = "warn" | "block";
 
 export interface HotelWorkflowSettings {
   id: string;
   tenant_id: string;
   vax_gate_mode: VaxGateMode;
+  overbooking_mode: OverbookingMode;
   check_in_open_time: string;   // "HH:MM:SS"
   check_in_close_time: string;
   check_out_by_time: string;
