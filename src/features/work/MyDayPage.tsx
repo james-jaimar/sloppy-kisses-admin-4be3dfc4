@@ -69,6 +69,7 @@ export default function MyDayPage() {
         day={day}
         onDayChange={setDay}
       />
+      <StayPlayFlagsProvider tenantId={tenantId} bookingIds={jobs.map((j) => j.id)}>
       <div className="mx-auto max-w-3xl space-y-3 p-4">
         {jobsQ.isLoading && (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
@@ -94,6 +95,7 @@ export default function MyDayPage() {
           </>
         )}
       </div>
+      </StayPlayFlagsProvider>
     </>
   );
 }
