@@ -7,6 +7,8 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { BookingFormModal } from "./BookingFormModal";
 import { BookingStatusChip } from "./statusMeta";
 import { useBookingsList, type BookingStatus, type ServiceType } from "./queries";
+import { StayPlayBadge } from "@/features/daycare/StayPlayBadge";
+import { useStayPlayFlags } from "@/features/daycare/stayPlayQueries";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
