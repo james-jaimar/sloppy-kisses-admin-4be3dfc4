@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
-import { NewBookingModal } from "@/features/bookings/NewBookingModal";
+import { BookingFormModal } from "@/features/bookings/BookingFormModal";
 import { CustomerFormModal } from "@/features/customers/CustomerFormModal";
 import { EnrolmentDrawer } from "@/features/daycare/EnrolmentDrawer";
 import { NewInvoiceDrawer } from "@/features/invoices/NewInvoiceDrawer";
@@ -34,7 +34,16 @@ export function QuickAddProvider({ children }: { children: ReactNode }) {
   return (
     <QuickAddCtx.Provider value={value}>
       {children}
-      {active === "booking" && <NewBookingModal onClose={close} />}
+      {active === "booking" && tenantId && (
+        <BookingFormModal
+          tenantId={tenantId}
+          onClose={close}
+          onSaved={(id) => {
+            close();
+            navigate(`/admin/bookings/${id}`);
+          }}
+        />
+      )}
       {active === "customer" && tenantId && (
         <CustomerFormModal
           tenantId={tenantId}
