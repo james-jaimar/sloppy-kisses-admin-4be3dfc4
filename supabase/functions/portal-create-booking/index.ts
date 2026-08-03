@@ -232,6 +232,38 @@ Deno.serve(async (req) => {
   }
 
   // --- Create the booking ----------------------------------------------
+  // --- Hotel capacity gate ---------------------------------------------
+  // Portal stays are unassigned, so we compare total pets booked per night
+  // against the sum of pens/spaces across all hotel/cattery areas.
+  if (group === "hotel" && body.end_at) {
+    const { data: hotelSettings } = await admin
+      .from("hotel_workflow_settings")
+      .select("overbooking_mode")
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+    if ((hotelSettings as any)?.overbooking_mode === "block") {
+      const { data: avail } = await admin.rpc("hotel_day_availability", {
+        p_tenant_id: tenantId,
+        p_start: start.toISOString().slice(0, 10),
+        p_end: new Date(body.end_at).toISOString().slice(0, 10),
+        p_exclude_booking_id: null,
+      });
+      const byDay = new Map<string, { used: number; capacity: number; capped: boolean }>();
+      for (const r of (avail ?? []) as any[]) {
+        const cur = byDay.get(r.day) ?? { used: 0, capacity: 0, capped: false };
+        cur.used += Number(r.used ?? 0);
+        if (r.capacity != null) { cur.capacity += Number(r.capacity); cur.capped = true; }
+        byDay.set(r.day, cur);
+      }
+      const full = [...byDay.entries()].filter(
+        ([, v]) => v.capped && v.used + body.pet_ids.length > v.capacity,
+      );
+      if (full.length) {
+        return json({ error: "no_availability", nights: full.map(([d]) => d) }, 409);
+      }
+    }
+  }
+
   const { data: numRes, error: numErr } = await admin.rpc("next_booking_number", {
     target_tenant_id: tenantId,
   });
