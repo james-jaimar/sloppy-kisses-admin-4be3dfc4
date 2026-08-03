@@ -5,6 +5,7 @@ import { ArrowLeft, Loader2, X, Edit3 } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { SERVICE_LABEL, fmtDateTime, statusTone } from "../portalCommon";
+import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
 import { useCurrentCustomer } from "../hooks";
 import { BookingChangeModal } from "./BookingChangeModal";
 import { useMinLeadHours } from "./new/useBookingSubmit";
@@ -53,6 +54,7 @@ export default function MyBookingDetailPage() {
         <div className="sk-card space-y-4 p-6">
           <div className="flex items-center justify-between">
             <span className={"rounded-full px-2 py-0.5 text-xs font-medium " + statusTone(b.status)}>{b.status}</span>
+            <BookingStayPlayBadge tenantId={b.tenant_id} bookingId={b.id} size="sm" />
             {cancellable && cust.data && (
               <div className="flex gap-2">
                 <button onClick={() => setAction("reschedule")} className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted">
