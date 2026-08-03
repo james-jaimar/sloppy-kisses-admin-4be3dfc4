@@ -16,6 +16,7 @@ import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { HotelVaxGatePanel } from "./HotelVaxGatePanel";
 import { GroomingVaxGatePanel } from "./GroomingVaxGatePanel";
+import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -137,7 +138,10 @@ export default function BookingDetailPage() {
                     <h2 className="mt-0.5 text-xl font-semibold">
                       {SERVICE_LABELS[b.service_type] ?? b.service_type}
                     </h2>
-                    <div className="mt-2"><BookingStatusChip status={b.status} /></div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <BookingStatusChip status={b.status} />
+                      <BookingStayPlayBadge tenantId={tenantId} bookingId={b.id} />
+                    </div>
                   </div>
                   <Link
                     to="/admin/calendar"
