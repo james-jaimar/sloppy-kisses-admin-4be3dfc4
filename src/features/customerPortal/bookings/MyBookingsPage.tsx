@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { useCurrentCustomer } from "../hooks";
 import { SERVICE_LABEL, fmtDateTime, statusTone } from "../portalCommon";
+import { BookingStayPlayBadge } from "@/features/daycare/StayPlayBadge";
 
 export default function MyBookingsPage() {
   const cust = useCurrentCustomer();
@@ -62,6 +63,7 @@ export default function MyBookingsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-semibold">{SERVICE_LABEL[b.service_type] ?? b.service_type} · {petNames || "—"}</div>
                         <div className="text-xs text-muted-foreground">{fmtDateTime(b.start_at)} · {b.booking_number}</div>
+                        <BookingStayPlayBadge tenantId={null} bookingId={b.id} className="mt-1" />
                       </div>
                       <span className={"rounded-full px-2 py-0.5 text-[11px] font-medium " + statusTone(b.status)}>{b.status}</span>
                     </Link>
