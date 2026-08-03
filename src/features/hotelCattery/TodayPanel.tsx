@@ -46,8 +46,14 @@ export function TodayPanel({
   );
   const currentlyInHouse = useMemo(() => bookings.filter((b) => inHouse(b, today)), [bookings, today]);
 
-  const totalCapacity = resources.reduce((sum, r) => sum + (r.capacity ?? 1), 0);
-  const utilisation = totalCapacity ? Math.round((currentlyInHouse.length / totalCapacity) * 100) : 0;
+  // Count pets, not bookings — a family booking of 3 dogs uses 3 spaces.
+  const petsInHouse = useMemo(
+    () => currentlyInHouse.reduce((sum, b) => sum + Math.max(1, b.pets.length), 0),
+    [currentlyInHouse],
+  );
+  const totalCapacity = resources.reduce((sum, r) => sum + (r.capacity ?? 0), 0);
+  const capacitySet = resources.some((r) => r.capacity != null);
+  const utilisation = totalCapacity ? Math.round((petsInHouse / totalCapacity) * 100) : 0;
 
   async function doCheckIn(b: HotelBookingRow) {
     if (gateMode !== "off" && b.pets.length) {
@@ -95,8 +101,15 @@ export function TodayPanel({
             <Hotel className="h-5 w-5" />
           </div>
           <div className="flex-1">
-            <div className="text-2xl font-semibold tabular-nums">{currentlyInHouse.length}<span className="text-sm text-muted-foreground"> / {totalCapacity}</span></div>
-            <div className="text-xs text-muted-foreground">In-house · {utilisation}% occupied</div>
+            <div className="text-2xl font-semibold tabular-nums">
+              {petsInHouse}
+              {capacitySet && <span className="text-sm text-muted-foreground"> / {totalCapacity}</span>}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {capacitySet
+                ? `Pets in-house · ${utilisation}% occupied`
+                : "Pets in-house · set pens/spaces in Settings → Resources"}
+            </div>
           </div>
         </div>
       </div>
