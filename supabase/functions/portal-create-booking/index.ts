@@ -163,15 +163,39 @@ Deno.serve(async (req) => {
       .from("daycare_enrolments").insert(rows).select("id, invoice_id");
     if (eErr) return json({ error: eErr.message }, 500);
 
-    const invoiceId = enrolments?.find((e: any) => e.invoice_id)?.invoice_id ?? null;
+    // Mid-month enrolments get a standalone issued pro-rata invoice from a DB trigger.
+    const enrolmentIds = (enrolments ?? []).map((e: any) => e.id);
+    const { data: prorataItems } = await admin
+      .from("invoice_items")
+      .select("invoice_id")
+      .eq("source_type", "daycare_enrolment_prorata")
+      .in("source_id", enrolmentIds);
+
+    const invoiceId =
+      (prorataItems ?? [])[0]?.invoice_id ??
+      enrolments?.find((e: any) => e.invoice_id)?.invoice_id ??
+      null;
     let bal = 0;
     if (invoiceId) {
       const { data: inv } = await admin
         .from("invoices").select("balance_due").eq("id", invoiceId).maybeSingle();
       bal = Number(inv?.balance_due ?? 0);
+
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-invoice-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SERVICE_KEY}`,
+          },
+          body: JSON.stringify({ invoice_id: invoiceId, kind: "send" }),
+        });
+      } catch (e) {
+        console.error("portal-create-booking: pro-rata invoice email failed", e);
+      }
     }
     return json({
-      enrolment_ids: (enrolments ?? []).map((e: any) => e.id),
+      enrolment_ids: enrolmentIds,
       invoice_id: invoiceId,
       balance_due: bal,
       short_notice: false,
