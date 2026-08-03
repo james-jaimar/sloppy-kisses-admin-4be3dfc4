@@ -62,6 +62,7 @@ export function TransportCard({ leg }: { leg: TransportLeg }) {
           <span className="rounded bg-sk-orange-soft px-1.5 py-0.5 text-sk-orange">Round trip</span>
         )}
         <PaymentChip bookingId={leg.id} />
+        <StayPlayChip bookingId={leg.id} />
         {leg.details?.gate_code && (
           <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
             <KeyRound className="h-3 w-3" /> {leg.details.gate_code}
