@@ -718,6 +718,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 </div>
               </div>
             )}
+            {kind === "hotel" && (
+              <HotelCapacityNotice
+                tenantId={tenantId}
+                resourceId={resourceId}
+                startAt={startIso}
+                endAt={endIso}
+                petCount={petIds.length || 1}
+                excludeBookingId={booking?.id ?? null}
+                onIssueChange={setCapacityIssue}
+              />
+            )}
           </div>
         </div>
 
