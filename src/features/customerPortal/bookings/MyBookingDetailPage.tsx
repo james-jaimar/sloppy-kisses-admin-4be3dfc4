@@ -156,12 +156,3 @@ function AccommodationFormBanner({ bookingId }: { bookingId: string }) {
     </div>
   );
 }
-
-function FieldLegacy({ label, value, full }: { label: string; value: string | null | undefined; full?: boolean }) {
-  return (
-    <div className={full ? "md:col-span-2" : ""}>
-      <div className="text-xs font-semibold uppercase text-muted-foreground">{label}</div>
-      <div className="mt-1 text-sm">{value || "—"}</div>
-    </div>
-  );
-}
