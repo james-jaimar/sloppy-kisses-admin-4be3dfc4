@@ -7403,6 +7403,7 @@ export type Database = {
         Returns: Json
       }
       void_refund: { Args: { p_refund_id: string }; Returns: undefined }
+      xero_drain_queue: { Args: never; Returns: undefined }
       xero_enqueue: {
         Args: { _entity_id: string; _entity_type: string; _tenant_id: string }
         Returns: undefined
