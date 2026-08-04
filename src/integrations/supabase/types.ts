@@ -6709,6 +6709,9 @@ export type Database = {
       xero_contacts_staging: {
         Row: {
           account_number: string | null
+          address_line_1: string | null
+          address_line_2: string | null
+          city: string | null
           contact_status: string | null
           created_at: string
           email: string | null
@@ -6720,6 +6723,8 @@ export type Database = {
           matched_customer_id: string | null
           name: string | null
           phone: string | null
+          postcode: string | null
+          province: string | null
           pulled_at: string
           tenant_id: string
           updated_at: string
@@ -6727,6 +6732,9 @@ export type Database = {
         }
         Insert: {
           account_number?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          city?: string | null
           contact_status?: string | null
           created_at?: string
           email?: string | null
@@ -6738,6 +6746,8 @@ export type Database = {
           matched_customer_id?: string | null
           name?: string | null
           phone?: string | null
+          postcode?: string | null
+          province?: string | null
           pulled_at?: string
           tenant_id: string
           updated_at?: string
@@ -6745,6 +6755,9 @@ export type Database = {
         }
         Update: {
           account_number?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          city?: string | null
           contact_status?: string | null
           created_at?: string
           email?: string | null
@@ -6756,6 +6769,8 @@ export type Database = {
           matched_customer_id?: string | null
           name?: string | null
           phone?: string | null
+          postcode?: string | null
+          province?: string | null
           pulled_at?: string
           tenant_id?: string
           updated_at?: string
