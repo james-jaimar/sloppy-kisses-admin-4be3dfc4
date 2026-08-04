@@ -308,7 +308,10 @@ Deno.serve(async (req) => {
     if (!token) return j(401, { error: "Unauthorized" });
     const asUser = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } });
     const { data: userData, error: authErr } = await asUser.auth.getUser(token);
-    if (authErr || !userData?.user) return j(401, { error: "Unauthorized" });
+    if (authErr || !userData?.user) {
+      console.error("auth check failed", { hasToken: Boolean(token), tokenLen: token.length, authErr: authErr?.message });
+      return j(401, { error: "Unauthorized" });
+    }
     const userId = userData.user.id;
     const { data: prof } = await admin.from("profiles").select("id, user_type").eq("user_id", userId).maybeSingle();
     actor = prof?.id ?? null;
