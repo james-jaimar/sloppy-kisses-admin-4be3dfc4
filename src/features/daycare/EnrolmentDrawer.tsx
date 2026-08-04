@@ -281,6 +281,64 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
               className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" />
           </Field>
+          {editing && (
+            <>
+              <div className="rounded-xl border border-border bg-sk-surface-muted/40 p-3">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Pause (holiday / temporary break)
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  A month fully inside the pause is skipped by the monthly daycare run.
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <Field label="Paused from">
+                    <input type="date" value={pausedFrom} onChange={(e) => setPausedFrom(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                  </Field>
+                  <Field label="Paused to">
+                    <input type="date" value={pausedTo} onChange={(e) => setPausedTo(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                  </Field>
+                </div>
+                {(pausedFrom || pausedTo) && (
+                  <button type="button" onClick={() => { setPausedFrom(""); setPausedTo(""); }}
+                    className="mt-1 text-[11px] font-medium text-sk-coral hover:underline">
+                    Clear pause
+                  </button>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-border bg-sk-surface-muted/40 p-3">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Notice to leave
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <Field label="Notice given on">
+                    <input type="date" value={noticeGivenAt} onChange={(e) => setNoticeGivenAt(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                  </Field>
+                  <Field label="Reason">
+                    <input value={endReason} onChange={(e) => setEndReason(e.target.value)}
+                      placeholder="e.g. moving away"
+                      className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                  </Field>
+                </div>
+                <button type="button" onClick={checkNotice}
+                  className="mt-1 h-9 rounded-lg border border-border bg-white px-3 text-xs font-medium hover:bg-muted">
+                  Work out earliest end date
+                </button>
+                {noticeQuote && (
+                  <div className="mt-2 rounded-lg border border-sk-turquoise/40 bg-sk-turquoise-soft/40 px-3 py-2 text-xs">
+                    <span className="font-semibold">
+                      Earliest end date: {noticeQuote.effective_end_date ?? "—"}
+                    </span>
+                    {noticeQuote.notice_days != null && ` · ${noticeQuote.notice_days} days' notice required`}
+                    {noticeQuote.months_payable != null && ` · ${noticeQuote.months_payable} month(s) still payable`}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
             Active
