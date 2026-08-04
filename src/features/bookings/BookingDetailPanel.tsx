@@ -9,6 +9,7 @@ import { BookingFormModal } from "./BookingFormModal";
 import { BookingStatusChip } from "./statusMeta";
 import { useBookingServiceDetails } from "./detailsQueries";
 import { useCancelSeriesForward } from "./recurringQueries";
+import { CancelBookingDialog } from "./CancelBookingDialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useBookingInstructions, useInstructionCatalog } from "@/features/grooming/instructions/queries";
 import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
@@ -32,6 +33,7 @@ interface Props {
 
 export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
   const [editOpen, setEditOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const confirm = useConfirm();
   const updateStatus = useUpdateBookingStatus(tenantId);
   const cancelSeries = useCancelSeriesForward(tenantId);
@@ -49,6 +51,10 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
   if (!booking.customer?.mobile && !booking.customer?.email) warnings.push("Customer has no phone or email");
 
   async function setStatus(status: BookingStatus) {
+    if (status === "cancelled") {
+      setCancelOpen(true);
+      return;
+    }
     try {
       await updateStatus.mutateAsync({ id: booking.id, status });
       toast.success(`Status updated to ${status.replace(/_/g, " ")}`);
