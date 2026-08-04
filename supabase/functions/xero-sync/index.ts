@@ -818,6 +818,25 @@ Deno.serve(async (req) => {
       return j(200, await linkContacts(s, ids, actor));
     }
 
+    if (action === "reconcile_report") {
+      const s = await getSettings(tenantId);
+      return j(200, await reconcileReport(s));
+    }
+
+    if (action === "import_contacts") {
+      const s = await getSettings(tenantId);
+      const ids: string[] = body?.staging_ids ?? [];
+      if (!ids.length) return j(400, { error: "staging_ids required" });
+      return j(200, await importContacts(s, ids, actor));
+    }
+
+    if (action === "ignore_contacts") {
+      const s = await getSettings(tenantId);
+      const ids: string[] = body?.staging_ids ?? [];
+      if (!ids.length) return j(400, { error: "staging_ids required" });
+      return j(200, await ignoreContacts(s, ids));
+    }
+
     if (action === "run_queue") {
       const s = await getSettings(tenantId);
       // Queue items execute the same multi-call Xero workflow as manual pushes.
