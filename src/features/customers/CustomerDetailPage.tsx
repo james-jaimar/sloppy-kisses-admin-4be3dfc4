@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { SyncToXeroButton } from "@/features/xero/SyncToXeroButton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
@@ -91,7 +92,20 @@ export default function CustomerDetailPage() {
 
   return (
     <>
-      <AppHeader title="Customer profile" subtitle={customer?.customer_number ? `#${customer.customer_number}` : undefined} />
+      <AppHeader
+        title="Customer profile"
+        subtitle={customer?.customer_number ? `#${customer.customer_number}` : undefined}
+        actions={
+          customer ? (
+            <SyncToXeroButton
+              entityType="customer"
+              entityId={customer.id}
+              synced={Boolean((customer as any).xero_customer_id)}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted disabled:opacity-50"
+            />
+          ) : undefined
+        }
+      />
       <div className="flex-1 space-y-4 p-6">
         <div>
           <Link
