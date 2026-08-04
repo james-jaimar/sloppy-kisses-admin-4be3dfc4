@@ -593,10 +593,14 @@ Deno.serve(async (req) => {
       if (!type || !requestedIds.length) return j(400, { error: "entity_type and entity_id(s) required" });
       // An invoice can require several Xero and database round-trips (contact,
       // item lookup, invoice write and logging). Keep each HTTP invocation well
-      // below Supabase's 150-second idle timeout; callers continue in chunks.
-      const ids = requestedIds.slice(0, 5);
+      // below Supabase's idle timeout; callers continue in chunks. We also stop
+      // early on a wall-clock budget so the function always answers.
+      const ids = requestedIds.slice(0, type === "invoice" ? 2 : 5);
+      const deadline = Date.now() + 60_000;
       const results: any[] = [];
+      let stoppedEarly = false;
       for (const id of ids) {
+        if (Date.now() > deadline) { stoppedEarly = true; break; }
         try {
           const r = await pushOne(s, type, id, actor);
           results.push({ id, ok: true, ...(typeof r === "object" ? r : { xero_id: r }) });
@@ -608,11 +612,13 @@ Deno.serve(async (req) => {
           if (msg.includes("[429]")) break; // back off; the rest stay for a retry
         }
       }
+      const attempted = results.length;
       return j(200, {
         results,
         succeeded: results.filter((r) => r.ok).length,
         failed: results.filter((r) => !r.ok).length,
-        remaining: Math.max(0, requestedIds.length - ids.length),
+        stopped_early: stoppedEarly,
+        remaining: Math.max(0, requestedIds.length - attempted),
       });
     }
 
@@ -654,12 +660,14 @@ Deno.serve(async (req) => {
       // Process a short slice so the request always returns before the edge
       // runtime's idle timeout; subsequent runs drain the remaining rows.
       const limit = Math.min(Math.max(1, Number(body?.limit ?? 5)), 5);
+      const deadline = Date.now() + 60_000;
       const { data: items } = await admin.from("xero_sync_queue")
         .select("*").eq("tenant_id", tenantId).eq("status", "pending")
         .lte("run_after", new Date().toISOString())
         .order("created_at", { ascending: true }).limit(limit);
       let done = 0, failed = 0;
       for (const item of items ?? []) {
+        if (Date.now() > deadline) break;
         try {
           await pushOne(s, item.entity_type, item.entity_id, null);
           await admin.from("xero_sync_queue").update({ status: "done", last_error: null }).eq("id", item.id);
