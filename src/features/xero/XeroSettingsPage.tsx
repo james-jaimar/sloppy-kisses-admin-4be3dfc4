@@ -159,6 +159,8 @@ export default function XeroSettingsPage() {
   }
 
   const pendingQueue = useMemo(() => (queueQ.data ?? []).length, [queueQ.data]);
+  const unlinked = counts.data?.customers ?? 0;
+  const totalCustomers = unlinked + (counts.data?.linkedCustomers ?? 0);
 
   return (
     <>
