@@ -120,7 +120,9 @@ export default function XeroSettingsPage() {
       const ids = await fetchBackfillIds(tenantId, kind, fromDate);
       if (!ids.length) { toast.info("Nothing left to push."); return; }
       let ok = 0, failed = 0;
-      const size = 20;
+      // Invoice pushes can involve multiple Xero calls per record. Short
+      // requests avoid Supabase's 150-second edge-function idle timeout.
+      const size = 5;
       for (let i = 0; i < ids.length; i += size) {
         setProgress(`Pushing ${Math.min(i + size, ids.length)} of ${ids.length} ${kind}…`);
         const res = await push.mutateAsync({

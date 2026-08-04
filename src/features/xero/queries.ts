@@ -105,7 +105,19 @@ export function useXeroPush(tenantId: string | null) {
 export function useXeroRunQueue(tenantId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => await invoke({ action: "run_queue", tenant_id: tenantId }),
+    mutationFn: async () => {
+      let processed = 0;
+      let done = 0;
+      let failed = 0;
+      while (true) {
+        const res = await invoke({ action: "run_queue", tenant_id: tenantId, limit: 5 });
+        processed += res?.processed ?? 0;
+        done += res?.done ?? 0;
+        failed += res?.failed ?? 0;
+        if ((res?.processed ?? 0) < 5 || (res?.done ?? 0) === 0) break;
+      }
+      return { processed, done, failed };
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["xero_log", tenantId] });
       qc.invalidateQueries({ queryKey: ["xero_queue", tenantId] });
