@@ -13,6 +13,7 @@ import { CancelBookingDialog } from "./CancelBookingDialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useBookingInstructions, useInstructionCatalog } from "@/features/grooming/instructions/queries";
 import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
+import { AccommodationFormCard } from "@/features/hotelForm/AccommodationFormCard";
 
 const STATUS_ACTIONS: { status: BookingStatus; label: string }[] = [
   { status: "confirmed", label: "Confirm" },
@@ -220,6 +221,8 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
           )}
 
           {isGrooming && instrQ.data && catalogQ.data && (
+            <></>
+          ) && null}
             <section>
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Grooming instructions
