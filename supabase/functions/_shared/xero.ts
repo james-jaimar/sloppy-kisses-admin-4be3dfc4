@@ -34,7 +34,10 @@ export async function xero(
 ): Promise<any> {
   const { lovableKey, connKey } = keys();
   const method = init.method ?? "GET";
-  const maxRetries = init.retries ?? 3;
+  // Keep the retry budget small: an edge invocation that spends 45s backing off
+  // gets killed with no response at all, which the browser reports as a CORS
+  // failure. Better to fail fast and let the caller retry the item.
+  const maxRetries = init.retries ?? 2;
 
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(`${GATEWAY_URL}/api.xro/2.0/${path}`, {
@@ -58,7 +61,7 @@ export async function xero(
     const transient = res.status === 429 || res.status === 503 || res.status === 502;
     if (transient && attempt < maxRetries) {
       const retryAfter = Number(res.headers.get("Retry-After") ?? 0);
-      const waitMs = retryAfter > 0 ? retryAfter * 1000 : Math.min(2 ** attempt * 1500, 15_000);
+      const waitMs = Math.min(retryAfter > 0 ? retryAfter * 1000 : 2 ** attempt * 1200, 8_000);
       await sleep(waitMs);
       continue;
     }
