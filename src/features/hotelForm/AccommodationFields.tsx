@@ -66,7 +66,7 @@ export function Section({
   summary?: string;
   defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(defaultOpen ?? !collapsible ?? true);
+  const [open, setOpen] = useState(defaultOpen ?? !collapsible);
   if (!collapsible) {
     return (
       <section className="sk-card space-y-4 p-4 md:p-6">
