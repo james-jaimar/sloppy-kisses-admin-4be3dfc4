@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, X, Edit3 } from "lucide-react";
+import { ArrowLeft, Loader2, X, Edit3, FileText, CheckCircle2 } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { SERVICE_LABEL, fmtDateTime, statusTone } from "../portalCommon";
@@ -9,6 +9,7 @@ import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPl
 import { useCurrentCustomer } from "../hooks";
 import { BookingChangeModal } from "./BookingChangeModal";
 import { useMinLeadHours } from "./new/useBookingSubmit";
+import { useAccommodationForm } from "@/features/hotelForm/accommodationForm";
 
 export default function MyBookingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +51,8 @@ export default function MyBookingDetailPage() {
         <Link to="/customer/bookings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to bookings
         </Link>
+
+        {group === "hotel" && <AccommodationFormBanner bookingId={b.id} />}
 
         <div className="sk-card space-y-4 p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
