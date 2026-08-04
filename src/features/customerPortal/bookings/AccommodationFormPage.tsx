@@ -77,6 +77,13 @@ function toggle(list: string[], v: string): string[] {
   return list.includes(v) ? list.filter((x) => x !== v) : [...list, v];
 }
 
+function cap(v: string | null | undefined): string {
+  if (!v) return "";
+  return v.charAt(0).toUpperCase() + v.slice(1);
+}
+
+const SIZE_LABEL: Record<string, string> = { small: "Small", medium: "Medium", large: "Large" };
+
 export default function AccommodationFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -90,7 +97,7 @@ export default function AccommodationFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, tenant_id, booking_number, service_type, start_at, end_at, booking_pets(pet:pets(id, name, breed, sex, size, colour_markings))")
+        .select("id, tenant_id, booking_number, service_type, start_at, end_at, booking_pets(pet:pets(id, name, breed, sex, size, size_override, marks_colour))")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
@@ -145,9 +152,9 @@ export default function AccommodationFormPage() {
           : bookingPets.map((p: any) => ({
               ...emptyPet(p.id, p.name ?? ""),
               breed: p.breed ?? "",
-              sex: p.sex ?? "",
-              size: p.size ?? "",
-              colour_marks: p.colour_markings ?? "",
+              sex: cap(p.sex === "unknown" ? "" : p.sex),
+              size: SIZE_LABEL[String(p.size_override ?? p.size ?? "")] ?? "",
+              colour_marks: p.marks_colour ?? "",
             })),
     }));
     setSeeded(true);
