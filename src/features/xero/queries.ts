@@ -344,15 +344,21 @@ export function useXeroBackfillCounts(tenantId: string | null, fromDate: string)
     queryKey: ["xero_backfill", tenantId, fromDate],
     enabled: Boolean(tenantId),
     queryFn: async () => {
-      const [cust, inv] = await Promise.all([
+      const [cust, linked, inv] = await Promise.all([
         (supabase as any).from("customers").select("id", { count: "exact", head: true })
           .eq("tenant_id", tenantId).is("xero_customer_id", null).neq("status", "archived"),
+        (supabase as any).from("customers").select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId).not("xero_customer_id", "is", null).neq("status", "archived"),
         (supabase as any).from("invoices").select("id", { count: "exact", head: true })
           .eq("tenant_id", tenantId).is("xero_invoice_id", null)
           .in("status", ["issued", "sent", "part_paid", "paid", "overdue"])
           .gte("issue_date", fromDate),
       ]);
-      return { customers: cust.count ?? 0, invoices: inv.count ?? 0 };
+      return {
+        customers: cust.count ?? 0,
+        linkedCustomers: linked.count ?? 0,
+        invoices: inv.count ?? 0,
+      };
     },
   });
 }

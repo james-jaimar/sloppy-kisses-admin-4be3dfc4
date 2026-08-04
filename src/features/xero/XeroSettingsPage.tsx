@@ -159,6 +159,8 @@ export default function XeroSettingsPage() {
   }
 
   const pendingQueue = useMemo(() => (queueQ.data ?? []).length, [queueQ.data]);
+  const unlinked = counts.data?.customers ?? 0;
+  const totalCustomers = unlinked + (counts.data?.linkedCustomers ?? 0);
 
   return (
     <>
@@ -324,12 +326,15 @@ export default function XeroSettingsPage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 Drafts are never sent. Only issued, part-paid and paid invoices go across.
               </p>
-              {(counts.data?.customers ?? 0) > 500 && (
-                <p className="mt-3 rounded-lg border border-dashed border-border bg-sk-surface-muted p-3 text-xs text-muted-foreground">
-                  {counts.data?.customers} customers have no Xero contact yet. Invoice pushes have to look each one
-                  up in Xero first, which is slow and burns the API limit — match them in bulk on the{" "}
+              {unlinked > 0 && (
+                <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+                  <span className="font-semibold">
+                    {unlinked.toLocaleString()} of {totalCustomers.toLocaleString()} customers are not linked to a Xero contact.
+                  </span>{" "}
+                  Every invoice for an unlinked customer costs up to four extra Xero calls (three searches plus a
+                  create), which is slow and burns the 60-calls-per-minute limit. Match them in bulk on the{" "}
                   <Link to="/admin/settings/xero-customers" className="font-medium underline">Xero customers</Link>{" "}
-                  screen first.
+                  screen first — after that each invoice is a single call.
                 </p>
               )}
               <div className="mt-4 flex flex-wrap items-end gap-3">
