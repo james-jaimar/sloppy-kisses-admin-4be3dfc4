@@ -110,6 +110,10 @@ export default function HotelRequestWizard() {
         feeding_instructions: payload.feeding_instructions || null,
         check_in_window: payload.check_in_window || null,
         check_out_window: payload.check_out_window || null,
+        medication_instructions: payload.medication_instructions || null,
+        belongings_notes: payload.belongings_notes || null,
+        pickup_required: payload.pickup_required,
+        dropoff_required: payload.dropoff_required,
       },
       afterCreate: async (res) => {
         if (!res.booking_id) return;
