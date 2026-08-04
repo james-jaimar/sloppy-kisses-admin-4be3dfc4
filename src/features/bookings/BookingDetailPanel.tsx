@@ -220,9 +220,11 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
             </section>
           )}
 
+          {String(booking.service_type).startsWith("hotel") && (
+            <AccommodationFormCard bookingId={booking.id} />
+          )}
+
           {isGrooming && instrQ.data && catalogQ.data && (
-            <></>
-          ) && null}
             <section>
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Grooming instructions
