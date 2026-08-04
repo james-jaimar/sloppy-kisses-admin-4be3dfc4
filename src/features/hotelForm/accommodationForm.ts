@@ -122,7 +122,7 @@ export function useAccommodationForm(bookingId: string | null | undefined) {
       if (e2) throw e2;
       return {
         receivedAt: det.form_received_at,
-        payload: (sub?.payload ?? null) as AccommodationFormPayload | null,
+        payload: (sub?.payload ?? null) as unknown as AccommodationFormPayload | null,
       };
     },
   });
@@ -134,7 +134,7 @@ export function useSubmitAccommodationForm(bookingId: string | null | undefined)
     mutationFn: async (payload: AccommodationFormPayload) => {
       const { data, error } = await supabase.rpc("submit_accommodation_form", {
         p_booking_id: bookingId!,
-        p_payload: payload as unknown as Record<string, unknown>,
+        p_payload: payload as unknown as never,
       });
       if (error) throw error;
       return data as string;
