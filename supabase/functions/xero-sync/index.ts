@@ -231,10 +231,22 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
 }
 
 async function ensureContact(s: Settings, customerId: string, actor: string | null) {
+  const cached = contactCache.get(customerId);
+  if (cached) return cached;
   const { data } = await admin.from("customers").select("xero_customer_id").eq("id", customerId).maybeSingle();
-  if (data?.xero_customer_id) return data.xero_customer_id as string;
-  return await pushCustomer(s, customerId, actor);
+  // Legacy imports left non-GUID text here; only a real Xero id is usable.
+  if (isGuid(data?.xero_customer_id)) {
+    const id = String(data!.xero_customer_id).trim();
+    contactCache.set(customerId, id);
+    return id;
+  }
+  const id = await pushCustomer(s, customerId, actor);
+  contactCache.set(customerId, id);
+  return id;
 }
+
+/** Per-invocation contact cache — avoids re-searching Xero for the same customer. */
+const contactCache = new Map<string, string>();
 
 // ---------- Payments ----------
 async function pushPayment(s: Settings, paymentId: string, actor: string | null) {
