@@ -589,12 +589,13 @@ Deno.serve(async (req) => {
 
     if (action === "pull_contacts") {
       const s = await getSettings(tenantId);
-      return j(200, await pullContacts(s, actor));
+      const startPage = Math.max(1, Number(body?.page ?? 1));
+      return j(200, await pullContacts(s, actor, startPage));
     }
 
     if (action === "match_contacts") {
       const s = await getSettings(tenantId);
-      return j(200, { matched: await autoMatchContacts(s) });
+      return j(200, await autoMatchContacts(s, body?.cursor ?? null));
     }
 
     if (action === "link_contacts") {
