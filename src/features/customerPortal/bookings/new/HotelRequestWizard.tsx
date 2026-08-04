@@ -1,122 +1,279 @@
-import { useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, Minus, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client";
 import { useCurrentCustomer } from "../../hooks";
-import { WizardShell, Field, inputCls, selectCls, textareaCls } from "./WizardShell";
+import { WizardShell, Field, inputCls, selectCls } from "./WizardShell";
 import { usePortalPets, useResources } from "./wizardHooks";
 import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
+import {
+  AcknowledgementSection,
+  AttachmentsSection,
+  CareSection,
+  EmergencySection,
+  OwnerSection,
+  PetSections,
+  StayWindowSection,
+  VetSection,
+  buildAccommodationForm,
+  syncFormPets,
+  emptyAccommodationForm,
+} from "@/features/hotelForm/AccommodationFields";
+import {
+  useAccommodationCustomer,
+  useAccommodationPets,
+  useAccommodationWriteBack,
+} from "@/features/hotelForm/prefillQueries";
+import type { AccommodationFormPayload } from "@/features/hotelForm/accommodationForm";
+
+const STEPS = ["Stay", "Your details", "Pet details", "Care & consent"];
+
+function addDays(date: string, days: number): string {
+  if (!date) return "";
+  const d = new Date(`${date}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function nightsBetween(a: string, b: string): number {
+  if (!a || !b) return 1;
+  const ms = new Date(`${b}T00:00:00`).getTime() - new Date(`${a}T00:00:00`).getTime();
+  return Math.max(1, Math.round(ms / 86400000));
+}
 
 export default function HotelRequestWizard() {
   const cust = useCurrentCustomer();
   const pets = usePortalPets(cust.data?.id);
   const rooms = useResources(cust.data?.tenant_id, ["hotel_area", "cattery_area"]);
   const submit = useCreatePortalBooking();
+  const writeBack = useAccommodationWriteBack();
 
+  const [step, setStep] = useState(0);
   const [petIds, setPetIds] = useState<string[]>([]);
   const [checkInDate, setCheckInDate] = useState("");
   const [checkInTime, setCheckInTime] = useState("09:00");
-  const [checkOutDate, setCheckOutDate] = useState("");
+  const [nights, setNights] = useState(1);
   const [checkOutTime, setCheckOutTime] = useState("10:00");
   const [roomPref, setRoomPref] = useState("");
-  const [dietMeds, setDietMeds] = useState("");
-  const [notes, setNotes] = useState("");
+  const [form, setForm] = useState<AccommodationFormPayload>(emptyAccommodationForm());
+  const [seeded, setSeeded] = useState(false);
+
+  const checkOutDate = useMemo(() => (checkInDate ? addDays(checkInDate, nights) : ""), [checkInDate, nights]);
+
+  const detailCustomer = useAccommodationCustomer(cust.data?.id);
+  const detailPets = useAccommodationPets(petIds);
+
+  // Seed the form from the customer record once it loads.
+  useEffect(() => {
+    if (seeded || !detailCustomer.data) return;
+    setForm((f) => buildAccommodationForm({ customer: detailCustomer.data, saved: f.owner.full_name ? f : null }));
+    setSeeded(true);
+  }, [seeded, detailCustomer.data]);
+
+  // Keep pet cards in step with the pets picked on step 1.
+  useEffect(() => {
+    if (!detailPets.data) return;
+    setForm((f) => syncFormPets(f, detailPets.data));
+  }, [detailPets.data]);
 
   const selectedPets = useMemo(
     () => (pets.data ?? []).filter((p: any) => petIds.includes(p.id)),
     [pets.data, petIds],
   );
+  const isCat = selectedPets.length > 0 && selectedPets.every((p) => (p.species ?? "").toLowerCase().includes("cat"));
+  const serviceType = isCat ? "hotel_cat" : "hotel_dog";
 
-  const isCat = selectedPets.some((p) => (p.species ?? "").toLowerCase().includes("cat"));
-  const serviceType = isCat && selectedPets.every((p) => (p.species ?? "").toLowerCase().includes("cat")) ? "hotel_cat" : "hotel_dog";
-
-  const canSubmit = cust.data && petIds.length > 0 && checkInDate && checkOutDate && !submit.isPending;
+  const stayReady = petIds.length > 0 && !!checkInDate && nights >= 1;
+  const canSubmit =
+    stayReady && form.acknowledgement.accepted && form.acknowledgement.signed_name.trim().length > 1 && !submit.isPending;
 
   function togglePet(id: string) {
     setPetIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
-  function onSubmit() {
+  async function onSubmit() {
     if (!cust.data) return;
     const startAt = dateToIso(checkInDate, checkInTime);
     if (!startAt) return;
+    const payload: AccommodationFormPayload = {
+      ...form,
+      acknowledgement: { ...form.acknowledgement, signed_at: new Date().toISOString() },
+    };
     submit.mutate({
       serviceType: serviceType as any,
       petIds,
       startAt,
       endAt: dateToIso(checkOutDate, checkOutTime),
-      notes,
+      notes: payload.additional_notes || null,
       hotel: {
         accommodation_type: roomPref || null,
-        feeding_instructions: dietMeds || null,
+        feeding_instructions: payload.feeding_instructions || null,
+        check_in_window: payload.check_in_window || null,
+        check_out_window: payload.check_out_window || null,
+      },
+      afterCreate: async (res) => {
+        if (!res.booking_id) return;
+        const { error } = await supabase.rpc("submit_accommodation_form", {
+          p_booking_id: res.booking_id,
+          p_payload: payload as unknown as never,
+        });
+        if (error) {
+          toast.error("Booking created, but the form didn't save — please complete it from the booking.");
+          return;
+        }
+        try {
+          await writeBack.mutateAsync({ customerId: cust.data!.id, form: payload });
+        } catch {
+          /* non-fatal */
+        }
       },
     });
   }
 
-  if (cust.isLoading) return <div className="grid flex-1 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+  if (cust.isLoading) {
+    return <div className="grid flex-1 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
+  }
+
+  const isLast = step === STEPS.length - 1;
 
   return (
     <WizardShell
       title="Book Hotel & Cattery"
-      subtitle="Pick your dates — your invoice is issued as soon as the stay is booked."
+      subtitle="Your stay details and accommodation form, all in one go."
       footer={
-        <button
-          onClick={onSubmit}
-          disabled={!canSubmit}
-          className="rounded-lg bg-sk-coral px-5 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50"
-        >
-          {submit.isPending ? "Booking…" : "Confirm booking"}
-        </button>
+        <>
+          {step > 0 && (
+            <button onClick={() => setStep((s) => s - 1)} className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted">
+              Back
+            </button>
+          )}
+          {!isLast ? (
+            <button
+              onClick={() => setStep((s) => s + 1)}
+              disabled={step === 0 && !stayReady}
+              className="rounded-lg bg-sk-coral px-5 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50"
+            >
+              Continue
+            </button>
+          ) : (
+            <button
+              onClick={onSubmit}
+              disabled={!canSubmit}
+              className="rounded-lg bg-sk-coral px-5 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50"
+            >
+              {submit.isPending ? "Booking…" : "Confirm booking"}
+            </button>
+          )}
+        </>
       }
     >
-      <Field label="Which pets?">
-        <div className="flex flex-wrap gap-2">
-          {(pets.data ?? []).map((p: any) => {
-            const active = petIds.includes(p.id);
-            return (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => togglePet(p.id)}
-                className={"rounded-full border px-3 py-1.5 text-sm " + (active ? "border-sk-coral bg-sk-coral-soft text-sk-coral-dark" : "border-border bg-white hover:bg-muted")}
-              >
-                {p.name} <span className="text-xs text-muted-foreground">· {p.species ?? "—"}</span>
-              </button>
-            );
-          })}
-          {(pets.data ?? []).length === 0 && <span className="text-xs text-muted-foreground">Add a pet under My Pets first.</span>}
+      <ol className="flex flex-wrap gap-2 text-xs">
+        {STEPS.map((s, i) => (
+          <li
+            key={s}
+            className={
+              "rounded-full px-3 py-1 font-medium " +
+              (i === step ? "bg-sk-coral text-white" : i < step ? "bg-sk-coral-soft text-sk-coral-dark" : "bg-muted text-muted-foreground")
+            }
+          >
+            {i + 1}. {s}
+          </li>
+        ))}
+      </ol>
+
+      {step === 0 && (
+        <>
+          <Field label="Which pets?">
+            <div className="flex flex-wrap gap-2">
+              {(pets.data ?? []).map((p: any) => {
+                const active = petIds.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => togglePet(p.id)}
+                    className={"rounded-full border px-3 py-1.5 text-sm " + (active ? "border-sk-coral bg-sk-coral-soft text-sk-coral-dark" : "border-border bg-white hover:bg-muted")}
+                  >
+                    {p.name} <span className="text-xs text-muted-foreground">· {p.species ?? "—"}</span>
+                  </button>
+                );
+              })}
+              {(pets.data ?? []).length === 0 && <span className="text-xs text-muted-foreground">Add a pet under My Pets first.</span>}
+            </div>
+          </Field>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <Field label="Check-in date">
+              <input type="date" value={checkInDate} onChange={(e) => setCheckInDate(e.target.value)} className={inputCls} />
+            </Field>
+            <Field label="Nights" hint={checkOutDate ? `Check-out ${checkOutDate}` : undefined}>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setNights((n) => Math.max(1, n - 1))} className="grid h-10 w-10 place-items-center rounded-lg border border-border hover:bg-muted">
+                  <Minus className="h-4 w-4" />
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={nights}
+                  onChange={(e) => setNights(Math.max(1, Number(e.target.value) || 1))}
+                  className={inputCls + " text-center"}
+                />
+                <button type="button" onClick={() => setNights((n) => n + 1)} className="grid h-10 w-10 place-items-center rounded-lg border border-border hover:bg-muted">
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </Field>
+            <Field label="Arrival time">
+              <input type="time" value={checkInTime} onChange={(e) => setCheckInTime(e.target.value)} className={inputCls} />
+            </Field>
+            <Field label="Collection time">
+              <input type="time" value={checkOutTime} onChange={(e) => setCheckOutTime(e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+
+          <Field label="Room preference (optional)" hint="Final room allocation is confirmed by our team.">
+            <select value={roomPref} onChange={(e) => setRoomPref(e.target.value)} className={selectCls}>
+              <option value="">No preference</option>
+              {(rooms.data ?? []).map((r: any) => (
+                <option key={r.id} value={r.name}>{r.name}{r.description ? ` — ${r.description}` : ""}</option>
+              ))}
+            </select>
+          </Field>
+
+          <StayWindowSection form={form} setForm={setForm} />
+        </>
+      )}
+
+      {step === 1 && (
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">We've filled in what we hold on file — please check and correct anything that's changed.</p>
+          <OwnerSection form={form} setForm={setForm} />
+          <EmergencySection form={form} setForm={setForm} />
+          <VetSection form={form} setForm={setForm} />
         </div>
-      </Field>
+      )}
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Check-in date">
-          <input type="date" value={checkInDate} onChange={(e) => setCheckInDate(e.target.value)} className={inputCls} />
-        </Field>
-        <Field label="Check-in time">
-          <input type="time" value={checkInTime} onChange={(e) => setCheckInTime(e.target.value)} className={inputCls} />
-        </Field>
-        <Field label="Check-out date">
-          <input type="date" value={checkOutDate} onChange={(e) => setCheckOutDate(e.target.value)} className={inputCls} />
-        </Field>
-        <Field label="Check-out time">
-          <input type="time" value={checkOutTime} onChange={(e) => setCheckOutTime(e.target.value)} className={inputCls} />
-        </Field>
-      </div>
+      {step === 2 && (
+        <div className="space-y-4">
+          {detailPets.isLoading ? (
+            <div className="grid place-items-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <PetSections form={form} setForm={setForm} />
+          )}
+        </div>
+      )}
 
-      <Field label="Room preference (optional)" hint="Final room allocation is confirmed by our team.">
-        <select value={roomPref} onChange={(e) => setRoomPref(e.target.value)} className={selectCls}>
-          <option value="">No preference</option>
-          {(rooms.data ?? []).map((r: any) => (
-            <option key={r.id} value={r.name}>{r.name}{r.description ? ` — ${r.description}` : ""}</option>
-          ))}
-        </select>
-      </Field>
-
-      <Field label="Diet, medication or special care notes">
-        <textarea rows={3} value={dietMeds} onChange={(e) => setDietMeds(e.target.value)} className={textareaCls} placeholder="e.g. twice-daily insulin, raw diet, senior food only…" />
-      </Field>
-
-      <Field label="Anything else we should know?">
-        <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={textareaCls} />
-      </Field>
+      {step === 3 && (
+        <div className="space-y-4">
+          <CareSection form={form} setForm={setForm} />
+          <AttachmentsSection
+            form={form}
+            setForm={setForm}
+            hint="Photos and vaccination cards can be uploaded against each pet under My pets."
+          />
+          <AcknowledgementSection form={form} setForm={setForm} />
+        </div>
+      )}
     </WizardShell>
   );
 }
