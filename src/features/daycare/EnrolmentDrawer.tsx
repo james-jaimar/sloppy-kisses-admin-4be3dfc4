@@ -12,6 +12,32 @@ import {
 import { prorataQuote } from "./prorata";
 import { supabase } from "@/lib/supabase/client";
 import { emailIssuedInvoice } from "@/features/invoices/autoEmail";
+import { useQuery } from "@tanstack/react-query";
+
+const DAY_INDEX: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+
+/** Days over capacity in the next 4 weeks on the weekdays this enrolment would attend. */
+function useCapacityWarning(tenantId: string, startDate: string, days: Weekday[]) {
+  const from = startDate || new Date().toISOString().slice(0, 10);
+  const to = new Date(new Date(from).getTime() + 27 * 86_400_000).toISOString().slice(0, 10);
+  return useQuery({
+    queryKey: ["daycare-capacity-check", tenantId, from, to, days.join(",")],
+    enabled: Boolean(tenantId && days.length),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("daycare_day_availability" as any, {
+        p_tenant_id: tenantId,
+        p_start: from,
+        p_end: to,
+      });
+      if (error) throw error;
+      const wanted = new Set(days.map((d) => DAY_INDEX[String(d).slice(0, 3).toLowerCase()]));
+      return ((data ?? []) as any[])
+        .filter((r) => r.capacity != null && wanted.has(new Date(r.day + "T00:00:00").getDay()))
+        .filter((r) => Number(r.expected) + 1 > Number(r.capacity))
+        .map((r) => ({ day: r.day as string, expected: Number(r.expected), capacity: Number(r.capacity) }));
+    },
+  });
+}
 
 interface Props {
   tenantId: string;
@@ -41,6 +67,11 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
   const [days, setDays] = useState<Weekday[]>([]);
   const [notes, setNotes] = useState("");
   const [active, setActive] = useState(true);
+  const [pausedFrom, setPausedFrom] = useState("");
+  const [pausedTo, setPausedTo] = useState("");
+  const [noticeGivenAt, setNoticeGivenAt] = useState("");
+  const [endReason, setEndReason] = useState("");
+  const [noticeQuote, setNoticeQuote] = useState<any>(null);
 
   useEffect(() => {
     if (editing) {
@@ -51,10 +82,16 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
       setDays((editing.selected_days ?? []) as Weekday[]);
       setNotes(editing.notes ?? "");
       setActive(editing.active);
+      setPausedFrom((editing as any).paused_from ?? "");
+      setPausedTo((editing as any).paused_to ?? "");
+      setNoticeGivenAt((editing as any).notice_given_at ?? "");
+      setEndReason((editing as any).end_reason ?? "");
     } else {
       setPetId(""); setPlanId(""); setStartDate(""); setEndDate("");
       setDays([]); setNotes(""); setActive(true);
+      setPausedFrom(""); setPausedTo(""); setNoticeGivenAt(""); setEndReason("");
     }
+    setNoticeQuote(null);
     setQuery("");
     setPickerOpen(false);
   }, [editing, open]);
@@ -69,6 +106,21 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
     [editing, startDate, endDate, days, selectedPlan?.price],
   );
   const showProrata = !!quote?.isPartial && quote.amount > 0;
+  const capacityQ = useCapacityWarning(tenantId, startDate, days);
+  const fullDays = capacityQ.data ?? [];
+
+  /** Works out the earliest legal end date from the notice period in Policy settings. */
+  async function checkNotice() {
+    if (!editing) return;
+    const { data, error } = await supabase.rpc("daycare_notice_quote" as any, {
+      p_enrolment_id: editing.id,
+      p_notice_date: noticeGivenAt || new Date().toISOString().slice(0, 10),
+    });
+    if (error) { toast.error(error.message); return; }
+    setNoticeQuote(data);
+    const suggested = (data as any)?.earliest_end_date as string | undefined;
+    if (suggested) setEndDate(suggested);
+  }
 
   async function save() {
     if (!petId || !startDate || days.length === 0) {
@@ -90,6 +142,10 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
             selected_days: days,
             notes: notes || null,
             active,
+            paused_from: pausedFrom || null,
+            paused_to: pausedTo || null,
+            notice_given_at: noticeGivenAt || null,
+            end_reason: endReason || null,
           } as any,
         });
       } else {
@@ -249,10 +305,79 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
               })}
             </div>
           </Field>
+          {fullDays.length > 0 && (
+            <div className="rounded-lg border border-sk-orange bg-sk-orange-soft px-3 py-2 text-xs text-sk-orange">
+              <span className="font-semibold">Over capacity on {fullDays.length} day(s) in the next 4 weeks</span>
+              <div className="mt-1 space-y-0.5 opacity-90">
+                {fullDays.slice(0, 5).map((d) => (
+                  <div key={d.day}>{d.day} — {d.expected + 1} expected vs {d.capacity} spaces</div>
+                ))}
+                {fullDays.length > 5 && <div>…and {fullDays.length - 5} more</div>}
+              </div>
+            </div>
+          )}
           <Field label="Notes">
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
               className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" />
           </Field>
+          {editing && (
+            <>
+              <div className="rounded-xl border border-border bg-sk-surface-muted/40 p-3">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Pause (holiday / temporary break)
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  A month fully inside the pause is skipped by the monthly daycare run.
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <Field label="Paused from">
+                    <input type="date" value={pausedFrom} onChange={(e) => setPausedFrom(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                  </Field>
+                  <Field label="Paused to">
+                    <input type="date" value={pausedTo} onChange={(e) => setPausedTo(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                  </Field>
+                </div>
+                {(pausedFrom || pausedTo) && (
+                  <button type="button" onClick={() => { setPausedFrom(""); setPausedTo(""); }}
+                    className="mt-1 text-[11px] font-medium text-sk-coral hover:underline">
+                    Clear pause
+                  </button>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-border bg-sk-surface-muted/40 p-3">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Notice to leave
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <Field label="Notice given on">
+                    <input type="date" value={noticeGivenAt} onChange={(e) => setNoticeGivenAt(e.target.value)}
+                      className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                  </Field>
+                  <Field label="Reason">
+                    <input value={endReason} onChange={(e) => setEndReason(e.target.value)}
+                      placeholder="e.g. moving away"
+                      className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                  </Field>
+                </div>
+                <button type="button" onClick={checkNotice}
+                  className="mt-1 h-9 rounded-lg border border-border bg-white px-3 text-xs font-medium hover:bg-muted">
+                  Work out earliest end date
+                </button>
+                {noticeQuote && (
+                  <div className="mt-2 rounded-lg border border-sk-turquoise/40 bg-sk-turquoise-soft/40 px-3 py-2 text-xs">
+                    <span className="font-semibold">
+                      Earliest end date: {noticeQuote.earliest_end_date ?? "—"}
+                    </span>
+                    {noticeQuote.notice_months != null && ` · ${noticeQuote.notice_months} month(s) notice required`}
+                    {" — set as the end date; the monthly run bills up to it."}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
             Active
