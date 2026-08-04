@@ -178,7 +178,27 @@ export function useXeroContactCounts(tenantId: string | null) {
 export function useXeroPullContacts(tenantId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async () => await invoke({ action: "pull_contacts", tenant_id: tenantId }),
+    // The edge worker only handles a few Xero pages per call (memory limits),
+    // so loop here until it reports there is nothing left.
+    mutationFn: async (onProgress?: (msg: string) => void) => {
+      let page: number | null = 1;
+      let pulled = 0;
+      while (page) {
+        const res: any = await invoke({ action: "pull_contacts", tenant_id: tenantId, page });
+        pulled += res.pulled ?? 0;
+        page = res.next_page ?? null;
+        onProgress?.(`${pulled} contacts pulled…`);
+      }
+      let cursor: string | null = null;
+      let matched = 0;
+      do {
+        const res: any = await invoke({ action: "match_contacts", tenant_id: tenantId, cursor });
+        matched += res.matched ?? 0;
+        cursor = res.next_cursor ?? null;
+        onProgress?.(`${pulled} pulled · ${matched} matched…`);
+      } while (cursor);
+      return { pulled, matched };
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["xero_contacts", tenantId] });
       qc.invalidateQueries({ queryKey: ["xero_contact_counts", tenantId] });
