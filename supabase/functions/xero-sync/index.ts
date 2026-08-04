@@ -482,20 +482,33 @@ async function autoMatchContacts(s: Settings, cursor: string | null = null, limi
 /** Confirm links: write the Xero contact id onto the customer and push SK numbers back. */
 async function linkContacts(s: Settings, stagingIds: string[], actor: string | null) {
   const ctx = { tenantId: s.xero_tenant_id! };
+  // Hard cap per invocation — the browser chunks larger selections. Doing
+  // hundreds of sequential round-trips here blew the 150s idle timeout.
+  const ids = stagingIds.slice(0, 50);
+  const remaining = stagingIds.length - ids.length;
   const { data: rows } = await admin.from("xero_contacts_staging")
     .select("id, xero_contact_id, matched_customer_id, name")
-    .eq("tenant_id", s.tenant_id).in("id", stagingIds);
+    .eq("tenant_id", s.tenant_id).in("id", ids);
 
-  let linked = 0;
-  const contactUpdates: any[] = [];
-  for (const r of rows ?? []) {
-    if (!r.matched_customer_id) continue;
-    await admin.from("customers").update({ xero_customer_id: r.xero_contact_id }).eq("id", r.matched_customer_id);
-    await admin.from("xero_contacts_staging").update({ match_state: "linked" }).eq("id", r.id);
-    const { data: c } = await admin.from("customers").select("customer_number").eq("id", r.matched_customer_id).maybeSingle();
-    if (c?.customer_number) contactUpdates.push({ ContactID: r.xero_contact_id, AccountNumber: c.customer_number });
-    linked++;
+  const usable = (rows ?? []).filter((r) => r.matched_customer_id);
+  const customerIds = usable.map((r) => r.matched_customer_id as string);
+  const { data: custs } = customerIds.length
+    ? await admin.from("customers").select("id, customer_number").in("id", customerIds)
+    : { data: [] as any[] };
+  const numberById = new Map<string, string>((custs ?? []).map((c: any) => [c.id, c.customer_number]));
+
+  // Parallel, bounded writes instead of one round-trip per row per step.
+  await Promise.all(usable.map((r) =>
+    admin.from("customers").update({ xero_customer_id: r.xero_contact_id }).eq("id", r.matched_customer_id!)
+  ));
+  if (usable.length) {
+    await admin.from("xero_contacts_staging").update({ match_state: "linked" })
+      .in("id", usable.map((r) => r.id));
   }
+  const contactUpdates = usable
+    .filter((r) => numberById.get(r.matched_customer_id as string))
+    .map((r) => ({ ContactID: r.xero_contact_id, AccountNumber: numberById.get(r.matched_customer_id as string) }));
+  const linked = usable.length;
 
   // Keep the SK customer number visible in Xero as the account number.
   for (let i = 0; i < contactUpdates.length; i += 50) {
@@ -510,7 +523,7 @@ async function linkContacts(s: Settings, stagingIds: string[], actor: string | n
 
   await logSync({ tenant_id: s.tenant_id, entity_type: "contact", action: "link", status: "success",
     entity_label: `${linked} contacts linked`, triggered_by: actor });
-  return { linked };
+  return { linked, remaining };
 }
 
 Deno.serve(async (req) => {
