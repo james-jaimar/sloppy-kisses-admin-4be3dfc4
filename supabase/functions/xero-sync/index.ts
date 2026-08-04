@@ -363,6 +363,8 @@ async function pushOne(s: Settings, type: string, id: string, actor: string | nu
 // ---------- Contact reconciliation ----------
 const norm = (v: unknown) => String(v ?? "").trim().toLowerCase();
 const digits = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-9);
+/** Quote a value for a PostgREST `in.(...)` list. */
+const quoteIn = (v: string) => `"${String(v).replace(/["\\]/g, "")}"`;
 
 /**
  * Pull a slice of Xero contacts into staging. Resumable: a few pages per call so
