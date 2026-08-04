@@ -120,20 +120,40 @@ export default function XeroSettingsPage() {
       const ids = await fetchBackfillIds(tenantId, kind, fromDate);
       if (!ids.length) { toast.info("Nothing left to push."); return; }
       let ok = 0, failed = 0;
-      // Invoice pushes can involve multiple Xero calls per record. Short
-      // requests avoid Supabase's 150-second edge-function idle timeout.
-      const size = 5;
+      // Invoice pushes involve several Xero calls per record. Keep each request
+      // short, and never let one dead invocation abort the whole run — the edge
+      // worker can be killed mid-flight, which the browser reports as a CORS /
+      // "Failed to fetch" error.
+      const size = kind === "invoices" ? 2 : 5;
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       for (let i = 0; i < ids.length; i += size) {
-        setProgress(`Pushing ${Math.min(i + size, ids.length)} of ${ids.length} ${kind}…`);
-        const res = await push.mutateAsync({
-          entity_type: kind === "customers" ? "customer" : "invoice",
-          entity_ids: ids.slice(i, i + size),
-        });
-        ok += res.succeeded ?? 0; failed += res.failed ?? 0;
+        const chunk = ids.slice(i, i + size);
+        let lastError = "";
+        let attempt = 0;
+        for (; attempt < 3; attempt++) {
+          setProgress(
+            `Pushing ${Math.min(i + size, ids.length)} of ${ids.length} ${kind}` +
+            `${attempt ? ` (retry ${attempt})` : ""} — ${ok} done, ${failed} failed…`,
+          );
+          try {
+            const res = await push.mutateAsync({
+              entity_type: kind === "customers" ? "customer" : "invoice",
+              entity_ids: chunk,
+            });
+            ok += res.succeeded ?? 0; failed += res.failed ?? 0;
+            lastError = "";
+            break;
+          } catch (e: any) {
+            lastError = e?.message ?? "Request failed";
+            await sleep(3000 * (attempt + 1));
+          }
+        }
+        if (lastError) failed += chunk.length;
+        await sleep(600); // stay under Xero's per-minute call ceiling
       }
       setProgress(null);
       counts.refetch();
-      if (failed) toast.error(`${ok} pushed, ${failed} failed — see the Xero sync log.`);
+      if (failed) toast.error(`${ok} pushed, ${failed} failed — see the Xero sync log, then run the push again for the rest.`);
       else toast.success(`${ok} ${kind} pushed to Xero.`);
     } catch (e: any) { setProgress(null); toast.error(e?.message ?? "Push failed"); }
   }
@@ -304,6 +324,14 @@ export default function XeroSettingsPage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 Drafts are never sent. Only issued, part-paid and paid invoices go across.
               </p>
+              {(counts.data?.customers ?? 0) > 500 && (
+                <p className="mt-3 rounded-lg border border-dashed border-border bg-sk-surface-muted p-3 text-xs text-muted-foreground">
+                  {counts.data?.customers} customers have no Xero contact yet. Invoice pushes have to look each one
+                  up in Xero first, which is slow and burns the API limit — match them in bulk on the{" "}
+                  <Link to="/admin/settings/xero-customers" className="font-medium underline">Xero customers</Link>{" "}
+                  screen first.
+                </p>
+              )}
               <div className="mt-4 flex flex-wrap items-end gap-3">
                 <div>
                   <div className={label}>Invoices issued from</div>
