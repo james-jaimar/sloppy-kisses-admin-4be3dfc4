@@ -699,6 +699,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           customer_id: string
+          deposit_invoice_id: string | null
           end_at: string | null
           end_date: string | null
           estimate_id: string | null
@@ -734,6 +735,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_id: string
+          deposit_invoice_id?: string | null
           end_at?: string | null
           end_date?: string | null
           estimate_id?: string | null
@@ -769,6 +771,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_id?: string
+          deposit_invoice_id?: string | null
           end_at?: string | null
           end_date?: string | null
           estimate_id?: string | null
@@ -819,6 +822,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_deposit_invoice_id_fkey"
+            columns: ["deposit_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
@@ -2658,16 +2668,24 @@ export type Database = {
       estimates: {
         Row: {
           accepted_at: string | null
+          accommodation_type: string | null
+          booking_id: string | null
           converted_invoice_id: string | null
           created_at: string
           created_by: string | null
           customer_id: string
+          declined_at: string | null
+          end_at: string | null
           estimate_number: string
           expiry_date: string | null
           id: string
           issue_date: string | null
           notes: string | null
           pdf_path: string | null
+          pet_ids: string[]
+          sent_at: string | null
+          service_type: Database["public"]["Enums"]["service_type"] | null
+          start_at: string | null
           status: Database["public"]["Enums"]["billing_status"]
           subtotal: number
           tenant_id: string
@@ -2677,16 +2695,24 @@ export type Database = {
         }
         Insert: {
           accepted_at?: string | null
+          accommodation_type?: string | null
+          booking_id?: string | null
           converted_invoice_id?: string | null
           created_at?: string
           created_by?: string | null
           customer_id: string
+          declined_at?: string | null
+          end_at?: string | null
           estimate_number: string
           expiry_date?: string | null
           id?: string
           issue_date?: string | null
           notes?: string | null
           pdf_path?: string | null
+          pet_ids?: string[]
+          sent_at?: string | null
+          service_type?: Database["public"]["Enums"]["service_type"] | null
+          start_at?: string | null
           status?: Database["public"]["Enums"]["billing_status"]
           subtotal?: number
           tenant_id: string
@@ -2696,16 +2722,24 @@ export type Database = {
         }
         Update: {
           accepted_at?: string | null
+          accommodation_type?: string | null
+          booking_id?: string | null
           converted_invoice_id?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string
+          declined_at?: string | null
+          end_at?: string | null
           estimate_number?: string
           expiry_date?: string | null
           id?: string
           issue_date?: string | null
           notes?: string | null
           pdf_path?: string | null
+          pet_ids?: string[]
+          sent_at?: string | null
+          service_type?: Database["public"]["Enums"]["service_type"] | null
+          start_at?: string | null
           status?: Database["public"]["Enums"]["billing_status"]
           subtotal?: number
           tenant_id?: string
@@ -2714,6 +2748,13 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "estimates_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "estimates_converted_invoice_id_fkey"
             columns: ["converted_invoice_id"]
@@ -2946,6 +2987,7 @@ export type Database = {
           groomer_name: string | null
           grooming_mode: string
           grooming_notes: string | null
+          hotel_checkout_discount_pct: number
           id: string
           loyalty_free_groom: boolean
           matted_surcharge_zar: number | null
@@ -2978,6 +3020,7 @@ export type Database = {
           groomer_name?: string | null
           grooming_mode: string
           grooming_notes?: string | null
+          hotel_checkout_discount_pct?: number
           id?: string
           loyalty_free_groom?: boolean
           matted_surcharge_zar?: number | null
@@ -3010,6 +3053,7 @@ export type Database = {
           groomer_name?: string | null
           grooming_mode?: string
           grooming_notes?: string | null
+          hotel_checkout_discount_pct?: number
           id?: string
           loyalty_free_groom?: boolean
           matted_surcharge_zar?: number | null
@@ -3348,6 +3392,8 @@ export type Database = {
           dropoff_required: boolean
           emergency_notes: string | null
           feeding_instructions: string | null
+          form_received_at: string | null
+          form_submission_id: string | null
           grooming_instructions: string | null
           grooming_required: boolean
           id: string
@@ -3367,6 +3413,8 @@ export type Database = {
           dropoff_required?: boolean
           emergency_notes?: string | null
           feeding_instructions?: string | null
+          form_received_at?: string | null
+          form_submission_id?: string | null
           grooming_instructions?: string | null
           grooming_required?: boolean
           id?: string
@@ -3386,6 +3434,8 @@ export type Database = {
           dropoff_required?: boolean
           emergency_notes?: string | null
           feeding_instructions?: string | null
+          form_received_at?: string | null
+          form_submission_id?: string | null
           grooming_instructions?: string | null
           grooming_required?: boolean
           id?: string
@@ -3400,6 +3450,13 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: true
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_booking_details_form_submission_id_fkey"
+            columns: ["form_submission_id"]
+            isOneToOne: false
+            referencedRelation: "form_submissions"
             referencedColumns: ["id"]
           },
           {
@@ -3456,6 +3513,97 @@ export type Database = {
           },
           {
             foreignKeyName: "hotel_booking_surcharges_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hotel_daycare_credits: {
+        Row: {
+          amount_zar: number
+          applied_invoice_id: string | null
+          booking_id: string
+          created_at: string
+          customer_id: string
+          daily_rate_zar: number
+          enrolment_id: string | null
+          id: string
+          nights: number
+          pet_id: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount_zar?: number
+          applied_invoice_id?: string | null
+          booking_id: string
+          created_at?: string
+          customer_id: string
+          daily_rate_zar?: number
+          enrolment_id?: string | null
+          id?: string
+          nights?: number
+          pet_id?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount_zar?: number
+          applied_invoice_id?: string | null
+          booking_id?: string
+          created_at?: string
+          customer_id?: string
+          daily_rate_zar?: number
+          enrolment_id?: string | null
+          id?: string
+          nights?: number
+          pet_id?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_daycare_credits_applied_invoice_id_fkey"
+            columns: ["applied_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_daycare_credits_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_daycare_credits_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_daycare_credits_enrolment_id_fkey"
+            columns: ["enrolment_id"]
+            isOneToOne: false
+            referencedRelation: "daycare_enrolments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_daycare_credits_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_daycare_credits_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3574,7 +3722,10 @@ export type Database = {
           check_in_close_time: string
           check_in_open_time: string
           check_out_by_time: string
+          checkout_groom_discount_pct: number
           created_at: string
+          daycare_credit_enabled: boolean
+          deposit_split_enabled: boolean
           id: string
           late_checkout_fee_zar: number
           min_lead_hours: number
@@ -3590,7 +3741,10 @@ export type Database = {
           check_in_close_time?: string
           check_in_open_time?: string
           check_out_by_time?: string
+          checkout_groom_discount_pct?: number
           created_at?: string
+          daycare_credit_enabled?: boolean
+          deposit_split_enabled?: boolean
           id?: string
           late_checkout_fee_zar?: number
           min_lead_hours?: number
@@ -3606,7 +3760,10 @@ export type Database = {
           check_in_close_time?: string
           check_in_open_time?: string
           check_out_by_time?: string
+          checkout_groom_discount_pct?: number
           created_at?: string
+          daycare_credit_enabled?: boolean
+          deposit_split_enabled?: boolean
           id?: string
           late_checkout_fee_zar?: number
           min_lead_hours?: number
@@ -4069,12 +4226,14 @@ export type Database = {
           balance_due: number
           billing_period_end: string | null
           billing_period_start: string | null
+          booking_id: string | null
           created_at: string
           created_by: string | null
           customer_id: string
           discount_total: number
           due_date: string | null
           id: string
+          invoice_kind: string
           invoice_number: string
           issue_date: string | null
           last_reminder_at: string | null
@@ -4103,12 +4262,14 @@ export type Database = {
           balance_due?: number
           billing_period_end?: string | null
           billing_period_start?: string | null
+          booking_id?: string | null
           created_at?: string
           created_by?: string | null
           customer_id: string
           discount_total?: number
           due_date?: string | null
           id?: string
+          invoice_kind?: string
           invoice_number: string
           issue_date?: string | null
           last_reminder_at?: string | null
@@ -4137,12 +4298,14 @@ export type Database = {
           balance_due?: number
           billing_period_end?: string | null
           billing_period_start?: string | null
+          booking_id?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string
           discount_total?: number
           due_date?: string | null
           id?: string
+          invoice_kind?: string
           invoice_number?: string
           issue_date?: string | null
           last_reminder_at?: string | null
@@ -4167,6 +4330,13 @@ export type Database = {
           xero_invoice_number?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_created_by_fkey"
             columns: ["created_by"]
@@ -4213,10 +4383,12 @@ export type Database = {
           credit_note_prefix: string
           daycare_prorata_enabled: boolean
           default_vat_rate: number
+          estimate_prefix: string
           footer_notes: string | null
           id: string
           invoice_prefix: string
           next_credit_note_number: number
+          next_estimate_number: number
           next_number: number
           payment_terms_days: number
           prices_include_vat: boolean
@@ -4240,10 +4412,12 @@ export type Database = {
           credit_note_prefix?: string
           daycare_prorata_enabled?: boolean
           default_vat_rate?: number
+          estimate_prefix?: string
           footer_notes?: string | null
           id?: string
           invoice_prefix?: string
           next_credit_note_number?: number
+          next_estimate_number?: number
           next_number?: number
           payment_terms_days?: number
           prices_include_vat?: boolean
@@ -4267,10 +4441,12 @@ export type Database = {
           credit_note_prefix?: string
           daycare_prorata_enabled?: boolean
           default_vat_rate?: number
+          estimate_prefix?: string
           footer_notes?: string | null
           id?: string
           invoice_prefix?: string
           next_credit_note_number?: number
+          next_estimate_number?: number
           next_number?: number
           payment_terms_days?: number
           prices_include_vat?: boolean
@@ -7066,6 +7242,10 @@ export type Database = {
           vaccine_type: string
         }[]
       }
+      grooming_checkout_discount_pct: {
+        Args: { p_booking_id: string }
+        Returns: number
+      }
       grooming_day_availability: {
         Args: { p_day: string; p_tenant_id: string }
         Returns: Json
@@ -7136,6 +7316,10 @@ export type Database = {
         Args: { target_tenant_id: string }
         Returns: string
       }
+      next_estimate_number: {
+        Args: { target_tenant_id: string }
+        Returns: string
+      }
       next_invoice_number: {
         Args: { target_tenant_id: string }
         Returns: string
@@ -7175,6 +7359,14 @@ export type Database = {
       show_trgm: { Args: { "": string }; Returns: string[] }
       stay_play_ensure_sessions: {
         Args: { p_booking_id: string; p_origin: string }
+        Returns: undefined
+      }
+      sync_hotel_daycare_credits: {
+        Args: { p_booking_id: string }
+        Returns: undefined
+      }
+      sync_hotel_deposit_invoice: {
+        Args: { p_booking_id: string }
         Returns: undefined
       }
       tenant_gateway_enabled: {
