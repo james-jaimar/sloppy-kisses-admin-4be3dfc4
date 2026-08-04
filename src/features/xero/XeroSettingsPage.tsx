@@ -324,6 +324,14 @@ export default function XeroSettingsPage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 Drafts are never sent. Only issued, part-paid and paid invoices go across.
               </p>
+              {(counts.data?.customers ?? 0) > 500 && (
+                <p className="mt-3 rounded-lg border border-dashed border-border bg-sk-surface-muted p-3 text-xs text-muted-foreground">
+                  {counts.data?.customers} customers have no Xero contact yet. Invoice pushes have to look each one
+                  up in Xero first, which is slow and burns the API limit — match them in bulk on the{" "}
+                  <Link to="/admin/settings/xero-customers" className="font-medium underline">Xero customers</Link>{" "}
+                  screen first.
+                </p>
+              )}
               <div className="mt-4 flex flex-wrap items-end gap-3">
                 <div>
                   <div className={label}>Invoices issued from</div>
