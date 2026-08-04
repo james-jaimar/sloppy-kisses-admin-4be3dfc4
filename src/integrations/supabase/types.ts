@@ -644,9 +644,13 @@ export type Database = {
       }
       bookings: {
         Row: {
+          amendment_count: number
           assigned_staff_id: string | null
           booking_number: string
           booking_request_id: string | null
+          cancellation_fee_note: string | null
+          cancellation_fee_waived: boolean
+          cancellation_fee_zar: number | null
           cancellation_reason: string | null
           created_at: string
           created_by: string | null
@@ -675,9 +679,13 @@ export type Database = {
           vax_override_reason: string | null
         }
         Insert: {
+          amendment_count?: number
           assigned_staff_id?: string | null
           booking_number: string
           booking_request_id?: string | null
+          cancellation_fee_note?: string | null
+          cancellation_fee_waived?: boolean
+          cancellation_fee_zar?: number | null
           cancellation_reason?: string | null
           created_at?: string
           created_by?: string | null
@@ -706,9 +714,13 @@ export type Database = {
           vax_override_reason?: string | null
         }
         Update: {
+          amendment_count?: number
           assigned_staff_id?: string | null
           booking_number?: string
           booking_request_id?: string | null
+          cancellation_fee_note?: string | null
+          cancellation_fee_waived?: boolean
+          cancellation_fee_zar?: number | null
           cancellation_reason?: string | null
           created_at?: string
           created_by?: string | null
@@ -6639,6 +6651,10 @@ export type Database = {
         Args: { p_allocations: Json; p_payment_id: string }
         Returns: Json
       }
+      apply_cancellation_fee: {
+        Args: { p_booking_id: string; p_reason?: string; p_waive?: boolean }
+        Returns: Json
+      }
       apply_credit_note: {
         Args: {
           p_amount: number
@@ -6646,6 +6662,10 @@ export type Database = {
           p_invoice_id: string
         }
         Returns: string
+      }
+      booking_cancellation_quote: {
+        Args: { p_at?: string; p_booking_id: string }
+        Returns: Json
       }
       current_customer_id: {
         Args: { target_tenant_id: string }
