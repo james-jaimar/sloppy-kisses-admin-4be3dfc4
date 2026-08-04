@@ -29,11 +29,13 @@ export default function InvoicingSettingsPage() {
     auto_invoice_grooming: true, auto_invoice_transport: true,
     billing_cycle: "monthly_prepaid", billing_run_day: 22, billing_due_day: 1,
     daycare_prorata_enabled: true,
+    estimate_prefix: "QUO", next_estimate_number: 1,
   });
   const nextMonth = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1); return d.toISOString().slice(0, 10); })();
   const [runPeriod, setRunPeriod] = useState<string>(nextMonth);
   const [running, setRunning] = useState(false);
   const [preview, setPreview] = useState<{ customers: number; lines: number; total: number; period_label: string } | null>(null);
+  const [creditPreview, setCreditPreview] = useState<{ lines: number; total: number } | null>(null);
   const [lastRun, setLastRun] = useState<string | null>(null);
   const [interestRunning, setInterestRunning] = useState(false);
   const [interestPreview, setInterestPreview] = useState<{ customers: number; total: number; percent: number } | null>(null);
@@ -62,6 +64,8 @@ export default function InvoicingSettingsPage() {
         billing_run_day: Number((d as any).billing_run_day ?? 22),
         billing_due_day: Number((d as any).billing_due_day ?? 1),
         daycare_prorata_enabled: (d as any).daycare_prorata_enabled ?? true,
+        estimate_prefix: (d as any).estimate_prefix ?? "QUO",
+        next_estimate_number: Number((d as any).next_estimate_number ?? 1),
       });
     }
   }, [settingsQ.data]);
@@ -90,6 +94,8 @@ export default function InvoicingSettingsPage() {
         billing_run_day: form.billing_run_day,
         billing_due_day: form.billing_due_day,
         daycare_prorata_enabled: form.daycare_prorata_enabled,
+        estimate_prefix: form.estimate_prefix || "QUO",
+        next_estimate_number: form.next_estimate_number,
       } as any);
       toast.success("Invoicing settings saved");
     } catch (err: any) { toast.error(err?.message ?? "Failed"); }
@@ -137,6 +143,10 @@ export default function InvoicingSettingsPage() {
         lines: Number(r.lines ?? 0),
         total: Number(r.total ?? 0),
         period_label: r.period_label ?? "",
+      });
+      setCreditPreview({
+        lines: Number(r.hotel_credit_lines ?? 0),
+        total: Number(r.hotel_credit_total ?? 0),
       });
     } catch (err: any) {
       toast.error(err?.message ?? "Preview failed");
@@ -231,6 +241,16 @@ export default function InvoicingSettingsPage() {
               <Field label="Default payment terms (days)">
                 <input type="number" min={0} disabled={!canManage} value={form.payment_terms_days}
                   onChange={(e) => setForm({ ...form, payment_terms_days: Number(e.target.value) })}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+              </Field>
+              <Field label="Quote prefix" hint="e.g. QUO">
+                <input disabled={!canManage} value={form.estimate_prefix}
+                  onChange={(e) => setForm({ ...form, estimate_prefix: e.target.value })}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+              </Field>
+              <Field label="Next quote number">
+                <input type="number" min={1} disabled={!canManage} value={form.next_estimate_number}
+                  onChange={(e) => setForm({ ...form, next_estimate_number: Number(e.target.value) })}
                   className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
               </Field>
               <Field label="Default VAT rate (%)">
@@ -355,6 +375,11 @@ export default function InvoicingSettingsPage() {
                   <span className="font-semibold">{preview.period_label}</span> — {preview.customers} customer(s),{" "}
                   {preview.lines} line(s), total{" "}
                   <span className="font-semibold">R{preview.total.toFixed(2)}</span>. Nothing has been created yet.
+                  {creditPreview && creditPreview.lines > 0 && (
+                    <div className="mt-1 text-sk-teal">
+                      Includes {creditPreview.lines} hotel-stay credit line(s) worth −R{creditPreview.total.toFixed(2)}.
+                    </div>
+                  )}
                 </div>
               )}
               {lastRun && (
