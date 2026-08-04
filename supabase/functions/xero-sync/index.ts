@@ -552,7 +552,11 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get("Authorization") ?? "";
   const token = authHeader.replace("Bearer ", "");
   let actor: string | null = null;
-  const isServiceCall = token === SERVICE_KEY;
+  const cronSecret = Deno.env.get("XERO_CRON_SECRET");
+  const isCronCall = Boolean(cronSecret) && req.headers.get("x-cron-secret") === cronSecret;
+  const isServiceCall = token === SERVICE_KEY || isCronCall;
+  // The scheduled drain may only run the queue — never arbitrary pushes.
+  if (isCronCall && action !== "run_queue") return j(403, { error: "Scheduled calls may only run the queue" });
   if (!isServiceCall) {
     if (!token) return j(401, { error: "Unauthorized" });
     const asUser = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } });
