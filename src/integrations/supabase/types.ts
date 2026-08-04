@@ -1420,6 +1420,8 @@ export type Database = {
           address_line_1: string | null
           address_line_2: string | null
           city: string | null
+          collections_hold: boolean
+          collections_hold_note: string | null
           consent_prompted_at: string | null
           created_at: string
           created_by: string | null
@@ -1466,6 +1468,8 @@ export type Database = {
           address_line_1?: string | null
           address_line_2?: string | null
           city?: string | null
+          collections_hold?: boolean
+          collections_hold_note?: string | null
           consent_prompted_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -1512,6 +1516,8 @@ export type Database = {
           address_line_1?: string | null
           address_line_2?: string | null
           city?: string | null
+          collections_hold?: boolean
+          collections_hold_note?: string | null
           consent_prompted_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -1747,9 +1753,13 @@ export type Database = {
           customer_id: string
           daycare_plan_id: string | null
           end_date: string | null
+          end_reason: string | null
           id: string
           invoice_id: string | null
           notes: string | null
+          notice_given_at: string | null
+          paused_from: string | null
+          paused_to: string | null
           pet_id: string
           selected_days: string[]
           start_date: string
@@ -1762,9 +1772,13 @@ export type Database = {
           customer_id: string
           daycare_plan_id?: string | null
           end_date?: string | null
+          end_reason?: string | null
           id?: string
           invoice_id?: string | null
           notes?: string | null
+          notice_given_at?: string | null
+          paused_from?: string | null
+          paused_to?: string | null
           pet_id: string
           selected_days?: string[]
           start_date: string
@@ -1777,9 +1791,13 @@ export type Database = {
           customer_id?: string
           daycare_plan_id?: string | null
           end_date?: string | null
+          end_reason?: string | null
           id?: string
           invoice_id?: string | null
           notes?: string | null
+          notice_given_at?: string | null
+          paused_from?: string | null
+          paused_to?: string | null
           pet_id?: string
           selected_days?: string[]
           start_date?: string
@@ -6667,11 +6685,27 @@ export type Database = {
         Args: { p_at?: string; p_booking_id: string }
         Returns: Json
       }
+      charge_overdue_interest: {
+        Args: { p_as_of?: string; p_preview?: boolean; p_tenant_id: string }
+        Returns: Json
+      }
       current_customer_id: {
         Args: { target_tenant_id: string }
         Returns: string
       }
       current_profile_id: { Args: never; Returns: string }
+      daycare_day_availability: {
+        Args: { p_end: string; p_start: string; p_tenant_id: string }
+        Returns: {
+          capacity: number
+          day: string
+          expected: number
+        }[]
+      }
+      daycare_notice_quote: {
+        Args: { p_enrolment_id: string; p_notice_date?: string }
+        Returns: Json
+      }
       daycare_prorata_quote: { Args: { p_enrolment_id: string }; Returns: Json }
       delete_booking: { Args: { p_booking_id: string }; Returns: undefined }
       delete_customer: { Args: { p_customer_id: string }; Returns: undefined }

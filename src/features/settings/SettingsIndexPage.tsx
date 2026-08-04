@@ -196,6 +196,13 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/closures",
+    label: "Closures & holidays",
+    description: "Public holidays and shut days. Daycare pro-rata skips them and bookings are blocked.",
+    icon: Gavel,
+    ready: true,
+  },
+  {
     to: "/admin/settings/terms",
     label: "Terms & Registration",
     description: "Versioned Terms & Conditions and daycare registration text customers accept on portal login.",
@@ -268,7 +275,7 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
   {
     id: "compliance",
     label: "Compliance",
-    members: ["Vaccination rules", "Documents & retention", "Policies", "Terms & Registration", "Registration status"],
+    members: ["Vaccination rules", "Documents & retention", "Policies", "Closures & holidays", "Terms & Registration", "Registration status"],
   },
   {
     id: "retail",

@@ -35,6 +35,9 @@ export default function InvoicingSettingsPage() {
   const [running, setRunning] = useState(false);
   const [preview, setPreview] = useState<{ customers: number; lines: number; total: number; period_label: string } | null>(null);
   const [lastRun, setLastRun] = useState<string | null>(null);
+  const [interestRunning, setInterestRunning] = useState(false);
+  const [interestPreview, setInterestPreview] = useState<{ customers: number; total: number; percent: number } | null>(null);
+  const [lastInterestRun, setLastInterestRun] = useState<string | null>(null);
 
   useEffect(() => {
     const d = settingsQ.data;
@@ -108,10 +111,10 @@ export default function InvoicingSettingsPage() {
       }
       setPreview(null);
       setLastRun(
-        `${r.created_invoices ?? 0} invoice(s) created · ${r.added_lines ?? 0} line(s) · ${r.issued_invoices ?? 0} issued · ${emailed} emailed`,
+        `${r.invoices ?? 0} invoice(s) created · ${r.lines ?? 0} line(s) · ${r.issued ?? 0} issued · ${emailed} emailed`,
       );
       toast.success(
-        `Monthly run complete — ${r.created_invoices ?? 0} invoice(s), ${r.issued_invoices ?? 0} issued, ${emailed} emailed.`,
+        `Monthly run complete — ${r.invoices ?? 0} invoice(s), ${r.issued ?? 0} issued, ${emailed} emailed.`,
       );
     } catch (err: any) {
       toast.error(err?.message ?? "Monthly run failed");
@@ -139,6 +142,41 @@ export default function InvoicingSettingsPage() {
       toast.error(err?.message ?? "Preview failed");
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function runInterest(previewOnly: boolean) {
+    if (!tenantId) return;
+    setInterestRunning(true);
+    try {
+      const { data, error } = await supabase.rpc("charge_overdue_interest" as any, {
+        p_tenant_id: tenantId,
+        p_as_of: new Date().toISOString().slice(0, 10),
+        p_preview: previewOnly,
+      });
+      if (error) throw error;
+      const r: any = data ?? {};
+      if (previewOnly) {
+        setInterestPreview({
+          customers: Number(r.customers ?? 0),
+          total: Number(r.total ?? 0),
+          percent: Number(r.percent ?? 0),
+        });
+        if (r.note) toast.info(r.note);
+      } else {
+        const ids: string[] = Array.isArray(r.invoice_ids) ? r.invoice_ids : [];
+        let emailed = 0;
+        for (const id of ids) if (await emailIssuedInvoice(id)) emailed += 1;
+        setInterestPreview(null);
+        setLastInterestRun(
+          `${r.customers ?? 0} interest invoice(s) · R${Number(r.total ?? 0).toFixed(2)} · ${emailed} emailed`,
+        );
+        toast.success(`Interest raised for ${r.customers ?? 0} customer(s).`);
+      }
+    } catch (err: any) {
+      toast.error(err?.message ?? "Interest run failed");
+    } finally {
+      setInterestRunning(false);
     }
   }
 
@@ -322,6 +360,36 @@ export default function InvoicingSettingsPage() {
               {lastRun && (
                 <div className="mt-3 rounded-lg border border-sk-teal/40 bg-sk-teal/5 px-3 py-2 text-xs text-sk-teal">
                   Last run: {lastRun}
+                </div>
+              )}
+            </div>
+          </Section>
+
+          <Section title="Overdue interest run">
+            <div className="rounded-xl border border-border bg-muted/30 p-4">
+              <p className="mb-3 text-xs text-muted-foreground">
+                Raises a separate interest invoice for every customer with an overdue balance, using the overdue
+                interest rate in Policies. Customers on collections hold are skipped. Preview first.
+              </p>
+              <div className="flex flex-wrap items-end gap-3">
+                <button disabled={!canRun || interestRunning} onClick={() => runInterest(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-sk-teal px-4 text-sm font-semibold text-sk-teal hover:bg-sk-teal/10 disabled:opacity-50">
+                  {interestRunning ? "Working…" : "Preview interest"}
+                </button>
+                <button disabled={!canRun || interestRunning || !interestPreview?.customers} onClick={() => runInterest(false)}
+                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-sk-teal px-4 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                  <Play className="h-4 w-4" /> {interestRunning ? "Running…" : "Raise & email interest"}
+                </button>
+              </div>
+              {interestPreview && (
+                <div className="mt-3 rounded-lg border border-border bg-white px-3 py-2 text-xs">
+                  {interestPreview.customers} customer(s) at {interestPreview.percent}% per month — total{" "}
+                  <span className="font-semibold">R{interestPreview.total.toFixed(2)}</span>. Nothing has been created yet.
+                </div>
+              )}
+              {lastInterestRun && (
+                <div className="mt-3 rounded-lg border border-sk-teal/40 bg-sk-teal/5 px-3 py-2 text-xs text-sk-teal">
+                  Last run: {lastInterestRun}
                 </div>
               )}
             </div>

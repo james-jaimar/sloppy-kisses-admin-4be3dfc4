@@ -28,6 +28,7 @@ import type { PetRow } from "./queries";
 import { CustomerCreditPanel } from "@/features/customerCredit/CustomerCreditPanel";
 import PortalAccessPanel from "./PortalAccessPanel";
 import { PinnedNotesBanner } from "./PinnedNotesBanner";
+import { CollectionsHoldToggle } from "./CollectionsHoldToggle";
 import { BookingsTab } from "./tabs/BookingsTab";
 import { InvoicesTab } from "./tabs/InvoicesTab";
 import { NotesTab } from "./tabs/NotesTab";
@@ -170,6 +171,11 @@ export default function CustomerDetailPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <CollectionsHoldToggle
+                    customerId={customer.id}
+                    onHold={Boolean((customer as any).collections_hold)}
+                    note={(customer as any).collections_hold_note}
+                  />
                   <button
                     onClick={() => setEditing(true)}
                     className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted"

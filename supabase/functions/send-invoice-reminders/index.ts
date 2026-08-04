@@ -47,17 +47,25 @@ Deno.serve(async (req) => {
   // Unpaid, issued invoices, past due, not paused
   const { data: invoices, error: iErr } = await admin
     .from("invoices")
-    .select("id, tenant_id, due_date, status, balance_due, reminders_paused, last_reminder_offset")
+    .select("id, tenant_id, customer_id, due_date, status, balance_due, reminders_paused, last_reminder_offset")
     .in("status", ["sent", "part_paid", "overdue"])
     .eq("reminders_paused", false)
     .gt("balance_due", 0);
   if (iErr) return j(500, { error: iErr.message });
+
+  // Customers on collections hold (dispute or payment arrangement) get no chasers.
+  const { data: heldCustomers } = await admin
+    .from("customers")
+    .select("id")
+    .eq("collections_hold", true);
+  const held = new Set((heldCustomers ?? []).map((c: any) => c.id));
 
   let processed = 0, sent = 0, failed = 0, skipped = 0;
   const details: any[] = [];
 
   for (const inv of invoices ?? []) {
     processed++;
+    if (held.has((inv as any).customer_id)) { skipped++; continue; }
     const offsets = tenantOffsets.get(inv.tenant_id);
     if (!offsets || !inv.due_date) { skipped++; continue; }
     const overdueDays = daysBetween(inv.due_date, today);
