@@ -96,6 +96,8 @@ import PolicySettingsPage from "@/features/settings/PolicySettingsPage";
 import ClosuresPage from "@/features/settings/ClosuresPage";
 import XeroSettingsPage from "@/features/xero/XeroSettingsPage";
 import XeroSyncLogPage from "@/features/xero/XeroSyncLogPage";
+import XeroCustomersPage from "@/features/xero/XeroCustomersPage";
+import BillingItemCodesPage from "@/features/settings/BillingItemCodesPage";
 import TermsVersionsPage from "@/features/settings/TermsVersionsPage";
 import ConsentStatusPage from "@/features/settings/ConsentStatusPage";
 import UsersPage from "@/features/users/UsersPage";
@@ -231,6 +233,8 @@ const App = () => (
                 <Route path="/admin/settings/closures" element={<ClosuresPage />} />
                 <Route path="/admin/settings/xero" element={<XeroSettingsPage />} />
                 <Route path="/admin/settings/xero-log" element={<XeroSyncLogPage />} />
+                <Route path="/admin/settings/xero-customers" element={<XeroCustomersPage />} />
+                <Route path="/admin/settings/billing-item-codes" element={<BillingItemCodesPage />} />
                 <Route path="/admin/settings/terms" element={<TermsVersionsPage />} />
                 <Route path="/admin/settings/consent-status" element={<ConsentStatusPage />} />
                 <Route path="/admin/settings/job-checklists" element={<JobChecklistsPage />} />

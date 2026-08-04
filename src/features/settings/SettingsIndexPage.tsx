@@ -261,6 +261,20 @@ SECTIONS.push(
     icon: ListChecks,
     ready: true,
   },
+  {
+    to: "/admin/settings/xero-customers",
+    label: "Xero customers",
+    description: "Match contacts that already exist in Xero to Sloppy Kisses customers so nothing gets duplicated.",
+    icon: Link2,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/billing-item-codes",
+    label: "Billing item codes",
+    description: "SKUs for each service, added to invoice lines and pushed to Xero as item codes.",
+    icon: ListChecks,
+    ready: true,
+  },
 );
 
 const GROUPS: { id: string; label: string; members: string[] }[] = [
@@ -302,7 +316,7 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
   {
     id: "integrations",
     label: "Integrations",
-    members: ["Xero", "Xero sync log"],
+    members: ["Xero", "Xero customers", "Billing item codes", "Xero sync log"],
   },
   {
     id: "admin",

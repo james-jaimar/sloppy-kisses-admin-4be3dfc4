@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, RefreshCw, PlugZap, Users, FileText, ListChecks } from "lucide-react";
+import { ArrowLeft, Loader2, RefreshCw, PlugZap, Users, FileText, ListChecks, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import {
   useXeroSettings, useSaveXeroSettings, useXeroOrganisations, useXeroTest,
   useXeroPush, useXeroBackfillCounts, fetchBackfillIds, useXeroRunQueue, useXeroQueue,
+  useXeroTaxRates, type XeroTaxRate,
 } from "./queries";
 
 const SERVICES: { key: string; label: string }[] = [
@@ -37,11 +38,13 @@ export default function XeroSettingsPage() {
   const push = useXeroPush(tenantId);
   const runQueue = useXeroRunQueue(tenantId);
   const queueQ = useXeroQueue(tenantId);
+  const taxRates = useXeroTaxRates(tenantId);
 
   const [form, setForm] = useState<any>(null);
   const [orgList, setOrgList] = useState<Array<{ tenantId: string; tenantName: string }>>([]);
   const [fromDate, setFromDate] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().slice(0, 10));
   const [progress, setProgress] = useState<string | null>(null);
+  const [rateList, setRateList] = useState<XeroTaxRate[]>([]);
   const counts = useXeroBackfillCounts(tenantId, fromDate);
 
   useEffect(() => {
@@ -49,8 +52,8 @@ export default function XeroSettingsPage() {
     else if (settingsQ.isFetched && !settingsQ.data) {
       setForm({
         enabled: false, auto_push: false, xero_tenant_id: null, xero_tenant_name: null,
-        default_sales_account: "200", service_account_codes: {}, default_tax_type: "OUTPUT",
-        zero_rated_tax_type: "ZERORATEDOUTPUT", line_amount_type: "Inclusive", payment_accounts: {},
+        default_sales_account: "200", service_account_codes: {}, default_tax_type: "OUTPUT3",
+        zero_rated_tax_type: "ZERORATED", line_amount_type: "Inclusive", payment_accounts: {},
       });
     }
   }, [settingsQ.data, settingsQ.isFetched]);
@@ -87,6 +90,30 @@ export default function XeroSettingsPage() {
     } catch (e: any) { toast.error(e?.message ?? "Connection test failed"); }
   }
 
+  async function loadTaxRates() {
+    try {
+      const list = await taxRates.mutateAsync();
+      setRateList(list);
+      if (!list.length) toast.error("Xero returned no sales tax rates for this organisation.");
+      else toast.success(`${list.length} tax rates loaded from Xero`);
+    } catch (e: any) { toast.error(e?.message ?? "Could not load tax rates"); }
+  }
+
+  function taxSelect(field: "default_tax_type" | "zero_rated_tax_type") {
+    const current = form?.[field] ?? "";
+    const known = rateList.some((r) => r.taxType === current);
+    return (
+      <select className={input} value={current} disabled={!canManage || !rateList.length}
+        onChange={(e) => set({ [field]: e.target.value })}>
+        {!rateList.length && <option value={current}>{current || "Load tax rates first"}</option>}
+        {rateList.length > 0 && !known && current && <option value={current}>{current} (not in Xero)</option>}
+        {rateList.map((r) => (
+          <option key={r.taxType} value={r.taxType}>{r.name} — {r.rate}% ({r.taxType})</option>
+        ))}
+      </select>
+    );
+  }
+
   async function backfill(kind: "customers" | "invoices") {
     if (!tenantId) return;
     try {
@@ -118,6 +145,12 @@ export default function XeroSettingsPage() {
         subtitle="Push customers, invoices, payments and credit notes into Xero."
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <Link to="/admin/settings/xero-customers" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
+              <Users className="h-4 w-4" /> Xero customers
+            </Link>
+            <Link to="/admin/settings/billing-item-codes" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
+              <Link2 className="h-4 w-4" /> Item codes
+            </Link>
             <Link to="/admin/settings/xero-log" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
               <ListChecks className="h-4 w-4" /> Sync log
             </Link>
@@ -193,8 +226,16 @@ export default function XeroSettingsPage() {
 
             {/* Account mapping */}
             <div className="sk-card p-5">
-              <div className="font-semibold">Account & tax mapping</div>
-              <p className="mt-1 text-sm text-muted-foreground">These must match the codes in Xero's chart of accounts.</p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="font-semibold">Account & tax mapping</div>
+                  <p className="mt-1 text-sm text-muted-foreground">These must match the codes in Xero's chart of accounts.</p>
+                </div>
+                <button onClick={loadTaxRates} disabled={!canManage || !form.xero_tenant_id || taxRates.isPending}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-semibold disabled:opacity-50">
+                  {taxRates.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Load tax rates
+                </button>
+              </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div>
                   <div className={label}>Default sales account</div>
@@ -203,13 +244,12 @@ export default function XeroSettingsPage() {
                 </div>
                 <div>
                   <div className={label}>VAT tax type</div>
-                  <input className={input} value={form.default_tax_type ?? ""} disabled={!canManage}
-                    onChange={(e) => set({ default_tax_type: e.target.value })} placeholder="OUTPUT" />
+                  {taxSelect("default_tax_type")}
+                  <p className="mt-1 text-xs text-muted-foreground">South Africa: "Standard Rate Sales" is 15% (OUTPUT3).</p>
                 </div>
                 <div>
                   <div className={label}>Zero-rated tax type</div>
-                  <input className={input} value={form.zero_rated_tax_type ?? ""} disabled={!canManage}
-                    onChange={(e) => set({ zero_rated_tax_type: e.target.value })} placeholder="ZERORATEDOUTPUT" />
+                  {taxSelect("zero_rated_tax_type")}
                 </div>
                 <div>
                   <div className={label}>Prices are</div>

@@ -1,7 +1,7 @@
 // One entry point for all Xero pushes: connection test, contacts, invoices,
 // payments, credit notes, plus the queue worker used by auto-push.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { xero, xeroConnections, xeroDate } from "../_shared/xero.ts";
+import { pace, xero, xeroConnections, xeroDate } from "../_shared/xero.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -34,6 +34,26 @@ async function logSync(row: Record<string, unknown>) {
   await admin.from("xero_sync_log").insert(row);
 }
 
+const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isGuid = (v: unknown) => typeof v === "string" && GUID.test(v.trim());
+const esc = (v: string) => v.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+
+/** Look for an existing Xero contact before creating a new one. */
+async function findContact(ctx: { tenantId: string }, c: any): Promise<string | null> {
+  const tries: string[] = [];
+  if (c.customer_number) tries.push(`AccountNumber=="${esc(String(c.customer_number))}"`);
+  if (c.email) tries.push(`EmailAddress=="${esc(String(c.email))}"`);
+  const name = c.full_name || [c.first_name, c.last_name].filter(Boolean).join(" ");
+  if (name) tries.push(`Name=="${esc(name)}"`);
+
+  for (const where of tries) {
+    const found = await xero(ctx, `Contacts?where=${encodeURIComponent(where)}`);
+    const id = found?.Contacts?.[0]?.ContactID;
+    if (id) return id as string;
+  }
+  return null;
+}
+
 async function getSettings(tenantId: string): Promise<Settings> {
   const { data, error } = await admin.from("xero_settings").select("*").eq("tenant_id", tenantId).maybeSingle();
   if (error) throw new Error(error.message);
@@ -51,13 +71,9 @@ async function pushCustomer(s: Settings, customerId: string, actor: string | nul
     .eq("id", customerId).single();
   if (error || !c) throw new Error(error?.message ?? "Customer not found");
 
-  let contactId = c.xero_customer_id as string | null;
-
-  // Match on email first so we never duplicate an existing Xero contact.
-  if (!contactId && c.email) {
-    const found = await xero(ctx, `Contacts?where=${encodeURIComponent(`EmailAddress=="${c.email}"`)}`);
-    contactId = found?.Contacts?.[0]?.ContactID ?? null;
-  }
+  // Legacy imports stored names in this column — only trust a real Xero GUID.
+  let contactId = isGuid(c.xero_customer_id) ? String(c.xero_customer_id).trim() : null;
+  if (!contactId) contactId = await findContact(ctx, c);
 
   const contact: Record<string, unknown> = {
     Name: c.full_name || [c.first_name, c.last_name].filter(Boolean).join(" ") || c.email || "Customer",
@@ -96,11 +112,50 @@ async function pushCustomer(s: Settings, customerId: string, actor: string | nul
 // ---------- Invoices ----------
 const PUSHABLE_INVOICE_STATUSES = ["issued", "sent", "part_paid", "paid", "overdue"];
 
+// Xero rejects a line whose ItemCode does not exist, so cache what the org has.
+const itemCodeCache = new Map<string, Set<string>>();
+async function knownItemCodes(ctx: { tenantId: string }): Promise<Set<string>> {
+  const hit = itemCodeCache.get(ctx.tenantId);
+  if (hit) return hit;
+  const set = new Set<string>();
+  try {
+    const res = await xero(ctx, "Items");
+    for (const it of res?.Items ?? []) if (it?.Code) set.add(String(it.Code));
+  } catch { /* item lookup is best-effort; lines just go without a code */ }
+  itemCodeCache.set(ctx.tenantId, set);
+  return set;
+}
+
+/** Create/update Xero Items from the tenant's billing item codes. */
+async function pushItemCodes(s: Settings, actor: string | null) {
+  const ctx = { tenantId: s.xero_tenant_id! };
+  const { data: rows } = await admin
+    .from("billing_item_codes").select("id, code, label, ref_key")
+    .eq("tenant_id", s.tenant_id).eq("active", true);
+  const wanted = (rows ?? []).filter((r) => r.code);
+  if (!wanted.length) return { pushed: 0 };
+
+  const existing = await knownItemCodes(ctx);
+  const items = wanted.map((r) => ({
+    Code: r.code,
+    Name: (r.label ?? r.code).slice(0, 50),
+    SalesDetails: { AccountCode: s.default_sales_account, TaxType: s.default_tax_type },
+    IsSold: true,
+  }));
+  await xero(ctx, "Items", { method: "POST", body: { Items: items } });
+  for (const r of wanted) existing.add(String(r.code));
+  await logSync({
+    tenant_id: s.tenant_id, entity_type: "item", action: "push", status: "success",
+    entity_label: `${items.length} item codes`, triggered_by: actor,
+  });
+  return { pushed: items.length };
+}
+
 async function pushInvoice(s: Settings, invoiceId: string, actor: string | null) {
   const ctx = { tenantId: s.xero_tenant_id! };
   const { data: inv, error } = await admin
     .from("invoices")
-    .select("id, tenant_id, invoice_number, status, issue_date, due_date, notes, customer_id, xero_invoice_id, invoice_items(id, description, quantity, unit_price, line_total, xero_account_code, vat_rate, sort_order, booking_id)")
+    .select("id, tenant_id, invoice_number, status, issue_date, due_date, notes, customer_id, xero_invoice_id, invoice_items(id, description, quantity, unit_price, line_total, xero_account_code, item_code, vat_rate, sort_order, booking_id)")
     .eq("id", invoiceId).single();
   if (error || !inv) throw new Error(error?.message ?? "Invoice not found");
   if (!PUSHABLE_INVOICE_STATUSES.includes(String(inv.status))) {
@@ -119,17 +174,33 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
     for (const b of bks ?? []) serviceByBooking[b.id] = b.service_type;
   }
 
+  // SKUs: per-service item codes configured in Settings → Billing item codes.
+  const { data: codeRows } = await admin
+    .from("billing_item_codes").select("kind, ref_key, code")
+    .eq("tenant_id", s.tenant_id).eq("active", true);
+  const serviceItemCode: Record<string, string> = {};
+  for (const r of codeRows ?? []) if (r.kind === "service" && r.code) serviceItemCode[r.ref_key] = r.code;
+
+  const validCodes = await knownItemCodes(ctx);
+
   const lines = (inv.invoice_items ?? [])
     .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    .map((l: any) => ({
-      Description: l.description || "Service",
-      Quantity: Number(l.quantity ?? 1),
-      UnitAmount: Number(l.unit_price ?? 0),
-      AccountCode: l.xero_account_code
-        || (l.booking_id ? s.service_account_codes?.[serviceByBooking[l.booking_id]] : null)
-        || s.default_sales_account,
-      TaxType: Number(l.vat_rate ?? 0) > 0 ? s.default_tax_type : s.zero_rated_tax_type,
-    }));
+    .map((l: any) => {
+      const wanted = l.item_code
+        || (l.booking_id ? serviceItemCode[serviceByBooking[l.booking_id]] : null)
+        || undefined;
+      const itemCode = wanted && validCodes.has(String(wanted)) ? String(wanted) : undefined;
+      return {
+        Description: l.description || "Service",
+        Quantity: Number(l.quantity ?? 1),
+        UnitAmount: Number(l.unit_price ?? 0),
+        ItemCode: itemCode,
+        AccountCode: l.xero_account_code
+          || (l.booking_id ? s.service_account_codes?.[serviceByBooking[l.booking_id]] : null)
+          || s.default_sales_account,
+        TaxType: Number(l.vat_rate ?? 0) > 0 ? s.default_tax_type : s.zero_rated_tax_type,
+      };
+    });
   if (!lines.length) throw new Error("Invoice has no line items");
 
   const payload: Record<string, unknown> = {
@@ -289,6 +360,132 @@ async function pushOne(s: Settings, type: string, id: string, actor: string | nu
   throw new Error(`Unknown entity type ${type}`);
 }
 
+// ---------- Contact reconciliation ----------
+const norm = (v: unknown) => String(v ?? "").trim().toLowerCase();
+const digits = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-9);
+
+/** Pull every Xero contact into staging and auto-match against SK customers. */
+async function pullContacts(s: Settings, actor: string | null) {
+  const ctx = { tenantId: s.xero_tenant_id! };
+  const rows: any[] = [];
+  for (let page = 1; page <= 40; page++) {
+    const res = await xero(ctx, `Contacts?page=${page}&includeArchived=false`);
+    const batch = res?.Contacts ?? [];
+    if (!batch.length) break;
+    for (const c of batch) {
+      rows.push({
+        tenant_id: s.tenant_id,
+        xero_contact_id: c.ContactID,
+        name: c.Name ?? null,
+        first_name: c.FirstName ?? null,
+        last_name: c.LastName ?? null,
+        email: c.EmailAddress ?? null,
+        phone: (c.Phones ?? []).map((p: any) => p.PhoneNumber).filter(Boolean)[0] ?? null,
+        account_number: c.AccountNumber ?? null,
+        contact_status: c.ContactStatus ?? null,
+        pulled_at: new Date().toISOString(),
+      });
+    }
+    if (batch.length < 100) break;
+    await pace();
+  }
+
+  for (let i = 0; i < rows.length; i += 500) {
+    const { error } = await admin.from("xero_contacts_staging")
+      .upsert(rows.slice(i, i + 500), { onConflict: "tenant_id,xero_contact_id" });
+    if (error) throw new Error(error.message);
+  }
+
+  const matched = await autoMatchContacts(s);
+  await logSync({
+    tenant_id: s.tenant_id, entity_type: "contact", action: "pull", status: "success",
+    entity_label: `${rows.length} contacts pulled, ${matched} auto-matched`, triggered_by: actor,
+  });
+  return { pulled: rows.length, matched };
+}
+
+/** Score staged contacts against customers on account number, email, phone, name. */
+async function autoMatchContacts(s: Settings) {
+  const { data: staged } = await admin.from("xero_contacts_staging")
+    .select("id, xero_contact_id, name, email, phone, account_number, matched_customer_id, match_state")
+    .eq("tenant_id", s.tenant_id).eq("match_state", "unmatched");
+  if (!staged?.length) return 0;
+
+  const { data: customers } = await admin.from("customers")
+    .select("id, customer_number, full_name, first_name, last_name, email, mobile, phone_alt, xero_customer_id")
+    .eq("tenant_id", s.tenant_id).neq("status", "archived");
+
+  const byNumber = new Map<string, string>();
+  const byEmail = new Map<string, string>();
+  const byPhone = new Map<string, string>();
+  const byName = new Map<string, string>();
+  for (const c of customers ?? []) {
+    if (c.customer_number) byNumber.set(norm(c.customer_number), c.id);
+    if (c.email) byEmail.set(norm(c.email), c.id);
+    for (const p of [c.mobile, c.phone_alt]) if (digits(p).length >= 8) byPhone.set(digits(p), c.id);
+    const n = norm(c.full_name || [c.first_name, c.last_name].filter(Boolean).join(" "));
+    if (n) byName.set(n, c.id);
+  }
+
+  let matched = 0;
+  for (const row of staged) {
+    let customerId: string | null = null;
+    let type: string | null = null;
+    if (row.account_number && byNumber.has(norm(row.account_number))) {
+      customerId = byNumber.get(norm(row.account_number))!; type = "account_number";
+    } else if (row.email && byEmail.has(norm(row.email))) {
+      customerId = byEmail.get(norm(row.email))!; type = "email";
+    } else if (digits(row.phone).length >= 8 && byPhone.has(digits(row.phone))) {
+      customerId = byPhone.get(digits(row.phone))!; type = "phone";
+    } else if (row.name && byName.has(norm(row.name))) {
+      customerId = byName.get(norm(row.name))!; type = "name";
+    }
+    if (!customerId) continue;
+    await admin.from("xero_contacts_staging").update({
+      matched_customer_id: customerId,
+      match_type: type,
+      // Account number and email are safe to trust; name/phone need a human eye.
+      match_state: type === "account_number" || type === "email" ? "suggested" : "review",
+    }).eq("id", row.id);
+    matched++;
+  }
+  return matched;
+}
+
+/** Confirm links: write the Xero contact id onto the customer and push SK numbers back. */
+async function linkContacts(s: Settings, stagingIds: string[], actor: string | null) {
+  const ctx = { tenantId: s.xero_tenant_id! };
+  const { data: rows } = await admin.from("xero_contacts_staging")
+    .select("id, xero_contact_id, matched_customer_id, name")
+    .eq("tenant_id", s.tenant_id).in("id", stagingIds);
+
+  let linked = 0;
+  const contactUpdates: any[] = [];
+  for (const r of rows ?? []) {
+    if (!r.matched_customer_id) continue;
+    await admin.from("customers").update({ xero_customer_id: r.xero_contact_id }).eq("id", r.matched_customer_id);
+    await admin.from("xero_contacts_staging").update({ match_state: "linked" }).eq("id", r.id);
+    const { data: c } = await admin.from("customers").select("customer_number").eq("id", r.matched_customer_id).maybeSingle();
+    if (c?.customer_number) contactUpdates.push({ ContactID: r.xero_contact_id, AccountNumber: c.customer_number });
+    linked++;
+  }
+
+  // Keep the SK customer number visible in Xero as the account number.
+  for (let i = 0; i < contactUpdates.length; i += 50) {
+    try {
+      await xero(ctx, "Contacts", { method: "POST", body: { Contacts: contactUpdates.slice(i, i + 50) } });
+      await pace();
+    } catch (e) {
+      await logSync({ tenant_id: s.tenant_id, entity_type: "contact", action: "account_number", status: "error",
+        error_message: String((e as Error).message), triggered_by: actor });
+    }
+  }
+
+  await logSync({ tenant_id: s.tenant_id, entity_type: "contact", action: "link", status: "success",
+    entity_label: `${linked} contacts linked`, triggered_by: actor });
+  return { linked };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return j(405, { error: "Method not allowed" });
@@ -347,6 +544,7 @@ Deno.serve(async (req) => {
         try {
           const r = await pushOne(s, type, id, actor);
           results.push({ id, ok: true, ...(typeof r === "object" ? r : { xero_id: r }) });
+          await pace();
         } catch (e) {
           const msg = String((e as Error).message);
           results.push({ id, ok: false, error: msg });
@@ -359,6 +557,37 @@ Deno.serve(async (req) => {
         succeeded: results.filter((r) => r.ok).length,
         failed: results.filter((r) => !r.ok).length,
       });
+    }
+
+    if (action === "tax_rates") {
+      const s = await getSettings(tenantId);
+      const res = await xero({ tenantId: s.xero_tenant_id! }, "TaxRates");
+      const rates = (res?.TaxRates ?? [])
+        .filter((r: any) => r.Status === "ACTIVE" && r.CanApplyToRevenue)
+        .map((r: any) => ({ name: r.Name, taxType: r.TaxType, rate: Number(r.DisplayTaxRate ?? 0) }));
+      return j(200, { rates });
+    }
+
+    if (action === "push_item_codes") {
+      const s = await getSettings(tenantId);
+      return j(200, await pushItemCodes(s, actor));
+    }
+
+    if (action === "pull_contacts") {
+      const s = await getSettings(tenantId);
+      return j(200, await pullContacts(s, actor));
+    }
+
+    if (action === "match_contacts") {
+      const s = await getSettings(tenantId);
+      return j(200, { matched: await autoMatchContacts(s) });
+    }
+
+    if (action === "link_contacts") {
+      const s = await getSettings(tenantId);
+      const ids: string[] = body?.staging_ids ?? [];
+      if (!ids.length) return j(400, { error: "staging_ids required" });
+      return j(200, await linkContacts(s, ids, actor));
     }
 
     if (action === "run_queue") {

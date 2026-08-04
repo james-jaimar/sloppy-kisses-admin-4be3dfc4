@@ -113,6 +113,159 @@ export function useXeroRunQueue(tenantId: string | null) {
   });
 }
 
+export type XeroTaxRate = { name: string; taxType: string; rate: number };
+
+export function useXeroTaxRates(tenantId: string | null) {
+  return useMutation({
+    mutationFn: async () => {
+      const res = await invoke({ action: "tax_rates", tenant_id: tenantId });
+      return (res?.rates ?? []) as XeroTaxRate[];
+    },
+  });
+}
+
+export function useXeroPushItemCodes(tenantId: string | null) {
+  return useMutation({
+    mutationFn: async () => await invoke({ action: "push_item_codes", tenant_id: tenantId }),
+  });
+}
+
+export type XeroStagedContact = {
+  id: string;
+  xero_contact_id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  account_number: string | null;
+  matched_customer_id: string | null;
+  match_type: string | null;
+  match_state: "unmatched" | "suggested" | "review" | "linked" | "ignored";
+};
+
+export function useXeroStagedContacts(tenantId: string | null, state: string, search: string) {
+  return useQuery({
+    queryKey: ["xero_contacts", tenantId, state, search],
+    enabled: Boolean(tenantId),
+    queryFn: async (): Promise<XeroStagedContact[]> => {
+      let q = (supabase as any).from("xero_contacts_staging")
+        .select("*").eq("tenant_id", tenantId).order("name", { ascending: true }).limit(300);
+      if (state !== "all") q = q.eq("match_state", state);
+      if (search.trim()) q = q.or(`name.ilike.%${search.trim()}%,email.ilike.%${search.trim()}%,account_number.ilike.%${search.trim()}%`);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as XeroStagedContact[];
+    },
+  });
+}
+
+export function useXeroContactCounts(tenantId: string | null) {
+  return useQuery({
+    queryKey: ["xero_contact_counts", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: async () => {
+      const states = ["unmatched", "suggested", "review", "linked", "ignored"] as const;
+      const out: Record<string, number> = {};
+      await Promise.all(states.map(async (st) => {
+        const { count } = await (supabase as any).from("xero_contacts_staging")
+          .select("id", { count: "exact", head: true }).eq("tenant_id", tenantId).eq("match_state", st);
+        out[st] = count ?? 0;
+      }));
+      return out;
+    },
+  });
+}
+
+export function useXeroPullContacts(tenantId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => await invoke({ action: "pull_contacts", tenant_id: tenantId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["xero_contacts", tenantId] });
+      qc.invalidateQueries({ queryKey: ["xero_contact_counts", tenantId] });
+    },
+  });
+}
+
+export function useXeroLinkContacts(tenantId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (stagingIds: string[]) =>
+      await invoke({ action: "link_contacts", tenant_id: tenantId, staging_ids: stagingIds }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["xero_contacts", tenantId] });
+      qc.invalidateQueries({ queryKey: ["xero_contact_counts", tenantId] });
+      qc.invalidateQueries({ queryKey: ["xero_backfill", tenantId] });
+    },
+  });
+}
+
+/** Manually point a staged Xero contact at a specific SK customer. */
+export function useSetContactMatch(tenantId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; customerId: string | null; state?: string }) => {
+      const { error } = await (supabase as any).from("xero_contacts_staging")
+        .update({
+          matched_customer_id: input.customerId,
+          match_type: input.customerId ? "manual" : null,
+          match_state: input.state ?? (input.customerId ? "suggested" : "unmatched"),
+        })
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["xero_contacts", tenantId] });
+      qc.invalidateQueries({ queryKey: ["xero_contact_counts", tenantId] });
+    },
+  });
+}
+
+export type BillingItemCode = {
+  id: string;
+  tenant_id: string;
+  kind: string;
+  ref_key: string;
+  label: string;
+  code: string;
+  active: boolean;
+};
+
+export function useBillingItemCodes(tenantId: string | null) {
+  return useQuery({
+    queryKey: ["billing_item_codes", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: async (): Promise<BillingItemCode[]> => {
+      const { data, error } = await (supabase as any).from("billing_item_codes")
+        .select("*").eq("tenant_id", tenantId).order("kind").order("label");
+      if (error) throw error;
+      return (data ?? []) as BillingItemCode[];
+    },
+  });
+}
+
+export function useSaveBillingItemCode(tenantId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (row: Partial<BillingItemCode>) => {
+      const { error } = await (supabase as any).from("billing_item_codes")
+        .upsert({ tenant_id: tenantId, ...row }, { onConflict: "tenant_id,kind,ref_key" });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["billing_item_codes", tenantId] }),
+  });
+}
+
+export function useDeleteBillingItemCode(tenantId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any).from("billing_item_codes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["billing_item_codes", tenantId] }),
+  });
+}
+
 export function useXeroLog(tenantId: string | null, filter?: { status?: string; entityType?: string }) {
   return useQuery({
     queryKey: ["xero_log", tenantId, filter?.status, filter?.entityType],
