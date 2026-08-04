@@ -101,7 +101,7 @@ export function useCreateQuote(tenantId: string) {
   return useMutation({
     mutationFn: async (input: NewQuoteInput): Promise<string> => {
       const { data: num, error: numErr } = await supabase.rpc("next_estimate_number" as any, {
-        p_tenant_id: tenantId,
+        target_tenant_id: tenantId,
       });
       if (numErr) throw numErr;
 
