@@ -368,7 +368,7 @@ const digits = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-9);
  * Pull a slice of Xero contacts into staging. Resumable: a few pages per call so
  * the worker never runs out of memory/CPU on large orgs. Returns next_page.
  */
-async function pullContacts(s: Settings, actor: string | null, startPage = 1, maxPages = 3) {
+async function pullContacts(s: Settings, actor: string | null, startPage = 1, maxPages = 1) {
   const ctx = { tenantId: s.xero_tenant_id! };
   let pulled = 0;
   let nextPage: number | null = null;
