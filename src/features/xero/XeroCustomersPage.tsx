@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, DownloadCloud, Link2, Loader2, Search } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle2, DownloadCloud, Link2, Loader2, Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
@@ -8,13 +8,15 @@ import { supabase } from "@/lib/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import {
   useXeroContactCounts, useXeroLinkContacts, useXeroPullContacts, useXeroStagedContacts, useSetContactMatch,
+  useXeroImportContacts, useXeroIgnoreContacts, useXeroReconcileReport,
 } from "./queries";
 
 const STATES: { key: string; label: string; hint: string }[] = [
   { key: "suggested", label: "Ready to link", hint: "Matched on account number or email." },
   { key: "review", label: "Needs a look", hint: "Matched on name or phone only — check before linking." },
-  { key: "unmatched", label: "No match", hint: "No SK customer found for this Xero contact." },
+  { key: "unmatched", label: "Xero only", hint: "In Xero but not in Sloppy Kisses — import them as new customers, or ignore them." },
   { key: "linked", label: "Linked", hint: "Already connected to an SK customer." },
+  { key: "ignored", label: "Ignored", hint: "Parked — these will not be linked or imported." },
   { key: "all", label: "All", hint: "" },
 ];
 
@@ -49,6 +51,9 @@ export default function XeroCustomersPage() {
   const pull = useXeroPullContacts(tenantId);
   const link = useXeroLinkContacts(tenantId);
   const setMatch = useSetContactMatch(tenantId);
+  const importContacts = useXeroImportContacts(tenantId);
+  const ignoreContacts = useXeroIgnoreContacts(tenantId);
+  const report = useXeroReconcileReport(tenantId);
 
   const rows = listQ.data ?? [];
   const matchedIds = useMemo(
@@ -76,6 +81,29 @@ export default function XeroCustomersPage() {
     } catch (e: any) { toast.error(e?.message ?? "Linking failed"); }
   }
 
+  async function onImport(ids: string[]) {
+    if (!ids.length) return;
+    try {
+      const r = await importContacts.mutateAsync(ids);
+      setSelected({});
+      counts.refetch();
+      toast.success(
+        `${r.imported} new customers created · ${r.relinked} matched to existing${r.skipped ? ` · ${r.skipped} skipped` : ""}`,
+      );
+      if (r.errors.length) toast.error(`${r.errors.length} failed — check the sync log`);
+    } catch (e: any) { toast.error(e?.message ?? "Import failed"); }
+  }
+
+  async function onIgnore(ids: string[]) {
+    if (!ids.length) return;
+    try {
+      const r = await ignoreContacts.mutateAsync(ids);
+      setSelected({});
+      counts.refetch();
+      toast.success(`${r.ignored} contacts ignored`);
+    } catch (e: any) { toast.error(e?.message ?? "Could not ignore those contacts"); }
+  }
+
   return (
     <>
       <AppHeader
@@ -96,6 +124,44 @@ export default function XeroCustomersPage() {
       />
 
       <div className="flex-1 space-y-4 p-4 sm:p-6">
+        <div className="sk-card p-4">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-semibold">Reconciliation</h2>
+              <p className="text-xs text-muted-foreground">Where the two systems agree — and where they don't. Nothing is changed by this view.</p>
+            </div>
+            <button onClick={() => report.refetch()} className="rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-muted">
+              Refresh
+            </button>
+          </div>
+          {report.isLoading ? (
+            <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Working it out…
+            </div>
+          ) : report.error ? (
+            <p className="mt-3 text-xs text-destructive">{(report.error as Error).message}</p>
+          ) : report.data ? (
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { label: "Contacts in Xero", value: report.data.xero_contacts, hint: `${report.data.linked} linked · ${report.data.ignored} ignored` },
+                { label: "SK customers", value: report.data.sk_customers, hint: `${report.data.sk_linked} linked to Xero` },
+                { label: "In Xero only", value: report.data.xero_only, hint: "Import as new SK customers" },
+                { label: "In SK only", value: report.data.sk_only, hint: `${report.data.sk_without_email} have no email` },
+                { label: "Matched on account no.", value: report.data.matched_account_number, hint: "Strongest match" },
+                { label: "Matched on email", value: report.data.matched_email, hint: "Safe to link" },
+                { label: "Matched on name", value: report.data.matched_name, hint: "Check before linking" },
+                { label: "Matched on phone", value: report.data.matched_phone, hint: "Check before linking" },
+              ].map((c) => (
+                <div key={c.label} className="rounded-xl border border-border bg-sk-surface-muted p-3">
+                  <div className="text-xs text-muted-foreground">{c.label}</div>
+                  <div className="text-xl font-semibold">{c.value.toLocaleString()}</div>
+                  <div className="text-[11px] text-muted-foreground">{c.hint}</div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
         <div className="sk-card p-4">
           <div className="flex flex-wrap gap-2">
             {STATES.map((s) => (
@@ -120,6 +186,19 @@ export default function XeroCustomersPage() {
               {link.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
               Link selected ({selectedIds.length})
             </button>
+            <button onClick={() => onIgnore(selectedIds)} disabled={!canManage || !selectedIds.length || ignoreContacts.isPending}
+              className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium text-muted-foreground disabled:opacity-50">
+              {ignoreContacts.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
+              Ignore
+            </button>
+            {state === "unmatched" && (
+              <button onClick={() => onImport(selectedIds.length ? selectedIds : rows.map((r) => r.id))}
+                disabled={!canManage || !rows.length || importContacts.isPending}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-3 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
+                {importContacts.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                Import {selectedIds.length ? `selected (${selectedIds.length})` : "all shown"} as customers
+              </button>
+            )}
             {state === "suggested" && (
               <button onClick={() => onLink(rows.filter((r) => r.matched_customer_id).map((r) => r.id))}
                 disabled={!canManage || !rows.length || link.isPending}
@@ -158,7 +237,7 @@ export default function XeroCustomersPage() {
                     return (
                       <tr key={r.id} className="border-t border-border">
                         <td className="p-3">
-                          <input type="checkbox" checked={!!selected[r.id]} disabled={!r.matched_customer_id || r.match_state === "linked"}
+                          <input type="checkbox" checked={!!selected[r.id]} disabled={r.match_state === "linked"}
                             onChange={(e) => setSelected({ ...selected, [r.id]: e.target.checked })} />
                         </td>
                         <td className="p-3">
