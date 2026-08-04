@@ -363,12 +363,14 @@ async function pushOne(s: Settings, type: string, id: string, actor: string | nu
 // ---------- Contact reconciliation ----------
 const norm = (v: unknown) => String(v ?? "").trim().toLowerCase();
 const digits = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-9);
+/** Quote a value for a PostgREST `in.(...)` list. */
+const quoteIn = (v: string) => `"${String(v).replace(/["\\]/g, "")}"`;
 
 /**
  * Pull a slice of Xero contacts into staging. Resumable: a few pages per call so
  * the worker never runs out of memory/CPU on large orgs. Returns next_page.
  */
-async function pullContacts(s: Settings, actor: string | null, startPage = 1, maxPages = 3) {
+async function pullContacts(s: Settings, actor: string | null, startPage = 1, maxPages = 1) {
   const ctx = { tenantId: s.xero_tenant_id! };
   let pulled = 0;
   let nextPage: number | null = null;
@@ -408,7 +410,7 @@ async function pullContacts(s: Settings, actor: string | null, startPage = 1, ma
 }
 
 /** Score a batch of staged contacts against customers. Resumable via cursor. */
-async function autoMatchContacts(s: Settings, cursor: string | null = null, limit = 300) {
+async function autoMatchContacts(s: Settings, cursor: string | null = null, limit = 100) {
   let q = admin.from("xero_contacts_staging")
     .select("id, xero_contact_id, name, email, phone, account_number, matched_customer_id, match_state")
     .eq("tenant_id", s.tenant_id).eq("match_state", "unmatched")
@@ -417,9 +419,20 @@ async function autoMatchContacts(s: Settings, cursor: string | null = null, limi
   const { data: staged } = await q;
   if (!staged?.length) return { matched: 0, next_cursor: null as string | null };
 
-  const { data: customers } = await admin.from("customers")
-    .select("id, customer_number, full_name, first_name, last_name, email, mobile, phone_alt, xero_customer_id")
-    .eq("tenant_id", s.tenant_id).neq("status", "archived");
+  // Only load the customers that could match this batch — loading all 4k rows
+  // per call blew the worker's memory budget (and hit PostgREST's 1000-row cap).
+  const numbers = staged.map((r) => r.account_number).filter(Boolean) as string[];
+  const emails = staged.map((r) => r.email).filter(Boolean) as string[];
+  const names = staged.map((r) => r.name).filter(Boolean) as string[];
+  const filters: string[] = [];
+  if (numbers.length) filters.push(`customer_number.in.(${numbers.map(quoteIn).join(",")})`);
+  if (emails.length) filters.push(`email.in.(${emails.map(quoteIn).join(",")})`);
+  if (names.length) filters.push(`full_name.in.(${names.map(quoteIn).join(",")})`);
+  let cq = admin.from("customers")
+    .select("id, customer_number, full_name, first_name, last_name, email, mobile, phone_alt")
+    .eq("tenant_id", s.tenant_id).neq("status", "archived").limit(1000);
+  if (filters.length) cq = cq.or(filters.join(","));
+  const { data: customers } = await cq;
 
   const byNumber = new Map<string, string>();
   const byEmail = new Map<string, string>();
