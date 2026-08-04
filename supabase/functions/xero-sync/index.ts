@@ -577,8 +577,12 @@ Deno.serve(async (req) => {
     if (action === "push") {
       const s = await getSettings(tenantId);
       const type: string = body?.entity_type;
-      const ids: string[] = body?.entity_ids ?? (body?.entity_id ? [body.entity_id] : []);
-      if (!type || !ids.length) return j(400, { error: "entity_type and entity_id(s) required" });
+      const requestedIds: string[] = body?.entity_ids ?? (body?.entity_id ? [body.entity_id] : []);
+      if (!type || !requestedIds.length) return j(400, { error: "entity_type and entity_id(s) required" });
+      // An invoice can require several Xero and database round-trips (contact,
+      // item lookup, invoice write and logging). Keep each HTTP invocation well
+      // below Supabase's 150-second idle timeout; callers continue in chunks.
+      const ids = requestedIds.slice(0, 5);
       const results: any[] = [];
       for (const id of ids) {
         try {
@@ -596,6 +600,7 @@ Deno.serve(async (req) => {
         results,
         succeeded: results.filter((r) => r.ok).length,
         failed: results.filter((r) => !r.ok).length,
+        remaining: Math.max(0, requestedIds.length - ids.length),
       });
     }
 
@@ -633,7 +638,10 @@ Deno.serve(async (req) => {
 
     if (action === "run_queue") {
       const s = await getSettings(tenantId);
-      const limit = Math.min(Number(body?.limit ?? 40), 100);
+      // Queue items execute the same multi-call Xero workflow as manual pushes.
+      // Process a short slice so the request always returns before the edge
+      // runtime's idle timeout; subsequent runs drain the remaining rows.
+      const limit = Math.min(Math.max(1, Number(body?.limit ?? 5)), 5);
       const { data: items } = await admin.from("xero_sync_queue")
         .select("*").eq("tenant_id", tenantId).eq("status", "pending")
         .lte("run_after", new Date().toISOString())
