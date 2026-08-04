@@ -72,6 +72,8 @@ import DaycareWorkflowPage from "@/features/settings/DaycareWorkflowPage";
 import DaycareImportPage from "@/features/settings/DaycareImportPage";
 import InvoicesListPage from "@/features/invoices/InvoicesListPage";
 import InvoiceDetailPage from "@/features/invoices/InvoiceDetailPage";
+import QuotesListPage from "@/features/quotes/QuotesListPage";
+import QuoteDetailPage from "@/features/quotes/QuoteDetailPage";
 import CreditNotesListPage from "@/features/creditNotes/CreditNotesListPage";
 import CreditNoteDetailPage from "@/features/creditNotes/CreditNoteDetailPage";
 import InvoicingSettingsPage from "@/features/settings/InvoicingSettingsPage";
@@ -183,6 +185,8 @@ const App = () => (
                   <Route path="/admin/invoices" element={<InvoicesListPage />} />
                   <Route path="/admin/invoices/:id" element={<InvoiceDetailPage />} />
                   <Route path="/admin/payments" element={<InvoicesListPage />} />
+                  <Route path="/admin/quotes" element={<QuotesListPage />} />
+                  <Route path="/admin/quotes/:id" element={<QuoteDetailPage />} />
                 </Route>
                 <Route element={<RequirePermission code="credit_notes.view" />}>
                   <Route path="/admin/credit-notes" element={<CreditNotesListPage />} />

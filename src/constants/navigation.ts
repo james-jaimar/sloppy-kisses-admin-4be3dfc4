@@ -18,6 +18,7 @@ export const adminNav = [
   { to: "/admin/mobile-vans", label: "Mobile Vans", icon: Truck, code: "grooming.view" },
   { to: "/admin/pickup-dropoff", label: "Pick Up / Drop Off", icon: ArrowLeftRight, code: "transport.view" },
   { to: "/admin/invoices", label: "Invoices & Payments", icon: ReceiptText, code: "invoices.update" },
+  { to: "/admin/quotes", label: "Quotes", icon: FileText, code: "invoices.view" },
   { to: "/admin/credit-notes", label: "Credit notes", icon: FileMinus, code: "credit_notes.view" },
   { to: "/admin/comms", label: "Comms", icon: MessageSquare, code: "comms.view" },
   { to: "/admin/shop-stock", label: "Shop & Stock", icon: ShoppingBag, code: "products.view" },

@@ -7128,6 +7128,7 @@ export type Database = {
         Args: { p_source_id: string; p_source_type: string }
         Returns: undefined
       }
+      accept_estimate: { Args: { p_estimate_id: string }; Returns: string }
       adjust_customer_credit: {
         Args: { p_amount: number; p_customer_id: string; p_notes: string }
         Returns: string

@@ -177,6 +177,9 @@ export interface HotelWorkflowSettings {
   late_checkout_fee_zar: number;
   peak_start_month_day: string | null;  // 'MM-DD'
   peak_end_month_day: string | null;
+  deposit_split_enabled: boolean;
+  checkout_groom_discount_pct: number;
+  daycare_credit_enabled: boolean;
 }
 
 export function useHotelWorkflowSettings(tenantId: string | null | undefined) {
