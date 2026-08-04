@@ -4730,6 +4730,7 @@ export type Database = {
           status: string
           tenant_id: string
           updated_at: string
+          xero_payment_id: string | null
         }
         Insert: {
           amount: number
@@ -4752,6 +4753,7 @@ export type Database = {
           status?: string
           tenant_id: string
           updated_at?: string
+          xero_payment_id?: string | null
         }
         Update: {
           amount?: number
@@ -4774,6 +4776,7 @@ export type Database = {
           status?: string
           tenant_id?: string
           updated_at?: string
+          xero_payment_id?: string | null
         }
         Relationships: [
           {
@@ -6477,6 +6480,181 @@ export type Database = {
           },
         ]
       }
+      xero_settings: {
+        Row: {
+          auto_push: boolean
+          branding_theme_id: string | null
+          created_at: string
+          default_sales_account: string
+          default_tax_type: string
+          enabled: boolean
+          id: string
+          last_test_at: string | null
+          last_test_result: string | null
+          line_amount_type: string
+          payment_accounts: Json
+          service_account_codes: Json
+          tenant_id: string
+          updated_at: string
+          xero_tenant_id: string | null
+          xero_tenant_name: string | null
+          zero_rated_tax_type: string
+        }
+        Insert: {
+          auto_push?: boolean
+          branding_theme_id?: string | null
+          created_at?: string
+          default_sales_account?: string
+          default_tax_type?: string
+          enabled?: boolean
+          id?: string
+          last_test_at?: string | null
+          last_test_result?: string | null
+          line_amount_type?: string
+          payment_accounts?: Json
+          service_account_codes?: Json
+          tenant_id: string
+          updated_at?: string
+          xero_tenant_id?: string | null
+          xero_tenant_name?: string | null
+          zero_rated_tax_type?: string
+        }
+        Update: {
+          auto_push?: boolean
+          branding_theme_id?: string | null
+          created_at?: string
+          default_sales_account?: string
+          default_tax_type?: string
+          enabled?: boolean
+          id?: string
+          last_test_at?: string | null
+          last_test_result?: string | null
+          line_amount_type?: string
+          payment_accounts?: Json
+          service_account_codes?: Json
+          tenant_id?: string
+          updated_at?: string
+          xero_tenant_id?: string | null
+          xero_tenant_name?: string | null
+          zero_rated_tax_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xero_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xero_sync_log: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_label: string | null
+          entity_type: string
+          error_message: string | null
+          id: string
+          payload: Json | null
+          status: string
+          tenant_id: string
+          triggered_by: string | null
+          xero_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_label?: string | null
+          entity_type: string
+          error_message?: string | null
+          id?: string
+          payload?: Json | null
+          status: string
+          tenant_id: string
+          triggered_by?: string | null
+          xero_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_label?: string | null
+          entity_type?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json | null
+          status?: string
+          tenant_id?: string
+          triggered_by?: string | null
+          xero_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xero_sync_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xero_sync_log_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xero_sync_queue: {
+        Row: {
+          attempts: number
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          last_error: string | null
+          run_after: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          last_error?: string | null
+          run_after?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          last_error?: string | null
+          run_after?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xero_sync_queue_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       customer_aging: {
@@ -6906,6 +7084,10 @@ export type Database = {
         Returns: Json
       }
       void_refund: { Args: { p_refund_id: string }; Returns: undefined }
+      xero_enqueue: {
+        Args: { _entity_id: string; _entity_type: string; _tenant_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       attendance_status:
