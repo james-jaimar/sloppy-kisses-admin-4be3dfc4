@@ -7408,6 +7408,10 @@ export type Database = {
         Args: { _entity_id: string; _entity_type: string; _tenant_id: string }
         Returns: undefined
       }
+      xero_reset_billing_data: {
+        Args: { target_tenant_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       attendance_status:
