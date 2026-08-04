@@ -41,6 +41,11 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
   const [days, setDays] = useState<Weekday[]>([]);
   const [notes, setNotes] = useState("");
   const [active, setActive] = useState(true);
+  const [pausedFrom, setPausedFrom] = useState("");
+  const [pausedTo, setPausedTo] = useState("");
+  const [noticeGivenAt, setNoticeGivenAt] = useState("");
+  const [endReason, setEndReason] = useState("");
+  const [noticeQuote, setNoticeQuote] = useState<any>(null);
 
   useEffect(() => {
     if (editing) {
@@ -51,10 +56,16 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
       setDays((editing.selected_days ?? []) as Weekday[]);
       setNotes(editing.notes ?? "");
       setActive(editing.active);
+      setPausedFrom((editing as any).paused_from ?? "");
+      setPausedTo((editing as any).paused_to ?? "");
+      setNoticeGivenAt((editing as any).notice_given_at ?? "");
+      setEndReason((editing as any).end_reason ?? "");
     } else {
       setPetId(""); setPlanId(""); setStartDate(""); setEndDate("");
       setDays([]); setNotes(""); setActive(true);
+      setPausedFrom(""); setPausedTo(""); setNoticeGivenAt(""); setEndReason("");
     }
+    setNoticeQuote(null);
     setQuery("");
     setPickerOpen(false);
   }, [editing, open]);
@@ -69,6 +80,19 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
     [editing, startDate, endDate, days, selectedPlan?.price],
   );
   const showProrata = !!quote?.isPartial && quote.amount > 0;
+
+  /** Works out the earliest legal end date from the notice period in Policy settings. */
+  async function checkNotice() {
+    if (!editing) return;
+    const { data, error } = await supabase.rpc("daycare_notice_quote" as any, {
+      p_enrolment_id: editing.id,
+      p_notice_date: noticeGivenAt || new Date().toISOString().slice(0, 10),
+    });
+    if (error) { toast.error(error.message); return; }
+    setNoticeQuote(data);
+    const suggested = (data as any)?.effective_end_date as string | undefined;
+    if (suggested) setEndDate(suggested);
+  }
 
   async function save() {
     if (!petId || !startDate || days.length === 0) {
@@ -90,6 +114,10 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
             selected_days: days,
             notes: notes || null,
             active,
+            paused_from: pausedFrom || null,
+            paused_to: pausedTo || null,
+            notice_given_at: noticeGivenAt || null,
+            end_reason: endReason || null,
           } as any,
         });
       } else {
