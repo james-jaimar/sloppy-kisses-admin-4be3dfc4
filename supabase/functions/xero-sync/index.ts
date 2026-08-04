@@ -313,7 +313,7 @@ Deno.serve(async (req) => {
     const { data: prof } = await admin.from("profiles").select("id, user_type").eq("user_id", userId).maybeSingle();
     actor = prof?.id ?? null;
     if (prof?.user_type !== "platform") {
-      const { data: allowed } = await asUser.rpc("user_has_permission", { _tenant_id: tenantId, _code: "settings.xero.manage" });
+      const { data: allowed } = await asUser.rpc("user_has_permission", { target_tenant_id: tenantId, permission_code: "settings.xero.manage" });
       if (!allowed) return j(403, { error: "You do not have permission to manage the Xero integration" });
     }
   }
