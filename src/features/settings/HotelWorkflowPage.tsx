@@ -34,6 +34,9 @@ export default function HotelWorkflowPage() {
     late_checkout_fee_zar: 0,
     peak_start_month_day: "",
     peak_end_month_day: "",
+    deposit_split_enabled: true,
+    checkout_groom_discount_pct: 50,
+    daycare_credit_enabled: true,
   });
 
   useEffect(() => {
@@ -47,6 +50,9 @@ export default function HotelWorkflowPage() {
         late_checkout_fee_zar: Number(settingsQ.data.late_checkout_fee_zar ?? 0),
         peak_start_month_day: settingsQ.data.peak_start_month_day ?? "",
         peak_end_month_day: settingsQ.data.peak_end_month_day ?? "",
+        deposit_split_enabled: settingsQ.data.deposit_split_enabled ?? true,
+        checkout_groom_discount_pct: Number(settingsQ.data.checkout_groom_discount_pct ?? 50),
+        daycare_credit_enabled: settingsQ.data.daycare_credit_enabled ?? true,
       });
     }
   }, [settingsQ.data]);
@@ -62,6 +68,9 @@ export default function HotelWorkflowPage() {
         late_checkout_fee_zar: form.late_checkout_fee_zar,
         peak_start_month_day: form.peak_start_month_day || null,
         peak_end_month_day: form.peak_end_month_day || null,
+        deposit_split_enabled: form.deposit_split_enabled,
+        checkout_groom_discount_pct: form.checkout_groom_discount_pct,
+        daycare_credit_enabled: form.daycare_credit_enabled,
       });
       toast.success("Hotel workflow settings saved");
     } catch (err: any) {
@@ -172,6 +181,63 @@ export default function HotelWorkflowPage() {
                 disabled={!canManage}
                 value={form.peak_end_month_day}
                 onChange={(e) => setForm((f) => ({ ...f, peak_end_month_day: e.target.value }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+              />
+            </Field>
+          </div>
+
+          <div className="flex justify-end">
+            {null}
+          </div>
+
+          <div className="space-y-4 rounded-xl border border-border p-4">
+            <div className="text-sm font-semibold">Money rules</div>
+
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                disabled={!canManage}
+                checked={form.deposit_split_enabled}
+                onChange={(e) => setForm((f) => ({ ...f, deposit_split_enabled: e.target.checked }))}
+                className="mt-1 h-4 w-4 rounded border-border"
+              />
+              <span className="text-sm">
+                Split hotel invoices into deposit + balance
+                <span className="block text-[11px] text-muted-foreground">
+                  Uses the deposit % and balance-due days from Settings → Policies. The deposit invoice secures the
+                  booking; the balance invoice is due before arrival.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                disabled={!canManage}
+                checked={form.daycare_credit_enabled}
+                onChange={(e) => setForm((f) => ({ ...f, daycare_credit_enabled: e.target.checked }))}
+                className="mt-1 h-4 w-4 rounded border-border"
+              />
+              <span className="text-sm">
+                Credit daycare customers for nights they stay in the hotel
+                <span className="block text-[11px] text-muted-foreground">
+                  Credits appear as a negative line on the next monthly daycare invoice.
+                </span>
+              </span>
+            </label>
+
+            <Field
+              label="Checkout-day grooming discount (%)"
+              hint="Applied automatically to a groom booked on the day a hotel guest checks out. Set 0 to disable."
+            >
+              <input
+                type="number"
+                min={0}
+                max={100}
+                step="1"
+                disabled={!canManage}
+                value={form.checkout_groom_discount_pct}
+                onChange={(e) => setForm((f) => ({ ...f, checkout_groom_discount_pct: Number(e.target.value) }))}
                 className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
               />
             </Field>
