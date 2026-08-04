@@ -139,3 +139,29 @@ function Field({ label, value, full }: { label: string; value: string | null | u
     </div>
   );
 }
+
+function AccommodationFormBanner({ bookingId }: { bookingId: string }) {
+  const q = useAccommodationForm(bookingId);
+  if (q.isLoading) return null;
+  const received = Boolean(q.data?.receivedAt);
+  return (
+    <div className={"flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm " + (received ? "border-sk-green/30 bg-sk-green-soft text-sk-green" : "border-sk-orange/30 bg-sk-orange-soft text-sk-orange")}>
+      <div className="flex items-center gap-2">
+        {received ? <CheckCircle2 className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+        {received ? "Accommodation form received — thank you." : "Please complete the accommodation form before your stay."}
+      </div>
+      <Link to={`/customer/bookings/${bookingId}/form`} className="rounded-lg border border-current px-3 py-1.5 text-xs font-semibold hover:bg-background/40">
+        {received ? "View / update form" : "Complete form"}
+      </Link>
+    </div>
+  );
+}
+
+function FieldLegacy({ label, value, full }: { label: string; value: string | null | undefined; full?: boolean }) {
+  return (
+    <div className={full ? "md:col-span-2" : ""}>
+      <div className="text-xs font-semibold uppercase text-muted-foreground">{label}</div>
+      <div className="mt-1 text-sm">{value || "—"}</div>
+    </div>
+  );
+}
