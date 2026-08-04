@@ -61,7 +61,7 @@ export default function XeroCustomersPage() {
 
   async function onPull() {
     try {
-      const r = await pull.mutateAsync();
+      const r = await pull.mutateAsync(undefined);
       toast.success(`${r.pulled} Xero contacts pulled · ${r.matched} matched automatically`);
     } catch (e: any) { toast.error(e?.message ?? "Could not pull contacts from Xero"); }
   }
