@@ -209,8 +209,17 @@ export function useXeroPullContacts(tenantId: string | null) {
 export function useXeroLinkContacts(tenantId: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (stagingIds: string[]) =>
-      await invoke({ action: "link_contacts", tenant_id: tenantId, staging_ids: stagingIds }),
+    // The worker only links 50 per call (150s idle timeout), so chunk here.
+    mutationFn: async (stagingIds: string[]) => {
+      let linked = 0;
+      for (let i = 0; i < stagingIds.length; i += 50) {
+        const res: any = await invoke({
+          action: "link_contacts", tenant_id: tenantId, staging_ids: stagingIds.slice(i, i + 50),
+        });
+        linked += res?.linked ?? 0;
+      }
+      return { linked };
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["xero_contacts", tenantId] });
       qc.invalidateQueries({ queryKey: ["xero_contact_counts", tenantId] });
