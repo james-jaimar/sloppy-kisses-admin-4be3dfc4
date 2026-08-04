@@ -118,6 +118,7 @@ import MyPetsPage from "@/features/customerPortal/pets/MyPetsPage";
 import MyPetDetailPage from "@/features/customerPortal/pets/MyPetDetailPage";
 import MyBookingsPage from "@/features/customerPortal/bookings/MyBookingsPage";
 import MyBookingDetailPage from "@/features/customerPortal/bookings/MyBookingDetailPage";
+import AccommodationFormPage from "@/features/customerPortal/bookings/AccommodationFormPage";
 import MyInvoicesPage from "@/features/customerPortal/invoices/MyInvoicesPage";
 import MyInvoiceDetailPage from "@/features/customerPortal/invoices/MyInvoiceDetailPage";
 import MyPaymentsPage from "@/features/customerPortal/payments/MyPaymentsPage";
@@ -282,6 +283,7 @@ const App = () => (
                 <Route path="/customer/bookings/new/grooming-mobile" element={<GroomingRequestWizard mode="mobile" />} />
                 <Route path="/customer/bookings/new/transport" element={<TransportRequestWizard />} />
                 <Route path="/customer/bookings/:id" element={<MyBookingDetailPage />} />
+                <Route path="/customer/bookings/:id/form" element={<AccommodationFormPage />} />
                 <Route path="/customer/documents" element={<MyDocumentsPage />} />
                 <Route path="/customer/invoices" element={<MyInvoicesPage />} />
                 <Route path="/customer/invoices/:id" element={<MyInvoiceDetailPage />} />

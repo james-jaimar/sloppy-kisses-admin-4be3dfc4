@@ -7362,6 +7362,10 @@ export type Database = {
         Args: { p_booking_id: string; p_origin: string }
         Returns: undefined
       }
+      submit_accommodation_form: {
+        Args: { p_booking_id: string; p_payload: Json }
+        Returns: string
+      }
       sync_hotel_daycare_credits: {
         Args: { p_booking_id: string }
         Returns: undefined

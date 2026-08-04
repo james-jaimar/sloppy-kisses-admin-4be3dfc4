@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, X, Edit3 } from "lucide-react";
+import { ArrowLeft, Loader2, X, Edit3, FileText, CheckCircle2 } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { SERVICE_LABEL, fmtDateTime, statusTone } from "../portalCommon";
@@ -9,6 +9,7 @@ import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPl
 import { useCurrentCustomer } from "../hooks";
 import { BookingChangeModal } from "./BookingChangeModal";
 import { useMinLeadHours } from "./new/useBookingSubmit";
+import { useAccommodationForm } from "@/features/hotelForm/accommodationForm";
 
 export default function MyBookingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +51,8 @@ export default function MyBookingDetailPage() {
         <Link to="/customer/bookings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to bookings
         </Link>
+
+        {group === "hotel" && <AccommodationFormBanner bookingId={b.id} />}
 
         <div className="sk-card space-y-4 p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -133,6 +136,23 @@ function Field({ label, value, full }: { label: string; value: string | null | u
     <div className={full ? "md:col-span-2" : ""}>
       <div className="text-xs font-semibold uppercase text-muted-foreground">{label}</div>
       <div className="mt-1 text-sm">{value || "—"}</div>
+    </div>
+  );
+}
+
+function AccommodationFormBanner({ bookingId }: { bookingId: string }) {
+  const q = useAccommodationForm(bookingId);
+  if (q.isLoading) return null;
+  const received = Boolean(q.data?.receivedAt);
+  return (
+    <div className={"flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm " + (received ? "border-sk-green/30 bg-sk-green-soft text-sk-green" : "border-sk-orange/30 bg-sk-orange-soft text-sk-orange")}>
+      <div className="flex items-center gap-2">
+        {received ? <CheckCircle2 className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+        {received ? "Accommodation form received — thank you." : "Please complete the accommodation form before your stay."}
+      </div>
+      <Link to={`/customer/bookings/${bookingId}/form`} className="rounded-lg border border-current px-3 py-1.5 text-xs font-semibold hover:bg-background/40">
+        {received ? "View / update form" : "Complete form"}
+      </Link>
     </div>
   );
 }
