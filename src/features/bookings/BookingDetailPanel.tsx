@@ -313,6 +313,16 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
           onSaved={() => setEditOpen(false)}
         />
       )}
+
+      {cancelOpen && (
+        <CancelBookingDialog
+          tenantId={tenantId}
+          bookingId={booking.id}
+          bookingNumber={booking.booking_number}
+          onClose={() => setCancelOpen(false)}
+          onCancelled={onClose}
+        />
+      )}
     </>
   );
 }
