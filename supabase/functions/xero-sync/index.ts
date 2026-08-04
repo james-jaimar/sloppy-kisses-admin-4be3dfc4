@@ -364,16 +364,20 @@ async function pushOne(s: Settings, type: string, id: string, actor: string | nu
 const norm = (v: unknown) => String(v ?? "").trim().toLowerCase();
 const digits = (v: unknown) => String(v ?? "").replace(/\D/g, "").slice(-9);
 
-/** Pull every Xero contact into staging and auto-match against SK customers. */
-async function pullContacts(s: Settings, actor: string | null) {
+/**
+ * Pull a slice of Xero contacts into staging. Resumable: a few pages per call so
+ * the worker never runs out of memory/CPU on large orgs. Returns next_page.
+ */
+async function pullContacts(s: Settings, actor: string | null, startPage = 1, maxPages = 3) {
   const ctx = { tenantId: s.xero_tenant_id! };
-  const rows: any[] = [];
-  for (let page = 1; page <= 40; page++) {
+  let pulled = 0;
+  let nextPage: number | null = null;
+  for (let i = 0; i < maxPages; i++) {
+    const page = startPage + i;
     const res = await xero(ctx, `Contacts?page=${page}&includeArchived=false`);
     const batch = res?.Contacts ?? [];
-    if (!batch.length) break;
-    for (const c of batch) {
-      rows.push({
+    if (!batch.length) { nextPage = null; break; }
+    const rows = batch.map((c: any) => ({
         tenant_id: s.tenant_id,
         xero_contact_id: c.ContactID,
         name: c.Name ?? null,
@@ -384,32 +388,34 @@ async function pullContacts(s: Settings, actor: string | null) {
         account_number: c.AccountNumber ?? null,
         contact_status: c.ContactStatus ?? null,
         pulled_at: new Date().toISOString(),
-      });
-    }
-    if (batch.length < 100) break;
+    }));
+    const { error } = await admin.from("xero_contacts_staging")
+      .upsert(rows, { onConflict: "tenant_id,xero_contact_id" });
+    if (error) throw new Error(error.message);
+    pulled += rows.length;
+    if (batch.length < 100) { nextPage = null; break; }
+    nextPage = page + 1;
     await pace();
   }
 
-  for (let i = 0; i < rows.length; i += 500) {
-    const { error } = await admin.from("xero_contacts_staging")
-      .upsert(rows.slice(i, i + 500), { onConflict: "tenant_id,xero_contact_id" });
-    if (error) throw new Error(error.message);
+  if (!nextPage) {
+    await logSync({
+      tenant_id: s.tenant_id, entity_type: "contact", action: "pull", status: "success",
+      entity_label: `contact pull finished (last page ${startPage + maxPages - 1})`, triggered_by: actor,
+    });
   }
-
-  const matched = await autoMatchContacts(s);
-  await logSync({
-    tenant_id: s.tenant_id, entity_type: "contact", action: "pull", status: "success",
-    entity_label: `${rows.length} contacts pulled, ${matched} auto-matched`, triggered_by: actor,
-  });
-  return { pulled: rows.length, matched };
+  return { pulled, next_page: nextPage };
 }
 
-/** Score staged contacts against customers on account number, email, phone, name. */
-async function autoMatchContacts(s: Settings) {
-  const { data: staged } = await admin.from("xero_contacts_staging")
+/** Score a batch of staged contacts against customers. Resumable via cursor. */
+async function autoMatchContacts(s: Settings, cursor: string | null = null, limit = 300) {
+  let q = admin.from("xero_contacts_staging")
     .select("id, xero_contact_id, name, email, phone, account_number, matched_customer_id, match_state")
-    .eq("tenant_id", s.tenant_id).eq("match_state", "unmatched");
-  if (!staged?.length) return 0;
+    .eq("tenant_id", s.tenant_id).eq("match_state", "unmatched")
+    .order("id", { ascending: true }).limit(limit);
+  if (cursor) q = q.gt("id", cursor);
+  const { data: staged } = await q;
+  if (!staged?.length) return { matched: 0, next_cursor: null as string | null };
 
   const { data: customers } = await admin.from("customers")
     .select("id, customer_number, full_name, first_name, last_name, email, mobile, phone_alt, xero_customer_id")
@@ -428,6 +434,7 @@ async function autoMatchContacts(s: Settings) {
   }
 
   let matched = 0;
+  const updates: any[] = [];
   for (const row of staged) {
     let customerId: string | null = null;
     let type: string | null = null;
@@ -441,15 +448,22 @@ async function autoMatchContacts(s: Settings) {
       customerId = byName.get(norm(row.name))!; type = "name";
     }
     if (!customerId) continue;
-    await admin.from("xero_contacts_staging").update({
+    updates.push({
+      id: row.id,
+      tenant_id: s.tenant_id,
+      xero_contact_id: row.xero_contact_id,
       matched_customer_id: customerId,
       match_type: type,
       // Account number and email are safe to trust; name/phone need a human eye.
       match_state: type === "account_number" || type === "email" ? "suggested" : "review",
-    }).eq("id", row.id);
+    });
     matched++;
   }
-  return matched;
+  if (updates.length) {
+    const { error } = await admin.from("xero_contacts_staging").upsert(updates, { onConflict: "id" });
+    if (error) throw new Error(error.message);
+  }
+  return { matched, next_cursor: staged.length < limit ? null : staged[staged.length - 1].id };
 }
 
 /** Confirm links: write the Xero contact id onto the customer and push SK numbers back. */
@@ -575,12 +589,13 @@ Deno.serve(async (req) => {
 
     if (action === "pull_contacts") {
       const s = await getSettings(tenantId);
-      return j(200, await pullContacts(s, actor));
+      const startPage = Math.max(1, Number(body?.page ?? 1));
+      return j(200, await pullContacts(s, actor, startPage));
     }
 
     if (action === "match_contacts") {
       const s = await getSettings(tenantId);
-      return j(200, { matched: await autoMatchContacts(s) });
+      return j(200, await autoMatchContacts(s, body?.cursor ?? null));
     }
 
     if (action === "link_contacts") {
