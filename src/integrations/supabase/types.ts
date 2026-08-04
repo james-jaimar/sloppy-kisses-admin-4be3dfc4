@@ -140,6 +140,50 @@ export type Database = {
           },
         ]
       }
+      billing_item_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          kind: string
+          label: string
+          ref_key: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          kind: string
+          label: string
+          ref_key: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          ref_key?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_item_codes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_runs: {
         Row: {
           created_at: string
@@ -1066,6 +1110,7 @@ export type Database = {
           credit_note_id: string
           description: string
           id: string
+          item_code: string | null
           line_total: number
           quantity: number
           sort_order: number
@@ -1077,6 +1122,7 @@ export type Database = {
           credit_note_id: string
           description: string
           id?: string
+          item_code?: string | null
           line_total?: number
           quantity?: number
           sort_order?: number
@@ -1088,6 +1134,7 @@ export type Database = {
           credit_note_id?: string
           description?: string
           id?: string
+          item_code?: string | null
           line_total?: number
           quantity?: number
           sort_order?: number
@@ -3917,6 +3964,7 @@ export type Database = {
           discount_pct: number
           id: string
           invoice_id: string
+          item_code: string | null
           line_total: number
           product_id: string | null
           quantity: number
@@ -3939,6 +3987,7 @@ export type Database = {
           discount_pct?: number
           id?: string
           invoice_id: string
+          item_code?: string | null
           line_total?: number
           product_id?: string | null
           quantity?: number
@@ -3961,6 +4010,7 @@ export type Database = {
           discount_pct?: number
           id?: string
           invoice_id?: string
+          item_code?: string | null
           line_total?: number
           product_id?: string | null
           quantity?: number
@@ -6473,6 +6523,78 @@ export type Database = {
           },
           {
             foreignKeyName: "vets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      xero_contacts_staging: {
+        Row: {
+          account_number: string | null
+          contact_status: string | null
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          match_state: string
+          match_type: string | null
+          matched_customer_id: string | null
+          name: string | null
+          phone: string | null
+          pulled_at: string
+          tenant_id: string
+          updated_at: string
+          xero_contact_id: string
+        }
+        Insert: {
+          account_number?: string | null
+          contact_status?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          match_state?: string
+          match_type?: string | null
+          matched_customer_id?: string | null
+          name?: string | null
+          phone?: string | null
+          pulled_at?: string
+          tenant_id: string
+          updated_at?: string
+          xero_contact_id: string
+        }
+        Update: {
+          account_number?: string | null
+          contact_status?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          match_state?: string
+          match_type?: string | null
+          matched_customer_id?: string | null
+          name?: string | null
+          phone?: string | null
+          pulled_at?: string
+          tenant_id?: string
+          updated_at?: string
+          xero_contact_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xero_contacts_staging_matched_customer_id_fkey"
+            columns: ["matched_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xero_contacts_staging_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
