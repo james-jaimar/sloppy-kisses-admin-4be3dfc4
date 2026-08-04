@@ -126,7 +126,6 @@ export default function XeroSettingsPage() {
       // "Failed to fetch" error.
       const size = kind === "invoices" ? 2 : 5;
       const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-      const stuck: string[] = [];
       for (let i = 0; i < ids.length; i += size) {
         const chunk = ids.slice(i, i + size);
         let lastError = "";
@@ -149,7 +148,7 @@ export default function XeroSettingsPage() {
             await sleep(3000 * (attempt + 1));
           }
         }
-        if (lastError) { failed += chunk.length; stuck.push(...chunk); }
+        if (lastError) failed += chunk.length;
         await sleep(600); // stay under Xero's per-minute call ceiling
       }
       setProgress(null);
