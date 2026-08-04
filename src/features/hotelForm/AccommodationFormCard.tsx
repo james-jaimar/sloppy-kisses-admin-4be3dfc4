@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { AlertTriangle, FileText } from "lucide-react";
 import { useAccommodationForm, type FormPet } from "./accommodationForm";
 
 function Row({ label, value }: { label: string; value?: string | null }) {
@@ -24,12 +24,25 @@ export function AccommodationFormCard({ bookingId }: { bookingId: string }) {
       {q.isLoading ? (
         <div className="mt-1 text-xs text-muted-foreground">Loading…</div>
       ) : !p ? (
-        <div className="mt-1 text-xs text-muted-foreground">Not received yet.</div>
+        <div className="mt-1 flex items-center gap-1.5 text-xs text-sk-orange">
+          <AlertTriangle className="h-3.5 w-3.5" /> Not received yet — capture it under Edit booking.
+        </div>
       ) : (
         <div className="mt-1 space-y-2 text-xs">
           <div className="inline-flex rounded-full bg-sk-green-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sk-green">
             Received {q.data?.receivedAt ? new Date(q.data.receivedAt).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : ""}
           </div>
+          {(() => {
+            const missing = [
+              !p.emergency_contact?.full_name || !p.emergency_contact?.mobile ? "emergency contact" : null,
+              !p.vet?.vet_name || !p.vet?.contact_number ? "vet details" : null,
+            ].filter(Boolean);
+            return missing.length ? (
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-sk-orange-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sk-orange">
+                <AlertTriangle className="h-3 w-3" /> Needs info: {missing.join(", ")}
+              </div>
+            ) : null;
+          })()}
           <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">
             <Row label="Check-in" value={p.check_in_window} />
             <Row label="Check-out" value={p.check_out_window} />

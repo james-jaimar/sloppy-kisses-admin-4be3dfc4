@@ -64,6 +64,8 @@ const BodySchema = z.object({
       belongings_notes: z.string().max(2000).nullable().optional(),
       pickup_required: z.boolean().optional(),
       dropoff_required: z.boolean().optional(),
+      check_in_window: z.string().max(60).nullable().optional(),
+      check_out_window: z.string().max(60).nullable().optional(),
     })
     .optional(),
   transport: z
@@ -398,6 +400,8 @@ Deno.serve(async (req) => {
       belongings_notes: h.belongings_notes ?? null,
       pickup_required: h.pickup_required ?? false,
       dropoff_required: h.dropoff_required ?? false,
+      check_in_window: h.check_in_window ?? null,
+      check_out_window: h.check_out_window ?? null,
     });
     if (error) return cleanup(error.message);
   } else {

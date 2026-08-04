@@ -38,6 +38,26 @@ import { BookingGroomingInstructionsPanel } from "@/features/grooming/instructio
 import { useSaveBookingInstructions } from "@/features/grooming/instructions/queries";
 import { useInstructionCatalog } from "@/features/grooming/instructions/queries";
 import type { GroomingInstructionsValue } from "@/features/grooming/instructions/GroomingInstructionsForm";
+import {
+  AcknowledgementSection,
+  AttachmentsSection,
+  CareSection,
+  EmergencySection,
+  OwnerSection,
+  PetSections,
+  StayWindowSection,
+  VetSection,
+  buildAccommodationForm,
+  emptyAccommodationForm,
+  syncFormPets,
+} from "@/features/hotelForm/AccommodationFields";
+import {
+  useAccommodationCustomer,
+  useAccommodationPets,
+  useAccommodationWriteBack,
+} from "@/features/hotelForm/prefillQueries";
+import { useAccommodationForm, type AccommodationFormPayload } from "@/features/hotelForm/accommodationForm";
+import { supabase } from "@/lib/supabase/client";
 
 const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: ResourceType }[] = [
   { value: "daycare", label: "Daycare", resourceType: "daycare_area" },
@@ -217,6 +237,68 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     told_office_to_call: "",
   });
   const saveInstructions = useSaveBookingInstructions(tenantId);
+
+  // ---- Accommodation (hotel intake) form, captured inline with the booking ----
+  const [accom, setAccom] = useState<AccommodationFormPayload>(emptyAccommodationForm());
+  const [accomSeeded, setAccomSeeded] = useState(false);
+  const [accomTouched, setAccomTouched] = useState(false);
+  const accomCustomerQ = useAccommodationCustomer(kind === "hotel" ? customerId || null : null);
+  const accomPetsQ = useAccommodationPets(kind === "hotel" ? petIds : []);
+  const existingAccomQ = useAccommodationForm(kind === "hotel" && isEdit ? booking?.id ?? null : null);
+  const accomWriteBack = useAccommodationWriteBack();
+
+  useEffect(() => {
+    if (kind !== "hotel") return;
+    if (accomSeeded) return;
+    if (!accomCustomerQ.data) return;
+    if (isEdit && existingAccomQ.isLoading) return;
+    setAccom(
+      buildAccommodationForm({
+        customer: accomCustomerQ.data,
+        pets: accomPetsQ.data ?? [],
+        saved: existingAccomQ.data?.payload ?? null,
+      }),
+    );
+    setAccomSeeded(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind, accomSeeded, accomCustomerQ.data, existingAccomQ.data, existingAccomQ.isLoading, isEdit]);
+
+  // Reseed when the customer changes on a new booking.
+  useEffect(() => {
+    if (!isEdit) setAccomSeeded(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customerId]);
+
+  useEffect(() => {
+    if (kind !== "hotel" || !accomPetsQ.data) return;
+    setAccom((f) => syncFormPets(f, accomPetsQ.data));
+  }, [kind, accomPetsQ.data]);
+
+  function patchAccom(next: AccommodationFormPayload) {
+    setAccomTouched(true);
+    setAccom(next);
+  }
+
+  async function persistAccommodation(bookingId: string) {
+    if (kind !== "hotel") return;
+    if (!accomTouched && !accom.pets.length) return;
+    try {
+      const payload: AccommodationFormPayload = {
+        ...accom,
+        acknowledgement: accom.acknowledgement.accepted
+          ? { ...accom.acknowledgement, signed_at: accom.acknowledgement.signed_at || new Date().toISOString() }
+          : accom.acknowledgement,
+      };
+      const { error } = await supabase.rpc("submit_accommodation_form", {
+        p_booking_id: bookingId,
+        p_payload: payload as unknown as never,
+      });
+      if (error) throw error;
+      if (customerId) await accomWriteBack.mutateAsync({ customerId, form: payload });
+    } catch (err: any) {
+      toast.error("Booking saved, but the accommodation form did not save: " + (err?.message ?? "unknown error"));
+    }
+  }
   const instrCatalogQ = useInstructionCatalog(tenantId);
 
   // Auto-add priced add-ons when an instruction option carries an addon_code.
@@ -365,6 +447,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         });
         await saveDetails(booking.id);
         if (kind === "hotel") await persistSurcharges(booking.id);
+        if (kind === "hotel") await persistAccommodation(booking.id);
         if (kind === "grooming") await persistGroomingAddons(booking.id);
         if (kind === "grooming") await persistInstructions(booking.id);
         toast.success("Booking updated");
@@ -388,6 +471,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           for (const b of res.bookings) {
             await saveDetails(b.id);
             if (kind === "hotel") await persistSurcharges(b.id);
+            if (kind === "hotel") await persistAccommodation(b.id);
             if (kind === "grooming") await persistGroomingAddons(b.id);
             if (kind === "grooming") await persistInstructions(b.id);
           }
@@ -409,6 +493,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         });
         await saveDetails(res.id);
         if (kind === "hotel") await persistSurcharges(res.id);
+        if (kind === "hotel") await persistAccommodation(res.id);
         if (kind === "grooming") await persistGroomingAddons(res.id);
         if (kind === "grooming") await persistInstructions(res.id);
         toast.success(`Booking ${res.booking_number} created`);
@@ -802,6 +887,22 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             selection={hotelSurcharges}
             onSelectionChange={setHotelSurcharges}
           />
+        )}
+        {kind === "hotel" && (
+          <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="text-sm font-semibold">Accommodation form</div>
+              <div className="text-xs text-muted-foreground">Prefilled from the customer & pet records</div>
+            </div>
+            <OwnerSection form={accom} setForm={patchAccom} collapsible />
+            <EmergencySection form={accom} setForm={patchAccom} collapsible />
+            <VetSection form={accom} setForm={patchAccom} collapsible />
+            <StayWindowSection form={accom} setForm={patchAccom} collapsible />
+            <PetSections form={accom} setForm={patchAccom} collapsible />
+            <CareSection form={accom} setForm={patchAccom} collapsible />
+            <AttachmentsSection form={accom} setForm={patchAccom} collapsible />
+            <AcknowledgementSection form={accom} setForm={patchAccom} collapsible />
+          </div>
         )}
         {kind === "transport" && (
           <TransportFields

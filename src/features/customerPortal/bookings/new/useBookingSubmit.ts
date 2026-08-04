@@ -23,6 +23,8 @@ export interface CreateBookingArgs {
   hotel?: Record<string, unknown>;
   transport?: Record<string, unknown>;
   daycare?: Record<string, unknown>;
+  /** Runs after the booking is created, before navigation (e.g. save the accommodation form). */
+  afterCreate?: (res: CreateBookingResult) => Promise<void>;
 }
 
 export interface CreateBookingResult {
@@ -72,7 +74,9 @@ export function useCreatePortalBooking() {
           (typeof code === "string" ? code : "Could not create the booking");
         throw new Error(msg);
       }
-      return payload as CreateBookingResult;
+      const result = payload as CreateBookingResult;
+      if (args.afterCreate) await args.afterCreate(result);
+      return result;
     },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["portal_bookings"] });
