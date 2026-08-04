@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Sliders, Users, KeyRound, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server, FileUp, Dog, FileText, Gavel, Search } from "lucide-react";
-import { Archive } from "lucide-react";
+import { Archive, Link2, ListChecks } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -246,6 +246,23 @@ const SECTIONS = [
   },
 ];
 
+SECTIONS.push(
+  {
+    to: "/admin/settings/xero",
+    label: "Xero",
+    description: "Connect a Xero organisation, map sales and bank accounts, and push customers, invoices and payments across.",
+    icon: Link2,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/xero-log",
+    label: "Xero sync log",
+    description: "Every push to Xero with the exact error when one fails.",
+    icon: ListChecks,
+    ready: true,
+  },
+);
+
 const GROUPS: { id: string; label: string; members: string[] }[] = [
   {
     id: "operations",
@@ -281,6 +298,11 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
     id: "retail",
     label: "Retail",
     members: ["Product categories", "Stock locations", "Retail settings"],
+  },
+  {
+    id: "integrations",
+    label: "Integrations",
+    members: ["Xero", "Xero sync log"],
   },
   {
     id: "admin",

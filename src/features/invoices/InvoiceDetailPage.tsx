@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Downl
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { SyncToXeroButton } from "@/features/xero/SyncToXeroButton";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useInvoice, useIssueInvoice, useVoidInvoice, useUpsertInvoiceItem, useDeleteInvoiceItem, useInvoicingSettings, useUpdateInvoice, useInvoiceEvents, useSendInvoiceEmail, type InvoiceEvent } from "./queries";
 import { InvoiceStatusChip, fmtZar } from "./status";
@@ -153,6 +154,14 @@ export default function InvoiceDetailPage() {
                   <Mail className="h-4 w-4" /> {hasBeenSent ? "Resend" : "Send"}
                 </button>
               </Can>
+            )}
+            {inv && !isDraft && inv.status !== "cancelled" && (
+              <SyncToXeroButton
+                entityType="invoice"
+                entityId={inv.id}
+                synced={Boolean((inv as any).xero_invoice_id)}
+                className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted disabled:opacity-50"
+              />
             )}
             {inv && !isDraft && inv.status !== "cancelled" && balance > 0 && (
               <Can code="payments.create">
