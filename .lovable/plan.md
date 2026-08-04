@@ -34,10 +34,41 @@ Net result: 4 invoices in Xero out of 240.
 - Stop treating `503` as a permanent failure — it currently burns the attempt; it should re-queue.
 - Surface progress in the sync log page: pending / done / failed counts, and a "Retry failed" button.
 
+### D. Go-live with the real Xero customer book (match first, then push)
+
+Nothing currently reads *from* Xero. Before real data goes live we need a matching step, not a blind push, or we will duplicate contacts for customers Charlotte already invoices in Xero.
+
+New **Xero customers** screen (Settings → Xero → Customers):
+1. **Pull** every Xero contact (paged) into a staging table: ContactID, name, email, phone, account number.
+2. **Match** against our customers on email first (lower-cased, trimmed), then on normalised name + mobile as a *suggestion only*.
+3. **Review**: four buckets — Matched (auto-linkable), Possible match (needs a human tick), In Xero only, In Sloppy Kisses only. Each row shows both sides so the difference is visible.
+4. **Apply**: linking writes the real Xero ContactID onto our customer. Nothing is created in Xero during matching.
+5. **Then push**: "In Sloppy Kisses only" customers are created in Xero; "In Xero only" contacts can optionally be imported as new customers, or left alone.
+
+Rules baked in:
+- **Email is the unique key** both ways. Customers with no email can only be matched by hand.
+- **The SK customer number stays ours.** We write it into the Xero contact's Account Number field (they don't use it today) so the accountant can see it, but Xero never overwrites our number.
+- After go-live, new customers push automatically on first invoice, always matching on email before creating, so a contact added directly in Xero is reused rather than duplicated.
+- The match run is re-runnable at any time and safe to repeat.
+
+### E. Item codes (SKUs) on billing lines
+
+Retail `products` already have a `sku`, but invoice lines carry no code at all, and service charges (daycare, hotel nights, grooming packages, transport, add-ons, surcharges) have no SKU concept — so Xero receives free text only and the accountant can't report by item.
+
+- Add an item-code column to invoice lines and credit note lines, populated when the line is generated.
+- Add a **Billing item codes** settings screen: one code per billable thing — each service type, each grooming package, each hotel rate card, each add-on/surcharge — plus retail products, which reuse their existing SKU. Codes are owner-editable with sensible defaults suggested (`DC-FULL`, `HTL-DOG`, `GRM-PKG-<name>`, `TRN-PU`).
+- Push the code as `ItemCode` on each Xero line alongside the account code, and optionally sync the code list into Xero's Items list so codes resolve to named items in Xero reporting.
+- Lines with no mapped code push as they do today (description only), so nothing breaks while the list is filled in.
+
+## Sequence
+A, B and C fix what is broken today. D and E are the go-live prerequisites and should land before the real Xero organisation is connected — matching first, item codes second.
+
 ## Technical notes
 - Migration: `UPDATE public.customers SET xero_customer_id = NULL WHERE xero_customer_id !~* '<uuid regex>'`.
 - `supabase/functions/xero-sync/index.ts`: UUID guard in `ensureContact`/`pushCustomer`, name+account-number contact matching, retry/backoff helper around `xero()`, queue-based bulk push.
 - `supabase/functions/_shared/xero.ts`: return `Retry-After` on the thrown error so the caller can back off correctly.
+- New staging table for pulled Xero contacts; `xero-sync` gains `pull_contacts` and `link_contact` actions using Xero `Contacts` paging; contact push writes `AccountNumber` from `customers.customer_number`.
+- New `item_code` column on `invoice_items` and `credit_note_items`; a tenant-level billing item-code map resolved when lines are created; `ItemCode` added to the Xero line payload.
 - `src/features/xero/XeroSettingsPage.tsx`: tax-rate pickers + `load_tax_rates` action; `src/features/xero/queries.ts`: fixed backfill counts.
 
 ## Verification
