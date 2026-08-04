@@ -12,6 +12,32 @@ import {
 import { prorataQuote } from "./prorata";
 import { supabase } from "@/lib/supabase/client";
 import { emailIssuedInvoice } from "@/features/invoices/autoEmail";
+import { useQuery } from "@tanstack/react-query";
+
+const DAY_INDEX: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
+
+/** Days over capacity in the next 4 weeks on the weekdays this enrolment would attend. */
+function useCapacityWarning(tenantId: string, startDate: string, days: Weekday[]) {
+  const from = startDate || new Date().toISOString().slice(0, 10);
+  const to = new Date(new Date(from).getTime() + 27 * 86_400_000).toISOString().slice(0, 10);
+  return useQuery({
+    queryKey: ["daycare-capacity-check", tenantId, from, to, days.join(",")],
+    enabled: Boolean(tenantId && days.length),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("daycare_day_availability" as any, {
+        p_tenant_id: tenantId,
+        p_start: from,
+        p_end: to,
+      });
+      if (error) throw error;
+      const wanted = new Set(days.map((d) => DAY_INDEX[String(d).slice(0, 3).toLowerCase()]));
+      return ((data ?? []) as any[])
+        .filter((r) => r.capacity != null && wanted.has(new Date(r.day + "T00:00:00").getDay()))
+        .filter((r) => Number(r.expected) + 1 > Number(r.capacity))
+        .map((r) => ({ day: r.day as string, expected: Number(r.expected), capacity: Number(r.capacity) }));
+    },
+  });
+}
 
 interface Props {
   tenantId: string;
@@ -80,6 +106,8 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
     [editing, startDate, endDate, days, selectedPlan?.price],
   );
   const showProrata = !!quote?.isPartial && quote.amount > 0;
+  const capacityQ = useCapacityWarning(tenantId, startDate, days);
+  const fullDays = capacityQ.data ?? [];
 
   /** Works out the earliest legal end date from the notice period in Policy settings. */
   async function checkNotice() {
@@ -277,6 +305,17 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
               })}
             </div>
           </Field>
+          {fullDays.length > 0 && (
+            <div className="rounded-lg border border-sk-orange bg-sk-orange-soft px-3 py-2 text-xs text-sk-orange">
+              <span className="font-semibold">Over capacity on {fullDays.length} day(s) in the next 4 weeks</span>
+              <div className="mt-1 space-y-0.5 opacity-90">
+                {fullDays.slice(0, 5).map((d) => (
+                  <div key={d.day}>{d.day} — {d.expected + 1} expected vs {d.capacity} spaces</div>
+                ))}
+                {fullDays.length > 5 && <div>…and {fullDays.length - 5} more</div>}
+              </div>
+            </div>
+          )}
           <Field label="Notes">
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2}
               className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" />
