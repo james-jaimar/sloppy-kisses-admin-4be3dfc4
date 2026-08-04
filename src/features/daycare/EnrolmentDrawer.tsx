@@ -90,7 +90,7 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
     });
     if (error) { toast.error(error.message); return; }
     setNoticeQuote(data);
-    const suggested = (data as any)?.effective_end_date as string | undefined;
+    const suggested = (data as any)?.earliest_end_date as string | undefined;
     if (suggested) setEndDate(suggested);
   }
 
@@ -330,10 +330,10 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
                 {noticeQuote && (
                   <div className="mt-2 rounded-lg border border-sk-turquoise/40 bg-sk-turquoise-soft/40 px-3 py-2 text-xs">
                     <span className="font-semibold">
-                      Earliest end date: {noticeQuote.effective_end_date ?? "—"}
+                      Earliest end date: {noticeQuote.earliest_end_date ?? "—"}
                     </span>
-                    {noticeQuote.notice_days != null && ` · ${noticeQuote.notice_days} days' notice required`}
-                    {noticeQuote.months_payable != null && ` · ${noticeQuote.months_payable} month(s) still payable`}
+                    {noticeQuote.notice_months != null && ` · ${noticeQuote.notice_months} month(s) notice required`}
+                    {" — set as the end date; the monthly run bills up to it."}
                   </div>
                 )}
               </div>
