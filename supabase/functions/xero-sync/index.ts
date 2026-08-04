@@ -391,7 +391,9 @@ async function pullContacts(s: Settings, actor: string | null, startPage = 1, ma
     const res = await xero(ctx, `Contacts?page=${page}&includeArchived=false`);
     const batch = res?.Contacts ?? [];
     if (!batch.length) { nextPage = null; break; }
-    const rows = batch.map((c: any) => ({
+    const rows = batch.map((c: any) => {
+      const addr = (c.Addresses ?? []).find((a: any) => a.AddressLine1 || a.City || a.PostalCode) ?? {};
+      return {
         tenant_id: s.tenant_id,
         xero_contact_id: c.ContactID,
         name: c.Name ?? null,
@@ -401,8 +403,14 @@ async function pullContacts(s: Settings, actor: string | null, startPage = 1, ma
         phone: (c.Phones ?? []).map((p: any) => p.PhoneNumber).filter(Boolean)[0] ?? null,
         account_number: c.AccountNumber ?? null,
         contact_status: c.ContactStatus ?? null,
+        address_line_1: addr.AddressLine1 ?? null,
+        address_line_2: addr.AddressLine2 ?? null,
+        city: addr.City ?? null,
+        province: addr.Region ?? null,
+        postcode: addr.PostalCode ?? null,
         pulled_at: new Date().toISOString(),
-    }));
+      };
+    });
     const { error } = await admin.from("xero_contacts_staging")
       .upsert(rows, { onConflict: "tenant_id,xero_contact_id" });
     if (error) throw new Error(error.message);
