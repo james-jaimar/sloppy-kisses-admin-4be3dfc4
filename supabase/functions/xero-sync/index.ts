@@ -391,7 +391,9 @@ async function pullContacts(s: Settings, actor: string | null, startPage = 1, ma
     const res = await xero(ctx, `Contacts?page=${page}&includeArchived=false`);
     const batch = res?.Contacts ?? [];
     if (!batch.length) { nextPage = null; break; }
-    const rows = batch.map((c: any) => ({
+    const rows = batch.map((c: any) => {
+      const addr = (c.Addresses ?? []).find((a: any) => a.AddressLine1 || a.City || a.PostalCode) ?? {};
+      return {
         tenant_id: s.tenant_id,
         xero_contact_id: c.ContactID,
         name: c.Name ?? null,
@@ -401,8 +403,14 @@ async function pullContacts(s: Settings, actor: string | null, startPage = 1, ma
         phone: (c.Phones ?? []).map((p: any) => p.PhoneNumber).filter(Boolean)[0] ?? null,
         account_number: c.AccountNumber ?? null,
         contact_status: c.ContactStatus ?? null,
+        address_line_1: addr.AddressLine1 ?? null,
+        address_line_2: addr.AddressLine2 ?? null,
+        city: addr.City ?? null,
+        province: addr.Region ?? null,
+        postcode: addr.PostalCode ?? null,
         pulled_at: new Date().toISOString(),
-    }));
+      };
+    });
     const { error } = await admin.from("xero_contacts_staging")
       .upsert(rows, { onConflict: "tenant_id,xero_contact_id" });
     if (error) throw new Error(error.message);
@@ -538,6 +546,158 @@ async function linkContacts(s: Settings, stagingIds: string[], actor: string | n
   return { linked, remaining };
 }
 
+/** Head-count helper: returns the row count without pulling rows. */
+async function countRows(table: string, apply: (q: any) => any) {
+  const { count } = await apply(admin.from(table).select("id", { count: "exact", head: true }));
+  return count ?? 0;
+}
+
+/**
+ * Read-only three-way reconciliation between the Xero contact base and our
+ * customers. Nothing is written — this is the picture you take to the owner
+ * before committing any links.
+ */
+async function reconcileReport(s: Settings) {
+  const t = s.tenant_id;
+  const st = (fn: (q: any) => any) => countRows("xero_contacts_staging", (q) => fn(q.eq("tenant_id", t)));
+  const cu = (fn: (q: any) => any) => countRows("customers", (q) => fn(q.eq("tenant_id", t).neq("status", "archived")));
+
+  const [
+    xeroTotal, byAccount, byEmail, byName, byPhone,
+    linked, ignored, xeroOnly, review, suggested,
+    skTotal, skLinked, skNoEmail,
+  ] = await Promise.all([
+    st((q) => q),
+    st((q) => q.eq("match_type", "account_number")),
+    st((q) => q.eq("match_type", "email")),
+    st((q) => q.eq("match_type", "name")),
+    st((q) => q.eq("match_type", "phone")),
+    st((q) => q.eq("match_state", "linked")),
+    st((q) => q.eq("match_state", "ignored")),
+    st((q) => q.eq("match_state", "unmatched")),
+    st((q) => q.eq("match_state", "review")),
+    st((q) => q.eq("match_state", "suggested")),
+    cu((q) => q),
+    cu((q) => q.not("xero_customer_id", "is", null)),
+    cu((q) => q.is("email", null)),
+  ]);
+
+  return {
+    xero_contacts: xeroTotal,
+    matched_account_number: byAccount,
+    matched_email: byEmail,
+    matched_name: byName,
+    matched_phone: byPhone,
+    suggested,
+    review,
+    linked,
+    ignored,
+    xero_only: xeroOnly,
+    sk_customers: skTotal,
+    sk_linked: skLinked,
+    sk_only: Math.max(0, skTotal - skLinked),
+    sk_without_email: skNoEmail,
+  };
+}
+
+/** Park contacts we never want to see again (junk, archived, duplicates). */
+async function ignoreContacts(s: Settings, stagingIds: string[]) {
+  const ids = stagingIds.slice(0, 500);
+  const { error } = await admin.from("xero_contacts_staging")
+    .update({ match_state: "ignored", matched_customer_id: null, match_type: null })
+    .eq("tenant_id", s.tenant_id).in("id", ids);
+  if (error) throw new Error(error.message);
+  return { ignored: ids.length, remaining: stagingIds.length - ids.length };
+}
+
+/**
+ * Create SK customers from Xero-only contacts, then push the new SK number
+ * back to Xero as the account number so both sides share an identifier.
+ */
+async function importContacts(s: Settings, stagingIds: string[], actor: string | null) {
+  const ctx = { tenantId: s.xero_tenant_id! };
+  const ids = stagingIds.slice(0, 40);
+  const remaining = stagingIds.length - ids.length;
+  const { data: rows } = await admin.from("xero_contacts_staging")
+    .select("*").eq("tenant_id", s.tenant_id).in("id", ids);
+
+  const batch = `xero-import-${new Date().toISOString().slice(0, 10)}`;
+  let imported = 0, relinked = 0, skipped = 0;
+  const accountUpdates: any[] = [];
+  const errors: Array<{ id: string; error: string }> = [];
+
+  for (const r of rows ?? []) {
+    try {
+      const email = r.email ? String(r.email).trim().toLowerCase() : null;
+      // Duplicate guard: never create a second customer for an email we hold.
+      if (email) {
+        const { data: existing } = await admin.from("customers")
+          .select("id, customer_number").eq("tenant_id", s.tenant_id).ilike("email", email).limit(1).maybeSingle();
+        if (existing) {
+          await admin.from("customers").update({ xero_customer_id: r.xero_contact_id }).eq("id", existing.id);
+          await admin.from("xero_contacts_staging")
+            .update({ matched_customer_id: existing.id, match_type: "email", match_state: "linked" }).eq("id", r.id);
+          if (existing.customer_number) {
+            accountUpdates.push({ ContactID: r.xero_contact_id, AccountNumber: existing.customer_number });
+          }
+          relinked++;
+          continue;
+        }
+      }
+
+      const fullName = (r.name || [r.first_name, r.last_name].filter(Boolean).join(" ") || email || "").trim();
+      if (!fullName) { skipped++; continue; }
+
+      const { data: number, error: numErr } = await admin.rpc("next_customer_number", { target_tenant_id: s.tenant_id });
+      if (numErr) throw new Error(numErr.message);
+
+      const { data: created, error: insErr } = await admin.from("customers").insert({
+        tenant_id: s.tenant_id,
+        customer_number: number,
+        full_name: fullName,
+        first_name: r.first_name ?? null,
+        last_name: r.last_name ?? null,
+        email,
+        mobile: r.phone ?? null,
+        address_line_1: r.address_line_1 ?? null,
+        address_line_2: r.address_line_2 ?? null,
+        city: r.city ?? null,
+        province: r.province ?? null,
+        postcode: r.postcode ?? null,
+        xero_customer_id: r.xero_contact_id,
+        import_source: "xero",
+        import_batch: batch,
+        imported_at: new Date().toISOString(),
+        notes_internal: email ? null : "Imported from Xero without an email address — details need completing.",
+      }).select("id").single();
+      if (insErr) throw new Error(insErr.message);
+
+      await admin.from("xero_contacts_staging")
+        .update({ matched_customer_id: created.id, match_type: "imported", match_state: "linked" }).eq("id", r.id);
+      accountUpdates.push({ ContactID: r.xero_contact_id, AccountNumber: number });
+      imported++;
+    } catch (e) {
+      errors.push({ id: r.id, error: String((e as Error).message) });
+    }
+  }
+
+  for (let i = 0; i < accountUpdates.length; i += 50) {
+    try {
+      await xero(ctx, "Contacts", { method: "POST", body: { Contacts: accountUpdates.slice(i, i + 50) } });
+      await pace();
+    } catch (e) {
+      await logSync({ tenant_id: s.tenant_id, entity_type: "contact", action: "account_number", status: "error",
+        error_message: String((e as Error).message), triggered_by: actor });
+    }
+  }
+
+  await logSync({ tenant_id: s.tenant_id, entity_type: "contact", action: "import", status: errors.length ? "error" : "success",
+    entity_label: `${imported} imported, ${relinked} relinked`, triggered_by: actor,
+    error_message: errors.length ? errors.map((e) => e.error).join("; ").slice(0, 900) : null });
+
+  return { imported, relinked, skipped, errors, remaining };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return j(405, { error: "Method not allowed" });
@@ -656,6 +816,25 @@ Deno.serve(async (req) => {
       const ids: string[] = body?.staging_ids ?? [];
       if (!ids.length) return j(400, { error: "staging_ids required" });
       return j(200, await linkContacts(s, ids, actor));
+    }
+
+    if (action === "reconcile_report") {
+      const s = await getSettings(tenantId);
+      return j(200, await reconcileReport(s));
+    }
+
+    if (action === "import_contacts") {
+      const s = await getSettings(tenantId);
+      const ids: string[] = body?.staging_ids ?? [];
+      if (!ids.length) return j(400, { error: "staging_ids required" });
+      return j(200, await importContacts(s, ids, actor));
+    }
+
+    if (action === "ignore_contacts") {
+      const s = await getSettings(tenantId);
+      const ids: string[] = body?.staging_ids ?? [];
+      if (!ids.length) return j(400, { error: "staging_ids required" });
+      return j(200, await ignoreContacts(s, ids));
     }
 
     if (action === "run_queue") {

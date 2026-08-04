@@ -241,6 +241,85 @@ export function useXeroLinkContacts(tenantId: string | null) {
 }
 
 /** Manually point a staged Xero contact at a specific SK customer. */
+export type XeroReconcileReport = {
+  xero_contacts: number; matched_account_number: number; matched_email: number;
+  matched_name: number; matched_phone: number; suggested: number; review: number;
+  linked: number; ignored: number; xero_only: number;
+  sk_customers: number; sk_linked: number; sk_only: number; sk_without_email: number;
+};
+
+/** Read-only three-way picture of Xero vs SK before anything is committed. */
+export function useXeroReconcileReport(tenantId: string | null) {
+  return useQuery({
+    queryKey: ["xero_reconcile", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: async (): Promise<XeroReconcileReport> =>
+      await invoke({ action: "reconcile_report", tenant_id: tenantId }),
+  });
+}
+
+/** Create SK customers from Xero-only contacts (chunked; pushes SK numbers back). */
+export function useXeroImportContacts(tenantId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (stagingIds: string[]) => {
+      let imported = 0, relinked = 0, skipped = 0;
+      const errors: Array<{ id: string; error: string }> = [];
+      for (let i = 0; i < stagingIds.length; i += 40) {
+        const res: any = await invoke({
+          action: "import_contacts", tenant_id: tenantId, staging_ids: stagingIds.slice(i, i + 40),
+        });
+        imported += res?.imported ?? 0;
+        relinked += res?.relinked ?? 0;
+        skipped += res?.skipped ?? 0;
+        errors.push(...(res?.errors ?? []));
+      }
+      return { imported, relinked, skipped, errors };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["xero_contacts", tenantId] });
+      qc.invalidateQueries({ queryKey: ["xero_contact_counts", tenantId] });
+      qc.invalidateQueries({ queryKey: ["xero_reconcile", tenantId] });
+      qc.invalidateQueries({ queryKey: ["customers"] });
+    },
+  });
+}
+
+/** Park contacts we never want to link or import. */
+export function useXeroIgnoreContacts(tenantId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (stagingIds: string[]) => {
+      let ignored = 0;
+      for (let i = 0; i < stagingIds.length; i += 500) {
+        const res: any = await invoke({
+          action: "ignore_contacts", tenant_id: tenantId, staging_ids: stagingIds.slice(i, i + 500),
+        });
+        ignored += res?.ignored ?? 0;
+      }
+      return { ignored };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["xero_contacts", tenantId] });
+      qc.invalidateQueries({ queryKey: ["xero_contact_counts", tenantId] });
+      qc.invalidateQueries({ queryKey: ["xero_reconcile", tenantId] });
+    },
+  });
+}
+
+/** Danger zone: wipe all billing data and Xero links before going live. */
+export function useXeroResetBilling(tenantId: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await (supabase as any).rpc("xero_reset_billing_data", { target_tenant_id: tenantId });
+      if (error) throw error;
+      return data as Record<string, number>;
+    },
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
 export function useSetContactMatch(tenantId: string | null) {
   const qc = useQueryClient();
   return useMutation({

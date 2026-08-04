@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, RefreshCw, PlugZap, Users, FileText, ListChecks, Link2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Loader2, RefreshCw, PlugZap, Users, FileText, ListChecks, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import {
   useXeroSettings, useSaveXeroSettings, useXeroOrganisations, useXeroTest,
   useXeroPush, useXeroBackfillCounts, fetchBackfillIds, useXeroRunQueue, useXeroQueue,
+  useXeroResetBilling,
   useXeroTaxRates, type XeroTaxRate,
 } from "./queries";
 
@@ -381,9 +382,54 @@ export default function XeroSettingsPage() {
                 </button>
               </div>
             </div>
+
+            <GoLiveResetCard tenantId={tenantId} canManage={canManage} />
           </>
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * Danger zone: clears every invoice, payment, credit note and Xero link so the
+ * first live sync starts from a clean slate. Customers and pets are kept.
+ */
+function GoLiveResetCard({ tenantId, canManage }: { tenantId: string | null; canManage: boolean }) {
+  const [confirm, setConfirm] = useState("");
+  const reset = useXeroResetBilling(tenantId);
+
+  async function run() {
+    try {
+      const res = await reset.mutateAsync();
+      const total = Object.values(res ?? {}).reduce((a, b) => a + Number(b || 0), 0);
+      setConfirm("");
+      toast.success(`Billing data cleared — ${total.toLocaleString()} records removed or reset`);
+    } catch (e: any) { toast.error(e?.message ?? "Reset failed"); }
+  }
+
+  return (
+    <div className="sk-card border-destructive/40 p-5">
+      <div className="flex items-start gap-3">
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+        <div className="flex-1">
+          <div className="font-semibold text-destructive">Prepare for go-live</div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Deletes every invoice, quote, payment, credit note and refund, and clears all Xero links
+            so matching starts fresh against the live Xero organisation. Customers, pets and bookings
+            are kept. This cannot be undone.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="Type RESET to confirm"
+              className="h-10 w-56 rounded-xl border border-border bg-white px-3 text-sm" />
+            <button onClick={run} disabled={!canManage || confirm !== "RESET" || reset.isPending}
+              className="inline-flex h-10 items-center gap-2 rounded-xl bg-destructive px-3 text-sm font-semibold text-destructive-foreground disabled:opacity-50">
+              {reset.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+              Clear billing data
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
