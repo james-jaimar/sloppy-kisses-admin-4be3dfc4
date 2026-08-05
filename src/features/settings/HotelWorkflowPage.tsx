@@ -37,6 +37,7 @@ export default function HotelWorkflowPage() {
     deposit_split_enabled: true,
     checkout_groom_discount_pct: 50,
     daycare_credit_enabled: true,
+    guidelines_md: "",
   });
 
   useEffect(() => {
@@ -53,6 +54,7 @@ export default function HotelWorkflowPage() {
         deposit_split_enabled: settingsQ.data.deposit_split_enabled ?? true,
         checkout_groom_discount_pct: Number(settingsQ.data.checkout_groom_discount_pct ?? 50),
         daycare_credit_enabled: settingsQ.data.daycare_credit_enabled ?? true,
+        guidelines_md: (settingsQ.data as any).guidelines_md ?? "",
       });
     }
   }, [settingsQ.data]);
@@ -71,6 +73,10 @@ export default function HotelWorkflowPage() {
         deposit_split_enabled: form.deposit_split_enabled,
         checkout_groom_discount_pct: form.checkout_groom_discount_pct,
         daycare_credit_enabled: form.daycare_credit_enabled,
+        guidelines_md: form.guidelines_md.trim() || null,
+        ...(form.guidelines_md.trim() !== (((settingsQ.data as any)?.guidelines_md ?? "").trim())
+          ? { guidelines_version: Number((settingsQ.data as any)?.guidelines_version ?? 0) + 1 }
+          : {}),
       });
       toast.success("Hotel workflow settings saved");
     } catch (err: any) {
@@ -187,6 +193,7 @@ export default function HotelWorkflowPage() {
           </div>
 
           <div className="flex justify-end">
+            </div>
             {null}
           </div>
 
