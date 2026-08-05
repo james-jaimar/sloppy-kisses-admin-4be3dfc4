@@ -188,6 +188,7 @@ export interface TransportWorkflowSettings {
   default_fee_zar: number;
   round_trip_multiplier: number;
   suburb_fees: Record<string, number> | null;
+  photo_gate_mode: "off" | "soft" | "hard";
 }
 
 export function useTransportWorkflowSettings(tenantId: string | null | undefined) {
