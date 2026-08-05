@@ -12,13 +12,12 @@ const KIND_META: Record<PetDocKind, { label: string; hint: string; icon: typeof 
 };
 
 function Tile({
-  kind, petId, petName, tenantId, onFile, onDone, onFile: _x, uploadedVia,
+  kind, petId, petName, tenantId, onDone, uploadedVia,
 }: {
   kind: PetDocKind;
   petId: string;
   petName: string;
   tenantId: string;
-  onFile?: never;
   onDone: () => void;
   uploadedVia: "portal" | "admin";
 }) {
