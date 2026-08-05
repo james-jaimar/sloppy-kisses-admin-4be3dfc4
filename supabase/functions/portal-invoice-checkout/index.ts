@@ -83,10 +83,27 @@ Deno.serve(async (req) => {
   const [firstName, ...restName] = (cust.full_name ?? "Customer").split(" ");
   const lastName = restName.join(" ") || "-";
 
+  const { data: attempt } = await admin.from("payment_attempts").insert({
+    tenant_id: inv.tenant_id,
+    invoice_id: inv.id,
+    customer_id: inv.customer_id,
+    provider: "payfast",
+    provider_mode: mode,
+    amount: Number(inv.balance_due),
+    status: "redirected",
+    origin: "customer_portal",
+  }).select("id").maybeSingle();
+  const attemptId = attempt?.id ?? null;
+
+  const baseReturn = settings.return_url ?? "";
+  const returnUrl = baseReturn && attemptId
+    ? `${baseReturn}${baseReturn.includes("?") ? "&" : "?"}att=${attemptId}`
+    : baseReturn;
+
   const fields: Record<string, string> = {
     merchant_id: settings.merchant_id,
     merchant_key: settings.merchant_key,
-    return_url: settings.return_url ?? "",
+    return_url: returnUrl,
     cancel_url: settings.cancel_url ?? "",
     notify_url: settings.notify_url ?? "",
     name_first: firstName,
@@ -96,6 +113,7 @@ Deno.serve(async (req) => {
     amount: Number(inv.balance_due).toFixed(2),
     item_name: `Invoice ${inv.invoice_number}`,
     item_description: `Payment for invoice ${inv.invoice_number}`,
+    custom_str3: attemptId ?? "",
   };
   const orderedKeys = Object.keys(fields);
   const signature = await payfastSignature(fields, settings.passphrase ?? null, orderedKeys);
