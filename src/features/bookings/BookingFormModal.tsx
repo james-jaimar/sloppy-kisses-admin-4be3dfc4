@@ -717,7 +717,19 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           </div>
           <div>
             <div className="mb-1 text-sm font-medium">Start</div>
-            <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} className={inputCls} />
+            {kind === "hotel" ? (
+              <>
+                <input
+                  type="date"
+                  value={startAt ? startAt.slice(0, 10) : ""}
+                  onChange={(e) => setStartAt(e.target.value ? `${e.target.value}T${CHECK_IN_TIME}` : "")}
+                  className={inputCls}
+                />
+                <div className="mt-1 text-[11px] text-muted-foreground">Arrivals 09:00–11:00 only</div>
+              </>
+            ) : (
+              <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} className={inputCls} />
+            )}
           </div>
           <div>
             <div className="mb-1 text-sm font-medium">
@@ -867,13 +879,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           />
         )}
         {kind === "hotel" && (
-          <HotelFields
-            value={hotel}
-            onChange={(patch) => setHotel((p) => ({ ...p, ...patch }))}
-            species={serviceType === "hotel_cat" ? "cat" : "dog"}
-          />
-        )}
-        {kind === "hotel" && (
           <HotelExtrasPanel
             tenantId={tenantId}
             bookingId={booking?.id ?? null}
@@ -897,10 +902,16 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             <OwnerSection form={accom} setForm={patchAccom} collapsible />
             <EmergencySection form={accom} setForm={patchAccom} collapsible />
             <VetSection form={accom} setForm={patchAccom} collapsible />
-            <StayWindowSection form={accom} setForm={patchAccom} collapsible />
+            <StayWindowSection
+              form={accom}
+              setForm={patchAccom}
+              collapsible
+              checkOutDate={endAtLocal ? endAtLocal.slice(0, 10) : null}
+            />
             <PetSections form={accom} setForm={patchAccom} collapsible />
             <CareSection form={accom} setForm={patchAccom} collapsible />
             <AttachmentsSection form={accom} setForm={patchAccom} collapsible />
+            <GuidelinesSection tenantId={tenantId} collapsible />
             <AcknowledgementSection form={accom} setForm={patchAccom} collapsible />
           </div>
         )}
