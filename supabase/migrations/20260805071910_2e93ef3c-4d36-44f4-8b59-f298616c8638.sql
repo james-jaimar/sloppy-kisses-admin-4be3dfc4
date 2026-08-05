@@ -1,0 +1,1 @@
+DELETE FROM public.documents WHERE id = 'b1628b74-4036-46b0-a9ea-2056de94d5a7' AND status = 'pending';
