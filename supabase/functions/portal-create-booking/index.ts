@@ -143,10 +143,40 @@ Deno.serve(async (req) => {
   // --- Pets must belong to this customer --------------------------------
   const { data: pets } = await admin
     .from("pets")
-    .select("id, name, species, vax_waived_until")
+    .select("id, name, species, vax_waived_until, photo_waived_until")
     .eq("customer_id", customer.id)
     .in("id", body.pet_ids);
   if (!pets || pets.length !== body.pet_ids.length) return json({ error: "invalid_pets" }, 403);
+
+  // --- Pet photo gate ----------------------------------------------------
+  // A photo on file is how staff match the right pet to the right owner.
+  // Enforced per service via <service>_workflow_settings.photo_gate_mode.
+  {
+    const { data: photoSettings } = await admin
+      .from(SETTINGS_TABLE[group])
+      .select("photo_gate_mode")
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+    const photoMode = (photoSettings as any)?.photo_gate_mode ?? "off";
+    if (photoMode === "hard") {
+      const { data: photoDocs } = await admin
+        .from("documents")
+        .select("pet_id")
+        .in("pet_id", body.pet_ids)
+        .eq("type", "pet_photo")
+        .is("deleted_at", null)
+        .neq("status", "rejected");
+      const withPhoto = new Set((photoDocs ?? []).map((d: any) => d.pet_id));
+      const today = new Date().toISOString().slice(0, 10);
+      const missingPhotos = (pets as any[])
+        .filter((p) => !withPhoto.has(p.id))
+        .filter((p) => !(p.photo_waived_until && p.photo_waived_until >= today))
+        .map((p) => p.name as string);
+      if (missingPhotos.length) {
+        return json({ error: "pet_photo_required", missing: missingPhotos }, 400);
+      }
+    }
+  }
 
   // --- Daycare is an enrolment, not a single booking ---------------------
   if (body.service_type === "daycare") {
