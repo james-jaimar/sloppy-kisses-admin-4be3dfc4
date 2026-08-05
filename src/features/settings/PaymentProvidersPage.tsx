@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Loader2, CreditCard, Settings2 } from "lucide-react";
+import { ArrowLeft, Loader2, CreditCard, Settings2, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
@@ -85,9 +85,14 @@ export default function PaymentProvidersPage() {
         title="Payment providers"
         subtitle="Manual refunds work today. Gateway integrations are scaffolded for future connect."
         actions={
-          <Link to="/admin/settings" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
-            <ArrowLeft className="h-4 w-4" /> Back to settings
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link to="/admin/settings/gateway-activity" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
+              <Activity className="h-4 w-4" /> Gateway activity
+            </Link>
+            <Link to="/admin/settings" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
+              <ArrowLeft className="h-4 w-4" /> Back to settings
+            </Link>
+          </div>
         }
       />
       <div className="flex-1 p-6">

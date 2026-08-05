@@ -126,6 +126,13 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/gateway-activity",
+    label: "Gateway activity",
+    description: "Online payment notifications, checkout attempts and a test tool.",
+    icon: CreditCard,
+    ready: true,
+  },
+  {
     to: "/admin/settings/comms",
     label: "Comms settings",
     description: "Sender identity, quiet hours, test sends.",
@@ -296,7 +303,7 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
   {
     id: "pricing",
     label: "Pricing & billing",
-    members: ["Hotel & Cattery rates", "Invoicing", "Payment methods", "Payment providers"],
+    members: ["Hotel & Cattery rates", "Invoicing", "Payment methods", "Payment providers", "Gateway activity"],
   },
   {
     id: "comms",

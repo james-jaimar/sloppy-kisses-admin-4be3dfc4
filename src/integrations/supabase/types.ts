@@ -4869,6 +4869,80 @@ export type Database = {
           },
         ]
       }
+      payment_attempts: {
+        Row: {
+          amount: number
+          created_at: string
+          customer_id: string | null
+          id: string
+          invoice_id: string
+          origin: string | null
+          payment_id: string | null
+          provider: string
+          provider_mode: string
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          invoice_id: string
+          origin?: string | null
+          payment_id?: string | null
+          provider?: string
+          provider_mode?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          invoice_id?: string
+          origin?: string | null
+          payment_id?: string | null
+          provider?: string
+          provider_mode?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_attempts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_attempts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_methods: {
         Row: {
           code: string
@@ -5058,6 +5132,88 @@ export type Database = {
           },
           {
             foreignKeyName: "payment_refunds_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_webhook_events: {
+        Row: {
+          amount_gross: number | null
+          created_at: string
+          error_text: string | null
+          id: string
+          invoice_id: string | null
+          m_payment_id: string | null
+          outcome: string
+          payload: Json
+          payment_id: string | null
+          payment_status: string | null
+          pf_payment_id: string | null
+          provider: string
+          provider_mode: string | null
+          raw_body: string | null
+          source_ip: string | null
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_gross?: number | null
+          created_at?: string
+          error_text?: string | null
+          id?: string
+          invoice_id?: string | null
+          m_payment_id?: string | null
+          outcome?: string
+          payload?: Json
+          payment_id?: string | null
+          payment_status?: string | null
+          pf_payment_id?: string | null
+          provider?: string
+          provider_mode?: string | null
+          raw_body?: string | null
+          source_ip?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_gross?: number | null
+          created_at?: string
+          error_text?: string | null
+          id?: string
+          invoice_id?: string | null
+          m_payment_id?: string | null
+          outcome?: string
+          payload?: Json
+          payment_id?: string | null
+          payment_status?: string | null
+          pf_payment_id?: string | null
+          provider?: string
+          provider_mode?: string | null
+          raw_body?: string | null
+          source_ip?: string | null
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_webhook_events_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_webhook_events_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_webhook_events_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -7612,6 +7768,17 @@ export type Database = {
           p_source_payment_id?: string
         }
         Returns: string
+      }
+      payment_attempt_status: {
+        Args: { p_attempt_id: string }
+        Returns: {
+          amount: number
+          attempt_status: string
+          balance_due: number
+          invoice_number: string
+          invoice_status: string
+          paid: boolean
+        }[]
       }
       pet_photo_status: {
         Args: { p_pet_ids: string[] }
