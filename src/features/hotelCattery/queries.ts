@@ -119,6 +119,27 @@ export function useUpdateBookingStatus(tenantId: string) {
   });
 }
 
+/** Assign (or clear) the hotel/cattery area on a booking straight from the board. */
+export function useAssignBookingResource(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ bookingId, resourceId }: { bookingId: string; resourceId: string | null }) => {
+      const { error } = await supabase
+        .from("bookings")
+        .update({ resource_id: resourceId })
+        .eq("id", bookingId)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+      return { bookingId, resourceId };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["hotel_bookings"] });
+      qc.invalidateQueries({ queryKey: ["hotel_day_availability"] });
+      qc.invalidateQueries({ queryKey: ["bookings"] });
+    },
+  });
+}
+
 export interface VaxCheck { ok: boolean; missing: string[]; expired: string[]; }
 
 export async function checkVaccinations(petIds: string[]): Promise<VaxCheck> {
