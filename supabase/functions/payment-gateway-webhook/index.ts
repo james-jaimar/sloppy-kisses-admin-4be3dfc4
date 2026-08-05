@@ -51,8 +51,30 @@ Deno.serve(async (req) => {
   const merchant_id = body["merchant_id"];
   const provided_signature = body["signature"];
 
+  // Log the ITN immediately so nothing is ever silently dropped again.
+  const sourceIp = req.headers.get("x-forwarded-for") ?? req.headers.get("cf-connecting-ip") ?? null;
+  const { data: logRow } = await admin.from("payment_webhook_events").insert({
+    provider,
+    m_payment_id: m_payment_id ?? null,
+    pf_payment_id: pf_payment_id ?? null,
+    payment_status: payment_status ?? null,
+    amount_gross: body["amount_gross"] ? Number(body["amount_gross"]) : null,
+    outcome: "received",
+    raw_body: rawText,
+    payload: body,
+    source_ip: sourceIp,
+  }).select("id").maybeSingle();
+  const eventId: string | null = logRow?.id ?? null;
+
+  async function finish(outcome: string, patch: Record<string, unknown>, resBody: unknown, status = 200) {
+    if (eventId) {
+      await admin.from("payment_webhook_events").update({ outcome, ...patch }).eq("id", eventId);
+    }
+    return json(resBody, status);
+  }
+
   if (!m_payment_id || !pf_payment_id) {
-    return json({ error: "missing_ids" }, 400);
+    return finish("error", { error_text: "missing_ids" }, { error: "missing_ids" }, 400);
   }
 
   // Determine tenant either from invoice (payments) or refund lookup.
@@ -68,22 +90,31 @@ Deno.serve(async (req) => {
     tenantId = r?.tenant_id ?? null; invoiceId = r?.invoice_id ?? null; customerId = r?.customer_id ?? null;
   } else {
     const { data: inv } = await admin.from("invoices").select("id, tenant_id, customer_id, total, balance_due, status, currency").eq("id", m_payment_id).maybeSingle();
-    if (!inv) return json({ error: "invoice_not_found" }, 404);
+    if (!inv) return finish("error", { error_text: "invoice_not_found" }, { error: "invoice_not_found" }, 404);
     tenantId = inv.tenant_id; invoiceId = inv.id; customerId = inv.customer_id;
   }
 
-  if (!tenantId) return json({ error: "tenant_not_resolved" }, 404);
+  if (!tenantId) return finish("error", { error_text: "tenant_not_resolved" }, { error: "tenant_not_resolved" }, 404);
+
+  if (eventId) {
+    await admin.from("payment_webhook_events").update({ tenant_id: tenantId, invoice_id: invoiceId }).eq("id", eventId);
+  }
 
   // Load tenant's PayFast creds.
   const { data: pf } = await admin.from("payment_providers")
     .select("mode, settings, enabled")
     .eq("tenant_id", tenantId).eq("provider", "payfast").maybeSingle();
-  if (!pf || !pf.enabled) return json({ error: "payfast_not_enabled_for_tenant" }, 403);
+  if (!pf || !pf.enabled) {
+    return finish("error", { error_text: "payfast_not_enabled_for_tenant" }, { error: "payfast_not_enabled_for_tenant" }, 403);
+  }
   const settings = (pf.settings ?? {}) as PayFastSettings;
   const mode = (pf.mode ?? "test") as PayFastMode;
+  if (eventId) await admin.from("payment_webhook_events").update({ provider_mode: mode }).eq("id", eventId);
 
   if (merchant_id && settings.merchant_id && merchant_id !== settings.merchant_id) {
-    return json({ error: "merchant_id_mismatch" }, 400);
+    return finish("error", {
+      error_text: `merchant_id_mismatch: received ${merchant_id}, configured ${settings.merchant_id}`,
+    }, { error: "merchant_id_mismatch" }, 400);
   }
 
   // 1. Signature check using the tenant's passphrase, over the ITN fields
@@ -97,10 +128,15 @@ Deno.serve(async (req) => {
   const expected = await payfastSignature(sigFields, settings.passphrase ?? null, orderedKeys);
   if (!provided_signature || expected !== provided_signature) {
     console.warn("[itn] signature mismatch", { expected, provided_signature });
-    return json({ error: "bad_signature" }, 400);
+    return finish("bad_signature", {
+      error_text: `expected ${expected}, received ${provided_signature ?? "(none)"} — check the passphrase configured in Settings matches the PayFast account`,
+    }, { error: "bad_signature" }, 400);
   }
 
   // 2. Callback to PayFast to validate the payload.
+  //    Sandbox's validate endpoint is unreliable, so in test mode a failure is
+  //    logged as a warning and processing continues. Live mode stays strict.
+  let validateWarning: string | null = null;
   try {
     const validateRes = await fetch(`${checkoutHost(mode)}/eng/query/validate`, {
       method: "POST",
@@ -110,11 +146,17 @@ Deno.serve(async (req) => {
     const validateBody = (await validateRes.text()).trim();
     if (!validateBody.startsWith("VALID")) {
       console.warn("[itn] validate failed", validateBody);
-      return json({ error: "not_validated_by_payfast" }, 400);
+      if (mode === "live") {
+        return finish("not_validated", { error_text: `validate returned: ${validateBody.slice(0, 200)}` }, { error: "not_validated_by_payfast" }, 400);
+      }
+      validateWarning = `validate returned: ${validateBody.slice(0, 200)} (ignored in test mode)`;
     }
   } catch (e) {
     console.warn("[itn] validate call error", (e as Error).message);
-    return json({ error: "validate_call_failed" }, 502);
+    if (mode === "live") {
+      return finish("not_validated", { error_text: `validate call failed: ${(e as Error).message}` }, { error: "validate_call_failed" }, 502);
+    }
+    validateWarning = `validate call failed: ${(e as Error).message} (ignored in test mode)`;
   }
 
   // 3. Apply the effect.
@@ -126,18 +168,18 @@ Deno.serve(async (req) => {
       provider_refund_id: pf_payment_id,
       provider_payload: body,
     }).eq("id", refundRowId);
-    return json({ ok: true, kind: "refund", status: newStatus });
+    return finish("accepted", { error_text: validateWarning }, { ok: true, kind: "refund", status: newStatus });
   }
 
   // Invoice payment.
   if (payment_status !== "COMPLETE") {
     console.log("[itn] non-complete payment_status", payment_status);
-    return json({ ok: true, kind: "payment", status: payment_status, note: "not recorded" });
+    return finish("ignored", { error_text: `payment_status = ${payment_status}` }, { ok: true, kind: "payment", status: payment_status, note: "not recorded" });
   }
 
   // Dedupe on pf_payment_id (unique index).
   const { data: existing } = await admin.from("payments").select("id").eq("pf_payment_id", pf_payment_id).maybeSingle();
-  if (existing) return json({ ok: true, kind: "payment", dedup: true, payment_id: existing.id });
+  if (existing) return finish("dedup", { payment_id: existing.id }, { ok: true, kind: "payment", dedup: true, payment_id: existing.id });
 
   const amountGross = Number(body["amount_gross"] ?? "0");
   const { data: inserted, error: insErr } = await admin.from("payments").insert({
@@ -155,9 +197,17 @@ Deno.serve(async (req) => {
     paid_at: new Date().toISOString(),
     notes: "PayFast online payment",
   }).select("id").maybeSingle();
-  if (insErr) return json({ error: insErr.message }, 500);
+  if (insErr) return finish("error", { error_text: insErr.message }, { error: insErr.message }, 500);
 
-  return json({ ok: true, kind: "payment", payment_id: inserted?.id });
+  // Close off the checkout attempt, if the redirect carried one.
+  const attemptId = body["custom_str3"];
+  if (attemptId) {
+    await admin.from("payment_attempts")
+      .update({ status: "completed", payment_id: inserted?.id ?? null })
+      .eq("id", attemptId);
+  }
+
+  return finish("accepted", { payment_id: inserted?.id ?? null, error_text: validateWarning }, { ok: true, kind: "payment", payment_id: inserted?.id });
 });
 
 function json(obj: unknown, status = 200) {
