@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, X, Edit3, FileText, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Loader2, X, Edit3, FileText, CheckCircle2, CalendarPlus } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { SERVICE_LABEL, fmtDateTime, statusTone } from "../portalCommon";
