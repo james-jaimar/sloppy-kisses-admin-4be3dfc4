@@ -24,7 +24,14 @@ import {
   useAccommodationPets,
   useAccommodationWriteBack,
 } from "@/features/hotelForm/prefillQueries";
-import type { AccommodationFormPayload } from "@/features/hotelForm/accommodationForm";
+import {
+  CHECK_IN_TIME,
+  checkOutTimeFor,
+  checkOutWindowsFor,
+  type AccommodationFormPayload,
+} from "@/features/hotelForm/accommodationForm";
+import { GuidelinesSection } from "@/features/hotelForm/GuidelinesSection";
+import { useHotelGuidelines } from "@/features/hotelForm/guidelinesQueries";
 
 const STEPS = ["Stay", "Your details", "Pet details", "Care & consent"];
 
@@ -51,14 +58,21 @@ export default function HotelRequestWizard() {
   const [step, setStep] = useState(0);
   const [petIds, setPetIds] = useState<string[]>([]);
   const [checkInDate, setCheckInDate] = useState("");
-  const [checkInTime, setCheckInTime] = useState("09:00");
   const [nights, setNights] = useState(1);
-  const [checkOutTime, setCheckOutTime] = useState("10:00");
   const [roomPref, setRoomPref] = useState("");
   const [form, setForm] = useState<AccommodationFormPayload>(emptyAccommodationForm());
   const [seeded, setSeeded] = useState(false);
 
   const checkOutDate = useMemo(() => (checkInDate ? addDays(checkInDate, nights) : ""), [checkInDate, nights]);
+  const guidelines = useHotelGuidelines(cust.data?.tenant_id);
+
+  // Sundays only allow the late (Stay & Play) collection window.
+  useEffect(() => {
+    const allowed = checkOutWindowsFor(checkOutDate);
+    if (form.check_out_window && !allowed.includes(form.check_out_window)) {
+      setForm((f) => ({ ...f, check_out_window: allowed[0] }));
+    }
+  }, [checkOutDate, form.check_out_window]);
 
   const detailCustomer = useAccommodationCustomer(cust.data?.id);
   const detailPets = useAccommodationPets(petIds);
@@ -93,24 +107,36 @@ export default function HotelRequestWizard() {
 
   async function onSubmit() {
     if (!cust.data) return;
-    const startAt = dateToIso(checkInDate, checkInTime);
+    const startAt = dateToIso(checkInDate, CHECK_IN_TIME);
     if (!startAt) return;
     const payload: AccommodationFormPayload = {
       ...form,
-      acknowledgement: { ...form.acknowledgement, signed_at: new Date().toISOString() },
+      acknowledgement: {
+        ...form.acknowledgement,
+        signed_at: new Date().toISOString(),
+        guidelines_version: guidelines.data?.guidelines_version ?? null,
+      },
     };
+    const petCare = payload.pets
+      .map((p) => [p.name, p.feeding_instructions].filter(Boolean).join(": "))
+      .filter(Boolean)
+      .join("\n");
+    const petMeds = payload.pets
+      .map((p) => [p.name, p.medication_instructions].filter(Boolean).join(": "))
+      .filter(Boolean)
+      .join("\n");
     submit.mutate({
       serviceType: serviceType as any,
       petIds,
       startAt,
-      endAt: dateToIso(checkOutDate, checkOutTime),
+      endAt: dateToIso(checkOutDate, checkOutTimeFor(payload.check_out_window)),
       notes: payload.additional_notes || null,
       hotel: {
         accommodation_type: roomPref || null,
-        feeding_instructions: payload.feeding_instructions || null,
+        feeding_instructions: petCare || null,
         check_in_window: payload.check_in_window || null,
         check_out_window: payload.check_out_window || null,
-        medication_instructions: payload.medication_instructions || null,
+        medication_instructions: petMeds || null,
         belongings_notes: payload.belongings_notes || null,
         pickup_required: payload.pickup_required,
         dropoff_required: payload.dropoff_required,
@@ -227,12 +253,6 @@ export default function HotelRequestWizard() {
                 </button>
               </div>
             </Field>
-            <Field label="Arrival time">
-              <input type="time" value={checkInTime} onChange={(e) => setCheckInTime(e.target.value)} className={inputCls} />
-            </Field>
-            <Field label="Collection time">
-              <input type="time" value={checkOutTime} onChange={(e) => setCheckOutTime(e.target.value)} className={inputCls} />
-            </Field>
           </div>
 
           <Field label="Room preference (optional)" hint="Final room allocation is confirmed by our team.">
@@ -244,7 +264,7 @@ export default function HotelRequestWizard() {
             </select>
           </Field>
 
-          <StayWindowSection form={form} setForm={setForm} />
+          <StayWindowSection form={form} setForm={setForm} checkOutDate={checkOutDate} />
         </>
       )}
 
@@ -275,6 +295,7 @@ export default function HotelRequestWizard() {
             setForm={setForm}
             hint="Photos and vaccination cards can be uploaded against each pet under My pets."
           />
+          <GuidelinesSection tenantId={cust.data?.tenant_id} />
           <AcknowledgementSection form={form} setForm={setForm} />
         </div>
       )}

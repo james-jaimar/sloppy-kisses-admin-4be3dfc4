@@ -7,6 +7,8 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { fmtDate } from "../portalCommon";
 import { useCurrentCustomer } from "../hooks";
+import { GuidelinesBody } from "@/features/hotelForm/GuidelinesSection";
+import { useHotelGuidelines } from "@/features/hotelForm/guidelinesQueries";
 import {
   ATTACHMENT_OPTIONS,
   BEHAVIOUR_OPTIONS,
@@ -65,6 +67,21 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return SectionImpl({ title, children });
+}
+
+function GuidelinesInline({ tenantId }: { tenantId: string | null | undefined }) {
+  const q = useHotelGuidelines(tenantId);
+  const md = q.data?.guidelines_md ?? "";
+  if (!md) return null;
+  return (
+    <div className="max-h-64 overflow-y-auto rounded-lg border border-border bg-muted/30 p-3">
+      <GuidelinesBody md={md} />
+    </div>
+  );
+}
+
+function SectionImpl({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="sk-card space-y-4 p-6">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-sk-coral-dark">{title}</h2>
@@ -311,6 +328,7 @@ export default function AccommodationFormPage() {
         </Section>
 
         <Section title="Acknowledgement">
+          <GuidelinesInline tenantId={b.tenant_id} />
           <p className="text-sm text-muted-foreground">
             By submitting your booking and/or completed forms, you confirm that you have read, understood, and agree to all
             Sloppy Kisses terms and conditions as stated on our website.

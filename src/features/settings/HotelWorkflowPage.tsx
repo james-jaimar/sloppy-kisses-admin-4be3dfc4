@@ -37,6 +37,7 @@ export default function HotelWorkflowPage() {
     deposit_split_enabled: true,
     checkout_groom_discount_pct: 50,
     daycare_credit_enabled: true,
+    guidelines_md: "",
   });
 
   useEffect(() => {
@@ -53,6 +54,7 @@ export default function HotelWorkflowPage() {
         deposit_split_enabled: settingsQ.data.deposit_split_enabled ?? true,
         checkout_groom_discount_pct: Number(settingsQ.data.checkout_groom_discount_pct ?? 50),
         daycare_credit_enabled: settingsQ.data.daycare_credit_enabled ?? true,
+        guidelines_md: (settingsQ.data as any).guidelines_md ?? "",
       });
     }
   }, [settingsQ.data]);
@@ -71,6 +73,10 @@ export default function HotelWorkflowPage() {
         deposit_split_enabled: form.deposit_split_enabled,
         checkout_groom_discount_pct: form.checkout_groom_discount_pct,
         daycare_credit_enabled: form.daycare_credit_enabled,
+        guidelines_md: form.guidelines_md.trim() || null,
+        ...(form.guidelines_md.trim() !== (((settingsQ.data as any)?.guidelines_md ?? "").trim())
+          ? { guidelines_version: Number((settingsQ.data as any)?.guidelines_version ?? 0) + 1 }
+          : {}),
       });
       toast.success("Hotel workflow settings saved");
     } catch (err: any) {
@@ -187,6 +193,7 @@ export default function HotelWorkflowPage() {
           </div>
 
           <div className="flex justify-end">
+            </div>
             {null}
           </div>
 
@@ -243,6 +250,21 @@ export default function HotelWorkflowPage() {
             </Field>
           </div>
 
+          <div className="sk-card space-y-3 p-4">
+            <div className="text-sm font-semibold">Hotel guidelines</div>
+            <p className="text-xs text-muted-foreground">
+              Shown to customers on the accommodation form before they confirm a stay. Markdown-lite: use # for headings and - for bullets.
+              Saving a change bumps the version customers acknowledge.
+            </p>
+            <textarea
+              disabled={!canManage}
+              rows={14}
+              value={form.guidelines_md}
+              onChange={(e) => setForm((f) => ({ ...f, guidelines_md: e.target.value }))}
+              className="w-full rounded-lg border border-border bg-white p-3 font-mono text-xs"
+            />
+          </div>
+
           <div className="flex justify-end">
             <button
               disabled={!canManage || update.isPending}
@@ -254,7 +276,6 @@ export default function HotelWorkflowPage() {
             </button>
           </div>
         </div>
-      </div>
     </>
   );
 }

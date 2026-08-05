@@ -7253,6 +7253,13 @@ export type Database = {
         }
         Returns: Json
       }
+      get_hotel_guidelines: {
+        Args: { p_tenant: string }
+        Returns: {
+          guidelines_md: string
+          guidelines_version: number
+        }[]
+      }
       get_public_invoice: { Args: { p_token: string }; Returns: Json }
       grooming_can_confirm_booking: {
         Args: { p_booking_id: string }
