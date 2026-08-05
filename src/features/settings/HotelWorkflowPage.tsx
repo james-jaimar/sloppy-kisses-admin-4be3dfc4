@@ -250,6 +250,21 @@ export default function HotelWorkflowPage() {
             </Field>
           </div>
 
+          <div className="sk-card space-y-3 p-4">
+            <div className="text-sm font-semibold">Hotel guidelines</div>
+            <p className="text-xs text-muted-foreground">
+              Shown to customers on the accommodation form before they confirm a stay. Markdown-lite: use # for headings and - for bullets.
+              Saving a change bumps the version customers acknowledge.
+            </p>
+            <textarea
+              disabled={!canManage}
+              rows={14}
+              value={form.guidelines_md}
+              onChange={(e) => setForm((f) => ({ ...f, guidelines_md: e.target.value }))}
+              className="w-full rounded-lg border border-border bg-white p-3 font-mono text-xs"
+            />
+          </div>
+
           <div className="flex justify-end">
             <button
               disabled={!canManage || update.isPending}
@@ -261,7 +276,6 @@ export default function HotelWorkflowPage() {
             </button>
           </div>
         </div>
-      </div>
     </>
   );
 }
