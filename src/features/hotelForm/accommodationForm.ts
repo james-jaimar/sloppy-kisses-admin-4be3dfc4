@@ -29,15 +29,13 @@ export const HEALTH_OPTIONS = [
   "Sterilised / spayed / neutered",
   "Vaccinations up to date",
   "Microchipped",
-  "Picture attached",
-  "Vaccination card attached",
 ];
-export const ATTACHMENT_OPTIONS = [
-  "Photo attached for each pet",
-  "Vaccination card attached for each pet",
+/** Office check-in list — ticked by staff on the booking, not by the customer. */
+export const OFFICE_CHECKLIST_OPTIONS = [
   "Food packed in labelled bags",
-  "Medication instructions included",
-  "Grooming requested",
+  "Medication received with instructions",
+  "Belongings labelled",
+  "Grooming requested for this stay",
 ];
 
 export interface FormPet {
