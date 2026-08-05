@@ -3,6 +3,27 @@ import { supabase } from "@/lib/supabase/client";
 
 export const CHECK_IN_WINDOWS = ["09:00–11:00"];
 export const CHECK_OUT_WINDOWS = ["09:00–09:30", "Stay & Play 16:00–16:30"];
+/** Fixed arrival time used to build `start_at` — arrivals are only taken 09:00–11:00. */
+export const CHECK_IN_TIME = "09:00";
+export const CHECK_OUT_STANDARD = CHECK_OUT_WINDOWS[0];
+export const CHECK_OUT_STAY_PLAY = CHECK_OUT_WINDOWS[1];
+
+export function isStayPlayWindow(w: string | null | undefined): boolean {
+  return (w ?? "").startsWith("Stay & Play");
+}
+
+/** Departure clock time implied by the selected check-out window. */
+export function checkOutTimeFor(w: string | null | undefined): string {
+  return isStayPlayWindow(w) ? "16:00" : "09:00";
+}
+
+/** Sundays (and public holidays) only allow the late 16:00–16:30 collection. */
+export function checkOutWindowsFor(dateIso: string | null | undefined): string[] {
+  if (!dateIso) return CHECK_OUT_WINDOWS;
+  const d = new Date(`${dateIso}T00:00:00`);
+  return d.getDay() === 0 ? [CHECK_OUT_STAY_PLAY] : CHECK_OUT_WINDOWS;
+}
+
 export const BEHAVIOUR_OPTIONS = ["Social", "Nervous", "Barker", "Jumps", "Needs extra care"];
 export const HEALTH_OPTIONS = [
   "Sterilised / spayed / neutered",
@@ -35,6 +56,10 @@ export interface FormPet {
   vax_kennel_cough: string;
   tick_flea_product: string;
   tick_flea_date: string;
+  feeding_instructions: string;
+  medication_instructions: string;
+  grooming_required: boolean;
+  grooming_notes: string;
   notes: string;
 }
 
@@ -64,10 +89,14 @@ export interface AccommodationFormPayload {
   dropoff_required: boolean;
   collection_address: string;
   pets: FormPet[];
-  feeding_instructions: string;
-  medication_instructions: string;
-  grooming_required: boolean;
-  grooming_instructions: string;
+  /** @deprecated kept for older submissions — care notes are captured per pet now. */
+  feeding_instructions?: string;
+  /** @deprecated kept for older submissions — care notes are captured per pet now. */
+  medication_instructions?: string;
+  /** @deprecated kept for older submissions. */
+  grooming_required?: boolean;
+  /** @deprecated kept for older submissions. */
+  grooming_instructions?: string;
   belongings_notes: string;
   emergency_notes: string;
   additional_notes: string;
@@ -77,6 +106,7 @@ export interface AccommodationFormPayload {
     signed_name: string;
     signed_at: string;
     signed_place: string;
+    guidelines_version?: number | null;
   };
 }
 
@@ -97,6 +127,10 @@ export function emptyPet(petId: string | null = null, name = ""): FormPet {
     vax_kennel_cough: "",
     tick_flea_product: "",
     tick_flea_date: "",
+    feeding_instructions: "",
+    medication_instructions: "",
+    grooming_required: false,
+    grooming_notes: "",
     notes: "",
   };
 }
