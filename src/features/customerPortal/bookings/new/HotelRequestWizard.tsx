@@ -296,6 +296,7 @@ export default function HotelRequestWizard() {
             setForm={setForm}
             hint="Photos and vaccination cards can be uploaded against each pet under My pets."
           />
+          <GuidelinesSection tenantId={cust.data?.tenant_id} />
           <AcknowledgementSection form={form} setForm={setForm} />
         </div>
       )}
