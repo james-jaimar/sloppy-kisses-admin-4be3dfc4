@@ -16,9 +16,10 @@ interface NavItem {
 interface Props {
   items: readonly NavItem[];
   footerLabel?: string;
+  action?: React.ReactNode;
 }
 
-export function MobileTopBar({ items, footerLabel }: Props) {
+export function MobileTopBar({ items, footerLabel, action }: Props) {
   const [open, setOpen] = useState(false);
   const location = useLocation();
 
@@ -62,7 +63,7 @@ export function MobileTopBar({ items, footerLabel }: Props) {
       <div className="flex-1 flex justify-center min-w-0 px-2">
         <Logo compact={false} />
       </div>
-      <div className="w-10" />
+      <div className="flex min-w-[40px] justify-end">{action}</div>
     </div>
   );
 }
