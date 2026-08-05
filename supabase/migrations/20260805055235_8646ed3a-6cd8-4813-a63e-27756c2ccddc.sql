@@ -1,0 +1,2 @@
+ALTER TABLE public.documents DROP CONSTRAINT IF EXISTS documents_uploaded_via_chk;
+ALTER TABLE public.documents ADD CONSTRAINT documents_uploaded_via_chk CHECK (uploaded_via = ANY (ARRAY['portal'::text, 'admin'::text, 'system'::text, 'import'::text, 'phone'::text]));
