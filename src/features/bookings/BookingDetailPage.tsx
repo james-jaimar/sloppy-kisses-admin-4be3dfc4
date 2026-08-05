@@ -129,6 +129,9 @@ export default function BookingDetailPage() {
               {tenantId && (b.service_type === "grooming_inhouse" || b.service_type === "grooming_mobile") && (
                 <GroomingVaxGatePanel tenantId={tenantId} bookingId={b.id} />
               )}
+              {tenantId && (
+                <PhotoGatePanel tenantId={tenantId} bookingId={b.id} serviceType={b.service_type} />
+              )}
               <div className="sk-card p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
