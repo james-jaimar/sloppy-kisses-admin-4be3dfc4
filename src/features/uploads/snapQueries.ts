@@ -71,7 +71,7 @@ export function usePetAttachmentStatus(petIds: string[]) {
         .in("pet_id", petIds)
         .in("type", ["pet_photo", "vaccination"])
         .is("deleted_at", null)
-        .neq("status", "rejected");
+        .in("status", ["uploaded", "verified"]);
       if (error) throw error;
       const map: Record<string, Record<PetDocKind, boolean>> = {};
       for (const id of petIds) map[id] = { pet_photo: false, vaccination: false };
