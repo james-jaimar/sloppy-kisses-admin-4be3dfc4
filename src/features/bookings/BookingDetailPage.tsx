@@ -18,6 +18,7 @@ import { HotelVaxGatePanel } from "./HotelVaxGatePanel";
 import { GroomingVaxGatePanel } from "./GroomingVaxGatePanel";
 import { PhotoGatePanel } from "./PhotoGatePanel";
 import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
+import { HotelGroomRequestsPanel } from "@/features/hotelGrooming/HotelGroomRequestsPanel";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -126,6 +127,9 @@ export default function BookingDetailPage() {
               <PinnedNotesBanner customerId={b.customer_id} tenantId={tenantId} />
               {tenantId && (b.service_type === "hotel_dog" || b.service_type === "hotel_cat") && (
                 <HotelVaxGatePanel tenantId={tenantId} bookingId={b.id} />
+              )}
+              {(b.service_type === "hotel_dog" || b.service_type === "hotel_cat") && (
+                <HotelGroomRequestsPanel tenantId={tenantId} bookingId={b.id} />
               )}
               {tenantId && (b.service_type === "grooming_inhouse" || b.service_type === "grooming_mobile") && (
                 <GroomingVaxGatePanel tenantId={tenantId} bookingId={b.id} />

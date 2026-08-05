@@ -3633,6 +3633,106 @@ export type Database = {
           },
         ]
       }
+      hotel_grooming_requests: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          customer_notes: string | null
+          decline_reason: string | null
+          grooming_booking_id: string | null
+          handled_by: string | null
+          hotel_booking_id: string
+          id: string
+          pet_id: string | null
+          pet_name: string | null
+          scheduled_at: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+          window_end: string | null
+          window_start: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          customer_notes?: string | null
+          decline_reason?: string | null
+          grooming_booking_id?: string | null
+          handled_by?: string | null
+          hotel_booking_id: string
+          id?: string
+          pet_id?: string | null
+          pet_name?: string | null
+          scheduled_at?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          window_end?: string | null
+          window_start?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          customer_notes?: string | null
+          decline_reason?: string | null
+          grooming_booking_id?: string | null
+          handled_by?: string | null
+          hotel_booking_id?: string
+          id?: string
+          pet_id?: string | null
+          pet_name?: string | null
+          scheduled_at?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          window_end?: string | null
+          window_start?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_grooming_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_grooming_requests_grooming_booking_id_fkey"
+            columns: ["grooming_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_grooming_requests_handled_by_fkey"
+            columns: ["handled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_grooming_requests_hotel_booking_id_fkey"
+            columns: ["hotel_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_grooming_requests_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_grooming_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotel_rate_cards: {
         Row: {
           accommodation_type: string
@@ -7350,6 +7450,10 @@ export type Database = {
         Returns: Json
       }
       daycare_prorata_quote: { Args: { p_enrolment_id: string }; Returns: Json }
+      decline_hotel_groom: {
+        Args: { p_reason: string; p_request_id: string }
+        Returns: undefined
+      }
       delete_booking: { Args: { p_booking_id: string }; Returns: undefined }
       delete_customer: { Args: { p_customer_id: string }; Returns: undefined }
       delete_daycare_enrolment: {
@@ -7538,6 +7642,17 @@ export type Database = {
         }
         Returns: string
       }
+      schedule_hotel_groom: {
+        Args: {
+          p_end_at: string
+          p_notes?: string
+          p_package_id?: string
+          p_request_id: string
+          p_resource_id?: string
+          p_start_at: string
+        }
+        Returns: string
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       stay_play_ensure_sessions: {
@@ -7554,6 +7669,10 @@ export type Database = {
       }
       sync_hotel_deposit_invoice: {
         Args: { p_booking_id: string }
+        Returns: undefined
+      }
+      sync_hotel_grooming_requests: {
+        Args: { p_booking_id: string; p_payload: Json }
         Returns: undefined
       }
       tenant_gateway_enabled: {
