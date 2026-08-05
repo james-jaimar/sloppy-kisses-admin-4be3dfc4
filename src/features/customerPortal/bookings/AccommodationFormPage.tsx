@@ -311,6 +311,7 @@ export default function AccommodationFormPage() {
         </Section>
 
         <Section title="Acknowledgement">
+          <GuidelinesBodyBlock tenantId={b.tenant_id} />
           <p className="text-sm text-muted-foreground">
             By submitting your booking and/or completed forms, you confirm that you have read, understood, and agree to all
             Sloppy Kisses terms and conditions as stated on our website.
