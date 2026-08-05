@@ -21,7 +21,7 @@ import {
   type HotelDetails,
   type TransportDetails,
 } from "./detailsQueries";
-import { GroomingFields, HotelFields, TransportFields } from "./BookingDetailsFields";
+import { GroomingFields, TransportFields } from "./BookingDetailsFields";
 import { RecurrenceFields, DEFAULT_RECURRENCE, toRule, type RecurrenceValue } from "./RecurrenceFields";
 import { useCreateRecurringBooking } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -56,7 +56,14 @@ import {
   useAccommodationPets,
   useAccommodationWriteBack,
 } from "@/features/hotelForm/prefillQueries";
-import { useAccommodationForm, type AccommodationFormPayload } from "@/features/hotelForm/accommodationForm";
+import {
+  useAccommodationForm,
+  CHECK_IN_TIME,
+  checkOutTimeFor,
+  isStayPlayWindow,
+  type AccommodationFormPayload,
+} from "@/features/hotelForm/accommodationForm";
+import { GuidelinesSection } from "@/features/hotelForm/GuidelinesSection";
 import { supabase } from "@/lib/supabase/client";
 
 const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: ResourceType }[] = [
