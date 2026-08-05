@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Camera, Check, Loader2, ImagePlus } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
+import { AlertTriangle, Camera, Check, Loader2, ImagePlus, RotateCw } from "lucide-react";
 
 interface Info {
   label: string | null;
@@ -26,6 +25,25 @@ async function call(body: Record<string, unknown>) {
   return json;
 }
 
+/**
+ * Send the bytes to our own function, which forwards them to storage.
+ * A phone browser PUTting straight to S3 fails silently ("Load failed"),
+ * so the file never goes cross-origin from here.
+ */
+async function uploadFile(token: string, file: File) {
+  const form = new FormData();
+  form.append("token", token);
+  form.append("file", file, file.name || `photo-${Date.now()}.jpg`);
+  const res = await fetch(FN_URL, {
+    method: "POST",
+    headers: { apikey: ANON, Authorization: `Bearer ${ANON}` },
+    body: form,
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json?.error ?? `Upload failed (${res.status})`);
+  return json;
+}
+
 /** Public, token-authorised phone page. No login — the link is the credential. */
 export default function SnapUpload() {
   const { token = "" } = useParams();
@@ -33,6 +51,7 @@ export default function SnapUpload() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string[]>([]);
+  const [lastFile, setLastFile] = useState<File | null>(null);
   const camRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -44,25 +63,17 @@ export default function SnapUpload() {
 
   async function upload(file: File | undefined) {
     if (!file) return;
+    setLastFile(file);
+    setErr(null);
     setBusy(true);
     try {
-      const sign = await call({
-        action: "sign",
-        token,
-        file_name: file.name || `photo-${Date.now()}.jpg`,
-        content_type: file.type || "image/jpeg",
-        size_bytes: file.size,
-      });
-      const put = await fetch(sign.upload_url, {
-        method: "PUT",
-        body: file,
-        headers: { "Content-Type": file.type || "image/jpeg" },
-      });
-      if (!put.ok) throw new Error(`Upload failed (${put.status})`);
-      await call({ action: "confirm", token, document_id: sign.document_id, client_size_bytes: file.size });
+      await uploadFile(token, file);
       setDone((d) => [...d, file.name || "Photo"]);
+      setLastFile(null);
     } catch (e: any) {
-      setErr(e.message);
+      setErr(e?.message === "Failed to fetch" || e?.message === "Load failed"
+        ? "We couldn't reach the server — check your signal and try again."
+        : e?.message ?? "Upload failed");
     } finally {
       setBusy(false);
     }
@@ -89,8 +100,22 @@ export default function SnapUpload() {
         </div>
 
         {err && (
-          <div className="rounded-2xl bg-sk-coral-soft p-4 text-sm font-medium text-sk-coral-dark">
-            {friendly[err] ?? err}
+          <div className="space-y-3 rounded-2xl bg-sk-coral-soft p-4 text-sm font-medium text-sk-coral-dark">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{friendly[err] ?? err}</span>
+            </div>
+            {lastFile && (
+              <button
+                type="button"
+                onClick={() => upload(lastFile)}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-sk-coral px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+              >
+                {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}
+                Try again
+              </button>
+            )}
           </div>
         )}
 
