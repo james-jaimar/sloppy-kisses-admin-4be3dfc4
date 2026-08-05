@@ -16,6 +16,7 @@ import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { HotelVaxGatePanel } from "./HotelVaxGatePanel";
 import { GroomingVaxGatePanel } from "./GroomingVaxGatePanel";
+import { PhotoGatePanel } from "./PhotoGatePanel";
 import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
 
 const SERVICE_LABELS: Record<string, string> = {

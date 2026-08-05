@@ -27,6 +27,7 @@ export default function HotelWorkflowPage() {
 
   const [form, setForm] = useState({
     vax_gate_mode: "soft" as VaxGateMode,
+    photo_gate_mode: "hard" as "off" | "soft" | "hard",
     overbooking_mode: "warn" as OverbookingMode,
     check_in_open_time: "08:00",
     check_in_close_time: "18:00",
@@ -44,6 +45,7 @@ export default function HotelWorkflowPage() {
     if (settingsQ.data) {
       setForm({
         vax_gate_mode: settingsQ.data.vax_gate_mode,
+        photo_gate_mode: ((settingsQ.data as any).photo_gate_mode ?? "hard") as "off" | "soft" | "hard",
         overbooking_mode: settingsQ.data.overbooking_mode ?? "warn",
         check_in_open_time: trimTime(settingsQ.data.check_in_open_time),
         check_in_close_time: trimTime(settingsQ.data.check_in_close_time),
@@ -63,6 +65,7 @@ export default function HotelWorkflowPage() {
     try {
       await update.mutateAsync({
         vax_gate_mode: form.vax_gate_mode,
+        photo_gate_mode: form.photo_gate_mode,
         overbooking_mode: form.overbooking_mode,
         check_in_open_time: form.check_in_open_time,
         check_in_close_time: form.check_in_close_time,
@@ -113,6 +116,34 @@ export default function HotelWorkflowPage() {
 
           <Field
             label="When a pen/space is full"
+            hint="Capacity is the pens/spaces set on each hotel or cattery resource under Settings → Resources."
+          >
+            <select
+              disabled={!canManage}
+              value={form.overbooking_mode}
+              onChange={(e) => setForm((f) => ({ ...f, overbooking_mode: e.target.value as OverbookingMode }))}
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+            >
+              <option value="warn">Warn — staff can overbook after confirming</option>
+              <option value="block">Block — refuse bookings past capacity</option>
+            </select>
+          </Field>
+
+          <Field label="Pet photo required" hint="A photo on file lets staff match the right dog to the right owner at check-in.">
+            <select
+              disabled={!canManage}
+              value={form.photo_gate_mode}
+              onChange={(e) => setForm((f) => ({ ...f, photo_gate_mode: e.target.value as "off" | "soft" | "hard" }))}
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+            >
+              <option value="hard">Required — block the booking until a photo is on file</option>
+              <option value="soft">Warn — flag the missing photo but allow the booking</option>
+              <option value="off">Off — skip check</option>
+            </select>
+          </Field>
+
+          <Field
+            label="Legacy capacity setting"
             hint="Capacity is the pens/spaces set on each hotel or cattery resource under Settings → Resources."
           >
             <select
