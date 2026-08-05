@@ -303,7 +303,7 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
   {
     id: "pricing",
     label: "Pricing & billing",
-    members: ["Hotel & Cattery rates", "Invoicing", "Payment methods", "Payment providers"],
+    members: ["Hotel & Cattery rates", "Invoicing", "Payment methods", "Payment providers", "Gateway activity"],
   },
   {
     id: "comms",
