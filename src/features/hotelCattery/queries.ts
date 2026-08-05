@@ -180,6 +180,8 @@ export interface HotelWorkflowSettings {
   deposit_split_enabled: boolean;
   checkout_groom_discount_pct: number;
   daycare_credit_enabled: boolean;
+  guidelines_md: string | null;
+  guidelines_version: number;
 }
 
 export function useHotelWorkflowSettings(tenantId: string | null | undefined) {
