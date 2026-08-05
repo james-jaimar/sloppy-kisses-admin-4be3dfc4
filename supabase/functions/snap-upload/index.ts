@@ -261,6 +261,11 @@ Deno.serve(async (req) => {
     }
   }
 
+  if (action === "close") {
+    await admin.from("upload_sessions").update({ closed_at: new Date().toISOString() }).eq("id", s.id);
+    return json(200, { ok: true });
+  }
+
   if (action === "confirm") {
     const docId = String(body.document_id ?? "");
     if (!docId) return json(400, { error: "document_id required" });
