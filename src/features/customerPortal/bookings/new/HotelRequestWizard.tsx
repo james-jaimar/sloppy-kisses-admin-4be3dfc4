@@ -28,7 +28,6 @@ import {
   CHECK_IN_TIME,
   checkOutTimeFor,
   checkOutWindowsFor,
-  isStayPlayWindow,
   type AccommodationFormPayload,
 } from "@/features/hotelForm/accommodationForm";
 import { GuidelinesSection } from "@/features/hotelForm/GuidelinesSection";
