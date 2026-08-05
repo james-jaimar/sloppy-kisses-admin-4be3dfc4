@@ -126,6 +126,13 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/gateway-activity",
+    label: "Gateway activity",
+    description: "Online payment notifications, checkout attempts and a test tool.",
+    icon: CreditCard,
+    ready: true,
+  },
+  {
     to: "/admin/settings/comms",
     label: "Comms settings",
     description: "Sender identity, quiet hours, test sends.",
