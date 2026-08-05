@@ -336,7 +336,61 @@ export default function HotelRequestWizard() {
             </Field>
           </div>
 
-          <Field label="Room preference (optional)" hint="Final room allocation is confirmed by our team.">
+          <Field label="Accommodation" hint="This sets the nightly rate. Final room allocation is confirmed by our team.">
+            <select
+              value={accommodationType}
+              onChange={(e) => setAccommodationType(e.target.value)}
+              className={selectCls}
+            >
+              <option value="">— Select accommodation —</option>
+              {speciesRates.map((r) => {
+                const blocked = rateBlockReason(r);
+                return (
+                  <option key={r.id} value={r.accommodation_type} disabled={!!blocked}>
+                    {r.display_name} · {fmtZar(Number(r.nightly_rate_zar))}/night
+                    {blocked ? ` — ${blocked}` : ""}
+                  </option>
+                );
+              })}
+            </select>
+            {speciesRates.length === 0 && !ratesQ.isLoading && (
+              <p className="mt-1 text-xs text-sk-coral-dark">
+                No rates are set up yet — please contact us to book.
+              </p>
+            )}
+          </Field>
+
+          {estimate && (
+            <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Estimated cost
+              </div>
+              <div className="flex justify-between">
+                <span>
+                  {fmtZar(estimate.nightly)} × {nights} night{nights === 1 ? "" : "s"}
+                </span>
+                <span>{fmtZar(estimate.stayTotal)}</span>
+              </div>
+              {estimate.extraTotal > 0 && (
+                <div className="flex justify-between">
+                  <span>
+                    Extra pet{estimate.extras === 1 ? "" : "s"} ({estimate.extras}) × {nights} night
+                    {nights === 1 ? "" : "s"}
+                  </span>
+                  <span>{fmtZar(estimate.extraTotal)}</span>
+                </div>
+              )}
+              <div className="mt-2 flex justify-between border-t border-border pt-2 font-semibold">
+                <span>Estimated total</span>
+                <span>{fmtZar(estimate.grand)}</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Excludes any extras and peak-season adjustments; your invoice confirms the final amount.
+              </p>
+            </div>
+          )}
+
+          <Field label="Room preference (optional)" hint="A request only — we'll do our best.">
             <select value={roomPref} onChange={(e) => setRoomPref(e.target.value)} className={selectCls}>
               <option value="">No preference</option>
               {(rooms.data ?? []).map((r: any) => (
