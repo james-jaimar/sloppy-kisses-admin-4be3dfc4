@@ -9,7 +9,7 @@ import { DocumentsPanel } from "@/features/documents/DocumentsPanel";
 import { PetGroomingDefaultsPanel } from "@/features/grooming/instructions/PetGroomingDefaultsPanel";
 import { SizeOverrideBadge } from "@/features/pets/SizeOverrideControl";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
-import { Syringe, FileText } from "lucide-react";
+import { Syringe, FileText, CalendarPlus } from "lucide-react";
 import { useCurrentCustomer } from "../hooks";
 import { MyPetFormModal } from "./MyPetFormModal";
 
@@ -60,9 +60,14 @@ function PetDetailBody({ p, editOpen, setEditOpen, wantsGrooming }: { p: any; ed
         title={p.name ?? "Pet"}
         subtitle={[p.breed, p.species].filter(Boolean).join(" · ")}
         actions={
-          <button onClick={() => setEditOpen(true)} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">
-            <Pencil className="h-4 w-4" /> Edit
-          </button>
+          <div className="flex items-center gap-2">
+            <Link to="/customer/bookings/new" className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-3 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark">
+              <CalendarPlus className="h-4 w-4" /> Book for {p.name}
+            </Link>
+            <button onClick={() => setEditOpen(true)} className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted">
+              <Pencil className="h-4 w-4" /> Edit
+            </button>
+          </div>
         }
       />
       <div className="flex-1 space-y-6 p-6">
