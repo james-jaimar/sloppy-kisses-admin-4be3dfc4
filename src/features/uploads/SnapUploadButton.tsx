@@ -2,7 +2,7 @@ import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Smartphone, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCreateSnapSession, useSnapSessionDocuments, readFnError, type SnapTarget } from "./snapQueries";
 
 /**
@@ -64,6 +64,9 @@ export function SnapUploadButton({
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Upload from your phone</DialogTitle>
+            <DialogDescription>
+              Scan the QR code with your phone to add a photo or file to this record.
+            </DialogDescription>
           </DialogHeader>
           {!session ? (
             <div className="grid h-48 place-items-center text-muted-foreground">
