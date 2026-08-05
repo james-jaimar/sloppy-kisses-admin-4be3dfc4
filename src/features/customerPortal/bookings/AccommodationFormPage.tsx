@@ -9,8 +9,9 @@ import { fmtDate } from "../portalCommon";
 import { useCurrentCustomer } from "../hooks";
 import { GuidelinesBody } from "@/features/hotelForm/GuidelinesSection";
 import { useHotelGuidelines } from "@/features/hotelForm/guidelinesQueries";
+import { PetAttachments } from "@/features/uploads/PetAttachments";
+import { usePetAttachmentStatus } from "@/features/uploads/snapQueries";
 import {
-  ATTACHMENT_OPTIONS,
   BEHAVIOUR_OPTIONS,
   CHECK_IN_WINDOWS,
   CHECK_OUT_WINDOWS,
@@ -297,6 +298,9 @@ export default function AccommodationFormPage() {
               <Text label="Tick & flea date" type="date" value={p.tick_flea_date} onChange={(v) => patchPet(i, { tick_flea_date: v })} />
               <Area label="Feeding / medication / grooming notes for this pet" value={p.notes} onChange={(v) => patchPet(i, { notes: v })} />
             </div>
+            {b.tenant_id && p.pet_id && (
+              <PetAttachments tenantId={b.tenant_id} petId={p.pet_id} petName={p.name || "this pet"} />
+            )}
           </Section>
         ))}
 
@@ -316,16 +320,7 @@ export default function AccommodationFormPage() {
           </div>
         </Section>
 
-        <Section title="Important attachments">
-          <div className="flex flex-wrap gap-2">
-            {ATTACHMENT_OPTIONS.map((o) => (
-              <Check key={o} label={o} checked={form.attachments.includes(o)} onChange={() => setForm({ ...form, attachments: toggle(form.attachments, o) })} />
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Photos and vaccination cards can be uploaded under each pet in <Link to="/customer/pets" className="text-sk-coral-dark hover:underline">My pets</Link>.
-          </p>
-        </Section>
+        <MissingAttachments form={form} />
 
         <Section title="Acknowledgement">
           <GuidelinesInline tenantId={b.tenant_id} />
