@@ -34,8 +34,32 @@ import { GuidelinesSection } from "@/features/hotelForm/GuidelinesSection";
 import { useHotelGuidelines } from "@/features/hotelForm/guidelinesQueries";
 import { usePhotoGateMode } from "@/features/bookings/PhotoGatePanel";
 import { usePetPhotoStatus, isPhotoWaiverActive } from "@/features/pets/photoGateQueries";
+import {
+  useHotelRateCards,
+  SIZE_BAND_ORDER,
+  type PetSizeBand,
+} from "@/features/settings/hotelRateCardQueries";
 
 const STEPS = ["Stay", "Your details", "Pet details", "Care & consent"];
+
+const fmtZar = (n: number) =>
+  new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", minimumFractionDigits: 2 }).format(n);
+
+function bandIndex(b: PetSizeBand | null | undefined) {
+  return b ? SIZE_BAND_ORDER.indexOf(b) : -1;
+}
+
+function rateAllowsSize(
+  r: { min_size_band: PetSizeBand | null; max_size_band: PetSizeBand | null },
+  size: PetSizeBand | null,
+) {
+  if (!r.min_size_band && !r.max_size_band) return true;
+  if (!size) return false;
+  const idx = bandIndex(size);
+  const lo = r.min_size_band ? bandIndex(r.min_size_band) : 0;
+  const hi = r.max_size_band ? bandIndex(r.max_size_band) : SIZE_BAND_ORDER.length - 1;
+  return idx >= lo && idx <= hi;
+}
 
 function addDays(date: string, days: number): string {
   if (!date) return "";
@@ -62,6 +86,7 @@ export default function HotelRequestWizard() {
   const [checkInDate, setCheckInDate] = useState("");
   const [nights, setNights] = useState(1);
   const [roomPref, setRoomPref] = useState("");
+  const [accommodationType, setAccommodationType] = useState("");
   const [form, setForm] = useState<AccommodationFormPayload>(emptyAccommodationForm());
   const [seeded, setSeeded] = useState(false);
 
@@ -99,7 +124,45 @@ export default function HotelRequestWizard() {
   const isCat = selectedPets.length > 0 && selectedPets.every((p) => (p.species ?? "").toLowerCase().includes("cat"));
   const serviceType = isCat ? "hotel_cat" : "hotel_dog";
 
-  const stayReady = petIds.length > 0 && !!checkInDate && nights >= 1;
+  // Accommodation drives the price, so it comes from the rate cards — not the room list.
+  const ratesQ = useHotelRateCards(cust.data?.tenant_id, { activeOnly: true });
+  const speciesRates = useMemo(
+    () => (ratesQ.data ?? []).filter((r) => r.species === (isCat ? "cat" : "dog")),
+    [ratesQ.data, isCat],
+  );
+  const rateBlockReason = (r: { min_size_band: PetSizeBand | null; max_size_band: PetSizeBand | null }) => {
+    if (selectedPets.length === 0) return null;
+    const bad = selectedPets.filter(
+      (p: any) => !rateAllowsSize(r, ((p.size_override ?? p.size) ?? null) as PetSizeBand | null),
+    );
+    if (bad.length === 0) return null;
+    return `Not available for: ${bad
+      .map((p: any) => `${p.name}${p.size_override ?? p.size ? ` (${p.size_override ?? p.size})` : " (no size set)"}`)
+      .join(", ")}`;
+  };
+  const activeRate = speciesRates.find((r) => r.accommodation_type === accommodationType) ?? null;
+
+  // Clear a choice that no longer fits the selected pets / species.
+  useEffect(() => {
+    if (!accommodationType) return;
+    const still = speciesRates.find((r) => r.accommodation_type === accommodationType);
+    if (!still || rateBlockReason(still)) setAccommodationType("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speciesRates, petIds.join(",")]);
+
+  const estimate = useMemo(() => {
+    if (!activeRate) return null;
+    const nightly = Number(activeRate.nightly_rate_zar);
+    const stayTotal = Math.round(nightly * nights * 100) / 100;
+    const extras = Math.max(0, petIds.length - 1);
+    const extraTotal =
+      extras > 0 && Number(activeRate.extra_pet_rate_zar) > 0
+        ? Math.round(Number(activeRate.extra_pet_rate_zar) * extras * nights * 100) / 100
+        : 0;
+    return { nightly, stayTotal, extras, extraTotal, grand: stayTotal + extraTotal };
+  }, [activeRate, nights, petIds.length]);
+
+  const stayReady = petIds.length > 0 && !!checkInDate && nights >= 1 && !!accommodationType;
 
   // Pet photo requirement (Settings → Hotel & Cattery workflow).
   const photoMode = usePhotoGateMode(cust.data?.tenant_id, serviceType);
@@ -140,14 +203,17 @@ export default function HotelRequestWizard() {
       .map((p) => [p.name, p.medication_instructions].filter(Boolean).join(": "))
       .filter(Boolean)
       .join("\n");
+    const notes = [payload.additional_notes || null, roomPref ? `Room preference: ${roomPref}` : null]
+      .filter(Boolean)
+      .join("\n");
     submit.mutate({
       serviceType: serviceType as any,
       petIds,
       startAt,
       endAt: dateToIso(checkOutDate, checkOutTimeFor(payload.check_out_window)),
-      notes: payload.additional_notes || null,
+      notes: notes || null,
       hotel: {
-        accommodation_type: roomPref || null,
+        accommodation_type: accommodationType || null,
         feeding_instructions: petCare || null,
         check_in_window: payload.check_in_window || null,
         check_out_window: payload.check_out_window || null,
