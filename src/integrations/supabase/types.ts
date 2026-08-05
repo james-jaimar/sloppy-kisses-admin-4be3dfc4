@@ -2047,6 +2047,7 @@ export type Database = {
           daily_capacity: number | null
           id: string
           late_arrival_cutoff: string
+          photo_gate_mode: string
           stay_play_default_collect_time: string
           stay_play_grace_minutes: number
           tenant_id: string
@@ -2061,6 +2062,7 @@ export type Database = {
           daily_capacity?: number | null
           id?: string
           late_arrival_cutoff?: string
+          photo_gate_mode?: string
           stay_play_default_collect_time?: string
           stay_play_grace_minutes?: number
           tenant_id: string
@@ -2075,6 +2077,7 @@ export type Database = {
           daily_capacity?: number | null
           id?: string
           late_arrival_cutoff?: string
+          photo_gate_mode?: string
           stay_play_default_collect_time?: string
           stay_play_grace_minutes?: number
           tenant_id?: string
@@ -3335,6 +3338,7 @@ export type Database = {
           overtime_threshold_minutes: number
           pensioner_discount_days: number[]
           pensioner_discount_pct: number
+          photo_gate_mode: string
           pickup_dropoff_fee_zar: number
           puppy_half_price_max_months: number
           require_prepayment_short_notice: boolean
@@ -3356,6 +3360,7 @@ export type Database = {
           overtime_threshold_minutes?: number
           pensioner_discount_days?: number[]
           pensioner_discount_pct?: number
+          photo_gate_mode?: string
           pickup_dropoff_fee_zar?: number
           puppy_half_price_max_months?: number
           require_prepayment_short_notice?: boolean
@@ -3377,6 +3382,7 @@ export type Database = {
           overtime_threshold_minutes?: number
           pensioner_discount_days?: number[]
           pensioner_discount_pct?: number
+          photo_gate_mode?: string
           pickup_dropoff_fee_zar?: number
           puppy_half_price_max_months?: number
           require_prepayment_short_notice?: boolean
@@ -3750,6 +3756,7 @@ export type Database = {
           overbooking_mode: string
           peak_end_month_day: string | null
           peak_start_month_day: string | null
+          photo_gate_mode: string
           require_prepayment_short_notice: boolean
           tenant_id: string
           updated_at: string
@@ -3771,6 +3778,7 @@ export type Database = {
           overbooking_mode?: string
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
+          photo_gate_mode?: string
           require_prepayment_short_notice?: boolean
           tenant_id: string
           updated_at?: string
@@ -3792,6 +3800,7 @@ export type Database = {
           overbooking_mode?: string
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
+          photo_gate_mode?: string
           require_prepayment_short_notice?: boolean
           tenant_id?: string
           updated_at?: string
@@ -5230,6 +5239,10 @@ export type Database = {
           nervous: boolean
           pet_number: string | null
           photo_url: string | null
+          photo_waived_until: string | null
+          photo_waiver_at: string | null
+          photo_waiver_by: string | null
+          photo_waiver_reason: string | null
           raw_gender_label: string | null
           raw_size_label: string | null
           raw_temperament_label: string | null
@@ -5289,6 +5302,10 @@ export type Database = {
           nervous?: boolean
           pet_number?: string | null
           photo_url?: string | null
+          photo_waived_until?: string | null
+          photo_waiver_at?: string | null
+          photo_waiver_by?: string | null
+          photo_waiver_reason?: string | null
           raw_gender_label?: string | null
           raw_size_label?: string | null
           raw_temperament_label?: string | null
@@ -5348,6 +5365,10 @@ export type Database = {
           nervous?: boolean
           pet_number?: string | null
           photo_url?: string | null
+          photo_waived_until?: string | null
+          photo_waiver_at?: string | null
+          photo_waiver_by?: string | null
+          photo_waiver_reason?: string | null
           raw_gender_label?: string | null
           raw_size_label?: string | null
           raw_temperament_label?: string | null
@@ -5384,6 +5405,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pets_photo_waiver_by_fkey"
+            columns: ["photo_waiver_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -6360,6 +6388,7 @@ export type Database = {
           max_leg_gap_minutes: number
           min_lead_hours: number
           min_leg_gap_minutes: number
+          photo_gate_mode: string
           require_prepayment_short_notice: boolean
           round_trip_multiplier: number
           suburb_fees: Json
@@ -6377,6 +6406,7 @@ export type Database = {
           max_leg_gap_minutes?: number
           min_lead_hours?: number
           min_leg_gap_minutes?: number
+          photo_gate_mode?: string
           require_prepayment_short_notice?: boolean
           round_trip_multiplier?: number
           suburb_fees?: Json
@@ -6394,6 +6424,7 @@ export type Database = {
           max_leg_gap_minutes?: number
           min_lead_hours?: number
           min_leg_gap_minutes?: number
+          photo_gate_mode?: string
           require_prepayment_short_notice?: boolean
           round_trip_multiplier?: number
           suburb_fees?: Json
@@ -7289,6 +7320,14 @@ export type Database = {
         Args: { p_at?: string; p_booking_id: string }
         Returns: Json
       }
+      booking_photo_gate: {
+        Args: { p_booking_id: string }
+        Returns: {
+          pet_id: string
+          pet_name: string
+          status: string
+        }[]
+      }
       charge_overdue_interest: {
         Args: { p_as_of?: string; p_preview?: boolean; p_tenant_id: string }
         Returns: Json
@@ -7469,6 +7508,15 @@ export type Database = {
           p_source_payment_id?: string
         }
         Returns: string
+      }
+      pet_photo_status: {
+        Args: { p_pet_ids: string[] }
+        Returns: {
+          document_id: string
+          has_photo: boolean
+          pet_id: string
+          waived_until: string
+        }[]
       }
       portal_cancel_booking: {
         Args: { p_booking_id: string; p_reason?: string }
