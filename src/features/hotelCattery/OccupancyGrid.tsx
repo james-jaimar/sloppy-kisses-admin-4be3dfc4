@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { BOOKING_STATUS_META } from "@/features/bookings/statusMeta";
-import type { HotelBookingRow, HotelResourceRow } from "./queries";
+import { useAssignBookingResource, type HotelBookingRow, type HotelResourceRow } from "./queries";
 
 function addDays(d: Date, n: number) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
 function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
@@ -19,6 +20,7 @@ function barClass(status: string) {
 }
 
 export interface OccupancyGridProps {
+  tenantId: string;
   resources: HotelResourceRow[];
   bookings: HotelBookingRow[];
   windowStart: Date;
@@ -85,7 +87,7 @@ function countTone(used: number, capacity: number | null) {
   return used > 0 ? "text-foreground" : "text-muted-foreground";
 }
 
-export function OccupancyGrid({ resources, bookings, windowStart, windowDays, loading }: OccupancyGridProps) {
+export function OccupancyGrid({ tenantId, resources, bookings, windowStart, windowDays, loading }: OccupancyGridProps) {
   const days = Array.from({ length: windowDays }, (_, i) => addDays(windowStart, i));
   const today = startOfDay(new Date());
 
@@ -153,6 +155,11 @@ export function OccupancyGrid({ resources, bookings, windowStart, windowDays, lo
                   r.id === "__unassigned"
                     ? bookings.filter((b) => !b.resource_id)
                     : bookings.filter((b) => b.resource_id === r.id)
+                }
+                assign={
+                  r.id === "__unassigned"
+                    ? { tenantId, resources, allBookings: bookings, today }
+                    : undefined
                 }
               />
             ))}
