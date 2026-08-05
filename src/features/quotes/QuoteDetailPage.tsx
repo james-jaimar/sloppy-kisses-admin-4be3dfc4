@@ -1,9 +1,12 @@
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { format, parseISO } from "date-fns";
-import { ArrowLeft, CheckCircle2, Send, Ban } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Send, Ban, Download } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { useQuote, useQuoteItems, useUpdateQuoteStatus, useAcceptQuote } from "./queries";
+import {
+  useQuote, useQuoteItems, useUpdateQuoteStatus, useAcceptQuote,
+  useSendQuote, downloadQuotePdf, isQuoteExpired,
+} from "./queries";
 
 export default function QuoteDetailPage() {
   const { id } = useParams();
@@ -12,8 +15,29 @@ export default function QuoteDetailPage() {
   const itemsQ = useQuoteItems(id);
   const setStatus = useUpdateQuoteStatus();
   const accept = useAcceptQuote();
+  const send = useSendQuote();
 
   const q = quoteQ.data;
+  const expired = q ? isQuoteExpired(q) : false;
+  async function onSend() {
+    if (!id) return;
+    try {
+      await send.mutateAsync(id);
+      toast.success("Quote emailed to the customer");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not send the quote");
+    }
+  }
+
+  async function onDownload() {
+    if (!q) return;
+    try {
+      await downloadQuotePdf(q.id, `${q.estimate_number ?? "quote"}.pdf`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not build the PDF");
+    }
+  }
+
 
   async function onAccept() {
     if (!id) return;
@@ -33,12 +57,21 @@ export default function QuoteDetailPage() {
         subtitle={q?.customer?.full_name ?? ""}
         actions={
           <div className="flex flex-wrap gap-2">
-            {q && q.status === "draft" && (
+            {q && (
               <button
-                onClick={() => setStatus.mutate({ id: q.id, status: "sent" })}
+                onClick={onDownload}
                 className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-4 text-sm font-semibold"
               >
-                <Send className="h-4 w-4" /> Mark sent
+                <Download className="h-4 w-4" /> PDF
+              </button>
+            )}
+            {q && q.status !== "cancelled" && (
+              <button
+                onClick={onSend}
+                disabled={send.isPending}
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-4 text-sm font-semibold disabled:opacity-50"
+              >
+                <Send className="h-4 w-4" /> {send.isPending ? "Sending…" : q.sent_at ? "Resend to customer" : "Email to customer"}
               </button>
             )}
             {q && !q.booking_id && q.status !== "cancelled" && (
@@ -66,12 +99,27 @@ export default function QuoteDetailPage() {
           <ArrowLeft className="h-4 w-4" /> All quotes
         </Link>
 
+        {expired && (
+          <div className="rounded-lg border border-sk-orange/40 bg-sk-orange-soft p-3 text-sm text-sk-orange">
+            This quote expired on {q?.expiry_date ? format(parseISO(q.expiry_date), "dd MMM yyyy") : ""}. Prices may need re-checking before you accept it.
+          </div>
+        )}
+
         {q && (
           <div className="sk-card grid gap-4 p-4 sm:grid-cols-4">
-            <Info label="Status" value={q.status} />
+            <Info label="Status" value={expired ? "expired" : q.status} />
             <Info label="Check-in" value={q.start_at ? format(parseISO(q.start_at), "dd MMM yyyy") : "—"} />
             <Info label="Check-out" value={q.end_at ? format(parseISO(q.end_at), "dd MMM yyyy") : "—"} />
             <Info label="Total" value={`R${Number(q.total ?? 0).toFixed(2)}`} />
+          </div>
+        )}
+
+        {q && (
+          <div className="sk-card grid gap-4 p-4 text-sm sm:grid-cols-4">
+            <Info label="Valid until" value={q.expiry_date ? format(parseISO(q.expiry_date), "dd MMM yyyy") : "—"} />
+            <Info label="Sent" value={q.sent_at ? format(parseISO(q.sent_at), "dd MMM yyyy HH:mm") : "Not sent yet"} />
+            <Info label="Accepted" value={q.accepted_at ? format(parseISO(q.accepted_at), "dd MMM yyyy HH:mm") : "—"} />
+            <Info label="Pets" value={String((q.pet_ids ?? []).length || "—")} />
           </div>
         )}
 

@@ -11,6 +11,7 @@ import { BookingChangeModal } from "./BookingChangeModal";
 import { useMinLeadHours } from "./new/useBookingSubmit";
 import { useAccommodationForm } from "@/features/hotelForm/accommodationForm";
 import { PortalGroomRequestStatus } from "@/features/hotelGrooming/PortalGroomRequestStatus";
+import { HotelMoneyStrip } from "@/features/hotelCattery/HotelMoneyStrip";
 
 export default function MyBookingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -88,7 +89,8 @@ export default function MyBookingDetailPage() {
             <Field label="Notes" value={b.notes_customer} full />
           </div>
           <StayPlaySection tenantId={b.tenant_id} bookingId={b.id} />
-          {inv && (
+          {group === "hotel" && <HotelMoneyStrip bookingId={b.id} mode="portal" />}
+          {inv && group !== "hotel" && (
             <div className="rounded-xl border border-border bg-sk-surface-muted p-4">
               <div className="text-xs font-semibold uppercase text-muted-foreground">Invoice</div>
               <div className="mt-1 flex items-center justify-between">

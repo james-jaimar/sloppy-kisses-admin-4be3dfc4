@@ -19,6 +19,7 @@ import { GroomingVaxGatePanel } from "./GroomingVaxGatePanel";
 import { PhotoGatePanel } from "./PhotoGatePanel";
 import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
 import { HotelGroomRequestsPanel } from "@/features/hotelGrooming/HotelGroomRequestsPanel";
+import { HotelMoneyStrip } from "@/features/hotelCattery/HotelMoneyStrip";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -130,6 +131,9 @@ export default function BookingDetailPage() {
               )}
               {(b.service_type === "hotel_dog" || b.service_type === "hotel_cat") && (
                 <HotelGroomRequestsPanel tenantId={tenantId} bookingId={b.id} />
+              )}
+              {(b.service_type === "hotel_dog" || b.service_type === "hotel_cat") && (
+                <HotelMoneyStrip bookingId={b.id} mode="admin" />
               )}
               {tenantId && (b.service_type === "grooming_inhouse" || b.service_type === "grooming_mobile") && (
                 <GroomingVaxGatePanel tenantId={tenantId} bookingId={b.id} />

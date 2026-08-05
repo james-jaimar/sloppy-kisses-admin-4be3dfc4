@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Scissors } from "lucide-react";
+import { Scissors, BadgePercent } from "lucide-react";
 import { ModalShell } from "@/components/modals/ModalShell";
+import { supabase } from "@/lib/supabase/client";
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
 import { useGroomingPackages } from "@/features/settings/groomingRateCardQueries";
 import { useScheduleHotelGroom, type HotelGroomRequest } from "./queries";
@@ -30,6 +32,23 @@ export function ScheduleHotelGroomDialog({
   const [start, setStart] = useState<string | null>(null);
   const [end, setEnd] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
+
+  const discountQ = useQuery({
+    queryKey: ["checkout_groom_discount_pct", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hotel_workflow_settings")
+        .select("checkout_groom_discount_pct")
+        .eq("tenant_id", tenantId as string)
+        .maybeSingle();
+      if (error) throw error;
+      return Number((data as any)?.checkout_groom_discount_pct ?? 0);
+    },
+  });
+  const discountPct = discountQ.data ?? 0;
+  const checkoutDay = request.window_end ?? null;
+  const onCheckoutDay = Boolean(start && checkoutDay && start.slice(0, 10) === checkoutDay);
 
   const minutes = useMemo(() => {
     const p = (packagesQ.data ?? []).find((x) => x.id === packageId);
@@ -96,6 +115,30 @@ export function ScheduleHotelGroomDialog({
       }
     >
       <div className="space-y-4">
+        {discountPct > 0 && checkoutDay && (
+          <div className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 text-sm ${onCheckoutDay ? "border-sk-green/40 bg-sk-green-soft text-sk-green" : "border-border bg-sk-surface-muted"}`}>
+            <span className="inline-flex items-center gap-2">
+              <BadgePercent className="h-4 w-4" />
+              {onCheckoutDay
+                ? `Checkout-day groom — ${discountPct}% off applies automatically.`
+                : `Book on the checkout day (${checkoutDay}) for ${discountPct}% off.`}
+            </span>
+            {!onCheckoutDay && (
+              <button
+                type="button"
+                onClick={() => {
+                  const s = `${checkoutDay}T09:00:00`;
+                  setStart(s);
+                  setEnd(addMinutes(s, minutes));
+                }}
+                className="rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold"
+              >
+                Use checkout morning
+              </button>
+            )}
+          </div>
+        )}
+
         {request.customer_notes && (
           <div className="rounded-xl border border-border bg-sk-surface-muted p-3 text-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
