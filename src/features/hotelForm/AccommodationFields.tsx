@@ -276,12 +276,53 @@ export function VetSection({ form, setForm, collapsible }: FormProps) {
   );
 }
 
-export function StayWindowSection({ form, setForm, collapsible }: FormProps) {
+export function StayWindowSection({
+  form,
+  setForm,
+  collapsible,
+  checkOutDate,
+}: FormProps & { checkOutDate?: string | null }) {
+  const options = checkOutWindowsFor(checkOutDate);
+  const sundayOnly = options.length === 1;
   return (
     <Section title="Arrival & collection" collapsible={collapsible} complete={Boolean(form.check_in_window)}>
       <div className="grid gap-4 md:grid-cols-2">
-        <Select label="Check-in time" options={CHECK_IN_WINDOWS} value={form.check_in_window} onChange={(v) => setForm({ ...form, check_in_window: v })} />
-        <Select label="Check-out time" options={CHECK_OUT_WINDOWS} value={form.check_out_window} onChange={(v) => setForm({ ...form, check_out_window: v })} />
+        <div className="text-sm">
+          <span className="text-xs font-semibold uppercase text-muted-foreground">Check-in time</span>
+          <div className="mt-1 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
+            {CHECK_IN_WINDOWS[0]} <span className="text-xs text-muted-foreground">· arrivals are only taken in this window</span>
+          </div>
+        </div>
+        <div className="text-sm">
+          <span className="text-xs font-semibold uppercase text-muted-foreground">Check-out time</span>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {options.map((o) => (
+              <button
+                key={o}
+                type="button"
+                onClick={() => setForm({ ...form, check_out_window: o })}
+                className={
+                  "rounded-lg border px-3 py-2 text-sm " +
+                  (form.check_out_window === o
+                    ? "border-sk-coral bg-sk-coral-soft text-sk-coral-dark"
+                    : "border-border bg-white hover:bg-muted")
+                }
+              >
+                {o}
+              </button>
+            ))}
+          </div>
+          {sundayOnly && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Sundays &amp; public holidays: collection is 16:00–16:30 only.
+            </p>
+          )}
+          {isStayPlayWindow(form.check_out_window) && (
+            <p className="mt-1 text-xs text-sk-coral-dark">
+              Late check-out (Stay &amp; Play) — your pet joins daycare for the day and an extra fee applies.
+            </p>
+          )}
+        </div>
         <div className="flex flex-wrap gap-2 md:col-span-2">
           <Check label="Collection required" checked={form.pickup_required} onChange={(v) => setForm({ ...form, pickup_required: v })} />
           <Check label="Drop-off required" checked={form.dropoff_required} onChange={(v) => setForm({ ...form, dropoff_required: v })} />
@@ -342,7 +383,19 @@ export function PetSections({ form, setForm, collapsible }: FormProps) {
             <Text label="Kennel cough date" type="date" value={p.vax_kennel_cough} onChange={(v) => patchPet(i, { vax_kennel_cough: v })} />
             <Text label="Tick & flea product" value={p.tick_flea_product} onChange={(v) => patchPet(i, { tick_flea_product: v })} />
             <Text label="Tick & flea date" type="date" value={p.tick_flea_date} onChange={(v) => patchPet(i, { tick_flea_date: v })} />
-            <Area label="Feeding / medication / grooming notes for this pet" value={p.notes} onChange={(v) => patchPet(i, { notes: v })} />
+            <Area label="Feeding instructions" value={p.feeding_instructions ?? ""} onChange={(v) => patchPet(i, { feeding_instructions: v })} />
+            <Area label="Medication instructions" value={p.medication_instructions ?? ""} onChange={(v) => patchPet(i, { medication_instructions: v })} />
+            <div className="md:col-span-2">
+              <Check
+                label="Grooming requested for this pet"
+                checked={Boolean(p.grooming_required)}
+                onChange={(v) => patchPet(i, { grooming_required: v })}
+              />
+            </div>
+            {p.grooming_required && (
+              <Area label="Grooming notes" value={p.grooming_notes ?? ""} onChange={(v) => patchPet(i, { grooming_notes: v })} />
+            )}
+            <Area label="Anything else about this pet" value={p.notes} onChange={(v) => patchPet(i, { notes: v })} />
           </div>
         </Section>
       ))}
@@ -352,16 +405,11 @@ export function PetSections({ form, setForm, collapsible }: FormProps) {
 
 export function CareSection({ form, setForm, collapsible }: FormProps) {
   return (
-    <Section title="Care instructions" collapsible={collapsible} complete={Boolean(form.feeding_instructions)}>
+    <Section title="Care instructions" collapsible={collapsible} complete={Boolean(form.belongings_notes)}>
       <div className="grid gap-4 md:grid-cols-2">
-        <Area label="Feeding instructions" value={form.feeding_instructions} onChange={(v) => setForm({ ...form, feeding_instructions: v })} />
-        <Area label="Medication instructions" value={form.medication_instructions} onChange={(v) => setForm({ ...form, medication_instructions: v })} />
-        <div className="md:col-span-2">
-          <Check label="Grooming requested during the stay" checked={form.grooming_required} onChange={(v) => setForm({ ...form, grooming_required: v })} />
-        </div>
-        {form.grooming_required && (
-          <Area label="Grooming instructions" value={form.grooming_instructions} onChange={(v) => setForm({ ...form, grooming_instructions: v })} />
-        )}
+        <p className="text-xs text-muted-foreground md:col-span-2">
+          Feeding, medication and grooming notes are captured on each pet's card above.
+        </p>
         <Area label="Belongings sent with your pet (please label clearly)" value={form.belongings_notes} onChange={(v) => setForm({ ...form, belongings_notes: v })} />
         <Area label="Emergency instructions" value={form.emergency_notes} onChange={(v) => setForm({ ...form, emergency_notes: v })} />
         <Area label="Anything else we should know?" value={form.additional_notes} onChange={(v) => setForm({ ...form, additional_notes: v })} />
