@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { ChevronDown, CheckCircle2 } from "lucide-react";
 import { PetAttachments } from "@/features/uploads/PetAttachments";
+import { usePetAttachmentStatus } from "@/features/uploads/snapQueries";
 import {
   BEHAVIOUR_OPTIONS,
   CHECK_IN_WINDOWS,
