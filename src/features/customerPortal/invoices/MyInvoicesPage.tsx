@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Loader2, CalendarPlus } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { useCurrentCustomer } from "../hooks";
@@ -52,7 +52,14 @@ export default function MyInvoicesPage() {
       <div className="flex-1 p-6">
         {tab === "invoices" && (<>
         {q.isLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
-        {q.data && q.data.length === 0 && <div className="sk-card p-10 text-center text-sm text-muted-foreground">No invoices yet.</div>}
+        {q.data && q.data.length === 0 && (
+          <div className="sk-card grid place-items-center gap-3 p-10 text-center">
+            <div className="text-sm text-muted-foreground">No invoices yet.</div>
+            <Link to="/customer/bookings/new" className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark">
+              <CalendarPlus className="h-4 w-4" /> Book a service
+            </Link>
+          </div>
+        )}
         {q.data && q.data.length > 0 && (
           <div className="sk-card overflow-hidden">
             <table className="w-full text-sm">
