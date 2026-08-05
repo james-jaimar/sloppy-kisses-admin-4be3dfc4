@@ -171,13 +171,14 @@ export function OccupancyGrid({ tenantId, resources, bookings, windowStart, wind
 }
 
 function ResourceRow({
-  resource, days, windowStart, windowEnd, bookings,
+  resource, days, windowStart, windowEnd, bookings, assign,
 }: {
   resource: { id: string; name: string; capacity: number | null };
   days: Date[];
   windowStart: Date;
   windowEnd: Date;
   bookings: HotelBookingRow[];
+  assign?: { tenantId: string; resources: HotelResourceRow[]; allBookings: HotelBookingRow[]; today: Date };
 }) {
   const today = startOfDay(new Date());
   const { segments, lanes } = buildSegments(bookings, windowStart, windowEnd);
@@ -252,6 +253,85 @@ function ResourceRow({
               title={capacity != null ? `${used} of ${capacity} spaces used` : `${used} pets`}
             >
               {capacity != null ? `${used}/${capacity}` : used || "—"}
+            </div>
+          );
+        })}
+      </div>
+
+      {assign && bookings.length > 0 && (
+        <AssignPanel
+          tenantId={assign.tenantId}
+          resources={assign.resources}
+          allBookings={assign.allBookings}
+          today={assign.today}
+          bookings={bookings}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Quick "put this stay in an area" control for unassigned hotel/cattery bookings. */
+function AssignPanel({
+  tenantId, resources, allBookings, today, bookings,
+}: {
+  tenantId: string;
+  resources: HotelResourceRow[];
+  allBookings: HotelBookingRow[];
+  today: Date;
+  bookings: HotelBookingRow[];
+}) {
+  const assignM = useAssignBookingResource(tenantId);
+
+  return (
+    <div className="border-t border-border bg-sk-surface-muted/60 px-3 py-3">
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Assign an area
+      </div>
+      <div className="space-y-2">
+        {bookings.map((b) => {
+          const wanted = b.service_type === "hotel_cat" ? "cattery_area" : "hotel_area";
+          const options = resources.filter((r) => r.type === wanted);
+          const petNames = b.pets.map((p) => p.name ?? "Unnamed pet").join(", ") || "Pet";
+          return (
+            <div key={b.id} className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-medium">{petNames}</span>
+              <span className="text-muted-foreground">{b.customer?.full_name ?? "—"}</span>
+              <span className="text-muted-foreground">{b.booking_number}</span>
+              <select
+                className="ml-auto rounded-lg border border-border bg-background px-2 py-1 text-xs"
+                defaultValue=""
+                disabled={assignM.isPending || !options.length}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  if (!id) return;
+                  const target = options.find((o) => o.id === id);
+                  const used = usedOnDay(allBookings.filter((x) => x.resource_id === id), today);
+                  if (target?.capacity != null && used + Math.max(1, b.pets.length) > target.capacity) {
+                    const ok = window.confirm(
+                      `${target.name} is at ${used}/${target.capacity} today. Assign anyway?`,
+                    );
+                    if (!ok) { e.target.value = ""; return; }
+                  }
+                  assignM.mutate(
+                    { bookingId: b.id, resourceId: id },
+                    {
+                      onSuccess: () => toast.success(`${b.booking_number} moved to ${target?.name ?? "area"}`),
+                      onError: (err: any) => toast.error(err?.message ?? "Could not assign the area"),
+                    },
+                  );
+                }}
+              >
+                <option value="">{options.length ? "Choose area…" : "No areas set up"}</option>
+                {options.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                    {o.capacity != null
+                      ? ` (${usedOnDay(allBookings.filter((x) => x.resource_id === o.id), today)}/${o.capacity} today)`
+                      : ""}
+                  </option>
+                ))}
+              </select>
             </div>
           );
         })}
