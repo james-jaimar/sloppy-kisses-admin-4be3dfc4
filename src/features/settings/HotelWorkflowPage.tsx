@@ -142,21 +142,6 @@ export default function HotelWorkflowPage() {
             </select>
           </Field>
 
-          <Field
-            label="Legacy capacity setting"
-            hint="Capacity is the pens/spaces set on each hotel or cattery resource under Settings → Resources."
-          >
-            <select
-              disabled={!canManage}
-              value={form.overbooking_mode}
-              onChange={(e) => setForm((f) => ({ ...f, overbooking_mode: e.target.value as OverbookingMode }))}
-              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-            >
-              <option value="warn">Warn — staff can overbook after confirming</option>
-              <option value="block">Block — refuse bookings past capacity</option>
-            </select>
-          </Field>
-
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Check-in opens at">
               <input

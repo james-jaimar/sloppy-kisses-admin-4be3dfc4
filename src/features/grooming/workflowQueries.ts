@@ -7,6 +7,7 @@ export interface GroomingWorkflowSettings {
   id: string;
   tenant_id: string;
   vax_gate_mode: GroomingVaxGateMode;
+  photo_gate_mode: "off" | "soft" | "hard";
   pensioner_discount_pct: number;
   default_mobile_travel_fee_zar: number;
   matted_rate_per_15min_zar: number;
