@@ -74,10 +74,9 @@ export function ScheduleHotelGroomDialog({
 
   return (
     <ModalShell
-      open={open}
       onClose={onClose}
       title={`Schedule groom — ${request.petLabel ?? request.pet_name ?? "pet"}`}
-      description={`Choose a slot inside the hotel stay (${windowLabel}).`}
+      subtitle={`Choose a slot inside the hotel stay (${windowLabel}).`}
       footer={
         <div className="flex justify-end gap-2">
           <button
