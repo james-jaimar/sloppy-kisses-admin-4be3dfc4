@@ -438,9 +438,13 @@ export function AcknowledgementSection({ form, setForm, collapsible }: FormProps
     <Section title="Acknowledgement" collapsible={collapsible} complete={form.acknowledgement.accepted}>
       <p className="text-sm text-muted-foreground">
         By submitting your booking and/or completed forms, you confirm that you have read, understood, and agree to all
-        Sloppy Kisses terms and conditions as stated on our website.
+        Sloppy Kisses terms and conditions as stated on our website, together with the hotel guidelines shown above.
       </p>
-      <Check label="I have read and agree to the terms and conditions" checked={form.acknowledgement.accepted} onChange={(v) => set({ accepted: v })} />
+      <Check
+        label="I have read and agree to the terms and conditions and the hotel guidelines"
+        checked={form.acknowledgement.accepted}
+        onChange={(v) => set({ accepted: v })}
+      />
       <div className="grid gap-4 md:grid-cols-2">
         <Text label="Signed (full name)" value={form.acknowledgement.signed_name} onChange={(v) => set({ signed_name: v })} />
         <Text label="Signed at (place)" value={form.acknowledgement.signed_place} onChange={(v) => set({ signed_place: v })} />
