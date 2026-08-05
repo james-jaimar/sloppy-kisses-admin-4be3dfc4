@@ -94,6 +94,119 @@ export interface NewQuoteInput {
   pet_ids: string[];
   notes: string | null;
   items: { description: string; quantity: number; unit_price: number }[];
+  expiry_date?: string | null;
+}
+
+export interface HotelStayLine {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  line_total: number;
+}
+
+/** Prices a hotel stay with the same rules the booking invoice uses. */
+export function useHotelStayLines(params: {
+  tenantId: string | null | undefined;
+  species: "dog" | "cat";
+  accommodationType: string | null;
+  start: string | null;
+  end: string | null;
+  petCount: number;
+}) {
+  const { tenantId, species, accommodationType, start, end, petCount } = params;
+  return useQuery({
+    queryKey: ["hotel_stay_lines", tenantId, species, accommodationType, start, end, petCount],
+    enabled: Boolean(tenantId && accommodationType && start && end && end > start),
+    queryFn: async (): Promise<HotelStayLine[]> => {
+      const { data, error } = await supabase.rpc("hotel_stay_lines" as any, {
+        p_tenant_id: tenantId,
+        p_species: species,
+        p_accommodation_type: accommodationType,
+        p_start: start,
+        p_end: end,
+        p_pet_count: Math.max(1, petCount),
+      });
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({
+        description: r.description,
+        quantity: Number(r.quantity),
+        unit_price: Number(r.unit_price),
+        line_total: Number(r.line_total),
+      }));
+    },
+    retry: false,
+  });
+}
+
+/** Quote validity window configured in Hotel workflow settings (defaults to 14 days). */
+export function useQuoteValidityDays(tenantId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["quote_validity_days", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await supabase
+        .from("hotel_workflow_settings" as any)
+        .select("quote_validity_days")
+        .eq("tenant_id", tenantId as string)
+        .maybeSingle();
+      if (error) throw error;
+      return Number((data as any)?.quote_validity_days ?? 14) || 14;
+    },
+  });
+}
+
+export function isQuoteExpired(q: Pick<QuoteRow, "status" | "expiry_date">): boolean {
+  if (!q.expiry_date) return false;
+  if (q.status === "accepted" || q.status === "cancelled") return false;
+  return q.expiry_date < new Date().toISOString().slice(0, 10);
+}
+
+/** Downloads the quote PDF. */
+export async function downloadQuotePdf(quoteId: string, filename: string) {
+  const { data: sess } = await supabase.auth.getSession();
+  const token = sess.session?.access_token;
+  if (!token) throw new Error("Not signed in");
+  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-quote-pdf`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+    },
+    body: JSON.stringify({ quote_id: quoteId }),
+  });
+  if (!res.ok) {
+    let msg = `Failed (${res.status})`;
+    try { const j = await res.json(); msg = j.error || msg; } catch { /* noop */ }
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(a.href);
+}
+
+/** Emails the quote PDF to the customer. */
+export function useSendQuote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase.functions.invoke("send-quote-email", {
+        body: { quote_id: id },
+      });
+      if (error) throw error;
+      if ((data as any)?.ok === false) throw new Error((data as any)?.error ?? "Could not send the quote");
+      return data;
+    },
+    onSuccess: (_d, id) => {
+      qc.invalidateQueries({ queryKey: ["estimates"] });
+      qc.invalidateQueries({ queryKey: ["estimate", id] });
+    },
+  });
 }
 
 export function useCreateQuote(tenantId: string) {
@@ -120,6 +233,7 @@ export function useCreateQuote(tenantId: string) {
           accommodation_type: input.accommodation_type,
           pet_ids: input.pet_ids,
           notes: input.notes,
+          expiry_date: input.expiry_date ?? null,
           subtotal,
           total: subtotal,
         } as any)

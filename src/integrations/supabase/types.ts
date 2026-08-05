@@ -700,6 +700,7 @@ export type Database = {
           created_by: string | null
           customer_id: string
           deposit_invoice_id: string | null
+          deposit_waived: boolean
           end_at: string | null
           end_date: string | null
           estimate_id: string | null
@@ -736,6 +737,7 @@ export type Database = {
           created_by?: string | null
           customer_id: string
           deposit_invoice_id?: string | null
+          deposit_waived?: boolean
           end_at?: string | null
           end_date?: string | null
           estimate_id?: string | null
@@ -772,6 +774,7 @@ export type Database = {
           created_by?: string | null
           customer_id?: string
           deposit_invoice_id?: string | null
+          deposit_waived?: boolean
           end_at?: string | null
           end_date?: string | null
           estimate_id?: string | null
@@ -3857,6 +3860,7 @@ export type Database = {
           peak_end_month_day: string | null
           peak_start_month_day: string | null
           photo_gate_mode: string
+          quote_validity_days: number
           require_prepayment_short_notice: boolean
           tenant_id: string
           updated_at: string
@@ -3879,6 +3883,7 @@ export type Database = {
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
           photo_gate_mode?: string
+          quote_validity_days?: number
           require_prepayment_short_notice?: boolean
           tenant_id: string
           updated_at?: string
@@ -3901,6 +3906,7 @@ export type Database = {
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
           photo_gate_mode?: string
+          quote_validity_days?: number
           require_prepayment_short_notice?: boolean
           tenant_id?: string
           updated_at?: string
@@ -7588,6 +7594,15 @@ export type Database = {
         Args: { p_as_of?: string; p_preview?: boolean; p_tenant_id: string }
         Returns: Json
       }
+      create_checkout_groom: {
+        Args: {
+          p_hotel_booking_id: string
+          p_package_id: string
+          p_pet_id: string
+          p_start_time?: string
+        }
+        Returns: string
+      }
       current_customer_id: {
         Args: { target_tenant_id: string }
         Returns: string
@@ -7711,6 +7726,23 @@ export type Database = {
           resource_id: string
           resource_name: string
           used: number
+        }[]
+      }
+      hotel_pay_in_full: { Args: { p_booking_id: string }; Returns: string }
+      hotel_stay_lines: {
+        Args: {
+          p_accommodation_type: string
+          p_end: string
+          p_pet_count: number
+          p_species: string
+          p_start: string
+          p_tenant_id: string
+        }
+        Returns: {
+          description: string
+          line_total: number
+          quantity: number
+          unit_price: number
         }[]
       }
       is_closed: {
