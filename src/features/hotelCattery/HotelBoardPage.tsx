@@ -20,6 +20,7 @@ const WINDOW_DAYS = 14;
 export default function HotelBoardPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
+  const groomQ = useHotelGroomPendingCount(tenantId);
   const [anchor, setAnchor] = useState<Date>(() => startOfDay(new Date()));
 
   const windowStart = anchor;
