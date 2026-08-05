@@ -42,6 +42,7 @@ const ERRORS: Record<string, string> = {
   start_in_past: "That time has already passed.",
   invalid_pets: "We couldn't match that pet to your profile.",
   vaccinations_required: "Vaccinations are outstanding for this pet.",
+  pet_photo_required: "We need a photo of your pet before this booking can be made — upload it on the pet's card.",
   no_availability: "We're fully booked on one or more of those nights — please try different dates.",
   forbidden: "Your portal access isn't active — please contact us.",
 };
