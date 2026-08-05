@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { Smartphone, Check, Loader2 } from "lucide-react";
+import { Smartphone, Check, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCreateSnapSession, useSnapSessionDocuments, readFnError, type SnapTarget } from "./snapQueries";
@@ -86,16 +86,30 @@ export function SnapUploadButton({
                   <span className="text-muted-foreground">Waiting for your phone…</span>
                 ) : (
                   <ul className="space-y-1">
-                    {arrived.map((d: any) => (
-                      <li key={d.id} className="flex items-center gap-2">
-                        {d.status === "uploaded" ? (
-                          <Check className="h-4 w-4 text-sk-green" />
-                        ) : (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        )}
-                        <span className="truncate">{d.file_name}</span>
-                      </li>
-                    ))}
+                    {arrived.map((d: any) => {
+                      const stalled =
+                        d.status === "pending" &&
+                        Date.now() - new Date(d.created_at).getTime() > 60_000;
+                      return (
+                        <li key={d.id} className="flex items-center gap-2">
+                          {d.status === "pending" ? (
+                            stalled ? (
+                              <AlertTriangle className="h-4 w-4 shrink-0 text-sk-orange" />
+                            ) : (
+                              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />
+                            )
+                          ) : (
+                            <Check className="h-4 w-4 shrink-0 text-sk-green" />
+                          )}
+                          <span className="truncate">{d.file_name}</span>
+                          {stalled && (
+                            <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                              didn't finish — retry on the phone
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>
