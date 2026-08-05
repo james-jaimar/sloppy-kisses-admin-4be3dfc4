@@ -79,6 +79,7 @@ export default function HotelBoardPage() {
       <div className="flex-1 space-y-6 p-6">
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           <OccupancyGrid
+            tenantId={tenantId}
             resources={resourcesQ.data ?? []}
             bookings={bookingsQ.data ?? []}
             windowStart={windowStart}
