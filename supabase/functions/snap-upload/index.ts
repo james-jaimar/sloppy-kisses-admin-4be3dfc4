@@ -53,6 +53,92 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
 
+  // ---- multipart upload (phone -> us -> S3) -----------------------------
+  // The phone posts the bytes here and we PUT to storage server-side. This
+  // avoids a cross-origin PUT from a mobile browser straight to S3, which is
+  // what fails with a bare "Load failed".
+  const ct = req.headers.get("content-type") ?? "";
+  if (ct.includes("multipart/form-data")) {
+    let form: FormData;
+    try { form = await req.formData(); } catch { return json(400, { error: "invalid_form" }); }
+    const token = String(form.get("token") ?? "");
+    const file = form.get("file") as File | null;
+    if (!token) return json(400, { error: "token required" });
+    if (!file) return json(400, { error: "file required" });
+
+    const loaded = await loadSession(token);
+    if ("error" in loaded) return json(loaded.error === "not_found" ? 404 : 410, { error: loaded.error });
+    const s = loaded.session!;
+
+    if (Number(s.files_uploaded) >= Number(s.max_files)) return json(429, { error: "limit_reached" });
+    const contentType = file.type || "application/octet-stream";
+    if (!ALLOWED_TYPES.includes(contentType)) return json(415, { error: "unsupported_type" });
+
+    const { data: settings } = await admin
+      .from("document_settings").select("max_upload_mb").eq("tenant_id", s.tenant_id).maybeSingle();
+    const maxMb = Number(settings?.max_upload_mb ?? 20);
+    if (file.size > maxMb * 1024 * 1024) return json(413, { error: `File exceeds ${maxMb}MB limit` });
+
+    const fileName = file.name || `photo-${Date.now()}.jpg`;
+    const { data: doc, error: insErr } = await admin
+      .from("documents")
+      .insert({
+        tenant_id: s.tenant_id,
+        pet_id: s.pet_id,
+        customer_id: s.customer_id,
+        booking_id: s.booking_id,
+        type: s.doc_type,
+        file_name: fileName,
+        content_type: contentType,
+        size_bytes: file.size,
+        storage_provider: "s3",
+        s3_bucket: S3_BUCKET_HINT,
+        status: "pending",
+        uploaded_via: "phone",
+        upload_session_id: s.id,
+      })
+      .select("id")
+      .single();
+    if (insErr) return json(500, { error: insErr.message });
+
+    const key = buildObjectKey({
+      tenantId: s.tenant_id, petId: s.pet_id, customerId: s.customer_id, docId: doc.id, fileName,
+    });
+    await admin.from("documents").update({ s3_key: key }).eq("id", doc.id);
+
+    try {
+      const signed = await signStorageUrl(key, "write");
+      const bytes = await file.arrayBuffer();
+      const put = await fetch(signed.url, {
+        method: signed.method ?? "PUT",
+        body: bytes,
+        headers: { "Content-Type": contentType },
+      });
+      if (!put.ok) {
+        const text = await put.text().catch(() => "");
+        console.error("snap-upload S3 PUT failed", put.status, text.slice(0, 300));
+        await admin.from("documents").delete().eq("id", doc.id);
+        return json(502, { error: `Storage rejected the file (${put.status})` });
+      }
+    } catch (e) {
+      console.error("snap-upload forward failed", String(e));
+      await admin.from("documents").delete().eq("id", doc.id);
+      return json(502, { error: (e as Error).message });
+    }
+
+    let etag: string | null = null;
+    try { etag = (await headObject(key)).etag; } catch { /* non-fatal */ }
+
+    await admin.from("documents")
+      .update({ status: "uploaded", size_bytes: file.size, checksum: etag })
+      .eq("id", doc.id);
+    await admin.from("upload_sessions")
+      .update({ files_uploaded: Number(s.files_uploaded) + 1 })
+      .eq("id", s.id);
+
+    return json(200, { document_id: doc.id, file_name: fileName });
+  }
+
   let body: Record<string, any>;
   try { body = await req.json(); } catch { return json(400, { error: "invalid_json" }); }
   const action = String(body.action ?? "");
