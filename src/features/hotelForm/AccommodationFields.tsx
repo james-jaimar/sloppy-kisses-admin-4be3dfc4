@@ -423,14 +423,43 @@ export function CareSection({ form, setForm, collapsible }: FormProps) {
   );
 }
 
-export function AttachmentsSection({ form, setForm, collapsible, hint }: FormProps & { hint?: ReactNode }) {
+/**
+ * Attachment status — no self-ticking. Reads what's actually on file for the
+ * selected pets and nudges for anything still missing.
+ */
+export function AttachmentsSection({ form, collapsible, hint }: FormProps & { hint?: ReactNode }) {
+  const petIds = form.pets.map((p) => p.pet_id).filter(Boolean) as string[];
+  const status = usePetAttachmentStatus(petIds);
+  const missing: string[] = [];
+  for (const p of form.pets) {
+    if (!p.pet_id) continue;
+    const s = status.data?.[p.pet_id];
+    if (!s) continue;
+    if (!s.pet_photo) missing.push(`${p.name || "Pet"}: photo`);
+    if (!s.vaccination) missing.push(`${p.name || "Pet"}: vaccination card`);
+  }
+  const complete = petIds.length > 0 && !status.isLoading && missing.length === 0;
   return (
-    <Section title="Important attachments" collapsible={collapsible} complete={form.attachments.length > 0}>
-      <div className="flex flex-wrap gap-2">
-        {ATTACHMENT_OPTIONS.map((o) => (
-          <Check key={o} label={o} checked={form.attachments.includes(o)} onChange={() => setForm({ ...form, attachments: toggle(form.attachments, o) })} />
-        ))}
-      </div>
+    <Section
+      title="Photos & vaccination cards"
+      collapsible={collapsible}
+      complete={complete}
+      summary={complete ? "All on file" : missing.length ? `${missing.length} outstanding` : undefined}
+    >
+      {petIds.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Select your pets to see what we still need.</p>
+      ) : complete ? (
+        <p className="text-sm text-muted-foreground">Everything we need is on file — thank you.</p>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground">
+            Still outstanding — you can upload these on each pet's card above, from this device or straight from your phone:
+          </p>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-sk-coral-dark">
+            {missing.map((m) => <li key={m}>{m}</li>)}
+          </ul>
+        </>
+      )}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </Section>
   );
