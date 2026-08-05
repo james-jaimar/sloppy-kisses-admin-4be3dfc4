@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Camera, Check, FileText, Loader2, Upload } from "lucide-react";
 import { uploadDocumentToS3 } from "@/features/documents/uploadDocument";
 import { SnapUploadButton } from "./SnapUploadButton";
-import { usePetAttachmentStatus, type PetDocKind } from "./snapQueries";
+import { usePetAttachmentStatus, useDocumentPreviewUrl, type PetDocKind } from "./snapQueries";
 import { useQueryClient } from "@tanstack/react-query";
 
 const KIND_META: Record<PetDocKind, { label: string; hint: string; icon: typeof Camera }> = {
@@ -27,7 +27,10 @@ function Tile({
   const [justDone, setJustDone] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const status = usePetAttachmentStatus([petId]);
-  const onFileState = Boolean(status.data?.[petId]?.[kind]) || justDone;
+  const doc = status.data?.[petId]?.[kind] ?? null;
+  const onFileState = Boolean(doc) || justDone;
+  const isImage = (doc?.content_type ?? "").startsWith("image/");
+  const preview = useDocumentPreviewUrl(isImage ? doc?.id : null);
 
   async function handle(file: File | undefined) {
     if (!file) return;
@@ -55,7 +58,19 @@ function Tile({
         {onFileState ? <Check className="h-4 w-4 text-sk-green" /> : <Icon className="h-4 w-4 text-muted-foreground" />}
         {meta.label}
       </div>
-      <p className="text-xs text-muted-foreground">{onFileState ? "On file" : meta.hint}</p>
+      <div className="flex items-center gap-2">
+        {preview.data && (
+          <img
+            src={preview.data}
+            alt={`${meta.label} for ${petName}`}
+            className="h-12 w-12 shrink-0 rounded-lg border border-border object-cover"
+            loading="lazy"
+          />
+        )}
+        <p className="min-w-0 truncate text-xs text-muted-foreground">
+          {onFileState ? (doc?.file_name ?? "On file") : meta.hint}
+        </p>
+      </div>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
