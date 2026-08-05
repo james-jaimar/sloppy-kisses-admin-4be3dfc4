@@ -50,7 +50,13 @@ export default function MyBookingsPage() {
       <div className="flex-1 p-6">
         {q.isLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
         {q.data && rows.length === 0 && (
-          <div className="sk-card p-10 text-center text-sm text-muted-foreground">No {tab} bookings.</div>
+          <div className="sk-card grid place-items-center gap-3 p-10 text-center">
+            <CalendarPlus className="h-10 w-10 text-muted-foreground" />
+            <div className="text-sm text-muted-foreground">No {tab} bookings.</div>
+            <Link to="/customer/bookings/new" className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark">
+              <CalendarPlus className="h-4 w-4" /> Book a service
+            </Link>
+          </div>
         )}
         {rows.length > 0 && (
           <div className="sk-card overflow-hidden">

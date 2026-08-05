@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, X, Edit3, FileText, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Loader2, X, Edit3, FileText, CheckCircle2, CalendarPlus } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { SERVICE_LABEL, fmtDateTime, statusTone } from "../portalCommon";
@@ -46,7 +46,15 @@ export default function MyBookingDetailPage() {
 
   return (
     <>
-      <AppHeader title={`${SERVICE_LABEL[b.service_type] ?? b.service_type}`} subtitle={b.booking_number} />
+      <AppHeader
+        title={`${SERVICE_LABEL[b.service_type] ?? b.service_type}`}
+        subtitle={b.booking_number}
+        actions={
+          <Link to="/customer/bookings/new" className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark">
+            <CalendarPlus className="h-4 w-4" /> Book another
+          </Link>
+        }
+      />
       <div className="flex-1 space-y-6 p-6">
         <Link to="/customer/bookings" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Back to bookings

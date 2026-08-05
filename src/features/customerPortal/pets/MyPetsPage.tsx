@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { PawPrint, Plus, Loader2, Scissors } from "lucide-react";
+import { PawPrint, Plus, Loader2, Scissors, CalendarPlus } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
 import { useCurrentCustomer } from "../hooks";
@@ -32,9 +32,14 @@ export default function MyPetsPage() {
         title="My pets"
         subtitle="Manage your pets and their records"
         actions={cust.data ? (
-          <button onClick={() => setAddOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark">
-            <Plus className="h-4 w-4" /> Add pet
-          </button>
+          <div className="flex items-center gap-2">
+            <Link to="/customer/bookings/new" className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold hover:border-sk-coral hover:text-sk-coral-dark">
+              <CalendarPlus className="h-4 w-4" /> Book a service
+            </Link>
+            <button onClick={() => setAddOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark">
+              <Plus className="h-4 w-4" /> Add pet
+            </button>
+          </div>
         ) : undefined}
       />
       <div className="flex-1 p-6">
@@ -57,6 +62,12 @@ export default function MyPetsPage() {
                   <div className="text-base font-semibold">{p.name}</div>
                   <div className="text-xs text-muted-foreground">{[p.breed, p.species, p.size].filter(Boolean).join(" · ")}</div>
                 </div>
+              </Link>
+              <Link
+                to="/customer/bookings/new"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-sk-coral-soft px-3 py-2 text-xs font-semibold text-sk-coral-dark hover:bg-sk-coral hover:text-white"
+              >
+                <CalendarPlus className="h-3.5 w-3.5" /> Book
               </Link>
               {(p.species === "dog" || p.species === "cat") && (
                 <Link

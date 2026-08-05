@@ -11,6 +11,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   badge?: number;
   code?: string;
+  primary?: boolean;
 }
 
 interface Props {
@@ -53,7 +54,9 @@ export function SidebarNavList({
                 cn(
                   "group relative flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
                   collapsed && "justify-center px-2",
-                  isActive
+                  item.primary
+                    ? "my-1 bg-sk-coral font-semibold text-white shadow-sm hover:bg-sk-coral-dark"
+                    : isActive
                     ? "bg-sk-coral-soft text-sk-coral-dark"
                     : "text-foreground/75 hover:bg-muted hover:text-foreground",
                 )
