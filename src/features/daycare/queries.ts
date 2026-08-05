@@ -360,6 +360,7 @@ export interface DaycareWorkflowSettings {
   late_arrival_cutoff: string;
   auto_checkout_time: string;
   block_unvaccinated: boolean;
+  photo_gate_mode: "off" | "soft" | "hard";
   daily_capacity: number | null;
   stay_play_default_collect_time: string;
   stay_play_grace_minutes: number;

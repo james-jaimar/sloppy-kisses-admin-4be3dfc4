@@ -29,6 +29,7 @@ export default function DaycareWorkflowPage() {
     late_arrival_cutoff: "10:00",
     auto_checkout_time: "18:00",
     block_unvaccinated: false,
+    photo_gate_mode: "hard" as "off" | "soft" | "hard",
     daily_capacity: "" as string,
     stay_play_default_collect_time: "16:30",
     stay_play_grace_minutes: 15,
@@ -42,6 +43,7 @@ export default function DaycareWorkflowPage() {
         late_arrival_cutoff: trimTime(settingsQ.data.late_arrival_cutoff),
         auto_checkout_time: trimTime(settingsQ.data.auto_checkout_time),
         block_unvaccinated: settingsQ.data.block_unvaccinated,
+        photo_gate_mode: ((settingsQ.data as any).photo_gate_mode ?? "hard") as "off" | "soft" | "hard",
         daily_capacity: settingsQ.data.daily_capacity == null ? "" : String(settingsQ.data.daily_capacity),
         stay_play_default_collect_time: trimTime(settingsQ.data.stay_play_default_collect_time) || "16:30",
         stay_play_grace_minutes: Number(settingsQ.data.stay_play_grace_minutes ?? 15),
@@ -99,6 +101,19 @@ export default function DaycareWorkflowPage() {
               onChange={(e) => setForm((f) => ({ ...f, block_unvaccinated: e.target.checked }))} />
             Block check-in for pets with missing or expired vaccinations
           </label>
+
+          <Field label="Pet photo required" hint="A photo on file lets staff match the right dog to the right owner at drop-off.">
+            <select
+              disabled={!canManage}
+              value={form.photo_gate_mode}
+              onChange={(e) => setForm((f) => ({ ...f, photo_gate_mode: e.target.value as "off" | "soft" | "hard" }))}
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+            >
+              <option value="hard">Required — block the booking until a photo is on file</option>
+              <option value="soft">Warn — flag the missing photo but allow the booking</option>
+              <option value="off">Off — skip check</option>
+            </select>
+          </Field>
 
           <div className="border-t border-border pt-5">
             <div className="mb-3 text-sm font-semibold">Capacity &amp; Stay &amp; Play</div>

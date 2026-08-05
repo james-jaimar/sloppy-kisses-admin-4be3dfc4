@@ -170,6 +170,7 @@ export interface HotelWorkflowSettings {
   id: string;
   tenant_id: string;
   vax_gate_mode: VaxGateMode;
+  photo_gate_mode: "off" | "soft" | "hard";
   overbooking_mode: OverbookingMode;
   check_in_open_time: string;   // "HH:MM:SS"
   check_in_close_time: string;

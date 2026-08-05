@@ -4,6 +4,8 @@ import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, textareaCls } from "./WizardShell";
 import { usePortalPets, useDaycarePlans } from "./wizardHooks";
 import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
+import { usePhotoGateMode } from "@/features/bookings/PhotoGatePanel";
+import { usePetPhotoStatus, isPhotoWaiverActive } from "@/features/pets/photoGateQueries";
 
 const WEEKDAYS = [
   { code: "mon", label: "Mon" },
@@ -34,10 +36,22 @@ export default function DaycareRequestWizard() {
   const [assessment, setAssessment] = useState(false);
   const [notes, setNotes] = useState("");
 
+  // Daycare needs a photo on file so staff can match the right dog at drop-off.
+  const photoMode = usePhotoGateMode(cust.data?.tenant_id, assessment ? "daycare_assessment" : "daycare");
+  const photoStatus = usePetPhotoStatus(petIds);
+  const petsMissingPhoto = (pets.data ?? [])
+    .filter((p: any) => petIds.includes(p.id))
+    .filter((p: any) => {
+      const s = photoStatus.data?.[p.id];
+      return !s?.has_photo && !isPhotoWaiverActive(s?.waived_until);
+    })
+    .map((p: any) => p.name as string);
+  const photoBlocked = photoMode === "hard" && petsMissingPhoto.length > 0;
+
   const canSubmit = Boolean(
     cust.data && petIds.length > 0 &&
     (assessment ? assessDate : startDate && planId),
-  ) && !submit.isPending;
+  ) && !photoBlocked && !submit.isPending;
 
   function togglePet(id: string) {
     setPetIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -98,6 +112,24 @@ export default function DaycareRequestWizard() {
           {(pets.data ?? []).length === 0 && <span className="text-xs text-muted-foreground">Add a pet under My Pets first.</span>}
         </div>
       </Field>
+
+      {photoMode !== "off" && petsMissingPhoto.length > 0 && (
+        <div
+          className={
+            "rounded-xl border p-3 text-sm " +
+            (photoBlocked
+              ? "border-sk-coral bg-sk-coral-soft text-sk-coral-dark"
+              : "border-sk-orange bg-sk-orange-soft text-sk-orange")
+          }
+        >
+          <div className="font-semibold">
+            {photoBlocked ? "A photo is required before you can enrol" : "Photo still missing"}
+          </div>
+          <div className="text-xs opacity-90">
+            We use it to match your dog at drop-off. Still needed for {petsMissingPhoto.join(", ")} — add it under My Pets.
+          </div>
+        </div>
+      )}
 
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={assessment} onChange={(e) => setAssessment(e.target.checked)} className="h-4 w-4 rounded border-border" />

@@ -22,6 +22,7 @@ export default function GroomingWorkflowPage() {
 
   const [form, setForm] = useState({
     vax_gate_mode: "soft" as GroomingVaxGateMode,
+    photo_gate_mode: "off" as "off" | "soft" | "hard",
     pensioner_discount_pct: 10,
     default_mobile_travel_fee_zar: 110,
     matted_rate_per_15min_zar: 50,
@@ -41,6 +42,7 @@ export default function GroomingWorkflowPage() {
       const d = settingsQ.data;
       setForm({
         vax_gate_mode: d.vax_gate_mode,
+        photo_gate_mode: ((d as any).photo_gate_mode ?? "off") as "off" | "soft" | "hard",
         pensioner_discount_pct: Number(d.pensioner_discount_pct ?? 0),
         default_mobile_travel_fee_zar: Number(d.default_mobile_travel_fee_zar ?? 0),
         matted_rate_per_15min_zar: Number(d.matted_rate_per_15min_zar ?? 50),
@@ -87,6 +89,19 @@ export default function GroomingWorkflowPage() {
               <option value="soft">Soft — warn and allow with logged override</option>
               <option value="hard">Hard — block check-in</option>
               <option value="off">Off — skip check</option>
+            </select>
+          </Field>
+
+          <Field label="Pet photo required" hint="Grooming clients usually bring the pet themselves, so this is normally off.">
+            <select
+              disabled={!canManage}
+              value={form.photo_gate_mode}
+              onChange={(e) => setForm((f) => ({ ...f, photo_gate_mode: e.target.value as "off" | "soft" | "hard" }))}
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+            >
+              <option value="off">Off — skip check</option>
+              <option value="soft">Warn — flag the missing photo but allow the booking</option>
+              <option value="hard">Required — block the booking until a photo is on file</option>
             </select>
           </Field>
 

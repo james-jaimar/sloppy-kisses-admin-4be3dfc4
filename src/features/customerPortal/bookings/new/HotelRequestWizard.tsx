@@ -32,6 +32,8 @@ import {
 } from "@/features/hotelForm/accommodationForm";
 import { GuidelinesSection } from "@/features/hotelForm/GuidelinesSection";
 import { useHotelGuidelines } from "@/features/hotelForm/guidelinesQueries";
+import { usePhotoGateMode } from "@/features/bookings/PhotoGatePanel";
+import { usePetPhotoStatus, isPhotoWaiverActive } from "@/features/pets/photoGateQueries";
 
 const STEPS = ["Stay", "Your details", "Pet details", "Care & consent"];
 
@@ -98,8 +100,21 @@ export default function HotelRequestWizard() {
   const serviceType = isCat ? "hotel_cat" : "hotel_dog";
 
   const stayReady = petIds.length > 0 && !!checkInDate && nights >= 1;
+
+  // Pet photo requirement (Settings → Hotel & Cattery workflow).
+  const photoMode = usePhotoGateMode(cust.data?.tenant_id, serviceType);
+  const photoStatus = usePetPhotoStatus(petIds);
+  const petsMissingPhoto = selectedPets
+    .filter((p: any) => {
+      const s = photoStatus.data?.[p.id];
+      return !s?.has_photo && !isPhotoWaiverActive(s?.waived_until);
+    })
+    .map((p: any) => p.name as string);
+  const photoBlocked = photoMode === "hard" && petsMissingPhoto.length > 0;
+
   const canSubmit =
-    stayReady && form.acknowledgement.accepted && form.acknowledgement.signed_name.trim().length > 1 && !submit.isPending;
+    stayReady && !photoBlocked && form.acknowledgement.accepted &&
+    form.acknowledgement.signed_name.trim().length > 1 && !submit.isPending;
 
   function togglePet(id: string) {
     setPetIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -295,6 +310,24 @@ export default function HotelRequestWizard() {
             setForm={setForm}
             hint="Upload on each pet above — from this device or straight from your phone."
           />
+          {photoMode !== "off" && petsMissingPhoto.length > 0 && (
+            <div
+              className={
+                "rounded-xl border p-3 text-sm " +
+                (photoBlocked
+                  ? "border-sk-coral bg-sk-coral-soft text-sk-coral-dark"
+                  : "border-sk-orange bg-sk-orange-soft text-sk-orange")
+              }
+            >
+              <div className="font-semibold">
+                {photoBlocked ? "A photo is required before you can book" : "Photo still missing"}
+              </div>
+              <div className="text-xs opacity-90">
+                We use it to match your pet at check-in. Still needed for {petsMissingPhoto.join(", ")} — upload it on the
+                pet's card under "Pet details".
+              </div>
+            </div>
+          )}
           <GuidelinesSection tenantId={cust.data?.tenant_id} />
           <AcknowledgementSection form={form} setForm={setForm} />
         </div>
