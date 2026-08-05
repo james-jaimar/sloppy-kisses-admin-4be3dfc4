@@ -47,6 +47,7 @@ export default function TransportWorkflowPage() {
     default_dropoff_trail_minutes: 15,
     default_fee_zar: 0,
     round_trip_multiplier: 1.8,
+    photo_gate_mode: "off" as "off" | "soft" | "hard",
   });
   const [suburbFees, setSuburbFees] = useState<SuburbFee[]>([]);
 
@@ -61,6 +62,7 @@ export default function TransportWorkflowPage() {
         default_dropoff_trail_minutes: settingsQ.data.default_dropoff_trail_minutes,
         default_fee_zar: Number(settingsQ.data.default_fee_zar ?? 0),
         round_trip_multiplier: Number(settingsQ.data.round_trip_multiplier ?? 1.8),
+        photo_gate_mode: ((settingsQ.data as any).photo_gate_mode ?? "off") as "off" | "soft" | "hard",
       });
       setSuburbFees(fromMap(settingsQ.data.suburb_fees));
     }
