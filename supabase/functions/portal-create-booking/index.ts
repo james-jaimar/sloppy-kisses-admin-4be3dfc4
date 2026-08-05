@@ -334,6 +334,44 @@ Deno.serve(async (req) => {
       ? new Date(start.getTime() + (body.grooming?.duration_minutes ?? 60) * 60_000).toISOString()
       : null;
 
+  // --- Pick a hotel/cattery area ----------------------------------------
+  // Portal stays used to land unassigned on the board. Auto-assign the first
+  // active area of the right type that has room every night of the stay.
+  let resourceId: string | null = null;
+  if (group === "hotel") {
+    const wantedType = body.service_type === "hotel_cat" ? "cattery_area" : "hotel_area";
+    const { data: areas } = await admin
+      .from("resources")
+      .select("id, capacity")
+      .eq("tenant_id", tenantId)
+      .eq("type", wantedType)
+      .eq("active", true)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (areas?.length) {
+      const startDay = start.toISOString().slice(0, 10);
+      const endDay = (endAt ?? start.toISOString()).slice(0, 10);
+      const { data: avail } = await admin.rpc("hotel_day_availability", {
+        p_tenant_id: tenantId,
+        p_start: startDay,
+        p_end: endDay,
+        p_exclude_booking_id: null,
+      });
+      const usedByResource = new Map<string, number>();
+      for (const r of (avail ?? []) as any[]) {
+        const key = r.resource_id as string;
+        usedByResource.set(key, Math.max(usedByResource.get(key) ?? 0, Number(r.used ?? 0)));
+      }
+      const pets = body.pet_ids.length;
+      resourceId =
+        (areas as any[]).find((a) => {
+          if (a.capacity == null) return true;
+          return (usedByResource.get(a.id) ?? 0) + pets <= Number(a.capacity);
+        })?.id ?? null;
+    }
+  }
+
   const { data: booking, error: bErr } = await admin
     .from("bookings")
     .insert({
@@ -343,6 +381,7 @@ Deno.serve(async (req) => {
       service_type: body.service_type,
       status: "confirmed",
       source: "customer_portal",
+      resource_id: resourceId,
       start_at: start.toISOString(),
       end_at: endAt,
       start_date: start.toISOString().slice(0, 10),
