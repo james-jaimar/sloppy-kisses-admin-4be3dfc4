@@ -47,15 +47,12 @@ export function GuidelinesBody({ md }: { md: string }) {
 export function GuidelinesSection({
   tenantId,
   collapsible,
-  onVersion,
 }: {
   tenantId: string | null | undefined;
   collapsible?: boolean;
-  onVersion?: (v: number) => void;
 }) {
   const q = useHotelGuidelines(tenantId);
   const md = q.data?.guidelines_md ?? "";
-  if (q.data?.guidelines_version && onVersion) onVersion(q.data.guidelines_version);
   if (!md) return null;
   return (
     <Section title="Hotel guidelines" collapsible={collapsible} complete summary="Please read before confirming">
