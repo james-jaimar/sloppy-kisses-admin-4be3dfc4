@@ -108,7 +108,7 @@ export default function HotelRequestWizard() {
 
   async function onSubmit() {
     if (!cust.data) return;
-    const startAt = dateToIso(checkInDate, checkInTime);
+    const startAt = dateToIso(checkInDate, CHECK_IN_TIME);
     if (!startAt) return;
     const payload: AccommodationFormPayload = {
       ...form,
@@ -254,12 +254,6 @@ export default function HotelRequestWizard() {
                 </button>
               </div>
             </Field>
-            <Field label="Arrival time">
-              <input type="time" value={checkInTime} onChange={(e) => setCheckInTime(e.target.value)} className={inputCls} />
-            </Field>
-            <Field label="Collection time">
-              <input type="time" value={checkOutTime} onChange={(e) => setCheckOutTime(e.target.value)} className={inputCls} />
-            </Field>
           </div>
 
           <Field label="Room preference (optional)" hint="Final room allocation is confirmed by our team.">
@@ -271,7 +265,7 @@ export default function HotelRequestWizard() {
             </select>
           </Field>
 
-          <StayWindowSection form={form} setForm={setForm} />
+          <StayWindowSection form={form} setForm={setForm} checkOutDate={checkOutDate} />
         </>
       )}
 
