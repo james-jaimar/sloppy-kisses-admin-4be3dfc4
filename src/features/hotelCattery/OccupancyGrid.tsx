@@ -20,7 +20,7 @@ function barClass(status: string) {
 }
 
 export interface OccupancyGridProps {
-  tenantId: string;
+  tenantId: string | null;
   resources: HotelResourceRow[];
   bookings: HotelBookingRow[];
   windowStart: Date;
@@ -157,7 +157,7 @@ export function OccupancyGrid({ tenantId, resources, bookings, windowStart, wind
                     : bookings.filter((b) => b.resource_id === r.id)
                 }
                 assign={
-                  r.id === "__unassigned"
+                  r.id === "__unassigned" && tenantId
                     ? { tenantId, resources, allBookings: bookings, today }
                     : undefined
                 }
