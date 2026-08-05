@@ -949,7 +949,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               collapsible
               checkOutDate={endAtLocal ? endAtLocal.slice(0, 10) : null}
             />
-            <PetSections form={accom} setForm={patchAccom} collapsible />
+            <PetSections form={accom} setForm={patchAccom} collapsible tenantId={tenantId} uploadedVia="admin" />
             <CareSection form={accom} setForm={patchAccom} collapsible />
             <AttachmentsSection form={accom} setForm={patchAccom} collapsible />
             <GuidelinesSection tenantId={tenantId} collapsible />

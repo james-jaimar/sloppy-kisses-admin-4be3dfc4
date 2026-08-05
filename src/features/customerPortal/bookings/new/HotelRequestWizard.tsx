@@ -282,7 +282,7 @@ export default function HotelRequestWizard() {
           {detailPets.isLoading ? (
             <div className="grid place-items-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : (
-            <PetSections form={form} setForm={setForm} />
+            <PetSections form={form} setForm={setForm} tenantId={cust.data?.tenant_id} />
           )}
         </div>
       )}
@@ -293,7 +293,7 @@ export default function HotelRequestWizard() {
           <AttachmentsSection
             form={form}
             setForm={setForm}
-            hint="Photos and vaccination cards can be uploaded against each pet under My pets."
+            hint="Upload on each pet above — from this device or straight from your phone."
           />
           <GuidelinesSection tenantId={cust.data?.tenant_id} />
           <AcknowledgementSection form={form} setForm={setForm} />
