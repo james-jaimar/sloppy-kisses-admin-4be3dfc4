@@ -286,6 +286,15 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     setAccom(next);
   }
 
+  // Hotel departures are fixed windows: standard 09:00–09:30, or Stay & Play 16:00–16:30.
+  // Keep end_at (duration) in step with the selected collection window.
+  useEffect(() => {
+    if (kind !== "hotel") return;
+    const nights = Math.max(1, Math.floor(durationMins / 1440));
+    const target = nights * 1440 + (isStayPlayWindow(accom.check_out_window) ? 7 * 60 : 0);
+    if (target !== durationMins) setDurationMins(target);
+  }, [kind, accom.check_out_window, durationMins]);
+
   async function persistAccommodation(bookingId: string) {
     if (kind !== "hotel") return;
     if (!accomTouched && !accom.pets.length) return;
@@ -529,7 +538,28 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         },
       });
     } else if (kind === "hotel") {
-      await upsertDetails.mutateAsync({ kind: "hotel", bookingId, data: hotel });
+      const petCare = accom.pets
+        .map((p) => [p.name, p.feeding_instructions].filter(Boolean).join(": "))
+        .filter((s) => s.includes(":"))
+        .join("\n");
+      const petMeds = accom.pets
+        .map((p) => [p.name, p.medication_instructions].filter(Boolean).join(": "))
+        .filter((s) => s.includes(":"))
+        .join("\n");
+      await upsertDetails.mutateAsync({
+        kind: "hotel",
+        bookingId,
+        data: {
+          ...hotel,
+          check_in_window: accom.check_in_window || hotel.check_in_window || null,
+          check_out_window: accom.check_out_window || hotel.check_out_window || null,
+          feeding_instructions: petCare || hotel.feeding_instructions || null,
+          medication_instructions: petMeds || hotel.medication_instructions || null,
+          belongings_notes: accom.belongings_notes || hotel.belongings_notes || null,
+          pickup_required: accom.pickup_required ?? hotel.pickup_required ?? false,
+          dropoff_required: accom.dropoff_required ?? hotel.dropoff_required ?? false,
+        },
+      });
     } else if (kind === "transport") {
       await upsertDetails.mutateAsync({ kind: "transport", bookingId, data: transport });
     }
@@ -747,8 +777,13 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 type="number"
                 min={1}
                 step={1}
-                value={Math.max(1, Math.round(durationMins / (24 * 60)))}
-                onChange={(e) => setDurationMins(Math.max(1, Number(e.target.value)) * 24 * 60)}
+                value={Math.max(1, Math.floor(durationMins / 1440))}
+                onChange={(e) =>
+                  setDurationMins(
+                    Math.max(1, Number(e.target.value)) * 1440 +
+                      (isStayPlayWindow(accom.check_out_window) ? 7 * 60 : 0),
+                  )
+                }
                 className={inputCls}
               />
             ) : customDuration ? (
