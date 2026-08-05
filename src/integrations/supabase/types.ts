@@ -3726,6 +3726,8 @@ export type Database = {
           created_at: string
           daycare_credit_enabled: boolean
           deposit_split_enabled: boolean
+          guidelines_md: string
+          guidelines_version: number
           id: string
           late_checkout_fee_zar: number
           min_lead_hours: number
@@ -3745,6 +3747,8 @@ export type Database = {
           created_at?: string
           daycare_credit_enabled?: boolean
           deposit_split_enabled?: boolean
+          guidelines_md?: string
+          guidelines_version?: number
           id?: string
           late_checkout_fee_zar?: number
           min_lead_hours?: number
@@ -3764,6 +3768,8 @@ export type Database = {
           created_at?: string
           daycare_credit_enabled?: boolean
           deposit_split_enabled?: boolean
+          guidelines_md?: string
+          guidelines_version?: number
           id?: string
           late_checkout_fee_zar?: number
           min_lead_hours?: number
