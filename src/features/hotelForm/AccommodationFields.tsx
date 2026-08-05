@@ -1,7 +1,7 @@
 import { ReactNode, useState } from "react";
 import { ChevronDown, CheckCircle2 } from "lucide-react";
+import { PetAttachments } from "@/features/uploads/PetAttachments";
 import {
-  ATTACHMENT_OPTIONS,
   BEHAVIOUR_OPTIONS,
   CHECK_IN_WINDOWS,
   CHECK_OUT_STANDARD,
@@ -335,7 +335,9 @@ export function StayWindowSection({
   );
 }
 
-export function PetSections({ form, setForm, collapsible }: FormProps) {
+export function PetSections({
+  form, setForm, collapsible, tenantId, uploadedVia = "portal",
+}: FormProps & { tenantId?: string | null; uploadedVia?: "portal" | "admin" }) {
   function patchPet(i: number, patch: Partial<FormPet>) {
     setForm({ ...form, pets: form.pets.map((p, idx) => (idx === i ? { ...p, ...patch } : p)) });
   }
@@ -379,6 +381,9 @@ export function PetSections({ form, setForm, collapsible }: FormProps) {
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <Text label="5-in-1 / DHPP date" type="date" value={p.vax_dhpp} onChange={(v) => patchPet(i, { vax_dhpp: v })} />
+            {tenantId && p.pet_id && (
+              <PetAttachments tenantId={tenantId} petId={p.pet_id} petName={p.name || "this pet"} uploadedVia={uploadedVia} />
+            )}
             <Text label="Rabies date" type="date" value={p.vax_rabies} onChange={(v) => patchPet(i, { vax_rabies: v })} />
             <Text label="Kennel cough date" type="date" value={p.vax_kennel_cough} onChange={(v) => patchPet(i, { vax_kennel_cough: v })} />
             <Text label="Tick & flea product" value={p.tick_flea_product} onChange={(v) => patchPet(i, { tick_flea_product: v })} />
