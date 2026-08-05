@@ -15,6 +15,7 @@ const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 function json(body: unknown, status = 200) {
+  if (status >= 400) console.error("portal-create-booking rejected", status, JSON.stringify(body));
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...cors, "Content-Type": "application/json" },
