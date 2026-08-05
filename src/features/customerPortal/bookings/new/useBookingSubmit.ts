@@ -65,13 +65,25 @@ export function useCreatePortalBooking() {
           daycare: args.daycare,
         },
       });
-      const payload: any = data ?? {};
+      // A non-2xx reply lands in `error`, with the JSON body on error.context —
+      // read it so we show the real reason instead of "unknown".
+      let payload: any = data ?? {};
+      if (error && !data) {
+        try {
+          const ctx = (error as any)?.context;
+          const text = typeof ctx?.text === "function" ? await ctx.text() : null;
+          if (text) payload = JSON.parse(text);
+        } catch {
+          /* body wasn't JSON — fall through to the generic message */
+        }
+      }
       if (error || payload?.error) {
-        const code = payload?.error ?? "unknown";
+        const code = payload?.error ?? error?.message ?? "unknown";
+        console.error("portal-create-booking failed:", { code, payload, error });
         const msg =
           ERRORS[code] ??
           (payload?.missing?.length ? `Outstanding: ${payload.missing.join(", ")}` : null) ??
-          (typeof code === "string" ? code : "Could not create the booking");
+          (typeof code === "string" && code !== "unknown" ? code : "Could not create the booking — please try again or contact us.");
         throw new Error(msg);
       }
       const result = payload as CreateBookingResult;
