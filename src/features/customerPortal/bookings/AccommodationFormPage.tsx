@@ -9,8 +9,9 @@ import { fmtDate } from "../portalCommon";
 import { useCurrentCustomer } from "../hooks";
 import { GuidelinesBody } from "@/features/hotelForm/GuidelinesSection";
 import { useHotelGuidelines } from "@/features/hotelForm/guidelinesQueries";
+import { PetAttachments } from "@/features/uploads/PetAttachments";
+import { usePetAttachmentStatus } from "@/features/uploads/snapQueries";
 import {
-  ATTACHMENT_OPTIONS,
   BEHAVIOUR_OPTIONS,
   CHECK_IN_WINDOWS,
   CHECK_OUT_WINDOWS,
@@ -24,6 +25,38 @@ import {
 
 const inputCls =
   "mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-sk-coral";
+
+/** Reads what's actually on file for the selected pets and nudges for the rest. */
+function MissingAttachments({ form }: { form: AccommodationFormPayload }) {
+  const petIds = form.pets.map((p) => p.pet_id).filter(Boolean) as string[];
+  const status = usePetAttachmentStatus(petIds);
+  const missing: string[] = [];
+  for (const p of form.pets) {
+    if (!p.pet_id) continue;
+    const s = status.data?.[p.pet_id];
+    if (!s) continue;
+    if (!s.pet_photo) missing.push(`${p.name || "Pet"}: photo`);
+    if (!s.vaccination) missing.push(`${p.name || "Pet"}: vaccination card`);
+  }
+  return (
+    <Section title="Photos & vaccination cards">
+      {petIds.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No pets selected yet.</p>
+      ) : missing.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Everything we need is on file — thank you.</p>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground">
+            Still outstanding — upload them on each pet's card above, from this device or straight from your phone:
+          </p>
+          <ul className="list-disc space-y-1 pl-5 text-sm text-sk-coral-dark">
+            {missing.map((m) => <li key={m}>{m}</li>)}
+          </ul>
+        </>
+      )}
+    </Section>
+  );
+}
 
 function Text({
   label, value, onChange, type = "text", placeholder,
@@ -297,6 +330,9 @@ export default function AccommodationFormPage() {
               <Text label="Tick & flea date" type="date" value={p.tick_flea_date} onChange={(v) => patchPet(i, { tick_flea_date: v })} />
               <Area label="Feeding / medication / grooming notes for this pet" value={p.notes} onChange={(v) => patchPet(i, { notes: v })} />
             </div>
+            {b.tenant_id && p.pet_id && (
+              <PetAttachments tenantId={b.tenant_id} petId={p.pet_id} petName={p.name || "this pet"} />
+            )}
           </Section>
         ))}
 
@@ -316,16 +352,7 @@ export default function AccommodationFormPage() {
           </div>
         </Section>
 
-        <Section title="Important attachments">
-          <div className="flex flex-wrap gap-2">
-            {ATTACHMENT_OPTIONS.map((o) => (
-              <Check key={o} label={o} checked={form.attachments.includes(o)} onChange={() => setForm({ ...form, attachments: toggle(form.attachments, o) })} />
-            ))}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Photos and vaccination cards can be uploaded under each pet in <Link to="/customer/pets" className="text-sk-coral-dark hover:underline">My pets</Link>.
-          </p>
-        </Section>
+        <MissingAttachments form={form} />
 
         <Section title="Acknowledgement">
           <GuidelinesInline tenantId={b.tenant_id} />

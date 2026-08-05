@@ -2097,6 +2097,8 @@ export type Database = {
           created_at: string
           default_retention_days: number
           max_upload_mb: number
+          snap_expiry_minutes: number
+          snap_max_files: number
           tenant_id: string
           updated_at: string
         }
@@ -2106,6 +2108,8 @@ export type Database = {
           created_at?: string
           default_retention_days?: number
           max_upload_mb?: number
+          snap_expiry_minutes?: number
+          snap_max_files?: number
           tenant_id: string
           updated_at?: string
         }
@@ -2115,6 +2119,8 @@ export type Database = {
           created_at?: string
           default_retention_days?: number
           max_upload_mb?: number
+          snap_expiry_minutes?: number
+          snap_max_files?: number
           tenant_id?: string
           updated_at?: string
         }
@@ -2156,6 +2162,7 @@ export type Database = {
           tenant_id: string
           type: string
           updated_at: string
+          upload_session_id: string | null
           uploaded_by: string | null
           uploaded_by_profile_id: string | null
           uploaded_via: string
@@ -2189,6 +2196,7 @@ export type Database = {
           tenant_id: string
           type: string
           updated_at?: string
+          upload_session_id?: string | null
           uploaded_by?: string | null
           uploaded_by_profile_id?: string | null
           uploaded_via?: string
@@ -2222,6 +2230,7 @@ export type Database = {
           tenant_id?: string
           type?: string
           updated_at?: string
+          upload_session_id?: string | null
           uploaded_by?: string | null
           uploaded_by_profile_id?: string | null
           uploaded_via?: string
@@ -2269,6 +2278,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_upload_session_id_fkey"
+            columns: ["upload_session_id"]
+            isOneToOne: false
+            referencedRelation: "upload_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -6389,6 +6405,96 @@ export type Database = {
             foreignKeyName: "transport_workflow_settings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      upload_sessions: {
+        Row: {
+          booking_id: string | null
+          closed_at: string | null
+          created_at: string
+          created_by_profile_id: string | null
+          customer_id: string | null
+          doc_type: string
+          expires_at: string
+          files_uploaded: number
+          id: string
+          label: string | null
+          max_files: number
+          pet_id: string | null
+          tenant_id: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          customer_id?: string | null
+          doc_type?: string
+          expires_at: string
+          files_uploaded?: number
+          id?: string
+          label?: string | null
+          max_files?: number
+          pet_id?: string | null
+          tenant_id: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string | null
+          closed_at?: string | null
+          created_at?: string
+          created_by_profile_id?: string | null
+          customer_id?: string | null
+          doc_type?: string
+          expires_at?: string
+          files_uploaded?: number
+          id?: string
+          label?: string | null
+          max_files?: number
+          pet_id?: string | null
+          tenant_id?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upload_sessions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upload_sessions_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upload_sessions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upload_sessions_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upload_sessions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
