@@ -142,6 +142,19 @@ export default function TransportWorkflowPage() {
             </Field>
           </div>
 
+          <Field label="Pet photo required" hint="Drivers collect pets from home, so a photo helps — but it rarely needs to block a booking.">
+            <select
+              disabled={!canManage}
+              value={form.photo_gate_mode}
+              onChange={(e) => setForm((f) => ({ ...f, photo_gate_mode: e.target.value as "off" | "soft" | "hard" }))}
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+            >
+              <option value="off">Off — skip check</option>
+              <option value="soft">Warn — flag the missing photo but allow the booking</option>
+              <option value="hard">Required — block the booking until a photo is on file</option>
+            </select>
+          </Field>
+
           <div className="border-t border-border pt-6 space-y-4">
             <div>
               <h3 className="text-sm font-semibold">Pricing</h3>
