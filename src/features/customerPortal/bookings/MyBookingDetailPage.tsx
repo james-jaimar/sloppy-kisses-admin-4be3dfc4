@@ -10,6 +10,7 @@ import { useCurrentCustomer } from "../hooks";
 import { BookingChangeModal } from "./BookingChangeModal";
 import { useMinLeadHours } from "./new/useBookingSubmit";
 import { useAccommodationForm } from "@/features/hotelForm/accommodationForm";
+import { PortalGroomRequestStatus } from "@/features/hotelGrooming/PortalGroomRequestStatus";
 
 export default function MyBookingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -61,6 +62,7 @@ export default function MyBookingDetailPage() {
         </Link>
 
         {group === "hotel" && <AccommodationFormBanner bookingId={b.id} />}
+        {group === "hotel" && <PortalGroomRequestStatus bookingId={b.id} />}
 
         <div className="sk-card space-y-4 p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
