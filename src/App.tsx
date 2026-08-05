@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ConfirmProvider } from "@/components/ui/confirm-dialog";
 import NotFound from "./pages/NotFound.tsx";
+import SnapUpload from "@/pages/SnapUpload";
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { TenantProvider } from "@/lib/tenant/TenantContext";
 import { BrandingProvider } from "@/lib/branding/BrandingProvider";
@@ -162,6 +163,7 @@ const App = () => (
               <Route path="/i/:token" element={<PublicInvoicePage />} />
               <Route path="/pay/success" element={<PaySuccessPage />} />
               <Route path="/pay/cancel" element={<PayCancelPage />} />
+             <Route path="/snap/:token" element={<SnapUpload />} />
 
               <Route element={<RequireAdmin />}>
               <Route element={<AdminLayout />}>
