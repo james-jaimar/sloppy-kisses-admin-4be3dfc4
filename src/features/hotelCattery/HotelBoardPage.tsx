@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Scissors } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { useHotelGroomPendingCount } from "@/features/hotelGrooming/queries";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { OccupancyGrid } from "./OccupancyGrid";
 import { TodayPanel } from "./TodayPanel";
@@ -34,6 +37,17 @@ export default function HotelBoardPage() {
         subtitle="Occupancy across kennels, runs and cattery pens."
         actions={
           <div className="flex items-center gap-2">
+            <Link
+              to="/admin/hotel-cattery/grooms"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 text-sm font-medium hover:bg-sk-surface-muted"
+            >
+              <Scissors className="h-4 w-4" /> Grooms to schedule
+              {(groomQ.data ?? 0) > 0 && (
+                <span className="rounded-full bg-sk-orange px-1.5 text-[11px] font-semibold text-white">
+                  {groomQ.data}
+                </span>
+              )}
+            </Link>
             <button
               onClick={() => setAnchor(startOfDay(new Date()))}
               className="h-9 rounded-lg border border-border bg-white px-3 text-sm font-medium hover:bg-sk-surface-muted"
