@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, Users } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, Users, UserPlus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
@@ -13,6 +13,8 @@ import { DaycareListView } from "./DaycareListView";
 import { StayPlayLane } from "./StayPlayLane";
 import { useDaycareWorkflowSettings } from "./queries";
 import { useStayPlayForDay, overdueMinutes } from "./stayPlayQueries";
+import { WalkInDialog } from "./WalkInDialog";
+import { Can } from "@/components/auth/Can";
 
 function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
 function addDays(d: Date, n: number) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
@@ -26,6 +28,7 @@ export default function DaycareBoardPage() {
   const navigate = useNavigate();
   const [day, setDay] = useState<Date>(() => startOfDay(new Date()));
   const dateIso = isoDate(day);
+  const [walkInOpen, setWalkInOpen] = useState(false);
 
   const expected = useExpectedForDay(tenantId, day);
   const attendanceQ = useAttendanceForDay(tenantId, day);
@@ -77,6 +80,14 @@ export default function DaycareBoardPage() {
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <Can code="daycare.checkin">
+              <button
+                onClick={() => setWalkInOpen(true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-sk-coral px-3 text-sm font-semibold text-white hover:bg-sk-coral-dark"
+              >
+                <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Walk-in</span>
+              </button>
+            </Can>
             <div className="inline-flex overflow-hidden rounded-lg border border-border bg-white">
               <button
                 onClick={() => setView("board")}
@@ -227,6 +238,9 @@ export default function DaycareBoardPage() {
           </div>
         )}
       </div>
+      {walkInOpen && tenantId && (
+        <WalkInDialog tenantId={tenantId} day={day} onClose={() => setWalkInOpen(false)} />
+      )}
     </>
   );
 }

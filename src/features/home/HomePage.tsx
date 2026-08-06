@@ -7,6 +7,8 @@ import {
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useDashboardTodayStats } from "@/features/dashboard/queries";
 import { useHomeAttention } from "./queries";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { HomeQuickActions } from "./HomeQuickActions";
 import { SoftDashboardTile, type SoftTileTone } from "@/components/ui/SoftDashboardTile";
 
 interface Tile {
@@ -53,6 +55,8 @@ export default function HomePage() {
   const displayName = (profile?.full_name ?? "").trim() || "there";
 
   return (
+    <>
+    <AppHeader />
     <div className="flex-1 space-y-6 px-5 py-6 sm:px-7 sm:py-7 lg:px-9 lg:py-9">
       <header className="space-y-1">
         <h1 className="text-2xl font-bold tracking-[-0.02em] sm:text-[34px] sm:leading-tight">Hi {displayName}</h1>
@@ -60,6 +64,8 @@ export default function HomePage() {
           {format(new Date(), "EEEE, d MMMM yyyy")} — pick where you're working.
         </p>
       </header>
+
+      <HomeQuickActions />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 xl:grid-cols-4">
         {tiles.map((tile) => {
@@ -108,5 +114,6 @@ export default function HomePage() {
         })}
       </div>
     </div>
+    </>
   );
 }

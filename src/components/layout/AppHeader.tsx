@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, KeyRound, LogOut, MessageSquare, Plus, Search, ShieldCheck, CalendarPlus, UserPlus, Dog, FileText, ChevronDown, HardHat } from "lucide-react";
+import { Bell, KeyRound, LogOut, MessageSquare, Plus, ShieldCheck, CalendarPlus, UserPlus, Dog, FileText, ChevronDown, HardHat } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useQuickAdd, type QuickAddKind } from "@/components/quickAdd/QuickAddProvider";
+import { GlobalSearch } from "@/components/layout/GlobalSearch";
 
 interface Props {
   title?: string;
@@ -57,12 +58,14 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [addOpen]);
 
-  const quickAddItems: { kind: QuickAddKind; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { kind: "booking", label: "New booking", icon: CalendarPlus },
-    { kind: "customer", label: "New customer", icon: UserPlus },
-    { kind: "enrolment", label: "New daycare enrolment", icon: Dog },
-    { kind: "invoice", label: "New invoice", icon: FileText },
-  ];
+  const quickAddItems = (
+    [
+      { kind: "booking" as QuickAddKind, label: "New booking", icon: CalendarPlus, code: "bookings.create" },
+      { kind: "customer" as QuickAddKind, label: "New customer", icon: UserPlus, code: "customers.create" },
+      { kind: "enrolment" as QuickAddKind, label: "New daycare enrolment", icon: Dog, code: "daycare.manage" },
+      { kind: "invoice" as QuickAddKind, label: "New invoice", icon: FileText, code: "invoices.create" },
+    ] as { kind: QuickAddKind; label: string; icon: React.ComponentType<{ className?: string }>; code: string }[]
+  ).filter((it) => isPlatform || hasPermission(it.code));
 
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-sk-surface/85 backdrop-blur">
@@ -116,14 +119,8 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
       ) : (
         <>
           <div className="flex h-16 items-center gap-2 px-3 sm:gap-3 sm:px-6">
-            <div className="relative flex-1 max-w-xl min-w-0">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search…"
-                className="h-10 w-full rounded-xl border border-border bg-sk-surface-muted pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-sk-coral/40"
-              />
-            </div>
+            <GlobalSearch />
+            {quickAddItems.length > 0 && (
             <div className="relative hidden md:block" ref={addRef}>
               <button
                 onClick={() => setAddOpen((v) => !v)}
@@ -151,6 +148,7 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
                 </div>
               )}
             </div>
+            )}
             {isPlatform && (
               <Link
                 to={inPlatform ? "/admin/dashboard" : "/platform"}
