@@ -8,6 +8,7 @@ import { useVaccineTypes, type VaccineType } from "./vaccineTypeQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { supabase } from "@/lib/supabase/client";
 import { uploadDocumentToS3, getDocumentDownloadUrl } from "@/features/documents/uploadDocument";
+import { SnapUploadButton } from "@/features/uploads/SnapUploadButton";
 import { VaxWaiverBanner } from "./VaxWaiverBanner";
 
 interface Props {
