@@ -140,32 +140,11 @@ export default function QuickSalePage() {
 
             <div className="sk-card p-4 space-y-3">
               <div className="text-sm font-semibold">Customer</div>
-              {selectedCustomer ? (
-                <div className="flex items-center justify-between rounded-lg border border-border bg-sk-surface-muted p-2 text-sm">
-                  <div>
-                    <div className="font-medium">{selectedCustomer.full_name}</div>
-                    <div className="text-xs text-muted-foreground">{selectedCustomer.customer_number} · {selectedCustomer.email ?? "no email"}</div>
-                  </div>
-                  <button onClick={() => setCustomerId("")} className="text-xs text-sk-coral-dark">Change</button>
-                </div>
-              ) : (
-                <>
-                  <input value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} placeholder="Search customer by name, email, mobile…"
-                    className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm" />
-                  <div className="max-h-40 overflow-y-auto divide-y divide-border rounded-lg border border-border">
-                    {(customersQ.data?.rows ?? []).map((c) => (
-                      <button key={c.id} onClick={() => setCustomerId(c.id)}
-                        className="block w-full text-left px-3 py-2 text-sm hover:bg-sk-surface-muted/50">
-                        <div className="font-medium">{c.full_name}</div>
-                        <div className="text-xs text-muted-foreground">{c.customer_number} · {c.email ?? c.mobile ?? "—"}</div>
-                      </button>
-                    ))}
-                    {(customersQ.data?.rows ?? []).length === 0 && (
-                      <div className="px-3 py-3 text-xs text-muted-foreground">No matches.</div>
-                    )}
-                  </div>
-                </>
-              )}
+              <CustomerCombobox
+                tenantId={tenantId}
+                value={customerId || null}
+                onChange={(id) => setCustomerId(id ?? "")}
+              />
 
               <div>
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Stock location</div>
