@@ -87,7 +87,7 @@ const RESOURCE_LABELS: Record<ServiceType, string> = {
 
 /** Presets shown in the Duration select. `mins` null = "Custom…" */
 const DURATION_PRESETS: Record<ServiceType, { label: string; mins: number }[]> = {
-  daycare:            [{ label: "Full day (08:00–17:00)", mins: 540 }, { label: "Half day (4h)", mins: 240 }],
+  daycare:            [{ label: "All day (08:00 – 17:00)", mins: 540 }, { label: "Half day (08:00 – 12:00)", mins: 240 }],
   daycare_assessment: [{ label: "1 hour", mins: 60 }, { label: "90 min", mins: 90 }],
   hotel_dog:          [], // uses nights
   hotel_cat:          [], // uses nights
@@ -100,6 +100,9 @@ const DEFAULT_DURATION: Record<ServiceType, number> = {
   daycare: 540, daycare_assessment: 60, hotel_dog: 24 * 60, hotel_cat: 24 * 60,
   grooming_inhouse: 60, grooming_mobile: 60, pickup_dropoff: 30,
 };
+
+/** Daycare runs to fixed times, so the form never asks for a start time. */
+const DAYCARE_START_TIME = "08:00";
 
 const STATUSES: BookingStatus[] = [
   "draft", "requested", "needs_info", "approved", "confirmed",
@@ -157,6 +160,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     booking?.service_type ?? prefill?.service_type ?? "daycare",
   );
   const [status, setStatus] = useState<BookingStatus>(booking?.status ?? "confirmed");
+  const isDaycare = serviceType === "daycare" || serviceType === "daycare_assessment";
   const [startAt, setStartAt] = useState<string>(
     toLocalInput(booking?.start_at ?? prefill?.start_at ?? null),
   );
@@ -183,6 +187,13 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     setDurationMins(DEFAULT_DURATION[serviceType]);
     setCustomDuration(false);
   }, [serviceType, isEdit]);
+
+  // Daycare has fixed times — force the start clock to the day start.
+  useEffect(() => {
+    if (!isDaycare || !startAt) return;
+    const wanted = `${startAt.slice(0, 10)}T${DAYCARE_START_TIME}`;
+    if (startAt !== wanted) setStartAt(wanted);
+  }, [isDaycare, startAt]);
 
   // Derived end iso string for downstream panels (hotel occupancy, conflicts).
   const endAtLocal = useMemo(() => {
@@ -752,8 +763,18 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             </select>
           </div>
           <div>
-            <div className="mb-1 text-sm font-medium">Start</div>
-            {kind === "hotel" ? (
+            <div className="mb-1 text-sm font-medium">{isDaycare ? "Day" : "Start"}</div>
+            {isDaycare ? (
+              <>
+                <input
+                  type="date"
+                  value={startAt ? startAt.slice(0, 10) : ""}
+                  onChange={(e) => setStartAt(e.target.value ? `${e.target.value}T${DAYCARE_START_TIME}` : "")}
+                  className={inputCls}
+                />
+                <div className="mt-1 text-[11px] text-muted-foreground">Daycare day runs 08:00 – 17:00.</div>
+              </>
+            ) : kind === "hotel" ? (
               <>
                 <input
                   type="date"
@@ -769,7 +790,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           </div>
           <div>
             <div className="mb-1 text-sm font-medium">
-              {kind === "hotel" ? "Nights" : "Duration"}
+              {kind === "hotel" ? "Nights" : isDaycare ? "How long?" : "Duration"}
             </div>
             {kind === "hotel" ? (
               <input
@@ -824,7 +845,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 <option value="__custom__">Custom…</option>
               </select>
             )}
-            {startAt && (
+            {startAt && !isDaycare && (
               <div className="mt-1 text-[11px] text-muted-foreground">
                 Ends {new Date(new Date(startAt).getTime() + durationMins * 60000).toLocaleString("en-ZA", {
                   weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",

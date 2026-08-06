@@ -51,6 +51,6 @@ describe("describeRule", () => {
   it("summarises weekly with weekdays", () => {
     expect(
       describeRule({ frequency: "weekly", interval: 1, daysOfWeek: ["mon", "wed"], endDate: "2026-11-30" }),
-    ).toMatch(/Every week on Mon, Wed until/);
+    ).toMatch(/Every week on Mon and Wed — until/);
   });
 });
