@@ -22,6 +22,7 @@ export function PaySuccessPage() {
   const attemptId = params.get("att");
   const [status, setStatus] = useState<AttemptStatus | null>(null);
   const [waiting, setWaiting] = useState(Boolean(attemptId));
+  const [round, setRound] = useState(0);
   const timedOut = useRef(false);
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export function PaySuccessPage() {
     }
     poll();
     return () => { cancelled = true; };
-  }, [attemptId]);
+  }, [attemptId, round]);
 
   const confirmed = status?.paid ?? false;
 
@@ -73,6 +74,11 @@ export function PaySuccessPage() {
               {status?.invoice_number ? ` Invoice ${status.invoice_number} still shows ${money(status.balance_due)} outstanding.` : ""}
               {" "}Please give it a few minutes and refresh your invoice — if it still shows unpaid, contact us and we'll check it.
             </p>
+            <button
+              onClick={() => { timedOut.current = false; setWaiting(true); setRound((r) => r + 1); }}
+              className="mt-4 inline-flex h-10 items-center rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white">
+              Check again
+            </button>
           </>
         ) : (
           <>

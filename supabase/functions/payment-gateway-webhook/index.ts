@@ -86,10 +86,20 @@ Deno.serve(async (req) => {
 
   if (isRefundNotification) {
     refundRowId = body["custom_str2"];
-    const { data: r } = await admin.from("payment_refunds").select("tenant_id, invoice_id, customer_id").eq("id", refundRowId).maybeSingle();
+    const { data: r, error: rErr } = await admin.from("payment_refunds").select("tenant_id, invoice_id, customer_id").eq("id", refundRowId).maybeSingle();
+    if (rErr) {
+      console.error("[itn] refund lookup failed", rErr.message);
+      return finish("error", { error_text: `refund_lookup_failed: ${rErr.message}` }, { error: "refund_lookup_failed" }, 500);
+    }
     tenantId = r?.tenant_id ?? null; invoiceId = r?.invoice_id ?? null; customerId = r?.customer_id ?? null;
   } else {
-    const { data: inv } = await admin.from("invoices").select("id, tenant_id, customer_id, total, balance_due, status, currency").eq("id", m_payment_id).maybeSingle();
+    const { data: inv, error: invErr } = await admin.from("invoices")
+      .select("id, tenant_id, customer_id, total, balance_due, status")
+      .eq("id", m_payment_id).maybeSingle();
+    if (invErr) {
+      console.error("[itn] invoice lookup failed", invErr.message);
+      return finish("error", { error_text: `invoice_lookup_failed: ${invErr.message}` }, { error: "invoice_lookup_failed" }, 500);
+    }
     if (!inv) return finish("error", { error_text: "invoice_not_found" }, { error: "invoice_not_found" }, 404);
     tenantId = inv.tenant_id; invoiceId = inv.id; customerId = inv.customer_id;
   }
@@ -101,9 +111,13 @@ Deno.serve(async (req) => {
   }
 
   // Load tenant's PayFast creds.
-  const { data: pf } = await admin.from("payment_providers")
+  const { data: pf, error: pfErr } = await admin.from("payment_providers")
     .select("mode, settings, enabled")
     .eq("tenant_id", tenantId).eq("provider", "payfast").maybeSingle();
+  if (pfErr) {
+    console.error("[itn] provider lookup failed", pfErr.message);
+    return finish("error", { error_text: `provider_lookup_failed: ${pfErr.message}` }, { error: "provider_lookup_failed" }, 500);
+  }
   if (!pf || !pf.enabled) {
     return finish("error", { error_text: "payfast_not_enabled_for_tenant" }, { error: "payfast_not_enabled_for_tenant" }, 403);
   }
@@ -125,9 +139,12 @@ Deno.serve(async (req) => {
     if (k === "signature") continue;
     sigFields[k] = v; orderedKeys.push(k);
   }
-  const expected = await payfastSignature(sigFields, settings.passphrase ?? null, orderedKeys);
-  if (!provided_signature || expected !== provided_signature) {
-    console.warn("[itn] signature mismatch", { expected, provided_signature });
+  // PayFast signs every posted field in the order received, blanks included.
+  const expected = await payfastSignature(sigFields, settings.passphrase ?? null, orderedKeys, true);
+  // Older/manually built notifications (our own self-test) omit blank fields.
+  const expectedNoBlanks = await payfastSignature(sigFields, settings.passphrase ?? null, orderedKeys, false);
+  if (!provided_signature || (expected !== provided_signature && expectedNoBlanks !== provided_signature)) {
+    console.warn("[itn] signature mismatch", { expected, expectedNoBlanks, provided_signature });
     return finish("bad_signature", {
       error_text: `expected ${expected}, received ${provided_signature ?? "(none)"} — check the passphrase configured in Settings matches the PayFast account`,
     }, { error: "bad_signature" }, 400);
@@ -178,7 +195,11 @@ Deno.serve(async (req) => {
   }
 
   // Dedupe on pf_payment_id (unique index).
-  const { data: existing } = await admin.from("payments").select("id").eq("pf_payment_id", pf_payment_id).maybeSingle();
+  const { data: existing, error: existErr } = await admin.from("payments").select("id").eq("pf_payment_id", pf_payment_id).maybeSingle();
+  if (existErr) {
+    console.error("[itn] dedupe lookup failed", existErr.message);
+    return finish("error", { error_text: `payment_lookup_failed: ${existErr.message}` }, { error: "payment_lookup_failed" }, 500);
+  }
   if (existing) return finish("dedup", { payment_id: existing.id }, { ok: true, kind: "payment", dedup: true, payment_id: existing.id });
 
   const amountGross = Number(body["amount_gross"] ?? "0");

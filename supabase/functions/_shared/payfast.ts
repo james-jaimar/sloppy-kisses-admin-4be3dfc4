@@ -22,18 +22,25 @@ export function apiHost(mode: PayFastMode) {
 
 /**
  * PayFast signature: build query string with URL-encoded values in a fixed
- * order (empty values EXCLUDED), append passphrase if configured, MD5.
+ * order, append passphrase if configured, MD5.
+ *
+ * Outgoing checkout requests EXCLUDE empty values. Inbound ITN signatures are
+ * calculated by PayFast over every posted field in the order received —
+ * including the blank custom_str/custom_int fields — so verification must pass
+ * includeEmpty = true or every ITN fails the signature check.
  */
 export async function payfastSignature(
   fields: Record<string, string | number | null | undefined>,
   passphrase: string | null,
   order?: string[],
+  includeEmpty = false,
 ): Promise<string> {
   const keys = order ?? Object.keys(fields);
   const parts: string[] = [];
   for (const k of keys) {
     const v = fields[k];
-    if (v === undefined || v === null || v === "") continue;
+    if (v === undefined || v === null) continue;
+    if (v === "" && !includeEmpty) continue;
     parts.push(`${k}=${encodePayfast(String(v))}`);
   }
   let base = parts.join("&");

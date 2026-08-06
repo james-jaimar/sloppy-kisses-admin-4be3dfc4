@@ -31,6 +31,7 @@ export default function GatewayActivityPage() {
   const [open, setOpen] = useState<string | null>(null);
   const [testInvoice, setTestInvoice] = useState("");
   const [testing, setTesting] = useState(false);
+  const [replaying, setReplaying] = useState<string | null>(null);
 
   const eventsQ = useQuery({
     queryKey: ["payment_webhook_events", tenantId],
@@ -91,6 +92,24 @@ export default function GatewayActivityPage() {
       toast.error(e?.message ?? "Test failed");
     } finally {
       setTesting(false);
+    }
+  }
+
+  async function replayItn(eventId: string) {
+    setReplaying(eventId);
+    try {
+      const { data, error } = await supabase.functions.invoke("payment-gateway-replay-itn", {
+        body: { event_id: eventId },
+      });
+      if (error) throw error;
+      if ((data as any)?.ok) toast.success("Notification reprocessed — payment applied");
+      else toast.error(`Still rejected: ${(data as any)?.webhook_response ?? "unknown"}`);
+      qc.invalidateQueries({ queryKey: ["payment_webhook_events"] });
+      qc.invalidateQueries({ queryKey: ["payment_attempts"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Reprocess failed");
+    } finally {
+      setReplaying(null);
     }
   }
 
@@ -178,6 +197,15 @@ export default function GatewayActivityPage() {
                       {e.error_text && <div className="text-destructive">{e.error_text}</div>}
                       <div className="text-muted-foreground">PayFast ref: <code>{e.pf_payment_id ?? "—"}</code></div>
                       <div className="text-muted-foreground">Invoice ref: <code>{e.m_payment_id ?? "—"}</code></div>
+                      {canManage && e.raw_body && !["accepted", "dedup"].includes(String(e.outcome)) && (
+                        <button
+                          disabled={replaying === e.id}
+                          onClick={() => replayItn(e.id)}
+                          className="inline-flex h-8 items-center gap-2 rounded-lg border border-border bg-white px-3 text-xs font-semibold hover:bg-muted disabled:opacity-50">
+                          {replaying === e.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                          Reprocess this notification
+                        </button>
+                      )}
                       <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all rounded bg-white p-2">
                         {JSON.stringify(e.payload, null, 2)}
                       </pre>
