@@ -202,12 +202,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     return toLocalInput(end.toISOString());
   }, [startAt, durationMins]);
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(customerSearch), 250);
-    return () => clearTimeout(t);
-  }, [customerSearch]);
-
-  const customersQ = useCustomers({ tenantId, search: debouncedSearch, pageSize: 25 });
   const petsQ = useCustomerPets(customerId, tenantId);
 
   // When creating a new booking, auto-select all of the chosen customer's pets
