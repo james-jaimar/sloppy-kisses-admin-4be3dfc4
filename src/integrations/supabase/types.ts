@@ -4269,7 +4269,7 @@ export type Database = {
           tenant_id: string
           unit_price: number
           vat_amount: number
-          vat_inclusive: boolean
+          vat_inclusive: boolean | null
           vat_rate: number | null
           xero_account_code: string | null
         }
@@ -4292,7 +4292,7 @@ export type Database = {
           tenant_id: string
           unit_price?: number
           vat_amount?: number
-          vat_inclusive?: boolean
+          vat_inclusive?: boolean | null
           vat_rate?: number | null
           xero_account_code?: string | null
         }
@@ -4315,7 +4315,7 @@ export type Database = {
           tenant_id?: string
           unit_price?: number
           vat_amount?: number
-          vat_inclusive?: boolean
+          vat_inclusive?: boolean | null
           vat_rate?: number | null
           xero_account_code?: string | null
         }
@@ -4367,12 +4367,15 @@ export type Database = {
           created_at: string
           created_by: string | null
           customer_id: string
+          deposit_due: number | null
+          deposit_due_date: string | null
           discount_total: number
           due_date: string | null
           id: string
           invoice_kind: string
           invoice_number: string
           issue_date: string | null
+          last_prearrival_offset: number | null
           last_reminder_at: string | null
           last_reminder_offset: number | null
           last_sent_at: string | null
@@ -4403,12 +4406,15 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_id: string
+          deposit_due?: number | null
+          deposit_due_date?: string | null
           discount_total?: number
           due_date?: string | null
           id?: string
           invoice_kind?: string
           invoice_number: string
           issue_date?: string | null
+          last_prearrival_offset?: number | null
           last_reminder_at?: string | null
           last_reminder_offset?: number | null
           last_sent_at?: string | null
@@ -4439,12 +4445,15 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_id?: string
+          deposit_due?: number | null
+          deposit_due_date?: string | null
           discount_total?: number
           due_date?: string | null
           id?: string
           invoice_kind?: string
           invoice_number?: string
           issue_date?: string | null
+          last_prearrival_offset?: number | null
           last_reminder_at?: string | null
           last_reminder_offset?: number | null
           last_sent_at?: string | null
@@ -5798,6 +5807,7 @@ export type Database = {
           hotel_cancellation_cutoff_days: number
           hotel_deposit_percent: number
           hotel_free_amendments: number
+          hotel_prearrival_reminder_days: number[]
           overdue_interest_percent_per_month: number
           tenant_id: string
           updated_at: string
@@ -5813,6 +5823,7 @@ export type Database = {
           hotel_cancellation_cutoff_days?: number
           hotel_deposit_percent?: number
           hotel_free_amendments?: number
+          hotel_prearrival_reminder_days?: number[]
           overdue_interest_percent_per_month?: number
           tenant_id: string
           updated_at?: string
@@ -5828,6 +5839,7 @@ export type Database = {
           hotel_cancellation_cutoff_days?: number
           hotel_deposit_percent?: number
           hotel_free_amendments?: number
+          hotel_prearrival_reminder_days?: number[]
           overdue_interest_percent_per_month?: number
           tenant_id?: string
           updated_at?: string
