@@ -705,6 +705,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               ))}
             </select>
           </div>
+          {kind !== "grooming" && (
           <div>
             <div className="mb-1 text-sm font-medium">{isDaycare ? "Day" : "Start"}</div>
             {isDaycare ? (
@@ -731,6 +732,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} className={inputCls} />
             )}
           </div>
+          )}
+          {kind !== "grooming" && (
           <div>
             <div className="mb-1 text-sm font-medium">
               {kind === "hotel" ? "Nights" : isDaycare ? "How long?" : "Duration"}
@@ -796,6 +799,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               </div>
             )}
           </div>
+          )}
           <div className="sm:col-span-2">
             <div className="mb-1 text-sm font-medium">{RESOURCE_LABELS[serviceType]}</div>
             <select
