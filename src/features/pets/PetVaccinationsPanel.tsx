@@ -232,6 +232,7 @@ function VaccinationModal({
   const [expiry, setExpiry] = useState(initialRecord?.expiry_date ?? "");
   const [notes, setNotes] = useState(initialRecord?.notes ?? "");
   const [file, setFile] = useState<File | null>(null);
+  const [phoneDoc, setPhoneDoc] = useState<{ id: string; file_name: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const selectedType = types.find((t) => t.id === typeId) ?? null;
@@ -247,6 +248,7 @@ function VaccinationModal({
     setBusy(true);
     try {
       let documentId = initialRecord?.document_id ?? null;
+      if (phoneDoc) documentId = phoneDoc.id;
       if (file) {
         const res = await uploadDocumentToS3({ tenantId, petId, type: "vaccination", file, uploadedVia });
         documentId = res.document_id;
