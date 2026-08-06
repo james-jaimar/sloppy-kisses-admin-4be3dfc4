@@ -7848,6 +7848,10 @@ export type Database = {
         Args: { p_booking_id: string; p_end_at?: string; p_start_at: string }
         Returns: undefined
       }
+      recompute_invoice_payments: {
+        Args: { p_invoice_id: string }
+        Returns: undefined
+      }
       record_manual_refund: {
         Args: {
           p_amount: number
