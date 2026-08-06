@@ -408,6 +408,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   }, [customerId, booking]);
 
   const resourceType = SERVICE_TYPES.find((s) => s.value === serviceType)?.resourceType;
+  // Grooming: the package decides the appointment length, so there is no
+  // separate Start / Duration control for it.
+  const selectedGroomingPackage = useMemo(
+    () => (packagesQ.data ?? []).find((p) => p.id === grooming.package_id) ?? null,
+    [packagesQ.data, grooming.package_id],
+  );
+  useEffect(() => {
+    if (kind !== "grooming" || !selectedGroomingPackage) return;
+    const mins = Number(selectedGroomingPackage.expected_minutes) || 60;
+    setDurationMins((prev) => (prev === mins ? prev : mins));
+  }, [kind, selectedGroomingPackage]);
   const filteredResources = (resourcesQ.data ?? []).filter(
     (r) => !resourceType || r.type === resourceType,
   );
@@ -416,7 +427,12 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!customerId) return toast.error("Please select a customer");
-    if (!startAt) return toast.error("Please pick a start time");
+    if (kind === "grooming" && !grooming.package_id) {
+      return toast.error("Please choose a grooming package");
+    }
+    if (!startAt) {
+      return toast.error(kind === "grooming" ? "Please pick a day and time slot" : "Please pick a start time");
+    }
     if (!durationMins || durationMins <= 0) return toast.error("Please set a duration");
     const endComputed = new Date(new Date(startAt).getTime() + durationMins * 60000);
     if ((petsQ.data?.length ?? 0) > 0 && petIds.length === 0) {
@@ -705,6 +721,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               ))}
             </select>
           </div>
+          {kind !== "grooming" && (
           <div>
             <div className="mb-1 text-sm font-medium">{isDaycare ? "Day" : "Start"}</div>
             {isDaycare ? (
@@ -731,6 +748,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} className={inputCls} />
             )}
           </div>
+          )}
+          {kind !== "grooming" && (
           <div>
             <div className="mb-1 text-sm font-medium">
               {kind === "hotel" ? "Nights" : isDaycare ? "How long?" : "Duration"}
@@ -796,6 +815,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               </div>
             )}
           </div>
+          )}
           <div className="sm:col-span-2">
             <div className="mb-1 text-sm font-medium">{RESOURCE_LABELS[serviceType]}</div>
             <select
@@ -835,22 +855,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         </div>
 
         {kind === "grooming" && (
-          <div className="mt-2">
-            <div className="mb-1 text-sm font-medium">Pick a slot</div>
-            <GroomingSlotPicker
-              tenantId={tenantId}
-              value={startAt || null}
-              durationMinutes={durationMins}
-              resourceId={resourceId}
-              excludeBookingId={booking?.id ?? null}
-              onChange={(startLocal, endLocal) => {
-                if (startLocal) setStartAt(startLocal);
-              }}
-            />
-          </div>
-        )}
-
-        {kind === "grooming" && (
           <GroomingFields
             value={grooming}
             onChange={(patch) => setGrooming((p) => ({ ...p, ...patch }))}
@@ -873,6 +877,34 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             travelFee={grooming.travel_fee ?? null}
             petSize={effectivePetSize(petsQ.data?.find((p) => petIds.includes(p.id)) as any)}
           />
+        )}
+        {kind === "grooming" && (
+          <div className="mt-2">
+            <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+              <div className="text-sm font-medium">Pick a day and time</div>
+              <div className="text-[11px] text-muted-foreground">
+                {selectedGroomingPackage
+                  ? `${durationMins} min — ${selectedGroomingPackage.name}`
+                  : "Pick a package first"}
+              </div>
+            </div>
+            {selectedGroomingPackage ? (
+              <GroomingSlotPicker
+                tenantId={tenantId}
+                value={startAt || null}
+                durationMinutes={durationMins}
+                resourceId={resourceId}
+                excludeBookingId={booking?.id ?? null}
+                onChange={(startLocal) => {
+                  if (startLocal) setStartAt(startLocal);
+                }}
+              />
+            ) : (
+              <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                Choose a grooming package above and the available times will show here.
+              </div>
+            )}
+          </div>
         )}
         {kind === "grooming" && (
           <BookingGroomingInstructionsPanel
