@@ -101,6 +101,9 @@ const DEFAULT_DURATION: Record<ServiceType, number> = {
   grooming_inhouse: 60, grooming_mobile: 60, pickup_dropoff: 30,
 };
 
+/** Daycare runs to fixed times, so the form never asks for a start time. */
+const DAYCARE_START_TIME = "08:00";
+
 const STATUSES: BookingStatus[] = [
   "draft", "requested", "needs_info", "approved", "confirmed",
   "checked_in", "in_progress", "ready", "checked_out", "completed", "cancelled", "no_show",
@@ -220,6 +223,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
   // Service-typed details state
   const kind = serviceKind(serviceType);
+  const isDaycare = serviceType === "daycare" || serviceType === "daycare_assessment";
   const [grooming, setGrooming] = useState<Partial<GroomingDetails>>(
     !isEdit && prefill?.grooming ? prefill.grooming : {},
   );
