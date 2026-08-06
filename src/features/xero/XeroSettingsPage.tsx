@@ -303,14 +303,40 @@ export default function XeroSettingsPage() {
               </div>
 
               <div className="mt-5 text-sm font-semibold">Bank account per payment method</div>
-              <p className="text-xs text-muted-foreground">Payments recorded here post to these Xero accounts.</p>
+              <p className="text-xs text-muted-foreground">
+                Payments recorded here post to these Xero accounts. A payment with no mapped account cannot sync.
+              </p>
+              {bankAccounts.isError && (
+                <p className="mt-1 text-xs text-amber-700">
+                  Could not load Xero bank accounts ({(bankAccounts.error as Error)?.message}). You can still type a code.
+                </p>
+              )}
+              {!form.payment_accounts?.payfast && (
+                <p className="mt-1 flex items-center gap-1 text-xs font-medium text-amber-700">
+                  <AlertTriangle className="h-3.5 w-3.5" /> PayFast has no bank account mapped — online payments will fail to sync to Xero.
+                </p>
+              )}
               <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {PAYMENT_METHODS.map((m) => (
                   <div key={m}>
                     <div className={label}>{m}</div>
-                    <input className={input} disabled={!canManage}
-                      value={form.payment_accounts?.[m] ?? ""} placeholder="e.g. 090"
-                      onChange={(e) => set({ payment_accounts: { ...(form.payment_accounts ?? {}), [m]: e.target.value } })} />
+                    {(bankAccounts.data?.length ?? 0) > 0 ? (
+                      <select className={input} disabled={!canManage}
+                        value={form.payment_accounts?.[m] ?? ""}
+                        onChange={(e) => set({ payment_accounts: { ...(form.payment_accounts ?? {}), [m]: e.target.value } })}>
+                        <option value="">Not mapped</option>
+                        {bankAccounts.data!.map((a) => (
+                          <option key={a.code} value={a.code}>{a.code} — {a.name}</option>
+                        ))}
+                        {form.payment_accounts?.[m] && !bankAccounts.data!.some((a) => a.code === form.payment_accounts[m]) && (
+                          <option value={form.payment_accounts[m]}>{form.payment_accounts[m]}</option>
+                        )}
+                      </select>
+                    ) : (
+                      <input className={input} disabled={!canManage}
+                        value={form.payment_accounts?.[m] ?? ""} placeholder={bankAccounts.isFetching ? "Loading…" : "e.g. 090"}
+                        onChange={(e) => set({ payment_accounts: { ...(form.payment_accounts ?? {}), [m]: e.target.value } })} />
+                    )}
                   </div>
                 ))}
               </div>
