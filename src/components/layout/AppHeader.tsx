@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, KeyRound, LogOut, MessageSquare, Plus, Search, ShieldCheck, CalendarPlus, UserPlus, Dog, FileText, ChevronDown, HardHat } from "lucide-react";
+import { Bell, KeyRound, LogOut, MessageSquare, Plus, ShieldCheck, CalendarPlus, UserPlus, Dog, FileText, ChevronDown, HardHat } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useQuickAdd, type QuickAddKind } from "@/components/quickAdd/QuickAddProvider";
