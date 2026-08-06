@@ -408,6 +408,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   }, [customerId, booking]);
 
   const resourceType = SERVICE_TYPES.find((s) => s.value === serviceType)?.resourceType;
+  // Grooming: the package decides the appointment length, so there is no
+  // separate Start / Duration control for it.
+  const selectedGroomingPackage = useMemo(
+    () => (packagesQ.data ?? []).find((p) => p.id === grooming.package_id) ?? null,
+    [packagesQ.data, grooming.package_id],
+  );
+  useEffect(() => {
+    if (kind !== "grooming" || !selectedGroomingPackage) return;
+    const mins = Number(selectedGroomingPackage.expected_minutes) || 60;
+    setDurationMins((prev) => (prev === mins ? prev : mins));
+  }, [kind, selectedGroomingPackage]);
   const filteredResources = (resourcesQ.data ?? []).filter(
     (r) => !resourceType || r.type === resourceType,
   );
