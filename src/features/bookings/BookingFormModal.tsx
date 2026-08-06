@@ -160,6 +160,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     booking?.service_type ?? prefill?.service_type ?? "daycare",
   );
   const [status, setStatus] = useState<BookingStatus>(booking?.status ?? "confirmed");
+  const isDaycare = serviceType === "daycare" || serviceType === "daycare_assessment";
   const [startAt, setStartAt] = useState<string>(
     toLocalInput(booking?.start_at ?? prefill?.start_at ?? null),
   );
@@ -230,7 +231,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
   // Service-typed details state
   const kind = serviceKind(serviceType);
-  const isDaycare = serviceType === "daycare" || serviceType === "daycare_assessment";
   const [grooming, setGrooming] = useState<Partial<GroomingDetails>>(
     !isEdit && prefill?.grooming ? prefill.grooming : {},
   );
