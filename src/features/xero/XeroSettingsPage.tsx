@@ -9,6 +9,7 @@ import {
   useXeroPush, useXeroBackfillCounts, fetchBackfillIds, useXeroRunQueue, useXeroQueue,
   useXeroResetBilling,
   useXeroTaxRates, type XeroTaxRate,
+  useXeroBankAccounts,
 } from "./queries";
 
 const SERVICES: { key: string; label: string }[] = [
@@ -21,7 +22,7 @@ const SERVICES: { key: string; label: string }[] = [
   { key: "pickup_dropoff", label: "Pick-up / drop-off" },
 ];
 
-const PAYMENT_METHODS = ["eft", "cash", "card", "yoko", "payfast", "other"];
+const PAYMENT_METHODS = ["payfast", "eft", "cash", "card", "yoko", "other"];
 
 const input = "h-10 w-full rounded-xl border border-border bg-white px-3 text-sm";
 const label = "text-xs font-semibold uppercase tracking-wide text-muted-foreground";
