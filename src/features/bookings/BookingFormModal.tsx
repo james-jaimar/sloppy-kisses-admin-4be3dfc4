@@ -87,7 +87,7 @@ const RESOURCE_LABELS: Record<ServiceType, string> = {
 
 /** Presets shown in the Duration select. `mins` null = "Custom…" */
 const DURATION_PRESETS: Record<ServiceType, { label: string; mins: number }[]> = {
-  daycare:            [{ label: "Full day (08:00–17:00)", mins: 540 }, { label: "Half day (4h)", mins: 240 }],
+  daycare:            [{ label: "All day (08:00 – 17:00)", mins: 540 }, { label: "Half day (08:00 – 12:00)", mins: 240 }],
   daycare_assessment: [{ label: "1 hour", mins: 60 }, { label: "90 min", mins: 90 }],
   hotel_dog:          [], // uses nights
   hotel_cat:          [], // uses nights
