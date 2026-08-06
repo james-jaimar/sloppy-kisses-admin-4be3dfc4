@@ -839,22 +839,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         </div>
 
         {kind === "grooming" && (
-          <div className="mt-2">
-            <div className="mb-1 text-sm font-medium">Pick a slot</div>
-            <GroomingSlotPicker
-              tenantId={tenantId}
-              value={startAt || null}
-              durationMinutes={durationMins}
-              resourceId={resourceId}
-              excludeBookingId={booking?.id ?? null}
-              onChange={(startLocal, endLocal) => {
-                if (startLocal) setStartAt(startLocal);
-              }}
-            />
-          </div>
-        )}
-
-        {kind === "grooming" && (
           <GroomingFields
             value={grooming}
             onChange={(patch) => setGrooming((p) => ({ ...p, ...patch }))}
@@ -877,6 +861,34 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             travelFee={grooming.travel_fee ?? null}
             petSize={effectivePetSize(petsQ.data?.find((p) => petIds.includes(p.id)) as any)}
           />
+        )}
+        {kind === "grooming" && (
+          <div className="mt-2">
+            <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+              <div className="text-sm font-medium">Pick a day and time</div>
+              <div className="text-[11px] text-muted-foreground">
+                {selectedGroomingPackage
+                  ? `${durationMins} min — ${selectedGroomingPackage.name}`
+                  : "Pick a package first"}
+              </div>
+            </div>
+            {selectedGroomingPackage ? (
+              <GroomingSlotPicker
+                tenantId={tenantId}
+                value={startAt || null}
+                durationMinutes={durationMins}
+                resourceId={resourceId}
+                excludeBookingId={booking?.id ?? null}
+                onChange={(startLocal) => {
+                  if (startLocal) setStartAt(startLocal);
+                }}
+              />
+            ) : (
+              <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
+                Choose a grooming package above and the available times will show here.
+              </div>
+            )}
+          </div>
         )}
         {kind === "grooming" && (
           <BookingGroomingInstructionsPanel
