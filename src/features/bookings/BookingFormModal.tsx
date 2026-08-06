@@ -427,7 +427,12 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!customerId) return toast.error("Please select a customer");
-    if (!startAt) return toast.error("Please pick a start time");
+    if (kind === "grooming" && !grooming.package_id) {
+      return toast.error("Please choose a grooming package");
+    }
+    if (!startAt) {
+      return toast.error(kind === "grooming" ? "Please pick a day and time slot" : "Please pick a start time");
+    }
     if (!durationMins || durationMins <= 0) return toast.error("Please set a duration");
     const endComputed = new Date(new Date(startAt).getTime() + durationMins * 60000);
     if ((petsQ.data?.length ?? 0) > 0 && petIds.length === 0) {
