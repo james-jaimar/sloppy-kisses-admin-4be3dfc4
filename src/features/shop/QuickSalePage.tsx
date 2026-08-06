@@ -4,7 +4,7 @@ import { Minus, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
-import { useCustomers } from "@/features/customers/queries";
+import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import { usePaymentMethods } from "@/features/invoices/queries";
 import {
   useDefaultLocation, useProducts, useQuickSale, useStockLocations, useStockOnHand, type Product,
@@ -18,7 +18,6 @@ export default function QuickSalePage() {
   const tenantId = tenant?.id ?? null;
 
   const [search, setSearch] = useState("");
-  const [customerSearch, setCustomerSearch] = useState("");
   const [customerId, setCustomerId] = useState<string>("");
   const [locationId, setLocationId] = useState<string>("");
   const [cart, setCart] = useState<Line[]>([]);
@@ -31,7 +30,6 @@ export default function QuickSalePage() {
   const { defaultLocation } = useDefaultLocation(tenantId);
   const effectiveLoc = locationId || defaultLocation?.id || "";
   const stockQ = useStockOnHand(tenantId, effectiveLoc || null);
-  const customersQ = useCustomers({ tenantId, search: customerSearch, pageSize: 10 });
   const methodsQ = usePaymentMethods(tenantId, { activeOnly: true });
   const sale = useQuickSale(tenantId ?? "");
 
@@ -53,8 +51,6 @@ export default function QuickSalePage() {
     setCart((c) => c.map((l) => l.product.id === id ? { ...l, qty: Math.max(1, qty) } : l));
   }
   function removeLine(id: string) { setCart((c) => c.filter((l) => l.product.id !== id)); }
-
-  const selectedCustomer = (customersQ.data?.rows ?? []).find((c) => c.id === customerId);
 
   async function completeSale() {
     if (!tenantId) return;
@@ -140,32 +136,11 @@ export default function QuickSalePage() {
 
             <div className="sk-card p-4 space-y-3">
               <div className="text-sm font-semibold">Customer</div>
-              {selectedCustomer ? (
-                <div className="flex items-center justify-between rounded-lg border border-border bg-sk-surface-muted p-2 text-sm">
-                  <div>
-                    <div className="font-medium">{selectedCustomer.full_name}</div>
-                    <div className="text-xs text-muted-foreground">{selectedCustomer.customer_number} · {selectedCustomer.email ?? "no email"}</div>
-                  </div>
-                  <button onClick={() => setCustomerId("")} className="text-xs text-sk-coral-dark">Change</button>
-                </div>
-              ) : (
-                <>
-                  <input value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} placeholder="Search customer by name, email, mobile…"
-                    className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm" />
-                  <div className="max-h-40 overflow-y-auto divide-y divide-border rounded-lg border border-border">
-                    {(customersQ.data?.rows ?? []).map((c) => (
-                      <button key={c.id} onClick={() => setCustomerId(c.id)}
-                        className="block w-full text-left px-3 py-2 text-sm hover:bg-sk-surface-muted/50">
-                        <div className="font-medium">{c.full_name}</div>
-                        <div className="text-xs text-muted-foreground">{c.customer_number} · {c.email ?? c.mobile ?? "—"}</div>
-                      </button>
-                    ))}
-                    {(customersQ.data?.rows ?? []).length === 0 && (
-                      <div className="px-3 py-3 text-xs text-muted-foreground">No matches.</div>
-                    )}
-                  </div>
-                </>
-              )}
+              <CustomerCombobox
+                tenantId={tenantId}
+                value={customerId || null}
+                onChange={(id) => setCustomerId(id ?? "")}
+              />
 
               <div>
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Stock location</div>

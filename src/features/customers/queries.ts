@@ -61,7 +61,11 @@ export function useCustomers(params: {
         // Split on whitespace so "james hawkins" matches "James  Hawkins"
         // (extra spaces, punctuation, etc). Each token must match some field;
         // chained .or() calls are AND-ed together by PostgREST.
-        const tokens = s.split(/\s+/).filter(Boolean);
+        // Commas/parens/quotes would break PostgREST's or() grammar, so strip them.
+        const tokens = s
+          .split(/\s+/)
+          .map((t) => t.replace(/[,()"']/g, "").trim())
+          .filter(Boolean);
         for (const tok of tokens) {
           const q = `%${tok}%`;
           query = query.or(

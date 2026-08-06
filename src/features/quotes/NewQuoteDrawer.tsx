@@ -4,7 +4,8 @@ import { Plus, Trash2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { addDays, format } from "date-fns";
 import { ModalShell } from "@/components/modals/ModalShell";
-import { useCustomers, useCustomerPets } from "@/features/customers/queries";
+import { useCustomerPets } from "@/features/customers/queries";
+import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import { useHotelRateCards } from "@/features/settings/hotelRateCardQueries";
 import { useCreateQuote, useHotelStayLines, useQuoteValidityDays } from "./queries";
 
@@ -14,7 +15,6 @@ interface Line { description: string; quantity: number; unit_price: number }
 
 export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClose: () => void }) {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
   const [customerId, setCustomerId] = useState("");
   const [petIds, setPetIds] = useState<string[]>([]);
   const [serviceType, setServiceType] = useState("hotel_dog");
@@ -25,7 +25,6 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
   const [extraLines, setExtraLines] = useState<Line[]>([]);
   const [expiry, setExpiry] = useState("");
 
-  const customersQ = useCustomers({ tenantId, search, pageSize: 20 });
   const petsQ = useCustomerPets(customerId || null, tenantId);
   const ratesQ = useHotelRateCards(tenantId, { activeOnly: true });
   const validityQ = useQuoteValidityDays(tenantId);
@@ -113,20 +112,11 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
       <div className="space-y-4">
         <div>
           <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Customer</div>
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, email or mobile…"
-            className={input}
+          <CustomerCombobox
+            tenantId={tenantId}
+            value={customerId || null}
+            onChange={(id) => setCustomerId(id ?? "")}
           />
-          <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className={input + " mt-2"}>
-            <option value="">Select a customer…</option>
-            {(customersQ.data?.rows ?? []).map((c: any) => (
-              <option key={c.id} value={c.id}>
-                {c.full_name} {c.email ? `· ${c.email}` : ""}
-              </option>
-            ))}
-          </select>
         </div>
 
         {customerId && (
