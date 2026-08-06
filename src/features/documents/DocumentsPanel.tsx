@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { uploadDocumentToS3, getDocumentDownloadUrl } from "./uploadDocument";
+import { SnapUploadButton } from "@/features/uploads/SnapUploadButton";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Props = {
