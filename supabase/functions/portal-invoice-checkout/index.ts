@@ -35,10 +35,14 @@ Deno.serve(async (req) => {
   const { data: userRes, error: userErr } = await asCaller.auth.getUser();
   if (userErr || !userRes?.user) return json({ error: "not_authenticated" }, 401);
 
-  let body: { invoice_id?: string };
+  let body: { invoice_id?: string; amount?: number };
   try { body = await req.json(); } catch { return json({ error: "bad_json" }, 400); }
   const invoiceId = body.invoice_id;
   if (!invoiceId) return json({ error: "missing_invoice_id" }, 400);
+  const requestedAmount = body.amount === undefined || body.amount === null ? null : Number(body.amount);
+  if (requestedAmount !== null && (!Number.isFinite(requestedAmount) || requestedAmount <= 0)) {
+    return json({ error: "invalid_amount" }, 400);
+  }
 
   const { data: inv, error: invErr } = await admin
     .from("invoices")
@@ -68,6 +72,10 @@ Deno.serve(async (req) => {
   if (Number(inv.balance_due) <= 0) return json({ error: "nothing_to_pay" }, 400);
   if (inv.status === "draft" || inv.status === "cancelled") return json({ error: "invoice_not_payable" }, 400);
 
+  // Part payments (e.g. a hotel deposit) are allowed up to the outstanding balance.
+  const payAmount = Math.min(requestedAmount ?? Number(inv.balance_due), Number(inv.balance_due));
+  const isPartial = payAmount < Number(inv.balance_due);
+
   const { data: pf, error: pfErr } = await admin
     .from("payment_providers")
     .select("mode, settings, enabled")
@@ -89,7 +97,7 @@ Deno.serve(async (req) => {
     customer_id: inv.customer_id,
     provider: "payfast",
     provider_mode: mode,
-    amount: Number(inv.balance_due),
+    amount: payAmount,
     status: "redirected",
     origin: "customer_portal",
   }).select("id").maybeSingle();
@@ -110,9 +118,11 @@ Deno.serve(async (req) => {
     name_last: lastName,
     email_address: cust.email ?? "",
     m_payment_id: inv.id,
-    amount: Number(inv.balance_due).toFixed(2),
+    amount: payAmount.toFixed(2),
     item_name: `Invoice ${inv.invoice_number}`,
-    item_description: `Payment for invoice ${inv.invoice_number}`,
+    item_description: isPartial
+      ? `Part payment for invoice ${inv.invoice_number}`
+      : `Payment for invoice ${inv.invoice_number}`,
     custom_str3: attemptId ?? "",
   };
   const orderedKeys = Object.keys(fields);
