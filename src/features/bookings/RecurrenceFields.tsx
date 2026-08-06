@@ -55,6 +55,15 @@ interface Props {
 }
 
 export function RecurrenceFields({ value, onChange, anchorDate }: Props) {
+  const howOften =
+    value.frequency === "monthly" ? "monthly" : value.frequency === "weekly" && value.interval === 2 ? "fortnightly" : "weekly";
+
+  function setHowOften(v: string) {
+    if (v === "monthly") onChange({ frequency: "monthly", interval: 1 });
+    else if (v === "fortnightly") onChange({ frequency: "weekly", interval: 2 });
+    else onChange({ frequency: "weekly", interval: 1 });
+  }
+
   function toggleDay(k: WeekdayKey) {
     const set = new Set(value.daysOfWeek);
     set.has(k) ? set.delete(k) : set.add(k);
@@ -76,7 +85,7 @@ export function RecurrenceFields({ value, onChange, anchorDate }: Props) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Repeat className="h-4 w-4 text-muted-foreground" />
-          Repeat
+          Book the same days again?
         </div>
         <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
           <input
@@ -84,41 +93,24 @@ export function RecurrenceFields({ value, onChange, anchorDate }: Props) {
             checked={value.enabled}
             onChange={(e) => (e.target.checked ? enable() : onChange({ enabled: false }))}
           />
-          Make this a recurring series
+          Yes, book this again and again
         </label>
       </div>
 
       {value.enabled && (
         <div className="mt-4 space-y-3">
-          <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
-            <div>
-              <div className="mb-1 text-xs font-medium text-muted-foreground">Frequency</div>
-              <select
-                value={value.frequency}
-                onChange={(e) => onChange({ frequency: e.target.value as RecurrenceFrequency })}
-                className={inputCls}
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </div>
-            <div>
-              <div className="mb-1 text-xs font-medium text-muted-foreground">Every</div>
-              <input
-                type="number"
-                min={1}
-                max={12}
-                value={value.interval}
-                onChange={(e) => onChange({ interval: Math.max(1, Number(e.target.value) || 1) })}
-                className={inputCls}
-              />
-            </div>
+          <div>
+            <div className="mb-1 text-xs font-medium text-muted-foreground">How often</div>
+            <select value={howOften} onChange={(e) => setHowOften(e.target.value)} className={inputCls}>
+              <option value="weekly">Every week</option>
+              <option value="fortnightly">Every 2 weeks</option>
+              <option value="monthly">Every month</option>
+            </select>
           </div>
 
           {value.frequency === "weekly" && (
             <div>
-              <div className="mb-1 text-xs font-medium text-muted-foreground">On</div>
+              <div className="mb-1 text-xs font-medium text-muted-foreground">Which days?</div>
               <div className="flex flex-wrap gap-1.5">
                 {WEEKDAY_KEYS.map((k) => {
                   const active = value.daysOfWeek.includes(k);
@@ -144,21 +136,21 @@ export function RecurrenceFields({ value, onChange, anchorDate }: Props) {
 
           <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
             <div>
-              <div className="mb-1 text-xs font-medium text-muted-foreground">Ends</div>
+              <div className="mb-1 text-xs font-medium text-muted-foreground">When does it stop?</div>
               <select
                 value={value.endMode}
                 onChange={(e) => onChange({ endMode: e.target.value as EndMode })}
                 className={inputCls}
               >
-                <option value="after">After N occurrences</option>
-                <option value="on">On a specific date</option>
-                <option value="never">Never (60-day rolling window)</option>
+                <option value="after">After a set number of visits</option>
+                <option value="on">On a date I choose</option>
+                <option value="never">Keep going (we book 60 days ahead)</option>
               </select>
             </div>
             <div>
               {value.endMode === "after" && (
                 <>
-                  <div className="mb-1 text-xs font-medium text-muted-foreground">Occurrences</div>
+                  <div className="mb-1 text-xs font-medium text-muted-foreground">How many visits?</div>
                   <input
                     type="number"
                     min={2}
@@ -171,7 +163,7 @@ export function RecurrenceFields({ value, onChange, anchorDate }: Props) {
               )}
               {value.endMode === "on" && (
                 <>
-                  <div className="mb-1 text-xs font-medium text-muted-foreground">End date</div>
+                  <div className="mb-1 text-xs font-medium text-muted-foreground">Last day</div>
                   <input
                     type="date"
                     value={value.endDate}
