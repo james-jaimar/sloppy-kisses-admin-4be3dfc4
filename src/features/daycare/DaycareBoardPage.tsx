@@ -238,6 +238,9 @@ export default function DaycareBoardPage() {
           </div>
         )}
       </div>
+      {walkInOpen && tenantId && (
+        <WalkInDialog tenantId={tenantId} day={day} onClose={() => setWalkInOpen(false)} />
+      )}
     </>
   );
 }
