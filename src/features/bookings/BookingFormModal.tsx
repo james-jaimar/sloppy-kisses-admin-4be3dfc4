@@ -752,8 +752,18 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             </select>
           </div>
           <div>
-            <div className="mb-1 text-sm font-medium">Start</div>
-            {kind === "hotel" ? (
+            <div className="mb-1 text-sm font-medium">{isDaycare ? "Day" : "Start"}</div>
+            {isDaycare ? (
+              <>
+                <input
+                  type="date"
+                  value={startAt ? startAt.slice(0, 10) : ""}
+                  onChange={(e) => setStartAt(e.target.value ? `${e.target.value}T${DAYCARE_START_TIME}` : "")}
+                  className={inputCls}
+                />
+                <div className="mt-1 text-[11px] text-muted-foreground">Daycare day runs 08:00 – 17:00.</div>
+              </>
+            ) : kind === "hotel" ? (
               <>
                 <input
                   type="date"
@@ -769,7 +779,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           </div>
           <div>
             <div className="mb-1 text-sm font-medium">
-              {kind === "hotel" ? "Nights" : "Duration"}
+              {kind === "hotel" ? "Nights" : isDaycare ? "How long?" : "Duration"}
             </div>
             {kind === "hotel" ? (
               <input
@@ -824,7 +834,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 <option value="__custom__">Custom…</option>
               </select>
             )}
-            {startAt && (
+            {startAt && !isDaycare && (
               <div className="mt-1 text-[11px] text-muted-foreground">
                 Ends {new Date(new Date(startAt).getTime() + durationMins * 60000).toLocaleString("en-ZA", {
                   weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
