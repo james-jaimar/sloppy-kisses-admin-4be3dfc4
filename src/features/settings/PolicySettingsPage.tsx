@@ -18,6 +18,7 @@ type Row = {
   daycare_catchup_window_days: number;
   overdue_interest_percent_per_month: number;
   consent_grace_days: number;
+  hotel_prearrival_reminder_days: number[];
 };
 
 const DEFAULTS: Omit<Row, "tenant_id"> = {
@@ -31,6 +32,7 @@ const DEFAULTS: Omit<Row, "tenant_id"> = {
   daycare_catchup_window_days: 30,
   overdue_interest_percent_per_month: 3,
   consent_grace_days: 30,
+  hotel_prearrival_reminder_days: [3, 2, 1],
 };
 
 export default function PolicySettingsPage() {
@@ -76,7 +78,7 @@ export default function PolicySettingsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const set = <K extends keyof typeof form>(k: K, v: number) =>
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
   const num = (label: string, key: keyof typeof form, hint?: string, suffix?: string) => (
@@ -87,8 +89,8 @@ export default function PolicySettingsPage() {
           type="number"
           step="0.01"
           min={0}
-          value={form[key]}
-          onChange={(e) => set(key, Number(e.target.value))}
+          value={form[key] as number}
+          onChange={(e) => set(key, Number(e.target.value) as any)}
           className="w-32 rounded-md border px-3 py-2"
         />
         {suffix && <span className="text-xs text-muted-foreground">{suffix}</span>}
@@ -113,6 +115,27 @@ export default function PolicySettingsPage() {
               {num("Free amendments", "hotel_free_amendments", "Before amendment fee kicks in")}
               {num("Amendment fee", "hotel_amendment_fee", "After free amendments used", "ZAR")}
               {num("Cancellation cutoff", "hotel_cancellation_cutoff_days", "Deposit forfeit inside this window", "days")}
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium">Balance reminders before arrival</span>
+                <input
+                  type="text"
+                  value={(form.hotel_prearrival_reminder_days ?? []).join(", ")}
+                  onChange={(e) =>
+                    set(
+                      "hotel_prearrival_reminder_days",
+                      e.target.value
+                        .split(",")
+                        .map((s) => Number(s.trim()))
+                        .filter((n) => Number.isFinite(n) && n > 0) as any,
+                    )
+                  }
+                  className="w-40 rounded-md border px-3 py-2"
+                  placeholder="3, 2, 1"
+                />
+                <span className="text-xs text-muted-foreground">
+                  Days before check-in to email the outstanding balance. Comma separated.
+                </span>
+              </label>
             </div>
           </section>
 

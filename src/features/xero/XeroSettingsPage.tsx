@@ -381,6 +381,35 @@ export default function XeroSettingsPage() {
                   {runQueue.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Run now
                 </button>
               </div>
+
+              {(queueQ.data ?? []).length > 0 && (
+                <div className="mt-4 overflow-hidden rounded-lg border border-border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-sk-surface-muted text-xs text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium">Type</th>
+                        <th className="px-3 py-2 text-left font-medium">Status</th>
+                        <th className="px-3 py-2 text-left font-medium">Attempts</th>
+                        <th className="px-3 py-2 text-left font-medium">Last error</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {(queueQ.data ?? []).slice(0, 25).map((row: any) => (
+                        <tr key={row.id} className="align-top">
+                          <td className="px-3 py-2">{row.entity_type}</td>
+                          <td className="px-3 py-2">
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${row.status === "failed" ? "bg-destructive/10 text-destructive" : "bg-sk-orange-soft text-sk-orange"}`}>
+                              {row.status}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-muted-foreground">{row.attempts ?? 0}</td>
+                          <td className="px-3 py-2 text-xs text-muted-foreground">{row.last_error ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             <GoLiveResetCard tenantId={tenantId} canManage={canManage} />
