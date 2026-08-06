@@ -4,7 +4,7 @@ import { Minus, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
-import { useCustomers } from "@/features/customers/queries";
+import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import { usePaymentMethods } from "@/features/invoices/queries";
 import {
   useDefaultLocation, useProducts, useQuickSale, useStockLocations, useStockOnHand, type Product,
@@ -18,7 +18,6 @@ export default function QuickSalePage() {
   const tenantId = tenant?.id ?? null;
 
   const [search, setSearch] = useState("");
-  const [customerSearch, setCustomerSearch] = useState("");
   const [customerId, setCustomerId] = useState<string>("");
   const [locationId, setLocationId] = useState<string>("");
   const [cart, setCart] = useState<Line[]>([]);
@@ -31,7 +30,6 @@ export default function QuickSalePage() {
   const { defaultLocation } = useDefaultLocation(tenantId);
   const effectiveLoc = locationId || defaultLocation?.id || "";
   const stockQ = useStockOnHand(tenantId, effectiveLoc || null);
-  const customersQ = useCustomers({ tenantId, search: customerSearch, pageSize: 10 });
   const methodsQ = usePaymentMethods(tenantId, { activeOnly: true });
   const sale = useQuickSale(tenantId ?? "");
 
@@ -53,8 +51,6 @@ export default function QuickSalePage() {
     setCart((c) => c.map((l) => l.product.id === id ? { ...l, qty: Math.max(1, qty) } : l));
   }
   function removeLine(id: string) { setCart((c) => c.filter((l) => l.product.id !== id)); }
-
-  const selectedCustomer = (customersQ.data?.rows ?? []).find((c) => c.id === customerId);
 
   async function completeSale() {
     if (!tenantId) return;
