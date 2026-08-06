@@ -187,6 +187,13 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     setCustomDuration(false);
   }, [serviceType, isEdit]);
 
+  // Daycare has fixed times — force the start clock to the day start.
+  useEffect(() => {
+    if (!isDaycare || !startAt) return;
+    const wanted = `${startAt.slice(0, 10)}T${DAYCARE_START_TIME}`;
+    if (startAt !== wanted) setStartAt(wanted);
+  }, [isDaycare, startAt]);
+
   // Derived end iso string for downstream panels (hotel occupancy, conflicts).
   const endAtLocal = useMemo(() => {
     if (!startAt) return "";
