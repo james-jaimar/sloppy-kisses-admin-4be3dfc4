@@ -106,5 +106,93 @@ Deno.serve(async (req) => {
     }
   }
 
-  return j(200, { processed, sent, failed, skipped, details });
+  // ---- Pre-arrival balance reminders for hotel/cattery stays ----------------
+  // Separate from overdue chasers: these fire N days BEFORE check-in so the
+  // balance is settled on arrival. Offsets come from policy_settings.
+  let prearrivalSent = 0, prearrivalSkipped = 0, prearrivalFailed = 0;
+  const { data: policies } = await admin
+    .from("policy_settings")
+    .select("tenant_id, hotel_prearrival_reminder_days");
+  const prearrivalOffsets = new Map<string, number[]>();
+  for (const p of policies ?? []) {
+    const raw = (p as any).hotel_prearrival_reminder_days;
+    const arr = Array.isArray(raw) ? raw.map((n: any) => Number(n)).filter((n) => Number.isFinite(n) && n > 0) : [];
+    if (arr.length) prearrivalOffsets.set((p as any).tenant_id, arr);
+  }
+
+  if (prearrivalOffsets.size) {
+    const maxOffset = Math.max(...[...prearrivalOffsets.values()].flat());
+    const todayUtc = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    const horizon = new Date(todayUtc.getTime() + maxOffset * 86_400_000);
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+    const { data: stays } = await admin
+      .from("bookings")
+      .select("id, tenant_id, invoice_id, start_date, status, service_type")
+      .in("service_type", ["hotel_dog", "hotel_cat"])
+      .not("invoice_id", "is", null)
+      .not("status", "in", "(cancelled,no_show)")
+      .gte("start_date", iso(todayUtc))
+      .lte("start_date", iso(horizon));
+
+    const invoiceById = new Map((invoices ?? []).map((i: any) => [i.id, i]));
+
+    for (const st of stays ?? []) {
+      const offsets = prearrivalOffsets.get((st as any).tenant_id);
+      if (!offsets) { prearrivalSkipped++; continue; }
+      const daysToArrival = -daysBetween((st as any).start_date, today);
+      if (!offsets.includes(daysToArrival)) { prearrivalSkipped++; continue; }
+
+      let inv: any = invoiceById.get((st as any).invoice_id);
+      if (!inv) {
+        const { data } = await admin
+          .from("invoices")
+          .select("id, tenant_id, customer_id, status, balance_due, reminders_paused, last_prearrival_offset")
+          .eq("id", (st as any).invoice_id)
+          .maybeSingle();
+        inv = data;
+      }
+      if (!inv || Number(inv.balance_due ?? 0) <= 0) { prearrivalSkipped++; continue; }
+      if (inv.reminders_paused || held.has(inv.customer_id)) { prearrivalSkipped++; continue; }
+      if (["draft", "cancelled", "paid"].includes(inv.status)) { prearrivalSkipped++; continue; }
+      if (Number(inv.last_prearrival_offset ?? -1) === daysToArrival) { prearrivalSkipped++; continue; }
+
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-invoice-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SERVICE_KEY}`,
+          apikey: SERVICE_KEY,
+        },
+        body: JSON.stringify({ invoice_id: inv.id, kind: "reminder" }),
+      });
+      if (res.ok) {
+        prearrivalSent++;
+        await admin
+          .from("invoices")
+          .update({ last_reminder_at: new Date().toISOString(), last_prearrival_offset: daysToArrival })
+          .eq("id", inv.id);
+        await admin.from("notification_events").insert({
+          tenant_id: inv.tenant_id,
+          invoice_id: inv.id,
+          booking_id: (st as any).id,
+          event_type: "invoice_reminder",
+          channel: "email",
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          subject: `Balance due — stay starts in ${daysToArrival} day${daysToArrival === 1 ? "" : "s"}`,
+        });
+      } else {
+        prearrivalFailed++;
+        const body = await res.json().catch(() => ({}));
+        details.push({ invoice_id: inv.id, prearrival: true, error: (body as any)?.error ?? `HTTP ${res.status}` });
+      }
+    }
+  }
+
+  return j(200, {
+    processed, sent, failed, skipped,
+    prearrival: { sent: prearrivalSent, failed: prearrivalFailed, skipped: prearrivalSkipped },
+    details,
+  });
 });
