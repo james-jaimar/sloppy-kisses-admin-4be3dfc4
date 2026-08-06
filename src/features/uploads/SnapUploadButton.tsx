@@ -22,7 +22,7 @@ export function SnapUploadButton({
   label = "Use my phone",
 }: {
   target: SnapTarget;
-  onUploaded?: () => void;
+  onUploaded?: (docs: { id: string; file_name: string }[]) => void;
   className?: string;
   label?: string;
 }) {
@@ -57,7 +57,7 @@ export function SnapUploadButton({
     if (!settled) return;
     acceptedRef.current = true;
     setDone(true);
-    onUploaded?.();
+    onUploaded?.(arrived as any);
     if (session) closeSession.mutate(session.token);
     const t = setTimeout(() => reset(false), 1500);
     return () => clearTimeout(t);
@@ -66,7 +66,7 @@ export function SnapUploadButton({
 
   function reset(fireCallback: boolean) {
     setOpen(false);
-    if (fireCallback && !acceptedRef.current && arrived.length) onUploaded?.();
+    if (fireCallback && !acceptedRef.current && arrived.length) onUploaded?.(arrived as any);
     setSession(null);
     setDone(false);
     acceptedRef.current = false;
