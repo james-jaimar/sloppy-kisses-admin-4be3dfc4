@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { uploadDocumentToS3, getDocumentDownloadUrl } from "./uploadDocument";
+import { SnapUploadButton } from "@/features/uploads/SnapUploadButton";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type Props = {
@@ -119,6 +120,16 @@ export function DocumentsPanel({
               {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
               {uploading ? "Uploading…" : "Upload"}
             </button>
+            <SnapUploadButton
+              target={{
+                tenantId,
+                petId,
+                customerId,
+                docType: docType,
+                label: docTypes.find((t) => t.value === docType)?.label ?? "Document",
+              }}
+              onUploaded={() => qc.invalidateQueries({ queryKey: key })}
+            />
           </div>
         )}
       </div>

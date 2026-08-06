@@ -8,6 +8,7 @@ import { useVaccineTypes, type VaccineType } from "./vaccineTypeQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { supabase } from "@/lib/supabase/client";
 import { uploadDocumentToS3, getDocumentDownloadUrl } from "@/features/documents/uploadDocument";
+import { SnapUploadButton } from "@/features/uploads/SnapUploadButton";
 import { VaxWaiverBanner } from "./VaxWaiverBanner";
 
 interface Props {
@@ -232,6 +233,7 @@ function VaccinationModal({
   const [expiry, setExpiry] = useState(initialRecord?.expiry_date ?? "");
   const [notes, setNotes] = useState(initialRecord?.notes ?? "");
   const [file, setFile] = useState<File | null>(null);
+  const [phoneDoc, setPhoneDoc] = useState<{ id: string; file_name: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
   const selectedType = types.find((t) => t.id === typeId) ?? null;
@@ -247,6 +249,7 @@ function VaccinationModal({
     setBusy(true);
     try {
       let documentId = initialRecord?.document_id ?? null;
+      if (phoneDoc) documentId = phoneDoc.id;
       if (file) {
         const res = await uploadDocumentToS3({ tenantId, petId, type: "vaccination", file, uploadedVia });
         documentId = res.document_id;
@@ -304,8 +307,14 @@ function VaccinationModal({
             <button type="button" onClick={() => fileRef.current?.click()}
               className="inline-flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 py-3 text-sm text-muted-foreground hover:bg-muted">
               {file ? <FileText className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
-              {file ? file.name : initialRecord?.document_id ? "Replace certificate" : "Choose a photo or PDF of the certificate"}
+              {file ? file.name : phoneDoc ? phoneDoc.file_name : initialRecord?.document_id ? "Replace certificate" : "Choose a photo or PDF of the certificate"}
             </button>
+            <div className="mt-2 flex justify-end">
+              <SnapUploadButton
+                target={{ tenantId, petId, docType: "vaccination", label: "Vaccination certificate" }}
+                onUploaded={(docs) => { if (docs?.[0]) { setPhoneDoc(docs[0]); setFile(null); } }}
+              />
+            </div>
           </div>
           <label className="block"><div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Notes</div>
             <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" />

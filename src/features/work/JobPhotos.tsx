@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Camera, Loader2 } from "lucide-react";
 import { uploadDocumentToS3, getDocumentDownloadUrl } from "@/features/documents/uploadDocument";
+import { SnapUploadButton } from "@/features/uploads/SnapUploadButton";
 import { useJobPhotos, useLinkJobPhoto, type PhotoKind } from "./queries";
 
 function PhotoThumb({ documentId }: { documentId: string | null }) {
@@ -86,6 +87,27 @@ export function JobPhotos({
         onChange={(e) => { handleFile("before", e.target.files?.[0]); e.target.value = ""; }} />
       <input ref={afterRef} type="file" accept="image/*" capture="environment" className="hidden"
         onChange={(e) => { handleFile("after", e.target.files?.[0]); e.target.value = ""; }} />
+
+      <div className="grid grid-cols-2 gap-3">
+        {(["before", "after"] as PhotoKind[]).map((kind) => (
+          <SnapUploadButton
+            key={kind}
+            label={`Use my phone (${kind})`}
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold hover:bg-muted"
+            target={{ tenantId, petId, customerId, bookingId, docType: "booking_photo", label: `${kind} photo` }}
+            onUploaded={async (docs) => {
+              try {
+                for (const d of docs ?? []) {
+                  await link.mutateAsync({ bookingId, petId, documentId: d.id, kind });
+                }
+                toast.success(`${kind === "before" ? "Before" : "After"} photo saved`);
+              } catch (err: any) {
+                toast.error(err?.message ?? "Could not attach photo");
+              }
+            }}
+          />
+        ))}
+      </div>
 
       {photos.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
