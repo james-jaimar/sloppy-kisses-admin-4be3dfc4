@@ -43,16 +43,14 @@ export default function MyInvoiceDetailPage() {
   });
 
   const payfast = useQuery({
-    queryKey: ["portal_payfast_enabled", q.data?.tenant_id],
-    enabled: !!q.data?.tenant_id,
+    queryKey: ["portal_payment_options", q.data?.id],
+    enabled: !!q.data?.id,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("payment_providers")
-        .select("enabled")
-        .eq("tenant_id", (q.data as any).tenant_id)
-        .eq("provider", "payfast")
-        .maybeSingle();
-      return !!data?.enabled;
+      const { data } = await supabase.rpc("portal_payment_options", {
+        p_invoice_id: (q.data as any).id,
+      });
+      const row = Array.isArray(data) ? data[0] : data;
+      return !!(row as any)?.payfast_enabled;
     },
   });
 
