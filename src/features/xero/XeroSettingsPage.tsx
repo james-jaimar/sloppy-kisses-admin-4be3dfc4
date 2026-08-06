@@ -10,6 +10,7 @@ import {
   useXeroResetBilling,
   useXeroTaxRates, type XeroTaxRate,
   useXeroBankAccounts,
+  useXeroAccounts,
 } from "./queries";
 
 const SERVICES: { key: string; label: string }[] = [
@@ -42,6 +43,21 @@ export default function XeroSettingsPage() {
   const queueQ = useXeroQueue(tenantId);
   const taxRates = useXeroTaxRates(tenantId);
   const bankAccounts = useXeroBankAccounts(tenantId, !!settingsQ.data?.xero_tenant_id && !!settingsQ.data?.enabled);
+  const allAccounts = useXeroAccounts(tenantId, !!settingsQ.data?.xero_tenant_id && !!settingsQ.data?.enabled);
+  const revenueAccounts = useMemo(
+    () => (allAccounts.data ?? []).filter((a) => a.accountClass === "REVENUE"),
+    [allAccounts.data],
+  );
+
+  const salesSelect = (value: string, onChange: (v: string) => void, emptyLabel: string) => (
+    <select className={input} disabled={!canManage} value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{emptyLabel}</option>
+      {revenueAccounts.map((a) => (
+        <option key={a.code} value={a.code}>{a.code} — {a.name}</option>
+      ))}
+      {value && !revenueAccounts.some((a) => a.code === value) && <option value={value}>{value}</option>}
+    </select>
+  );
 
   const [form, setForm] = useState<any>(null);
   const [orgList, setOrgList] = useState<Array<{ tenantId: string; tenantName: string }>>([]);
