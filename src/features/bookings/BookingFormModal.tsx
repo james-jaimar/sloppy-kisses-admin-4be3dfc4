@@ -641,68 +641,18 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         {/* Customer */}
         <div>
           <div className="mb-1 text-sm font-medium">Customer</div>
-          {selectedCustomer ? (
-            <div className="flex items-center justify-between rounded-lg border border-border bg-sk-surface-muted px-3 py-2 text-sm">
-              <div>
-                <div className="font-medium">{selectedCustomer.full_name ?? "Unnamed"}</div>
-                <div className="text-xs text-muted-foreground">
-                  {selectedCustomer.customer_number} · {selectedCustomer.email ?? "—"}
-                </div>
-              </div>
-              {!isEdit && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCustomerId(null);
-                    setPetIds([]);
-                  }}
-                  className="text-xs text-sk-coral-dark hover:underline"
-                >
-                  Change
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-border">
-              <div className="relative border-b border-border">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  autoFocus
-                  value={customerSearch}
-                  onChange={(e) => setCustomerSearch(e.target.value)}
-                  placeholder="Search customer by name or number..."
-                  className="h-10 w-full rounded-t-lg bg-white pl-9 pr-3 text-sm outline-none"
-                />
-              </div>
-              <ul className="max-h-56 overflow-y-auto">
-                {customersQ.isLoading && (
-                  <li className="px-3 py-2 text-sm text-muted-foreground">Loading…</li>
-                )}
-                {!customersQ.isLoading && (customersQ.data?.rows.length ?? 0) === 0 && (
-                  <li className="px-3 py-2 text-sm text-muted-foreground">No customers found.</li>
-                )}
-                {customersQ.data?.rows.map((c) => (
-                  <li key={c.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCustomerId(c.id);
-                        setPetIds([]);
-                      }}
-                      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-sk-surface-muted"
-                    >
-                      <div>
-                        <div className="font-medium">{c.full_name ?? "Unnamed"}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {c.customer_number} · {c.email ?? c.mobile ?? "—"}
-                        </div>
-                      </div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <CustomerCombobox
+            tenantId={tenantId}
+            value={customerId}
+            initialCustomer={selectedCustomer as any}
+            disabled={isEdit}
+            inline={!customerId}
+            autoFocus={!customerId && !isEdit}
+            onChange={(id) => {
+              setCustomerId(id);
+              setPetIds([]);
+            }}
+          />
         </div>
 
         {/* Pets */}
