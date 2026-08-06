@@ -126,19 +126,23 @@ export function expandRecurrence(opts: ExpandOptions): GeneratedOccurrence[] {
   return out;
 }
 
-/** Human-friendly summary for the UI (e.g. "Every 2 weeks on Mon, Wed until 30 Nov 2026"). */
+/** Plain-English summary for the UI (e.g. "Every 2 weeks on Mon and Wed — 3 visits"). */
 export function describeRule(rule: RecurrenceRuleInput | null): string {
-  if (!rule) return "Does not repeat";
+  if (!rule) return "This booking happens once only";
   const interval = Math.max(1, rule.interval || 1);
   const unit = rule.frequency === "daily" ? "day" : rule.frequency === "weekly" ? "week" : "month";
   const every = interval === 1 ? `Every ${unit}` : `Every ${interval} ${unit}s`;
   let body = every;
   if (rule.frequency === "weekly" && rule.daysOfWeek && rule.daysOfWeek.length) {
     const pretty: Record<WeekdayKey, string> = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
-    body += ` on ${rule.daysOfWeek.map((d) => pretty[d]).join(", ")}`;
+    const names = WEEKDAY_KEYS.filter((k) => rule.daysOfWeek!.includes(k)).map((d) => pretty[d]);
+    const list =
+      names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0];
+    body += ` on ${list}`;
   }
-  if (rule.endDate) body += ` until ${formatShort(new Date(rule.endDate))}`;
-  else if (rule.count) body += ` for ${rule.count} occurrences`;
+  if (rule.endDate) body += ` — until ${formatShort(new Date(rule.endDate))}`;
+  else if (rule.count) body += ` — ${rule.count} visit${rule.count === 1 ? "" : "s"}`;
+  else body += " — keeps going (we book 60 days ahead)";
   return body;
 }
 
