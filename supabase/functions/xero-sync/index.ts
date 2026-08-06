@@ -798,7 +798,16 @@ Deno.serve(async (req) => {
     if (action === "push_item_codes") {
       const s = await getSettings(tenantId);
       return j(200, await pushItemCodes(s, actor));
-      return j(200, await pushItemCodes(s, actor));
+    }
+
+    if (action === "bank_accounts") {
+      const s = await getSettings(tenantId);
+      const res = await xero({ tenantId: s.xero_tenant_id! }, "Accounts");
+      const accounts = (res?.Accounts ?? [])
+        .filter((a: any) => a.Status === "ACTIVE" && (a.Type === "BANK" || a.EnablePaymentsToAccount === true))
+        .map((a: any) => ({ code: String(a.Code ?? ""), name: String(a.Name ?? ""), type: String(a.Type ?? "") }))
+        .filter((a: any) => a.code);
+      return j(200, { accounts });
     }
 
     if (action === "pull_contacts") {
