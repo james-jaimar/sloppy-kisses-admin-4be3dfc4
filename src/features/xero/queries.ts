@@ -157,6 +157,27 @@ export function useXeroBankAccounts(tenantId: string | null, enabled: boolean) {
   });
 }
 
+export type XeroAccount = {
+  code: string;
+  name: string;
+  type: string;
+  accountClass: string;
+  paymentsEnabled: boolean;
+};
+
+export function useXeroAccounts(tenantId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ["xero-accounts", tenantId],
+    enabled: !!tenantId && enabled,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+    queryFn: async () => {
+      const res = await invoke({ action: "accounts", tenant_id: tenantId });
+      return (res?.accounts ?? []) as XeroAccount[];
+    },
+  });
+}
+
 export type XeroStagedContact = {
   id: string;
   xero_contact_id: string;

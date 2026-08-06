@@ -10,6 +10,7 @@ import {
   useXeroResetBilling,
   useXeroTaxRates, type XeroTaxRate,
   useXeroBankAccounts,
+  useXeroAccounts,
 } from "./queries";
 
 const SERVICES: { key: string; label: string }[] = [
@@ -42,6 +43,21 @@ export default function XeroSettingsPage() {
   const queueQ = useXeroQueue(tenantId);
   const taxRates = useXeroTaxRates(tenantId);
   const bankAccounts = useXeroBankAccounts(tenantId, !!settingsQ.data?.xero_tenant_id && !!settingsQ.data?.enabled);
+  const allAccounts = useXeroAccounts(tenantId, !!settingsQ.data?.xero_tenant_id && !!settingsQ.data?.enabled);
+  const revenueAccounts = useMemo(
+    () => (allAccounts.data ?? []).filter((a) => a.accountClass === "REVENUE"),
+    [allAccounts.data],
+  );
+
+  const salesSelect = (value: string, onChange: (v: string) => void, emptyLabel: string) => (
+    <select className={input} disabled={!canManage} value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">{emptyLabel}</option>
+      {revenueAccounts.map((a) => (
+        <option key={a.code} value={a.code}>{a.code} — {a.name}</option>
+      ))}
+      {value && !revenueAccounts.some((a) => a.code === value) && <option value={value}>{value}</option>}
+    </select>
+  );
 
   const [form, setForm] = useState<any>(null);
   const [orgList, setOrgList] = useState<Array<{ tenantId: string; tenantName: string }>>([]);
@@ -258,16 +274,31 @@ export default function XeroSettingsPage() {
                   <div className="font-semibold">Account & tax mapping</div>
                   <p className="mt-1 text-sm text-muted-foreground">These must match the codes in Xero's chart of accounts.</p>
                 </div>
-                <button onClick={loadTaxRates} disabled={!canManage || !form.xero_tenant_id || taxRates.isPending}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-semibold disabled:opacity-50">
-                  {taxRates.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Load tax rates
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => { allAccounts.refetch(); bankAccounts.refetch(); }}
+                    disabled={!canManage || !form.xero_tenant_id || allAccounts.isFetching}
+                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-semibold disabled:opacity-50">
+                    {allAccounts.isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Refresh accounts
+                  </button>
+                  <button onClick={loadTaxRates} disabled={!canManage || !form.xero_tenant_id || taxRates.isPending}
+                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-semibold disabled:opacity-50">
+                    {taxRates.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Load tax rates
+                  </button>
+                </div>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div>
                   <div className={label}>Default sales account</div>
-                  <input className={input} value={form.default_sales_account ?? ""} disabled={!canManage}
-                    onChange={(e) => set({ default_sales_account: e.target.value })} placeholder="200" />
+                  {revenueAccounts.length > 0 ? (
+                    salesSelect(form.default_sales_account ?? "", (v) => set({ default_sales_account: v }), "Select an account")
+                  ) : (
+                    <input className={input} value={form.default_sales_account ?? ""} disabled={!canManage}
+                      onChange={(e) => set({ default_sales_account: e.target.value })}
+                      placeholder={allAccounts.isFetching ? "Loading…" : "200"} />
+                  )}
+                  {allAccounts.isError && (
+                    <p className="mt-1 text-xs text-amber-700">Could not load Xero accounts — you can still type a code.</p>
+                  )}
                 </div>
                 <div>
                   <div className={label}>VAT tax type</div>
@@ -294,10 +325,18 @@ export default function XeroSettingsPage() {
                 {SERVICES.map((s) => (
                   <div key={s.key}>
                     <div className={label}>{s.label}</div>
-                    <input className={input} disabled={!canManage}
-                      value={form.service_account_codes?.[s.key] ?? ""}
-                      placeholder={form.default_sales_account || "200"}
-                      onChange={(e) => set({ service_account_codes: { ...(form.service_account_codes ?? {}), [s.key]: e.target.value } })} />
+                    {revenueAccounts.length > 0 ? (
+                      salesSelect(
+                        form.service_account_codes?.[s.key] ?? "",
+                        (v) => set({ service_account_codes: { ...(form.service_account_codes ?? {}), [s.key]: v } }),
+                        `Use default (${form.default_sales_account || "200"})`,
+                      )
+                    ) : (
+                      <input className={input} disabled={!canManage}
+                        value={form.service_account_codes?.[s.key] ?? ""}
+                        placeholder={form.default_sales_account || "200"}
+                        onChange={(e) => set({ service_account_codes: { ...(form.service_account_codes ?? {}), [s.key]: e.target.value } })} />
+                    )}
                   </div>
                 ))}
               </div>
