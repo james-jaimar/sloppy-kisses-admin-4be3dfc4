@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Search, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { ModalShell } from "@/components/modals/ModalShell";
-import { useCustomers, useCustomerPets } from "@/features/customers/queries";
+import { useCustomerPets } from "@/features/customers/queries";
+import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import {
   useCreateBooking,
   useUpdateBooking,
@@ -154,8 +155,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [petIds, setPetIds] = useState<string[]>(
     booking ? booking.booking_pets.map((bp) => bp.pet?.id ?? "").filter(Boolean) : prefill?.pet_ids ?? [],
   );
-  const [customerSearch, setCustomerSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [serviceType, setServiceType] = useState<ServiceType>(
     booking?.service_type ?? prefill?.service_type ?? "daycare",
   );
@@ -411,8 +410,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
   const selectedCustomer = useMemo(() => {
     if (booking?.customer && booking.customer.id === customerId) return booking.customer;
-    return customersQ.data?.rows.find((c) => c.id === customerId) ?? null;
-  }, [customersQ.data, customerId, booking]);
+    return null;
+  }, [customerId, booking]);
 
   const resourceType = SERVICE_TYPES.find((s) => s.value === serviceType)?.resourceType;
   const filteredResources = (resourcesQ.data ?? []).filter(
