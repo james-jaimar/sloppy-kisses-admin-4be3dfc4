@@ -43,41 +43,14 @@ export function TakePaymentDialog({ tenantId, onClose }: Props) {
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">Customer</label>
-            <div className="flex items-center gap-2 rounded-lg border border-border px-3">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <input
-                autoFocus
-                value={term}
-                onChange={(e) => { setTerm(e.target.value); setCustomerId(null); }}
-                placeholder="Name, SK number, email, mobile…"
-                className="h-10 w-full bg-transparent text-sm focus:outline-none"
-              />
-            </div>
-            <div className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-border">
-              {customersQ.isLoading && (
-                <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-                </div>
-              )}
-              {!customersQ.isLoading && customers.length === 0 && (
-                <div className="px-3 py-4 text-sm text-muted-foreground">No matching customer</div>
-              )}
-              {customers.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setCustomerId(c.id)}
-                  className={
-                    "flex w-full flex-col items-start px-3 py-2 text-left hover:bg-sk-surface-muted " +
-                    (c.id === customerId ? "bg-sk-coral-soft/40" : "")
-                  }
-                >
-                  <span className="text-sm font-medium">{c.full_name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {[c.customer_number, c.email ?? c.mobile].filter(Boolean).join(" · ")}
-                  </span>
-                </button>
-              ))}
-            </div>
+            <CustomerCombobox
+              tenantId={tenantId}
+              value={customerId}
+              inline={!customerId}
+              autoFocus={!customerId}
+              placeholder="Name, SK number, email, mobile…"
+              onChange={(id) => setCustomerId(id)}
+            />
           </div>
 
           {customerId && (
