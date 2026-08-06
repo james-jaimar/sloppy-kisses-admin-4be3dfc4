@@ -12,12 +12,14 @@ interface InvoiceLite {
   id: string;
   invoice_number: string | null;
   total: number;
+  amount_paid: number;
   balance_due: number;
   status: string;
   due_date: string | null;
-  invoice_kind: string | null;
+  deposit_due: number | null;
 }
 
+/** One invoice per hotel stay: the deposit is an amount to collect, not a second document. */
 export function useHotelMoney(bookingId: string | null | undefined) {
   return useQuery({
     queryKey: ["hotel_money", bookingId],
@@ -25,26 +27,19 @@ export function useHotelMoney(bookingId: string | null | undefined) {
     queryFn: async () => {
       const { data: b, error } = await supabase
         .from("bookings")
-        .select("id, invoice_id, deposit_invoice_id, deposit_waived, start_date, service_type")
+        .select("id, invoice_id, deposit_waived, start_date, service_type")
         .eq("id", bookingId as string)
         .maybeSingle();
       if (error) throw error;
-      if (!b) return null;
-      const ids = [b.invoice_id, (b as any).deposit_invoice_id].filter(Boolean) as string[];
-      let invoices: InvoiceLite[] = [];
-      if (ids.length) {
-        const { data: inv, error: e2 } = await supabase
-          .from("invoices")
-          .select("id, invoice_number, total, balance_due, status, due_date, invoice_kind")
-          .in("id", ids);
-        if (e2) throw e2;
-        invoices = (inv ?? []) as unknown as InvoiceLite[];
-      }
-      return {
-        booking: b as any,
-        balance: invoices.find((i) => i.id === b.invoice_id) ?? null,
-        deposit: invoices.find((i) => i.id === (b as any).deposit_invoice_id) ?? null,
-      };
+      if (!b || !b.invoice_id) return null;
+      const { data: inv, error: e2 } = await supabase
+        .from("invoices")
+        .select("id, invoice_number, total, amount_paid, balance_due, status, due_date, deposit_due")
+        .eq("id", b.invoice_id)
+        .maybeSingle();
+      if (e2) throw e2;
+      if (!inv) return null;
+      return { booking: b as any, invoice: inv as unknown as InvoiceLite };
     },
   });
 }
@@ -61,18 +56,21 @@ export function HotelMoneyStrip({
   const [busy, setBusy] = useState<null | "deposit" | "full">(null);
 
   if (q.isLoading || !q.data) return null;
-  const { deposit, balance, booking } = q.data;
-  if (!deposit && !balance) return null;
+  const { invoice, booking } = q.data;
+  if (Number(invoice.total ?? 0) <= 0 || invoice.status === "cancelled") return null;
 
-  const total = Number(deposit?.total ?? 0) + Number(balance?.total ?? 0);
-  const outstanding = Number(deposit?.balance_due ?? 0) + Number(balance?.balance_due ?? 0);
-  const depositPaid = deposit ? Number(deposit.balance_due) <= 0 : false;
+  const total = Number(invoice.total ?? 0);
+  const paid = Number(invoice.amount_paid ?? 0);
+  const outstanding = Number(invoice.balance_due ?? 0);
+  const depositDue = Number(invoice.deposit_due ?? 0);
+  const depositOutstanding = Math.max(0, Math.min(depositDue - paid, outstanding));
+  const depositSettled = depositDue > 0 && depositOutstanding <= 0;
   const arrivalCleared = outstanding <= 0;
-  const invoiceHref = (id: string) => (mode === "portal" ? `/customer/invoices/${id}` : `/admin/invoices/${id}`);
+  const invoiceHref = mode === "portal" ? `/customer/invoices/${invoice.id}` : `/admin/invoices/${invoice.id}`;
 
-  async function checkout(invoiceId: string) {
+  async function checkout(amount?: number) {
     const { data, error } = await supabase.functions.invoke("portal-invoice-checkout", {
-      body: { invoice_id: invoiceId },
+      body: { invoice_id: invoice.id, ...(amount ? { amount } : {}) },
     });
     if (error) throw error;
     const url = (data as any)?.redirect_url;
@@ -81,24 +79,17 @@ export function HotelMoneyStrip({
   }
 
   async function payDeposit() {
-    if (!deposit) return;
     setBusy("deposit");
-    try { await checkout(deposit.id); }
+    try { await checkout(depositOutstanding); }
     catch (e: any) { toast.error(e?.message ?? "Could not start checkout"); setBusy(null); }
   }
 
   async function payInFull() {
     setBusy("full");
     try {
-      let target = balance?.id ?? null;
-      if (deposit && !depositPaid) {
-        const { data, error } = await supabase.rpc("hotel_pay_in_full" as any, { p_booking_id: bookingId });
-        if (error) throw error;
-        target = (data as unknown as string) ?? target;
-        await qc.invalidateQueries({ queryKey: ["hotel_money", bookingId] });
-      }
-      if (!target) throw new Error("No invoice to pay");
-      await checkout(target);
+      await supabase.rpc("hotel_pay_in_full" as any, { p_booking_id: bookingId });
+      await qc.invalidateQueries({ queryKey: ["hotel_money", bookingId] });
+      await checkout();
     } catch (e: any) {
       toast.error(e?.message ?? "Could not start checkout");
       setBusy(null);
@@ -110,50 +101,44 @@ export function HotelMoneyStrip({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payment for this stay</div>
         <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${arrivalCleared ? "bg-sk-green/10 text-sk-green" : "bg-sk-orange-soft text-sk-orange"}`}>
-          {arrivalCleared ? "Paid — arrival cleared" : depositPaid ? "Deposit paid — balance outstanding" : "Deposit outstanding"}
+          {arrivalCleared ? "Paid — arrival cleared" : depositSettled ? "Deposit paid — balance outstanding" : "Deposit outstanding"}
         </span>
       </div>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-3">
-        <Cell label="Stay total" value={zar(total)} />
-        {deposit && (
+        <Cell label="Stay total" value={zar(total)} href={invoiceHref} number={invoice.invoice_number} />
+        {depositDue > 0 && (
           <Cell
-            label="Deposit"
-            value={zar(deposit.total)}
-            sub={Number(deposit.balance_due) <= 0 ? "Paid" : "Due now"}
-            paid={Number(deposit.balance_due) <= 0}
-            href={invoiceHref(deposit.id)}
-            number={deposit.invoice_number}
+            label="Deposit due now"
+            value={zar(depositDue)}
+            sub={depositSettled ? "Paid" : "Due now"}
+            paid={depositSettled}
           />
         )}
-        {balance && (
-          <Cell
-            label={deposit ? "Balance" : "Invoice"}
-            value={zar(balance.total)}
-            sub={
-              Number(balance.balance_due) <= 0
-                ? "Paid"
-                : balance.due_date
-                  ? `Due ${format(parseISO(balance.due_date), "dd MMM yyyy")}`
-                  : "Due"
-            }
-            paid={Number(balance.balance_due) <= 0}
-            href={invoiceHref(balance.id)}
-            number={balance.invoice_number}
-          />
-        )}
+        <Cell
+          label="Balance outstanding"
+          value={zar(outstanding)}
+          sub={
+            outstanding <= 0
+              ? "Paid"
+              : invoice.due_date
+                ? `Due ${format(parseISO(invoice.due_date), "dd MMM yyyy")}`
+                : "Due before arrival"
+          }
+          paid={outstanding <= 0}
+        />
       </div>
 
       {mode === "portal" && outstanding > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
-          {deposit && !depositPaid && (
+          {depositOutstanding > 0 && depositOutstanding < outstanding && (
             <button
               onClick={payDeposit}
               disabled={busy !== null}
               className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-4 py-2 text-sm font-semibold disabled:opacity-50"
             >
               {busy === "deposit" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
-              Pay {zar(deposit.balance_due)} deposit now
+              Pay {zar(depositOutstanding)} deposit now
             </button>
           )}
           <button
