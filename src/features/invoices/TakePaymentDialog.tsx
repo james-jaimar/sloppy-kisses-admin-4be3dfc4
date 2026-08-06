@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Loader2, Search, X } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
+import { useState } from "react";
+import { Loader2, X } from "lucide-react";
+import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import { useCustomerOpenInvoices } from "./queries";
 import { RecordPaymentDialog } from "./RecordPaymentDialog";
 
@@ -10,48 +9,12 @@ interface Props {
   onClose: () => void;
 }
 
-function useCustomerSearch(tenantId: string, term: string) {
-  const q = term.trim();
-  return useQuery({
-    queryKey: ["take-payment-customers", tenantId, q.toLowerCase()],
-    enabled: Boolean(tenantId),
-    staleTime: 15_000,
-    queryFn: async () => {
-      let query = supabase
-        .from("customers")
-        .select("id, full_name, customer_number, email, mobile")
-        .eq("tenant_id", tenantId)
-        .neq("status", "archived")
-        .order("full_name", { ascending: true })
-        .limit(20);
-      if (q) {
-        const like = `%${q.replace(/[,()]/g, " ")}%`;
-        query = query.or(
-          `full_name.ilike.${like},customer_number.ilike.${like},email.ilike.${like},mobile.ilike.${like}`,
-        );
-      }
-      const { data, error } = await query;
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-}
-
 export function TakePaymentDialog({ tenantId, onClose }: Props) {
-  const [term, setTerm] = useState("");
-  const [debounced, setDebounced] = useState("");
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
   const [suggested, setSuggested] = useState(0);
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(term), 220);
-    return () => clearTimeout(t);
-  }, [term]);
-
-  const customersQ = useCustomerSearch(tenantId, debounced);
   const openQ = useCustomerOpenInvoices(tenantId, customerId);
-  const customers = (customersQ.data ?? []) as any[];
   const invoices = (openQ.data ?? []) as any[];
 
   if (invoiceId && customerId) {
