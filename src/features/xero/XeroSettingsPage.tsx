@@ -41,6 +41,7 @@ export default function XeroSettingsPage() {
   const runQueue = useXeroRunQueue(tenantId);
   const queueQ = useXeroQueue(tenantId);
   const taxRates = useXeroTaxRates(tenantId);
+  const bankAccounts = useXeroBankAccounts(tenantId, !!settingsQ.data?.xero_tenant_id && !!settingsQ.data?.enabled);
 
   const [form, setForm] = useState<any>(null);
   const [orgList, setOrgList] = useState<Array<{ tenantId: string; tenantName: string }>>([]);
