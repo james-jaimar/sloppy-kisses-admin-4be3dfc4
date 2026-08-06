@@ -139,9 +139,12 @@ Deno.serve(async (req) => {
     if (k === "signature") continue;
     sigFields[k] = v; orderedKeys.push(k);
   }
-  const expected = await payfastSignature(sigFields, settings.passphrase ?? null, orderedKeys);
-  if (!provided_signature || expected !== provided_signature) {
-    console.warn("[itn] signature mismatch", { expected, provided_signature });
+  // PayFast signs every posted field in the order received, blanks included.
+  const expected = await payfastSignature(sigFields, settings.passphrase ?? null, orderedKeys, true);
+  // Older/manually built notifications (our own self-test) omit blank fields.
+  const expectedNoBlanks = await payfastSignature(sigFields, settings.passphrase ?? null, orderedKeys, false);
+  if (!provided_signature || (expected !== provided_signature && expectedNoBlanks !== provided_signature)) {
+    console.warn("[itn] signature mismatch", { expected, expectedNoBlanks, provided_signature });
     return finish("bad_signature", {
       error_text: `expected ${expected}, received ${provided_signature ?? "(none)"} — check the passphrase configured in Settings matches the PayFast account`,
     }, { error: "bad_signature" }, 400);
