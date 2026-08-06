@@ -306,8 +306,14 @@ function VaccinationModal({
             <button type="button" onClick={() => fileRef.current?.click()}
               className="inline-flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 py-3 text-sm text-muted-foreground hover:bg-muted">
               {file ? <FileText className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
-              {file ? file.name : initialRecord?.document_id ? "Replace certificate" : "Choose a photo or PDF of the certificate"}
+              {file ? file.name : phoneDoc ? phoneDoc.file_name : initialRecord?.document_id ? "Replace certificate" : "Choose a photo or PDF of the certificate"}
             </button>
+            <div className="mt-2 flex justify-end">
+              <SnapUploadButton
+                target={{ tenantId, petId, docType: "vaccination", label: "Vaccination certificate" }}
+                onUploaded={(docs) => { if (docs?.[0]) { setPhoneDoc(docs[0]); setFile(null); } }}
+              />
+            </div>
           </div>
           <label className="block"><div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Notes</div>
             <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" />
