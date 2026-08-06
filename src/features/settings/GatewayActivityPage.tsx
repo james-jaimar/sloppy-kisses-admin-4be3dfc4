@@ -113,24 +113,6 @@ export default function GatewayActivityPage() {
     }
   }
 
-  async function sendTestItnLegacy() {
-    if (!testInvoice) return;
-    setTesting(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("payment-gateway-test-itn", {
-        body: { invoice_id: testInvoice },
-      });
-      if (error) throw error;
-      if ((data as any)?.ok) toast.success("Test notification accepted — payment recorded");
-      else toast.error(`Webhook rejected it: ${(data as any)?.webhook_response ?? "unknown"}`);
-      qc.invalidateQueries({ queryKey: ["payment_webhook_events"] });
-    } catch (e: any) {
-      toast.error(e?.message ?? "Test failed");
-    } finally {
-      setTesting(false);
-    }
-  }
-
   return (
     <>
       <AppHeader
