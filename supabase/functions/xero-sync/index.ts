@@ -798,6 +798,7 @@ Deno.serve(async (req) => {
     if (action === "push_item_codes") {
       const s = await getSettings(tenantId);
       return j(200, await pushItemCodes(s, actor));
+      return j(200, await pushItemCodes(s, actor));
     }
 
     if (action === "pull_contacts") {
