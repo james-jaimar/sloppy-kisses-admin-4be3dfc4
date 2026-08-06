@@ -164,6 +164,13 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
     return { skipped: true };
   }
 
+  const lineTotalSum = (inv.invoice_items ?? []).reduce((t: number, l: any) => t + Number(l.line_total ?? 0), 0);
+  if (inv.xero_invoice_id && lineTotalSum === 0) {
+    await logSync({ tenant_id: s.tenant_id, entity_type: "invoice", entity_id: inv.id, entity_label: inv.invoice_number,
+      action: "skip", status: "skipped", error_message: "Zero-value invoice already in Xero — not modifiable", triggered_by: actor });
+    return { skipped: true };
+  }
+
   const contactId = await ensureContact(s, inv.customer_id as string, actor);
 
   // Service-level account codes come from the booking behind each line, when there is one.
