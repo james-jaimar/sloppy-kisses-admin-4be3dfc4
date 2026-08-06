@@ -7837,6 +7837,13 @@ export type Database = {
         Args: { p_booking_id: string; p_reason?: string }
         Returns: undefined
       }
+      portal_payment_options: {
+        Args: { p_invoice_id: string }
+        Returns: {
+          mode: string
+          payfast_enabled: boolean
+        }[]
+      }
       portal_reschedule_booking: {
         Args: { p_booking_id: string; p_end_at?: string; p_start_at: string }
         Returns: undefined
