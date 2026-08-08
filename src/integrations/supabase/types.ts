@@ -712,6 +712,12 @@ export type Database = {
           requires_grooming: boolean
           requires_transport: boolean
           resource_id: string | null
+          service_address_id: string | null
+          service_address_text: string | null
+          service_city: string | null
+          service_place_id: string | null
+          service_postcode: string | null
+          service_suburb: string | null
           service_type: Database["public"]["Enums"]["service_type"]
           source: Database["public"]["Enums"]["booking_source"] | null
           start_at: string | null
@@ -749,6 +755,12 @@ export type Database = {
           requires_grooming?: boolean
           requires_transport?: boolean
           resource_id?: string | null
+          service_address_id?: string | null
+          service_address_text?: string | null
+          service_city?: string | null
+          service_place_id?: string | null
+          service_postcode?: string | null
+          service_suburb?: string | null
           service_type: Database["public"]["Enums"]["service_type"]
           source?: Database["public"]["Enums"]["booking_source"] | null
           start_at?: string | null
@@ -786,6 +798,12 @@ export type Database = {
           requires_grooming?: boolean
           requires_transport?: boolean
           resource_id?: string | null
+          service_address_id?: string | null
+          service_address_text?: string | null
+          service_city?: string | null
+          service_place_id?: string | null
+          service_postcode?: string | null
+          service_suburb?: string | null
           service_type?: Database["public"]["Enums"]["service_type"]
           source?: Database["public"]["Enums"]["booking_source"] | null
           start_at?: string | null
@@ -860,6 +878,13 @@ export type Database = {
             columns: ["resource_id"]
             isOneToOne: false
             referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_service_address_id_fkey"
+            columns: ["service_address_id"]
+            isOneToOne: false
+            referencedRelation: "customer_addresses"
             referencedColumns: ["id"]
           },
           {
@@ -1252,6 +1277,99 @@ export type Database = {
           },
           {
             foreignKeyName: "credit_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_addresses: {
+        Row: {
+          access_notes: string | null
+          address_line_1: string | null
+          address_line_2: string | null
+          address_type: string | null
+          city: string | null
+          country_code: string
+          created_at: string
+          customer_id: string
+          formatted_address: string | null
+          gate_code: string | null
+          google_place_id: string | null
+          id: string
+          is_mobile_grooming_address: boolean
+          is_primary: boolean
+          label: string
+          latitude: number | null
+          longitude: number | null
+          parking_notes: string | null
+          postcode: string | null
+          province: string | null
+          suburb: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_notes?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          address_type?: string | null
+          city?: string | null
+          country_code?: string
+          created_at?: string
+          customer_id: string
+          formatted_address?: string | null
+          gate_code?: string | null
+          google_place_id?: string | null
+          id?: string
+          is_mobile_grooming_address?: boolean
+          is_primary?: boolean
+          label?: string
+          latitude?: number | null
+          longitude?: number | null
+          parking_notes?: string | null
+          postcode?: string | null
+          province?: string | null
+          suburb?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_notes?: string | null
+          address_line_1?: string | null
+          address_line_2?: string | null
+          address_type?: string | null
+          city?: string | null
+          country_code?: string
+          created_at?: string
+          customer_id?: string
+          formatted_address?: string | null
+          gate_code?: string | null
+          google_place_id?: string | null
+          id?: string
+          is_mobile_grooming_address?: boolean
+          is_primary?: boolean
+          label?: string
+          latitude?: number | null
+          longitude?: number | null
+          parking_notes?: string | null
+          postcode?: string | null
+          province?: string | null
+          suburb?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_addresses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_addresses_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -3321,6 +3439,147 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "grooming_packages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grooming_route_runs: {
+        Row: {
+          applied_at: string | null
+          applied_by: string | null
+          created_at: string
+          created_by: string | null
+          google_request_metadata: Json | null
+          google_response_summary: Json | null
+          id: string
+          route_date: string
+          status: string
+          tenant_id: string
+          total_distance_meters: number | null
+          total_travel_seconds: number | null
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          google_request_metadata?: Json | null
+          google_response_summary?: Json | null
+          id?: string
+          route_date: string
+          status?: string
+          tenant_id: string
+          total_distance_meters?: number | null
+          total_travel_seconds?: number | null
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          google_request_metadata?: Json | null
+          google_response_summary?: Json | null
+          id?: string
+          route_date?: string
+          status?: string
+          tenant_id?: string
+          total_distance_meters?: number | null
+          total_travel_seconds?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grooming_route_runs_applied_by_fkey"
+            columns: ["applied_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grooming_route_runs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grooming_route_runs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grooming_route_stops: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          planned_arrival: string | null
+          planned_departure: string | null
+          resource_id: string
+          route_run_id: string
+          stop_sequence: number
+          tenant_id: string
+          travel_distance_meters: number | null
+          travel_seconds: number | null
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          planned_arrival?: string | null
+          planned_departure?: string | null
+          resource_id: string
+          route_run_id: string
+          stop_sequence: number
+          tenant_id: string
+          travel_distance_meters?: number | null
+          travel_seconds?: number | null
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          planned_arrival?: string | null
+          planned_departure?: string | null
+          resource_id?: string
+          route_run_id?: string
+          stop_sequence?: number
+          tenant_id?: string
+          travel_distance_meters?: number | null
+          travel_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grooming_route_stops_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grooming_route_stops_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grooming_route_stops_route_run_id_fkey"
+            columns: ["route_run_id"]
+            isOneToOne: false
+            referencedRelation: "grooming_route_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grooming_route_stops_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -6069,41 +6328,65 @@ export type Database = {
         Row: {
           active: boolean
           capacity: number | null
+          colour: string | null
           created_at: string
           description: string | null
+          end_address_text: string | null
+          end_place_id: string | null
           home_suburb: string | null
           id: string
           name: string
+          registration: string | null
           sort_order: number
+          start_address_text: string | null
+          start_place_id: string | null
           tenant_id: string
           type: Database["public"]["Enums"]["resource_type"]
           updated_at: string
+          workday_end: string | null
+          workday_start: string | null
         }
         Insert: {
           active?: boolean
           capacity?: number | null
+          colour?: string | null
           created_at?: string
           description?: string | null
+          end_address_text?: string | null
+          end_place_id?: string | null
           home_suburb?: string | null
           id?: string
           name: string
+          registration?: string | null
           sort_order?: number
+          start_address_text?: string | null
+          start_place_id?: string | null
           tenant_id: string
           type: Database["public"]["Enums"]["resource_type"]
           updated_at?: string
+          workday_end?: string | null
+          workday_start?: string | null
         }
         Update: {
           active?: boolean
           capacity?: number | null
+          colour?: string | null
           created_at?: string
           description?: string | null
+          end_address_text?: string | null
+          end_place_id?: string | null
           home_suburb?: string | null
           id?: string
           name?: string
+          registration?: string | null
           sort_order?: number
+          start_address_text?: string | null
+          start_place_id?: string | null
           tenant_id?: string
           type?: Database["public"]["Enums"]["resource_type"]
           updated_at?: string
+          workday_end?: string | null
+          workday_start?: string | null
         }
         Relationships: [
           {
@@ -6592,9 +6875,13 @@ export type Database = {
           direction: string
           driver_notes: string | null
           dropoff_address: string | null
+          dropoff_address_id: string | null
+          dropoff_place_id: string | null
           gate_code: string | null
           id: string
           pickup_address: string | null
+          pickup_address_id: string | null
+          pickup_place_id: string | null
           planned_window_end: string | null
           planned_window_start: string | null
           suburb: string | null
@@ -6608,9 +6895,13 @@ export type Database = {
           direction: string
           driver_notes?: string | null
           dropoff_address?: string | null
+          dropoff_address_id?: string | null
+          dropoff_place_id?: string | null
           gate_code?: string | null
           id?: string
           pickup_address?: string | null
+          pickup_address_id?: string | null
+          pickup_place_id?: string | null
           planned_window_end?: string | null
           planned_window_start?: string | null
           suburb?: string | null
@@ -6624,9 +6915,13 @@ export type Database = {
           direction?: string
           driver_notes?: string | null
           dropoff_address?: string | null
+          dropoff_address_id?: string | null
+          dropoff_place_id?: string | null
           gate_code?: string | null
           id?: string
           pickup_address?: string | null
+          pickup_address_id?: string | null
+          pickup_place_id?: string | null
           planned_window_end?: string | null
           planned_window_start?: string | null
           suburb?: string | null
@@ -6639,6 +6934,20 @@ export type Database = {
             columns: ["booking_id"]
             isOneToOne: true
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transport_details_dropoff_address_id_fkey"
+            columns: ["dropoff_address_id"]
+            isOneToOne: false
+            referencedRelation: "customer_addresses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transport_details_pickup_address_id_fkey"
+            columns: ["pickup_address_id"]
+            isOneToOne: false
+            referencedRelation: "customer_addresses"
             referencedColumns: ["id"]
           },
           {
