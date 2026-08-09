@@ -521,7 +521,8 @@ Deno.serve(async (req) => {
       tenant_id: tenantId,
       booking_id: bookingId,
       direction: t.direction ?? "pickup",
-      pickup_address: t.pickup_address ?? customer.address_line_1 ?? null,
+      pickup_address:
+        t.pickup_address ?? addressSnapshot.service_address_text ?? customer.address_line_1 ?? null,
       pickup_address_id: addressSnapshot.service_address_id ?? null,
       pickup_place_id: addressSnapshot.service_place_id ?? null,
       dropoff_address: t.dropoff_address ?? null,
