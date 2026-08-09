@@ -13,6 +13,7 @@ export interface AddressSnapshot {
   google_place_id?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  access_notes?: string | null;
 }
 
 function hasAnyText(a: AddressSnapshot) {
@@ -57,6 +58,7 @@ export async function syncPrimaryCustomerAddress(
     google_place_id: addr.google_place_id ?? null,
     latitude: addr.latitude ?? null,
     longitude: addr.longitude ?? null,
+    access_notes: addr.access_notes ?? null,
     verification_failed_at: null,
     verification_error: null,
   };
