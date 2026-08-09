@@ -29,6 +29,53 @@ export function useCreateRecurringBooking(tenantId: string) {
       });
       if (occurrences.length === 0) throw new Error("Recurrence produced no occurrences");
 
+      // Snapshot the customer's selected or primary address onto every occurrence.
+      let addressSnapshot: {
+        service_address_id?: string | null;
+        service_address_text?: string | null;
+        service_place_id?: string | null;
+        service_suburb?: string | null;
+        service_city?: string | null;
+        service_postcode?: string | null;
+      } = {};
+      const addressId = input.service_address_id;
+      if (addressId) {
+        const { data: addr } = await supabase
+          .from("customer_addresses")
+          .select("id, formatted_address, google_place_id, suburb, city, postcode")
+          .eq("id", addressId)
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+        if (addr) {
+          addressSnapshot = {
+            service_address_id: addr.id,
+            service_address_text: addr.formatted_address,
+            service_place_id: addr.google_place_id,
+            service_suburb: addr.suburb,
+            service_city: addr.city,
+            service_postcode: addr.postcode,
+          };
+        }
+      } else {
+        const { data: addr } = await supabase
+          .from("customer_addresses")
+          .select("id, formatted_address, google_place_id, suburb, city, postcode")
+          .eq("customer_id", input.customer_id)
+          .eq("tenant_id", tenantId)
+          .eq("is_primary", true)
+          .maybeSingle();
+        if (addr) {
+          addressSnapshot = {
+            service_address_id: addr.id,
+            service_address_text: addr.formatted_address,
+            service_place_id: addr.google_place_id,
+            service_suburb: addr.suburb,
+            service_city: addr.city,
+            service_postcode: addr.postcode,
+          };
+        }
+      }
+
       // 1. Insert the rule
       const { data: ruleRow, error: ruleErr } = await supabase
         .from("recurring_rules")
@@ -74,6 +121,7 @@ export function useCreateRecurringBooking(tenantId: string) {
         requires_transport: input.requires_transport ?? false,
         requires_grooming: input.requires_grooming ?? false,
         recurring_rule_id: rule_id,
+        ...addressSnapshot,
       }));
 
       const { data: created, error: bErr } = await supabase

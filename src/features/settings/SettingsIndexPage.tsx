@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Sliders, Users, KeyRound, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server, FileUp, Dog, FileText, Gavel, Search } from "lucide-react";
+import { Sliders, Users, KeyRound, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server, FileUp, Dog, FileText, Gavel, Search, MapPin } from "lucide-react";
 import { Archive, Link2, ListChecks } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -282,6 +282,13 @@ SECTIONS.push(
     icon: ListChecks,
     ready: true,
   },
+  {
+    to: "/admin/settings/address-verification",
+    label: "Address verification",
+    description: "Backfill saved addresses with Google Place IDs and coordinates for maps and routing.",
+    icon: MapPin,
+    ready: true,
+  },
 );
 
 const GROUPS: { id: string; label: string; members: string[] }[] = [
@@ -323,7 +330,7 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
   {
     id: "integrations",
     label: "Integrations",
-    members: ["Xero", "Xero customers", "Billing item codes", "Xero sync log"],
+    members: ["Xero", "Xero customers", "Billing item codes", "Xero sync log", "Address verification"],
   },
   {
     id: "admin",
