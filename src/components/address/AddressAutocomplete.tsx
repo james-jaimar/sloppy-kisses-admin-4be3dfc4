@@ -60,8 +60,8 @@ export default function AddressAutocomplete({
   }, []);
 
   const fetchSuggestions = useCallback(
-    async (query: string) => {
-      if (lookupPaused || !query.trim() || query.trim().length < 3) {
+    async (query: string, force = false) => {
+      if ((!force && lookupPaused) || !query.trim() || query.trim().length < 3) {
         setSuggestions([]);
         setLoading(false);
         return;
@@ -221,7 +221,7 @@ export default function AddressAutocomplete({
             onClick={() => {
               setLookupPaused(false);
               setError(null);
-              void fetchSuggestions(value);
+              void fetchSuggestions(value, true);
             }}
           >
             <RotateCw className="h-3 w-3" /> Retry
