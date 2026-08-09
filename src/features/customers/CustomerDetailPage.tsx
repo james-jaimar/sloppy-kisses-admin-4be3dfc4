@@ -35,9 +35,10 @@ import { InvoicesTab } from "./tabs/InvoicesTab";
 import { NotesTab } from "./tabs/NotesTab";
 import { DocumentsTab } from "./tabs/DocumentsTab";
 import { HistoryTab } from "./tabs/HistoryTab";
+import { AddressesTab } from "./tabs/AddressesTab";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
-const TABS = ["Pets", "Bookings", "Invoices", "Credit", "Notes", "Documents", "History"] as const;
+const TABS = ["Pets", "Bookings", "Invoices", "Credit", "Addresses", "Notes", "Documents", "History"] as const;
 type Tab = (typeof TABS)[number];
 
 function initialsOf(name: string | null | undefined) {
@@ -387,6 +388,9 @@ export default function CustomerDetailPage() {
                 )}
                 {tab === "History" && tenant?.id && (
                   <HistoryTab tenantId={tenant.id} customerId={customer.id} />
+                )}
+                {tab === "Addresses" && tenant?.id && (
+                  <AddressesTab tenantId={tenant.id} customerId={customer.id} />
                 )}
               </div>
             </div>

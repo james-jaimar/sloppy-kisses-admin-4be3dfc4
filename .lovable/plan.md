@@ -1,43 +1,43 @@
-# Phase C — Google Places autocomplete on addresses
+# Phase C — Google Places address autocomplete & address management
 
-Add a reusable address autocomplete to customer and booking flows, capture canonical Place IDs and coordinates, and store them in the `customer_addresses` table created in Phase B.
+Phase C wires Google Places API (New) into customer addresses so staff and portal customers can pick verified South African addresses, capture Place IDs + coordinates, and manage multiple addresses per customer.
 
-## What gets built
+## Already done
 
-### 1. Reusable browser autocomplete component
-- `src/components/address/AddressAutocomplete.tsx`
-- Uses Google Places API (New) `AutocompleteSuggestion.fetchAutocompleteSuggestions()`
-- Biased to Gauteng / Johannesburg via `ZA_BIAS` in `src/lib/maps/googleMaps.ts`
-- Returns: `place_id`, `formatted_address`, plus `addressComponents` and `location` fetched via Place Details
-- Falls back gracefully to a plain text input when `VITE_GOOGLE_MAPS_BROWSER_KEY` is missing
+- Browser key loaded in `.env` as `VITE_GOOGLE_MAPS_BROWSER_KEY`.
+- `AddressAutocomplete` component using Places API (New) with Gauteng bias and session tokens.
+- `addressQueries.ts` hooks for CRUD on `customer_addresses`.
+- `AddressFormDrawer` for adding/editing addresses with autocomplete.
+- Admin "Addresses" tab on `CustomerDetailPage`.
+- Portal "My addresses" page + sidebar nav item.
 
-### 2. Address form / drawer
-- Add "Addresses" tab to `CustomerDetailPage.tsx`
-- List existing `customer_addresses` with label, type, primary flag, and formatted address
-- "Add address" / "Edit address" drawer using the autocomplete
-- Fields: label, address_type, is_primary, is_mobile_grooming_address, access_notes, parking_notes, gate_code
-- On save, write `google_place_id`, `latitude`, `longitude`, `formatted_address`, and parsed suburb/city/postcode from Place Details
+## Still to do
 
-### 3. Portal self-service
-- Same address list + add/edit in the customer portal (`/portal/profile` or new `/portal/addresses`)
-- Portal users can only see/edit their own addresses via existing `current_customer_id(tenant_id)` RLS
+### 1. Geocode backfill for legacy addresses
+- Staff-only edge function `backfill-addresses` that reads existing `customer_addresses` rows missing `google_place_id`, calls Places `searchText` / Geocoding to find the best match, and writes `google_place_id`, `latitude`, `longitude`, and a cleaned `formatted_address`.
+- Gated to users with a new permission code (e.g. `settings:manage`) and run from a button in Settings → Addresses / Data tools.
+- Idempotent: skip rows already verified; log count processed.
 
-### 4. Seed existing addresses with Place IDs (optional, async)
-- Edge function `geocode-addresses` (staff-only) that takes the 1,552 backfilled `customer_addresses` rows without `google_place_id` and fills them using Geocoding API + server key
-- Runs in batches with a cursor; idempotent (skips rows that already have a place_id)
-- Not run automatically — triggered from a button in Settings → Data tools
+### 2. Booking snapshot wiring
+- When a booking is created, copy the selected customer's primary address (or chosen service address) into the `bookings` snapshot columns: `service_address_id`, `service_address_text`, `service_place_id`, `service_suburb`, `service_city`, `service_postcode`.
+- For transport bookings, also snapshot `pickup_address_id` / `dropoff_address_id` into `transport_details`.
+- Update `portal-create-booking` and staff booking flows to capture the address at creation time.
 
-### 5. Booking snapshot wiring (additive only)
-- When a booking uses an address, copy `google_place_id`, `latitude`, `longitude`, and `formatted_address` into the booking snapshot columns added in Phase B
-- Keeps bookings independent even if the customer address is later edited
+### 3. Address selector in booking flows
+- Mobile grooming / transport wizards get an address picker that lists the customer's `customer_addresses` (with mobile-grooming flag shown).
+- Default to the primary address; allow adding a new address inline.
 
-## Explicitly not in this phase
-- Route optimization UI or van routing screens
-- Mobile grooming address assignment logic
-- Changes to existing free-text address columns on `customers` or `transport_details`
+### 4. Polish & validation
+- Ensure `is_primary` logic: only one primary address per customer; setting a new primary clears the old one.
+- Confirm `customer_addresses` RLS allows staff and the owning customer to CRUD.
+- Add a settings screen for "Address verification" with the backfill button and last-run stats.
+
+## Not in this phase
+- Route optimisation (Phase D).
+- Van assignment or travel-time availability.
 
 ## Verification
-- Browser console shows no `RefererNotAllowedMapError` or `REQUEST_DENIED` for Places API (New) calls
-- Staff can add/edit a customer address and see Place ID + coordinates saved
-- Portal customer can add/edit their own addresses
-- `geocode-addresses` edge function compiles and can be invoked by staff
+- Type-check passes.
+- Admin customer detail shows Addresses tab with add/edit/delete.
+- Portal sidebar shows Addresses and the page loads authenticated.
+- Backfill edge function self-test returns processed count and any errors.

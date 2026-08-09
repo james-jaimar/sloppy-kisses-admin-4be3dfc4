@@ -127,6 +127,7 @@ import MyInvoiceDetailPage from "@/features/customerPortal/invoices/MyInvoiceDet
 import MyPaymentsPage from "@/features/customerPortal/payments/MyPaymentsPage";
 import MyDocumentsPage from "@/features/customerPortal/documents/MyDocumentsPage";
 import MyProfilePage from "@/features/customerPortal/profile/MyProfilePage";
+import MyAddressesPage from "@/features/customerPortal/addresses/MyAddressesPage";
 import ServicePickerPage from "@/features/customerPortal/bookings/new/ServicePickerPage";
 import HotelRequestWizard from "@/features/customerPortal/bookings/new/HotelRequestWizard";
 import DaycareRequestWizard from "@/features/customerPortal/bookings/new/DaycareRequestWizard";
@@ -295,6 +296,7 @@ const App = () => (
                 <Route path="/customer/invoices/:id" element={<MyInvoiceDetailPage />} />
                 <Route path="/customer/payments" element={<MyPaymentsPage />} />
                 <Route path="/customer/messages" element={<MyMessagesPage />} />
+                <Route path="/customer/addresses" element={<MyAddressesPage />} />
                 <Route path="/customer/registration" element={<RegistrationPage />} />
               </Route>
               </Route>
