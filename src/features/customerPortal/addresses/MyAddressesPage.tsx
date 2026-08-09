@@ -154,6 +154,7 @@ export default function MyAddressesPage() {
             setEditing(null);
           }}
           onSave={handleSave}
+          allowManual={false}
           saving={create.isPending || update.isPending}
         />
       )}
