@@ -1,43 +1,42 @@
-# Fix "Address search is temporarily unavailable" in admin
+# Address lookup: one setting left in Google Cloud
 
-## Confirmed diagnosis (live probes just run)
+## Where we actually are (just re-tested, 19:0x SAST)
 
-I called Google Places Autocomplete directly with the browser key currently in the app (`VITE_GOOGLE_MAPS_BROWSER_KEY`) using three referrers:
+I called Places Autocomplete with your browser key, spoofing each real origin:
 
-- `https://lovable.dev/` → 403 `API_KEY_HTTP_REFERRER_BLOCKED` — referrer not on the key's allowlist
-- `https://sloppykisses.lovable.app/` → 403 `API_KEY_HTTP_REFERRER_BLOCKED`
-- `https://sloppykisses.jaimar.dev/` → 403 `SERVICE_DISABLED` — **Places API (New) is not enabled**
+| Origin | Result |
+|---|---|
+| `https://lovable.dev/` | 403 `SERVICE_DISABLED` |
+| `https://sloppykisses.lovable.app/` | 403 `SERVICE_DISABLED` |
+| `https://sloppykisses.jaimar.dev/` | 403 `SERVICE_DISABLED` |
+| `http://localhost:8080/` | 403 `SERVICE_DISABLED` |
 
-Every response reports the key's owning project as **`411237970562`**. That is a *different* Google Cloud project from `sloppy-kisses-maps-505006`, where the server key, service account, Routes API and Route Optimization all work (self-test passed).
+Two things this tells us:
 
-So this is not an app bug: the browser key comes from the wrong Google Cloud project, that project does not have Places API (New) enabled, and its referrer allowlist does not include the app's domains.
+1. **Your referrer work fixed that half.** The earlier `API_KEY_HTTP_REFERRER_BLOCKED` is gone on every origin.
+2. **One blocker remains**: Google says *"Places API (New) has not been used in project 411237970562 before or it is disabled."*
 
-## Fix (Google Cloud only — no app code changes needed)
+Also confirmed from your screenshots: project number `411237970562` **is** `sloppy-kisses-maps-505006`. My earlier note about "two different Google projects" was wrong — there is only one, and the server-side keys are fine in it.
 
-Preferred: put the browser key in the same project as everything else.
+## Why the key screen looks correct but still fails
 
-1. In Google Cloud, switch to project **sloppy-kisses-maps-505006**.
-2. Ensure **Maps JavaScript API** and **Places API (New)** are enabled there.
-3. Create a new API key named e.g. `SLOPPY_KISSES_MAPS_BROWSER_KEY_V2`.
-4. Application restriction → **Websites (HTTP referrers)**, add:
-   - `https://lovable.dev/*`
-   - `https://*.lovable.app/*`
-   - `https://*.lovableproject.com/*`
-   - `https://sloppykisses.jaimar.dev/*`
-   - `https://*.jaimar.dev/*`
-   - `http://localhost:8080/*`
-5. API restriction → limit to **Maps JavaScript API** and **Places API (New)** only.
-6. Send me the new key; I update `VITE_GOOGLE_MAPS_BROWSER_KEY` in `.env`.
+The key's *API restrictions* list (Maps JavaScript API + Places API (New)) is an allowlist on the key. It is separate from whether the **service** is switched on for the project. A common trap: the project has the **legacy "Places API"** enabled, while **"Places API (New)"** (`places.googleapis.com`) is a distinct entry that is still off. The key can list it without the service being active.
 
-Alternative if you want to keep the existing key: enable Places API (New) in project `411237970562` and add the same referrer patterns to that key. Works, but leaves browser and server credentials split across two projects.
+## What to do
 
-## Verification after the key is in place
+1. Open, in project `sloppy-kisses-maps-505006`:
+   `https://console.cloud.google.com/apis/library/places.googleapis.com?project=sloppy-kisses-maps-505006`
+2. If the button says **Enable**, click it. If it says **Manage/Disable**, the service is already on and I will re-probe and chase the next signal instead of guessing.
+3. Give it 2–5 minutes to propagate.
+4. Tell me, and I re-run the same four-origin probe.
 
-- Open Edit customer in admin, type a Johannesburg address, confirm suggestions appear and no red message shows.
-- Select a suggestion and confirm the verified address card renders with Place ID and coordinates.
-- Repeat on `sloppykisses.lovable.app` and `sloppykisses.jaimar.dev`.
-- Confirm the browser console has no `RefererNotAllowed` or Places errors.
+## Then I verify
+
+- Re-run the probe across all four origins and confirm suggestions come back.
+- Open Edit customer in admin, type a Bryanston address, confirm the dropdown appears with no red message.
+- Select one and confirm the verified address card shows Place ID and coordinates, and that it persists on save/reopen.
+- Confirm the same on `sloppykisses.lovable.app` and `sloppykisses.jaimar.dev`.
 
 ## Scope
 
-No database, RLS, or component logic changes. The only app change is swapping the browser key value in `.env` once you supply it.
+No code, database, or key changes. `.env`, `googleMaps.ts` and `AddressAutocomplete.tsx` are already correct — the only remaining action is the Google Cloud service toggle.
