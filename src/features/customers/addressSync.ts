@@ -58,10 +58,13 @@ export async function syncPrimaryCustomerAddress(
     google_place_id: addr.google_place_id ?? null,
     latitude: addr.latitude ?? null,
     longitude: addr.longitude ?? null,
-    access_notes: addr.access_notes ?? null,
     verification_failed_at: null,
     verification_error: null,
-  };
+  } as Record<string, any>;
+
+  // Only touch access notes when the caller actually captured them, so forms
+  // that don't show the field can't wipe a driver's gate code.
+  if (addr.access_notes !== undefined) payload.access_notes = addr.access_notes || null;
 
   if (existing?.id) {
     const { error } = await supabase.from("customer_addresses").update(payload).eq("id", existing.id);
