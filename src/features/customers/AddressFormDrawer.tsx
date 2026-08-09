@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import AddressAutocomplete, { AddressResult } from "@/components/address/AddressAutocomplete";
+import AddressField from "@/components/address/AddressField";
 import type { CustomerAddressRow } from "./addressQueries";
 
 interface Props {
@@ -11,6 +11,8 @@ interface Props {
   onClose: () => void;
   onSave: (values: Record<string, any>) => Promise<void>;
   saving?: boolean;
+  /** Portal customers don't get the manual (unverified) escape hatch. */
+  allowManual?: boolean;
 }
 
 const ADDRESS_TYPES = [
@@ -22,7 +24,7 @@ const ADDRESS_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-export default function AddressFormDrawer({ tenantId, customerId, address, onClose, onSave, saving }: Props) {
+export default function AddressFormDrawer({ tenantId, customerId, address, onClose, onSave, saving, allowManual = true }: Props) {
   const [form, setForm] = useState({
     label: "Home",
     address_type: "home",
@@ -68,23 +70,6 @@ export default function AddressFormDrawer({ tenantId, customerId, address, onClo
       });
     }
   }, [address]);
-
-  const handleAddressSelect = (result: AddressResult) => {
-    setForm((f) => ({
-      ...f,
-      formatted_address: result.formatted_address,
-      google_place_id: result.place_id,
-      address_line_1: result.address_line_1,
-      address_line_2: result.address_line_2,
-      suburb: result.suburb,
-      city: result.city,
-      province: result.province,
-      postcode: result.postcode,
-      country_code: result.country_code,
-      latitude: result.latitude,
-      longitude: result.longitude,
-    }));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

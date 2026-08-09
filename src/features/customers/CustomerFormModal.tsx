@@ -4,9 +4,7 @@ import { Loader2 } from "lucide-react";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { useCreateCustomer, useUpdateCustomer, useCustomerEmailLookup, type CustomerRow } from "./queries";
 import { Link } from "react-router-dom";
-import { AlertTriangle } from "lucide-react";
-import { BadgeCheck } from "lucide-react";
-import AddressAutocomplete, { AddressResult } from "@/components/address/AddressAutocomplete";
+import AddressField from "@/components/address/AddressField";
 import { useCustomerAddresses } from "./addressQueries";
 
 type Status = "active" | "inactive" | "archived";
@@ -254,58 +252,11 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
         <Field label="Alternative phone">
           <Input value={form.phone_alt} onChange={(v) => set("phone_alt", v)} />
         </Field>
-        <div className="space-y-3">
-          <AddressAutocomplete
-            label="Search address"
-            value={form.formatted_address}
-            onChange={(v) => set("formatted_address", v)}
-            onSelect={(r: AddressResult) =>
-              setForm((f) => ({
-                ...f,
-                formatted_address: r.formatted_address,
-                google_place_id: r.place_id,
-                address_line_1: r.address_line_1,
-                address_line_2: r.address_line_2,
-                suburb: r.suburb,
-                city: r.city,
-                province: r.province,
-                postcode: r.postcode,
-                latitude: r.latitude,
-                longitude: r.longitude,
-              }))
-            }
-            placeholder="Start typing the address…"
-          />
-          {form.google_place_id ? (
-            <div className="flex items-center gap-1.5 text-xs font-medium text-green-700">
-              <BadgeCheck className="h-3.5 w-3.5" /> Verified for routing
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700">
-              <AlertTriangle className="h-3.5 w-3.5" /> Not verified — search and pick the address to enable van routing
-            </div>
-          )}
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Address line 1">
-            <Input value={form.address_line_1} onChange={(v) => set("address_line_1", v)} />
-          </Field>
-          <Field label="Address line 2">
-            <Input value={form.address_line_2} onChange={(v) => set("address_line_2", v)} />
-          </Field>
-          <Field label="Suburb">
-            <Input value={form.suburb} onChange={(v) => set("suburb", v)} />
-          </Field>
-          <Field label="City">
-            <Input value={form.city} onChange={(v) => set("city", v)} />
-          </Field>
-          <Field label="Province">
-            <Input value={form.province} onChange={(v) => set("province", v)} />
-          </Field>
-          <Field label="Postal code">
-            <Input value={form.postcode} onChange={(v) => set("postcode", v)} />
-          </Field>
-        </div>
+        <AddressField
+          label="Address"
+          value={form}
+          onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+        />
         <Field label="Status">
           <select
             value={form.status}
