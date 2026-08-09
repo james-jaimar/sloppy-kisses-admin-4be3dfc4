@@ -108,7 +108,8 @@ export default function AddressAutocomplete({
       setLoading(true);
       setError(null);
       const maps = await loadGoogleMaps();
-      const { Place } = (await maps.importLibrary("places")) as google.maps.PlacesLibrary;
+      const lib = (await maps.importLibrary("places")) as any;
+      const Place = lib.Place;
       const place = new Place({ id: suggestion.placeId, requestedLanguage: "en-ZA" });
       await place.fetchFields({
         fields: ["location", "formattedAddress", "addressComponents", "displayName"],
