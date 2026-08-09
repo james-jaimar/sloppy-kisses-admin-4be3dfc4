@@ -10,6 +10,7 @@ import {
 } from "@/features/customers/addressQueries";
 import AddressFormDrawer from "@/features/customers/AddressFormDrawer";
 import AddressVerifyBadge from "@/components/address/AddressVerifyBadge";
+import StaticMapThumb from "@/components/address/StaticMapThumb";
 import { Loader2, AlertCircle, MapPin, Plus, Pencil, Trash2, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -105,8 +106,11 @@ export default function MyAddressesPage() {
                   </button>
                 </div>
               </div>
-              <div className="mt-2 text-sm text-foreground">
-                {addr.formatted_address || [addr.address_line_1, addr.address_line_2, addr.suburb, addr.city, addr.province, addr.postcode].filter(Boolean).join(", ") || "—"}
+              <div className="mt-2 flex items-start gap-3">
+                <StaticMapThumb latitude={addr.latitude} longitude={addr.longitude} size={64} />
+                <div className="min-w-0 flex-1 text-sm text-foreground">
+                  {addr.formatted_address || [addr.address_line_1, addr.address_line_2, addr.suburb, addr.city, addr.province, addr.postcode].filter(Boolean).join(", ") || "—"}
+                </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-1">
                 {addr.address_type && (
@@ -128,8 +132,15 @@ export default function MyAddressesPage() {
                 />
               </div>
               {!addr.google_place_id && (
-                <div className="mt-2 text-xs text-amber-700">
-                  Please search for this address above so our vans can find you.
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-amber-700">
+                  <span>We couldn't pin this on the map yet.</span>
+                  <button
+                    type="button"
+                    onClick={() => setEditing(addr)}
+                    className="rounded-md border border-border bg-white px-2 py-0.5 text-[11px] font-semibold text-foreground hover:bg-muted"
+                  >
+                    Confirm this address
+                  </button>
                 </div>
               )}
               {(addr.access_notes || addr.parking_notes || addr.gate_code) && (

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Loader2, CheckCircle2, PawPrint, ArrowRight, Clock, ShieldCheck, X } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase/client";
+import AddressField from "@/components/address/AddressField";
 import type { ConsentCustomer, ConsentStatus, TermsVersion } from "./consentQueries";
 
 type Props = {
@@ -20,14 +21,6 @@ const FIELD_SECTIONS: FieldSection[] = [
   {
     title: "Contact",
     fields: [{ key: "mobile", label: "Mobile number", hint: "So we can reach you quickly if needed." }],
-  },
-  {
-    title: "Address",
-    fields: [
-      { key: "address_line_1", label: "Street address" },
-      { key: "suburb", label: "Suburb" },
-      { key: "city", label: "City" },
-    ],
   },
   {
     title: "Identity",
@@ -56,6 +49,8 @@ const FIELD_SECTIONS: FieldSection[] = [
     ],
   },
 ];
+
+const ADDRESS_KEYS = ["address_line_1", "suburb", "city"];
 
 const KIND_LABEL: Record<string, string> = {
   terms: "Terms & Conditions",
@@ -160,13 +155,57 @@ export default function ConsentWizard({ status, onDone, onDismiss, fullPage = fa
   const [signatureName, setSignatureName] = useState(customer.full_name ?? "");
   const now = new Date();
 
+  const needsAddress = ADDRESS_KEYS.some((k) => status.missingFields.includes(k));
+  const [addr, setAddr] = useState<Record<string, any>>({
+    address_line_1: customer.address_line_1 ?? "",
+    address_line_2: "",
+    suburb: customer.suburb ?? "",
+    city: customer.city ?? "",
+    province: "",
+    postcode: "",
+    country_code: "ZA",
+    formatted_address: "",
+    google_place_id: "",
+    latitude: null,
+    longitude: null,
+  });
+
   const saveFields = useMutation({
     mutationFn: async () => {
+      const legacy = needsAddress
+        ? {
+            address_line_1: addr.address_line_1 || null,
+            address_line_2: addr.address_line_2 || null,
+            suburb: addr.suburb || null,
+            city: addr.city || null,
+            province: addr.province || null,
+            postcode: addr.postcode || null,
+          }
+        : {};
       const { error } = await supabase
         .from("customers")
-        .update(fieldValues as any)
+        .update({ ...(fieldValues as any), ...legacy })
         .eq("id", customer.id);
       if (error) throw error;
+
+      if (needsAddress) {
+        // Keep the canonical address book in sync so vans/routing use the same record.
+        const { error: addrErr } = await supabase.from("customer_addresses").insert({
+          tenant_id: customer.tenant_id,
+          customer_id: customer.id,
+          label: "Home",
+          address_type: "home",
+          is_primary: true,
+          ...addr,
+          formatted_address:
+            addr.formatted_address ||
+            [addr.address_line_1, addr.suburb, addr.city, addr.province, addr.postcode]
+              .filter(Boolean)
+              .join(", "),
+          google_place_id: addr.google_place_id || null,
+        } as any);
+        if (addrErr) throw addrErr;
+      }
     },
     onSuccess: () => setStepIdx((i) => i + 1),
     onError: (e: Error) => toast.error(e.message),
@@ -198,7 +237,11 @@ export default function ConsentWizard({ status, onDone, onDismiss, fullPage = fa
       return;
     }
     if (step.kind === "fields") {
-      const still = status.missingFields.filter((f) => !String((fieldValues as any)[f] ?? "").trim());
+      const still = status.missingFields.filter((f) =>
+        ADDRESS_KEYS.includes(f)
+          ? !String(addr[f] ?? "").trim()
+          : !String((fieldValues as any)[f] ?? "").trim()
+      );
       if (still.length > 0) {
         toast.error("Please complete all required fields.");
         return;
@@ -317,6 +360,22 @@ export default function ConsentWizard({ status, onDone, onDismiss, fullPage = fa
                 Please confirm or complete the details below. Anything you enter here you can edit
                 later from your profile.
               </p>
+              {needsAddress && (
+                <div className="space-y-2">
+                  <div>
+                    <h3 className="text-sm font-semibold">Home address</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Start typing and pick your address from the list so our vans can find you.
+                    </p>
+                  </div>
+                  <AddressField
+                    label="Address"
+                    allowManual={false}
+                    value={addr as any}
+                    onChange={(patch) => setAddr((s) => ({ ...s, ...patch }))}
+                  />
+                </div>
+              )}
               {FIELD_SECTIONS.map((sec) => {
                 const secFields = sec.fields.filter((f) => status.missingFields.includes(f.key));
                 if (secFields.length === 0) return null;
