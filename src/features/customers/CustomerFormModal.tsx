@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { useCreateCustomer, useUpdateCustomer, useCustomerEmailLookup, type CustomerRow } from "./queries";
 import { Link } from "react-router-dom";

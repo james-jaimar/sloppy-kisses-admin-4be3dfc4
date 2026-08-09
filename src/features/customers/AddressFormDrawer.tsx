@@ -98,12 +98,11 @@ export default function AddressFormDrawer({ tenantId, customerId, address, onClo
           </button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <AddressAutocomplete
-            label="Search address"
-            value={form.formatted_address}
-            onChange={(v) => setForm({ ...form, formatted_address: v })}
-            onSelect={handleAddressSelect}
-            placeholder="Start typing the address…"
+          <AddressField
+            label="Address"
+            allowManual={allowManual}
+            value={form}
+            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
           />
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -129,60 +128,6 @@ export default function AddressFormDrawer({ tenantId, customerId, address, onClo
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="block md:col-span-2">
-              <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Address line 1</div>
-              <input
-                type="text"
-                value={form.address_line_1}
-                onChange={(e) => setForm({ ...form, address_line_1: e.target.value })}
-                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-              />
-            </label>
-            <label className="block md:col-span-2">
-              <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Address line 2</div>
-              <input
-                type="text"
-                value={form.address_line_2}
-                onChange={(e) => setForm({ ...form, address_line_2: e.target.value })}
-                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Suburb</div>
-              <input
-                type="text"
-                value={form.suburb}
-                onChange={(e) => setForm({ ...form, suburb: e.target.value })}
-                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">City</div>
-              <input
-                type="text"
-                value={form.city}
-                onChange={(e) => setForm({ ...form, city: e.target.value })}
-                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Province</div>
-              <input
-                type="text"
-                value={form.province}
-                onChange={(e) => setForm({ ...form, province: e.target.value })}
-                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Postcode</div>
-              <input
-                type="text"
-                value={form.postcode}
-                onChange={(e) => setForm({ ...form, postcode: e.target.value })}
-                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-              />
             </label>
           </div>
 
