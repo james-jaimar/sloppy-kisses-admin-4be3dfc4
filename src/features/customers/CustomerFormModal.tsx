@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
 import { BadgeCheck } from "lucide-react";
 import AddressAutocomplete, { AddressResult } from "@/components/address/AddressAutocomplete";
+import { useCustomerAddresses } from "./addressQueries";
 
 type Status = "active" | "inactive" | "archived";
 
@@ -88,6 +89,20 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
   const create = useCreateCustomer(tenantId);
   const update = useUpdateCustomer(tenantId);
   const emailDupes = useCustomerEmailLookup(tenantId, form.email, customer?.id);
+  const { data: existingAddresses } = useCustomerAddresses(customer?.id, tenantId);
+
+  // Seed verification status from the customer's primary saved address.
+  useEffect(() => {
+    const primary = existingAddresses?.find((a) => a.is_primary) ?? existingAddresses?.[0];
+    if (!primary) return;
+    setForm((f) => ({
+      ...f,
+      formatted_address: f.formatted_address || primary.formatted_address || "",
+      google_place_id: f.google_place_id || primary.google_place_id || "",
+      latitude: f.latitude ?? primary.latitude ?? null,
+      longitude: f.longitude ?? primary.longitude ?? null,
+    }));
+  }, [existingAddresses]);
 
   // Auto-generate full_name from first/last if the user hasn't touched it
   useEffect(() => {
