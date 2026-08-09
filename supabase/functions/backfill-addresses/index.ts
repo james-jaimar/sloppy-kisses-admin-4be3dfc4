@@ -11,6 +11,9 @@ interface BackfillResult {
   updated: number;
   failed: number;
   errors: string[];
+  /** Rows still awaiting verification after this batch (excluding known failures). */
+  remaining: number;
+  totals: { total: number; verified: number; unverified: number; failedFlagged: number };
 }
 
 function sleep(ms: number) {
@@ -71,15 +74,37 @@ Deno.serve(async (req) => {
     });
   }
 
-  const result: BackfillResult = { processed: 0, updated: 0, failed: 0, errors: [] };
+  let body: { address_id?: string; retry_failures?: boolean } = {};
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
+  }
+
+  const result: BackfillResult = {
+    processed: 0,
+    updated: 0,
+    failed: 0,
+    errors: [],
+    remaining: 0,
+    totals: { total: 0, verified: 0, unverified: 0, failedFlagged: 0 },
+  };
 
   try {
-    const { data: rows, error: fetchError } = await supabase
+    let query = supabase
       .from("customer_addresses")
       .select("id, formatted_address, address_line_1, suburb, city, province, postcode, country_code")
-      .eq("tenant_id", tenantId)
-      .or("google_place_id.is.null,google_place_id.eq.''")
-      .limit(BATCH_SIZE);
+      .eq("tenant_id", tenantId);
+
+    if (body.address_id) {
+      query = query.eq("id", body.address_id).limit(1);
+    } else {
+      query = query.or("google_place_id.is.null,google_place_id.eq.''");
+      if (!body.retry_failures) query = query.is("verification_failed_at", null);
+      query = query.limit(BATCH_SIZE);
+    }
+
+    const { data: rows, error: fetchError } = await query;
 
     if (fetchError) throw fetchError;
 
@@ -93,6 +118,10 @@ Deno.serve(async (req) => {
       if (!text || text.length < 5) {
         result.failed++;
         result.errors.push(`${row.id}: address text too short`);
+        await supabase
+          .from("customer_addresses")
+          .update({ verification_failed_at: new Date().toISOString(), verification_error: "Address text too short" })
+          .eq("id", row.id);
         continue;
       }
 
@@ -101,6 +130,13 @@ Deno.serve(async (req) => {
         if (!match) {
           result.failed++;
           result.errors.push(`${row.id}: no geocode result for "${text}"`);
+          await supabase
+            .from("customer_addresses")
+            .update({
+              verification_failed_at: new Date().toISOString(),
+              verification_error: `No Google match for "${text}"`,
+            })
+            .eq("id", row.id);
           continue;
         }
         const { error: updError } = await supabase
@@ -110,6 +146,8 @@ Deno.serve(async (req) => {
             latitude: match.lat,
             longitude: match.lng,
             formatted_address: match.formatted_address,
+            verification_failed_at: null,
+            verification_error: null,
           })
           .eq("id", row.id);
         if (updError) throw updError;
@@ -118,8 +156,30 @@ Deno.serve(async (req) => {
       } catch (e) {
         result.failed++;
         result.errors.push(`${row.id}: ${(e as Error).message}`);
+        await supabase
+          .from("customer_addresses")
+          .update({
+            verification_failed_at: new Date().toISOString(),
+            verification_error: (e as Error).message.slice(0, 400),
+          })
+          .eq("id", row.id);
       }
     }
+
+    // Fresh totals so the caller can drive a progress bar / loop.
+    const countOf = async (build: (q: any) => any) => {
+      const { count } = await build(
+        supabase.from("customer_addresses").select("id", { count: "exact", head: true }).eq("tenant_id", tenantId),
+      );
+      return count ?? 0;
+    };
+    result.totals.total = await countOf((q: any) => q);
+    result.totals.verified = await countOf((q: any) => q.not("google_place_id", "is", null));
+    result.totals.unverified = await countOf((q: any) => q.is("google_place_id", null));
+    result.totals.failedFlagged = await countOf((q: any) =>
+      q.is("google_place_id", null).not("verification_failed_at", "is", null),
+    );
+    result.remaining = result.totals.unverified - result.totals.failedFlagged;
   } catch (e) {
     return new Response(JSON.stringify({ error: (e as Error).message, result }, null, 2), {
       status: 500,
