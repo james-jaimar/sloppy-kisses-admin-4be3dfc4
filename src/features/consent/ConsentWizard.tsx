@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Loader2, CheckCircle2, PawPrint, ArrowRight, Clock, ShieldCheck, X } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase/client";
+import AddressField from "@/components/address/AddressField";
 import type { ConsentCustomer, ConsentStatus, TermsVersion } from "./consentQueries";
 
 type Props = {
@@ -20,14 +21,6 @@ const FIELD_SECTIONS: FieldSection[] = [
   {
     title: "Contact",
     fields: [{ key: "mobile", label: "Mobile number", hint: "So we can reach you quickly if needed." }],
-  },
-  {
-    title: "Address",
-    fields: [
-      { key: "address_line_1", label: "Street address" },
-      { key: "suburb", label: "Suburb" },
-      { key: "city", label: "City" },
-    ],
   },
   {
     title: "Identity",
