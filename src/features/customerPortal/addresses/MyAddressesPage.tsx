@@ -9,6 +9,7 @@ import {
   type CustomerAddressRow,
 } from "@/features/customers/addressQueries";
 import AddressFormDrawer from "@/features/customers/AddressFormDrawer";
+import AddressVerifyBadge from "@/components/address/AddressVerifyBadge";
 import { Loader2, AlertCircle, MapPin, Plus, Pencil, Trash2, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -118,12 +119,19 @@ export default function MyAddressesPage() {
                     Mobile grooming
                   </span>
                 )}
-                {addr.google_place_id && (
-                  <span className="rounded-md bg-green-50 px-2 py-0.5 text-[10px] font-medium uppercase text-green-700">
-                    Verified
-                  </span>
-                )}
+                <AddressVerifyBadge
+                  addressId={addr.id}
+                  verified={Boolean(addr.google_place_id)}
+                  tenantId={tenantId}
+                  customerId={customerId}
+                  allowVerify={false}
+                />
               </div>
+              {!addr.google_place_id && (
+                <div className="mt-2 text-xs text-amber-700">
+                  Please search for this address above so our vans can find you.
+                </div>
+              )}
               {(addr.access_notes || addr.parking_notes || addr.gate_code) && (
                 <div className="mt-3 space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
                   {addr.access_notes && <div>Access: {addr.access_notes}</div>}
