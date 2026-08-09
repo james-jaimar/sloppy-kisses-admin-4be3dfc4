@@ -50,9 +50,9 @@ const FIELD_SECTIONS: FieldSection[] = [
   },
 ];
 
-const KIND_LABEL: Record<string, string> = {
-
 const ADDRESS_KEYS = ["address_line_1", "suburb", "city"];
+
+const KIND_LABEL: Record<string, string> = {
   terms: "Terms & Conditions",
   registration: "Daycare Registration",
 };
