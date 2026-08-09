@@ -266,11 +266,10 @@ export default function GroomingRequestWizard({ mode }: Props) {
           </p>
         </div>
       )}
-      {cust.data && (
+      {cust.data && showAddressDrawer && (
         <AddressFormDrawer
           customerId={cust.data.id}
           tenantId={cust.data.tenant_id}
-          open={showAddressDrawer}
           onClose={() => setShowAddressDrawer(false)}
           onSave={async (addr) => {
             setServiceAddressId(addr.id);
