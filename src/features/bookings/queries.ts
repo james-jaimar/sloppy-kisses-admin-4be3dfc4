@@ -270,14 +270,14 @@ export function useCreateBooking(tenantId: string) {
       if (addressId) {
         const { data: addr } = await supabase
           .from("customer_addresses")
-          .select("id, formatted_address, google_place_id, suburb, city, postcode")
+          .select("id, formatted_address, address_line_2, google_place_id, suburb, city, postcode")
           .eq("id", addressId)
           .eq("tenant_id", tenantId)
           .maybeSingle();
         if (addr) {
           addressSnapshot = {
             service_address_id: addr.id,
-            service_address_text: addr.formatted_address,
+            service_address_text: [addr.address_line_2, addr.formatted_address].filter(Boolean).join(", "),
             service_place_id: addr.google_place_id,
             service_suburb: addr.suburb,
             service_city: addr.city,
@@ -287,7 +287,7 @@ export function useCreateBooking(tenantId: string) {
       } else {
         const { data: addr } = await supabase
           .from("customer_addresses")
-          .select("id, formatted_address, google_place_id, suburb, city, postcode")
+          .select("id, formatted_address, address_line_2, google_place_id, suburb, city, postcode")
           .eq("customer_id", input.customer_id)
           .eq("tenant_id", tenantId)
           .eq("is_primary", true)
@@ -295,7 +295,7 @@ export function useCreateBooking(tenantId: string) {
         if (addr) {
           addressSnapshot = {
             service_address_id: addr.id,
-            service_address_text: addr.formatted_address,
+            service_address_text: [addr.address_line_2, addr.formatted_address].filter(Boolean).join(", "),
             service_place_id: addr.google_place_id,
             service_suburb: addr.suburb,
             service_city: addr.city,
@@ -376,12 +376,12 @@ export function useUpdateBooking(tenantId: string) {
         if (patch.service_address_id) {
           const { data: addr } = await supabase
             .from("customer_addresses")
-            .select("id, formatted_address, google_place_id, suburb, city, postcode")
+            .select("id, formatted_address, address_line_2, google_place_id, suburb, city, postcode")
             .eq("id", patch.service_address_id)
             .eq("tenant_id", tenantId)
             .maybeSingle();
           if (addr) {
-            update.service_address_text = addr.formatted_address;
+            update.service_address_text = [addr.address_line_2, addr.formatted_address].filter(Boolean).join(", ");
             update.service_place_id = addr.google_place_id;
             update.service_suburb = addr.suburb;
             update.service_city = addr.city;

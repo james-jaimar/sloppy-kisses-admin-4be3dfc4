@@ -107,7 +107,7 @@ async function resolveAddressSnapshot(
   if (addressId) {
     const { data } = await admin
       .from("customer_addresses")
-      .select("id, formatted_address, google_place_id, suburb, city, postcode")
+      .select("id, formatted_address, address_line_2, google_place_id, suburb, city, postcode")
       .eq("id", addressId)
       .eq("tenant_id", tenantId)
       .maybeSingle();
@@ -116,7 +116,7 @@ async function resolveAddressSnapshot(
   if (!addr) {
     const { data } = await admin
       .from("customer_addresses")
-      .select("id, formatted_address, google_place_id, suburb, city, postcode")
+      .select("id, formatted_address, address_line_2, google_place_id, suburb, city, postcode")
       .eq("customer_id", customerId)
       .eq("tenant_id", tenantId)
       .eq("is_primary", true)
@@ -126,7 +126,7 @@ async function resolveAddressSnapshot(
   if (!addr) return {};
   return {
     service_address_id: addr.id,
-    service_address_text: addr.formatted_address,
+    service_address_text: [addr.address_line_2, addr.formatted_address].filter(Boolean).join(", "),
     service_place_id: addr.google_place_id,
     service_suburb: addr.suburb,
     service_city: addr.city,
