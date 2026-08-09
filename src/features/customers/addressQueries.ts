@@ -6,6 +6,24 @@ export type CustomerAddressRow = Database["public"]["Tables"]["customer_addresse
 export type CustomerAddressInsert = Database["public"]["Tables"]["customer_addresses"]["Insert"];
 export type CustomerAddressUpdate = Database["public"]["Tables"]["customer_addresses"]["Update"];
 
+/** Mirror a primary address back onto the legacy customer columns. */
+async function mirrorToCustomer(tenantId: string, customerId: string, row: any) {
+  if (!row?.is_primary) return;
+  const { error } = await supabase
+    .from("customers")
+    .update({
+      address_line_1: row.address_line_1 ?? null,
+      address_line_2: row.address_line_2 ?? null,
+      suburb: row.suburb ?? null,
+      city: row.city ?? null,
+      province: row.province ?? null,
+      postcode: row.postcode ?? null,
+    })
+    .eq("id", customerId)
+    .eq("tenant_id", tenantId);
+  if (error) console.error("Failed to mirror address to customer", error);
+}
+
 export function useCustomerAddresses(customerId: string | null | undefined, tenantId?: string | null) {
   return useQuery({
     queryKey: ["customer_addresses", tenantId, customerId],
@@ -35,10 +53,12 @@ export function useCreateCustomerAddress(tenantId: string | null | undefined, cu
         .select("*")
         .single();
       if (error) throw error;
+      await mirrorToCustomer(tenantId, customerId, data);
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["customer_addresses", tenantId, customerId] });
+      qc.invalidateQueries({ queryKey: ["customers"] });
     },
   });
 }
@@ -58,10 +78,12 @@ export function useUpdateCustomerAddress(tenantId: string | null | undefined, cu
         .select("*")
         .single();
       if (error) throw error;
+      await mirrorToCustomer(tenantId, customerId, data);
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["customer_addresses", tenantId, customerId] });
+      qc.invalidateQueries({ queryKey: ["customers"] });
     },
   });
 }

@@ -9,6 +9,7 @@ import {
   type CustomerAddressRow,
 } from "../addressQueries";
 import AddressFormDrawer from "../AddressFormDrawer";
+import AddressVerifyBadge from "@/components/address/AddressVerifyBadge";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export function AddressesTab({ tenantId, customerId }: { tenantId: string; customerId: string }) {
@@ -110,12 +111,16 @@ export function AddressesTab({ tenantId, customerId }: { tenantId: string; custo
                   Mobile grooming
                 </span>
               )}
-              {addr.google_place_id && (
-                <span className="rounded-md bg-green-50 px-2 py-0.5 text-[10px] font-medium uppercase text-green-700">
-                  Verified
-                </span>
-              )}
+              <AddressVerifyBadge
+                addressId={addr.id}
+                verified={Boolean(addr.google_place_id)}
+                tenantId={tenantId}
+                customerId={customerId}
+              />
             </div>
+            {!addr.google_place_id && (addr as any).verification_error && (
+              <div className="mt-2 text-xs text-amber-700">{(addr as any).verification_error}</div>
+            )}
             {(addr.access_notes || addr.parking_notes || addr.gate_code) && (
               <div className="mt-3 space-y-1 border-t border-border pt-2 text-xs text-muted-foreground">
                 {addr.access_notes && <div>Access: {addr.access_notes}</div>}

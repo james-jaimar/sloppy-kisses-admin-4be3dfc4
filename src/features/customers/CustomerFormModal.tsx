@@ -5,6 +5,9 @@ import { ModalShell } from "@/components/modals/ModalShell";
 import { useCreateCustomer, useUpdateCustomer, useCustomerEmailLookup, type CustomerRow } from "./queries";
 import { Link } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
+import { BadgeCheck } from "lucide-react";
+import AddressAutocomplete, { AddressResult } from "@/components/address/AddressAutocomplete";
+import { useCustomerAddresses } from "./addressQueries";
 
 type Status = "active" | "inactive" | "archived";
 
@@ -29,6 +32,10 @@ interface FormState {
   city: string;
   province: string;
   postcode: string;
+  formatted_address: string;
+  google_place_id: string;
+  latitude: number | null;
+  longitude: number | null;
   status: Status;
   notes_internal: string;
   id_number: string;
@@ -55,6 +62,13 @@ function fromCustomer(c?: CustomerRow | null): FormState {
     city: c?.city ?? "",
     province: c?.province ?? "",
     postcode: c?.postcode ?? "",
+    formatted_address:
+      [c?.address_line_1, c?.address_line_2, c?.suburb, c?.city, c?.province, c?.postcode]
+        .filter(Boolean)
+        .join(", ") ?? "",
+    google_place_id: "",
+    latitude: null,
+    longitude: null,
     status: (c?.status as Status) ?? "active",
     notes_internal: c?.notes_internal ?? "",
     id_number: (c as any)?.id_number ?? "",
@@ -75,6 +89,20 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
   const create = useCreateCustomer(tenantId);
   const update = useUpdateCustomer(tenantId);
   const emailDupes = useCustomerEmailLookup(tenantId, form.email, customer?.id);
+  const { data: existingAddresses } = useCustomerAddresses(customer?.id, tenantId);
+
+  // Seed verification status from the customer's primary saved address.
+  useEffect(() => {
+    const primary = existingAddresses?.find((a) => a.is_primary) ?? existingAddresses?.[0];
+    if (!primary) return;
+    setForm((f) => ({
+      ...f,
+      formatted_address: f.formatted_address || primary.formatted_address || "",
+      google_place_id: f.google_place_id || primary.google_place_id || "",
+      latitude: f.latitude ?? primary.latitude ?? null,
+      longitude: f.longitude ?? primary.longitude ?? null,
+    }));
+  }, [existingAddresses]);
 
   // Auto-generate full_name from first/last if the user hasn't touched it
   useEffect(() => {
@@ -106,6 +134,18 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
       city: form.city.trim() || null,
       province: form.province.trim() || null,
       postcode: form.postcode.trim() || null,
+      _address: {
+        address_line_1: form.address_line_1.trim() || null,
+        address_line_2: form.address_line_2.trim() || null,
+        suburb: form.suburb.trim() || null,
+        city: form.city.trim() || null,
+        province: form.province.trim() || null,
+        postcode: form.postcode.trim() || null,
+        formatted_address: form.formatted_address.trim() || null,
+        google_place_id: form.google_place_id || null,
+        latitude: form.latitude,
+        longitude: form.longitude,
+      },
       status: form.status,
       notes_internal: form.notes_internal.trim() || null,
       id_number: form.id_number.trim() || null,
@@ -214,6 +254,38 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
         <Field label="Alternative phone">
           <Input value={form.phone_alt} onChange={(v) => set("phone_alt", v)} />
         </Field>
+        <div className="space-y-3">
+          <AddressAutocomplete
+            label="Search address"
+            value={form.formatted_address}
+            onChange={(v) => set("formatted_address", v)}
+            onSelect={(r: AddressResult) =>
+              setForm((f) => ({
+                ...f,
+                formatted_address: r.formatted_address,
+                google_place_id: r.place_id,
+                address_line_1: r.address_line_1,
+                address_line_2: r.address_line_2,
+                suburb: r.suburb,
+                city: r.city,
+                province: r.province,
+                postcode: r.postcode,
+                latitude: r.latitude,
+                longitude: r.longitude,
+              }))
+            }
+            placeholder="Start typing the address…"
+          />
+          {form.google_place_id ? (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-green-700">
+              <BadgeCheck className="h-3.5 w-3.5" /> Verified for routing
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700">
+              <AlertTriangle className="h-3.5 w-3.5" /> Not verified — search and pick the address to enable van routing
+            </div>
+          )}
+        </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Address line 1">
             <Input value={form.address_line_1} onChange={(v) => set("address_line_1", v)} />

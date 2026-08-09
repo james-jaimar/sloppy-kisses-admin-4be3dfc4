@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { syncPrimaryCustomerAddress, type AddressSnapshot } from "./addressSync";
 
 export type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
 export type PetRow = Database["public"]["Tables"]["pets"]["Row"];
@@ -311,8 +312,14 @@ export function useCustomerEmailDuplicates(customerId: string | null | undefined
 export function useCreateCustomer(tenantId: string | null | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: Omit<CustomerInsert, "tenant_id" | "customer_number" | "full_name"> & { full_name?: string }) => {
+    mutationFn: async (
+      raw: Omit<CustomerInsert, "tenant_id" | "customer_number" | "full_name"> & {
+        full_name?: string;
+        _address?: AddressSnapshot;
+      },
+    ) => {
       if (!tenantId) throw new Error("No tenant selected");
+      const { _address, ...input } = raw as any;
       const { data: numData, error: numErr } = await supabase.rpc("next_customer_number", {
         target_tenant_id: tenantId,
       });
@@ -328,10 +335,18 @@ export function useCreateCustomer(tenantId: string | null | undefined) {
         .select("*")
         .single();
       if (error) throw friendlyEmailError(error);
+      if (_address) {
+        try {
+          await syncPrimaryCustomerAddress(tenantId, data.id, _address);
+        } catch (e) {
+          console.error("Failed to sync primary address", e);
+        }
+      }
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["customers"] });
+      qc.invalidateQueries({ queryKey: ["customer_addresses"] });
       qc.invalidateQueries({ queryKey: ["stats"] });
     },
   });
@@ -340,10 +355,10 @@ export function useCreateCustomer(tenantId: string | null | undefined) {
 export function useUpdateCustomer(tenantId: string | null | undefined) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: CustomerUpdate }) => {
+    mutationFn: async ({ id, patch }: { id: string; patch: CustomerUpdate & { _address?: AddressSnapshot } }) => {
       if (!tenantId) throw new Error("No tenant selected");
       // Never allow changing customer_number or tenant_id via this mutation
-      const { customer_number: _cn, tenant_id: _tid, ...safe } = patch as any;
+      const { customer_number: _cn, tenant_id: _tid, _address, ...safe } = patch as any;
       const { data, error } = await supabase
         .from("customers")
         .update(safe)
@@ -352,10 +367,18 @@ export function useUpdateCustomer(tenantId: string | null | undefined) {
         .select("*")
         .single();
       if (error) throw friendlyEmailError(error);
+      if (_address) {
+        try {
+          await syncPrimaryCustomerAddress(tenantId, id, _address);
+        } catch (e) {
+          console.error("Failed to sync primary address", e);
+        }
+      }
       return data;
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ["customers"] });
+      qc.invalidateQueries({ queryKey: ["customer_addresses"] });
       qc.invalidateQueries({ queryKey: ["customers", "detail", tenantId, vars.id] });
     },
   });
