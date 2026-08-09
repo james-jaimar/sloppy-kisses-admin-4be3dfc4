@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { loadGoogleMaps, isGoogleMapsConfigured, ZA_BIAS } from "@/lib/maps/googleMaps";
-import { MapPin, Loader2, AlertCircle } from "lucide-react";
+import { MapPin, Loader2, AlertCircle, RotateCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export interface AddressResult {
   place_id: string;
@@ -43,6 +44,7 @@ export default function AddressAutocomplete({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lookupPaused, setLookupPaused] = useState(false);
   const [open, setOpen] = useState(false);
   const [configured] = useState(() => isGoogleMapsConfigured());
   const inputRef = useRef<HTMLInputElement>(null);
@@ -59,7 +61,7 @@ export default function AddressAutocomplete({
 
   const fetchSuggestions = useCallback(
     async (query: string) => {
-      if (!query.trim() || query.trim().length < 3) {
+      if (lookupPaused || !query.trim() || query.trim().length < 3) {
         setSuggestions([]);
         setLoading(false);
         return;
@@ -86,13 +88,14 @@ export default function AddressAutocomplete({
         setOpen(true);
       } catch (e) {
         console.error("Places autocomplete failed", e);
-        setError("Address lookup is unavailable right now — you can type the address instead.");
+        setError("Address search is temporarily unavailable.");
+        setLookupPaused(true);
         setSuggestions([]);
       } finally {
         setLoading(false);
       }
     },
-    [ensureSessionToken],
+    [ensureSessionToken, lookupPaused],
   );
 
   useEffect(() => {
@@ -193,6 +196,8 @@ export default function AddressAutocomplete({
           type="text"
           value={value}
           onChange={(e) => {
+            setLookupPaused(false);
+            setError(null);
             onChange(e.target.value);
             if (!open) setOpen(true);
           }}
@@ -204,8 +209,23 @@ export default function AddressAutocomplete({
         {loading && <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />}
       </div>
       {error && (
-        <div className="mt-1 flex items-center gap-1 text-xs text-sk-coral-dark">
-          <AlertCircle className="h-3 w-3" /> {error}
+        <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <AlertCircle className="h-3 w-3" /> {error}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 px-2 text-xs"
+            onClick={() => {
+              setLookupPaused(false);
+              setError(null);
+              void fetchSuggestions(value);
+            }}
+          >
+            <RotateCw className="h-3 w-3" /> Retry
+          </Button>
         </div>
       )}
       {open && suggestions.length > 0 && (
