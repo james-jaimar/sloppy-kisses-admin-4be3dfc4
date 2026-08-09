@@ -41,10 +41,14 @@ function Input({
   label,
   value,
   onChange,
+  hint,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
+  hint?: string;
+  placeholder?: string;
 }) {
   return (
     <label className="block">
@@ -53,8 +57,10 @@ function Input({
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
         className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40"
       />
+      {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
     </label>
   );
 }
