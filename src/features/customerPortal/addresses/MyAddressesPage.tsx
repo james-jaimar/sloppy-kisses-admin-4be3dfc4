@@ -109,7 +109,10 @@ export default function MyAddressesPage() {
               <div className="mt-2 flex items-start gap-3">
                 <StaticMapThumb latitude={addr.latitude} longitude={addr.longitude} size={64} />
                 <div className="min-w-0 flex-1 text-sm text-foreground">
-                  {addr.formatted_address || [addr.address_line_1, addr.address_line_2, addr.suburb, addr.city, addr.province, addr.postcode].filter(Boolean).join(", ") || "—"}
+                  {addr.address_line_2 && <div className="font-medium">{addr.address_line_2}</div>}
+                  <div>
+                    {addr.formatted_address || [addr.address_line_1, addr.suburb, addr.city, addr.province, addr.postcode].filter(Boolean).join(", ") || "—"}
+                  </div>
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-1">
