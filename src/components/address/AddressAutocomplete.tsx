@@ -120,14 +120,6 @@ export default function AddressAutocomplete({
       const components: Array<{ types: string[]; longText: string; shortText: string }> =
         (place as any).addressComponents ?? [];
 
-      const parsed: Partial<AddressResult> = {
-        place_id: suggestion.placeId,
-        formatted_address: formattedAddress,
-        country_code: "ZA",
-        latitude: location?.lat() ?? 0,
-        longitude: location?.lng() ?? 0,
-      };
-
       // Reset parsed fields
       const result: AddressResult = {
         place_id: suggestion.placeId,
