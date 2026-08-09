@@ -98,8 +98,13 @@ export default function MyProfilePage() {
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium">{primary.label || "Home"}</div>
                   <p className="truncate text-sm text-muted-foreground">
-                    {primary.formatted_address ||
-                      [primary.address_line_1, primary.suburb, primary.city].filter(Boolean).join(", ")}
+                    {[
+                      primary.address_line_2,
+                      primary.formatted_address ||
+                        [primary.address_line_1, primary.suburb, primary.city].filter(Boolean).join(", "),
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
                   </p>
                   {!primary.google_place_id && (
                     <p className="mt-1 text-xs text-amber-700">
