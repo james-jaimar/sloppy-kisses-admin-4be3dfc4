@@ -155,13 +155,57 @@ export default function ConsentWizard({ status, onDone, onDismiss, fullPage = fa
   const [signatureName, setSignatureName] = useState(customer.full_name ?? "");
   const now = new Date();
 
+  const needsAddress = ADDRESS_KEYS.some((k) => status.missingFields.includes(k));
+  const [addr, setAddr] = useState<Record<string, any>>({
+    address_line_1: customer.address_line_1 ?? "",
+    address_line_2: "",
+    suburb: customer.suburb ?? "",
+    city: customer.city ?? "",
+    province: "",
+    postcode: "",
+    country_code: "ZA",
+    formatted_address: "",
+    google_place_id: "",
+    latitude: null,
+    longitude: null,
+  });
+
   const saveFields = useMutation({
     mutationFn: async () => {
+      const legacy = needsAddress
+        ? {
+            address_line_1: addr.address_line_1 || null,
+            address_line_2: addr.address_line_2 || null,
+            suburb: addr.suburb || null,
+            city: addr.city || null,
+            province: addr.province || null,
+            postcode: addr.postcode || null,
+          }
+        : {};
       const { error } = await supabase
         .from("customers")
-        .update(fieldValues as any)
+        .update({ ...(fieldValues as any), ...legacy })
         .eq("id", customer.id);
       if (error) throw error;
+
+      if (needsAddress) {
+        // Keep the canonical address book in sync so vans/routing use the same record.
+        const { error: addrErr } = await supabase.from("customer_addresses").insert({
+          tenant_id: customer.tenant_id,
+          customer_id: customer.id,
+          label: "Home",
+          address_type: "home",
+          is_primary: true,
+          ...addr,
+          formatted_address:
+            addr.formatted_address ||
+            [addr.address_line_1, addr.suburb, addr.city, addr.province, addr.postcode]
+              .filter(Boolean)
+              .join(", "),
+          google_place_id: addr.google_place_id || null,
+        } as any);
+        if (addrErr) throw addrErr;
+      }
     },
     onSuccess: () => setStepIdx((i) => i + 1),
     onError: (e: Error) => toast.error(e.message),
@@ -193,7 +237,11 @@ export default function ConsentWizard({ status, onDone, onDismiss, fullPage = fa
       return;
     }
     if (step.kind === "fields") {
-      const still = status.missingFields.filter((f) => !String((fieldValues as any)[f] ?? "").trim());
+      const still = status.missingFields.filter((f) =>
+        ADDRESS_KEYS.includes(f)
+          ? !String(addr[f] ?? "").trim()
+          : !String((fieldValues as any)[f] ?? "").trim()
+      );
       if (still.length > 0) {
         toast.error("Please complete all required fields.");
         return;
