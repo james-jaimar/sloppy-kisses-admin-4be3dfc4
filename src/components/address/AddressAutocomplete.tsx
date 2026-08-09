@@ -85,7 +85,8 @@ export default function AddressAutocomplete({
         );
         setOpen(true);
       } catch (e) {
-        setError(String((e as Error).message));
+        console.error("Places autocomplete failed", e);
+        setError("Address lookup is unavailable right now — you can type the address instead.");
         setSuggestions([]);
       } finally {
         setLoading(false);
@@ -155,7 +156,8 @@ export default function AddressAutocomplete({
       setOpen(false);
       sessionTokenRef.current = null; // consume token
     } catch (e) {
-      setError(String((e as Error).message));
+      console.error("Place details lookup failed", e);
+      setError("We couldn't load that address from Google. Please try another one.");
     } finally {
       setLoading(false);
     }

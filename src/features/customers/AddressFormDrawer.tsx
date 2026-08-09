@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import AddressAutocomplete, { AddressResult } from "@/components/address/AddressAutocomplete";
+import AddressField from "@/components/address/AddressField";
 import type { CustomerAddressRow } from "./addressQueries";
 
 interface Props {
@@ -11,6 +11,8 @@ interface Props {
   onClose: () => void;
   onSave: (values: Record<string, any>) => Promise<void>;
   saving?: boolean;
+  /** Portal customers don't get the manual (unverified) escape hatch. */
+  allowManual?: boolean;
 }
 
 const ADDRESS_TYPES = [
@@ -22,7 +24,7 @@ const ADDRESS_TYPES = [
   { value: "other", label: "Other" },
 ];
 
-export default function AddressFormDrawer({ tenantId, customerId, address, onClose, onSave, saving }: Props) {
+export default function AddressFormDrawer({ tenantId, customerId, address, onClose, onSave, saving, allowManual = true }: Props) {
   const [form, setForm] = useState({
     label: "Home",
     address_type: "home",
@@ -69,23 +71,6 @@ export default function AddressFormDrawer({ tenantId, customerId, address, onClo
     }
   }, [address]);
 
-  const handleAddressSelect = (result: AddressResult) => {
-    setForm((f) => ({
-      ...f,
-      formatted_address: result.formatted_address,
-      google_place_id: result.place_id,
-      address_line_1: result.address_line_1,
-      address_line_2: result.address_line_2,
-      suburb: result.suburb,
-      city: result.city,
-      province: result.province,
-      postcode: result.postcode,
-      country_code: result.country_code,
-      latitude: result.latitude,
-      longitude: result.longitude,
-    }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -113,12 +98,11 @@ export default function AddressFormDrawer({ tenantId, customerId, address, onClo
           </button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <AddressAutocomplete
-            label="Search address"
-            value={form.formatted_address}
-            onChange={(v) => setForm({ ...form, formatted_address: v })}
-            onSelect={handleAddressSelect}
-            placeholder="Start typing the address…"
+          <AddressField
+            label="Address"
+            allowManual={allowManual}
+            value={form}
+            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
           />
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -144,60 +128,6 @@ export default function AddressFormDrawer({ tenantId, customerId, address, onClo
                   </option>
                 ))}
               </select>
-            </label>
-            <label className="block md:col-span-2">
-              <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Address line 1</div>
-              <input
-                type="text"
-                value={form.address_line_1}
-                onChange={(e) => setForm({ ...form, address_line_1: e.target.value })}
-                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-              />
-            </label>
-            <label className="block md:col-span-2">
-              <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Address line 2</div>
-              <input
-                type="text"
-                value={form.address_line_2}
-                onChange={(e) => setForm({ ...form, address_line_2: e.target.value })}
-                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Suburb</div>
-              <input
-                type="text"
-                value={form.suburb}
-                onChange={(e) => setForm({ ...form, suburb: e.target.value })}
-                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">City</div>
-              <input
-                type="text"
-                value={form.city}
-                onChange={(e) => setForm({ ...form, city: e.target.value })}
-                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Province</div>
-              <input
-                type="text"
-                value={form.province}
-                onChange={(e) => setForm({ ...form, province: e.target.value })}
-                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-              />
-            </label>
-            <label className="block">
-              <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Postcode</div>
-              <input
-                type="text"
-                value={form.postcode}
-                onChange={(e) => setForm({ ...form, postcode: e.target.value })}
-                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-              />
             </label>
           </div>
 
