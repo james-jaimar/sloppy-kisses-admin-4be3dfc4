@@ -4,7 +4,7 @@
 // Returns a pass/fail line per check with Google's raw error text on failure.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { computeRouteMatrix, optimizeTours, projectId } from "../_shared/google.ts";
+import { computeRouteMatrix, optimizeTours, projectId, rfc3339Seconds } from "../_shared/google.ts";
 
 // Two real Bryanston points (Nicolway and Bryanston shopping precinct).
 const A = { latitude: -26.0431, longitude: 28.0212 };
