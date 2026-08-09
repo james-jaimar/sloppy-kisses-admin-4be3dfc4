@@ -23,8 +23,7 @@ Deno.serve(async (req) => {
     { global: { headers: { Authorization: authHeader } } },
   );
   const { data: { user } } = await supabase.auth.getUser();
-  const diagnosticRun = req.headers.get("x-selftest") === "1";
-  if (!user && !diagnosticRun) {
+  if (!user) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
