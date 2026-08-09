@@ -61,10 +61,9 @@ function fromCustomer(c?: CustomerRow | null): FormState {
     city: c?.city ?? "",
     province: c?.province ?? "",
     postcode: c?.postcode ?? "",
+    // Street only — the unit / complex line lives in address_line_2.
     formatted_address:
-      [c?.address_line_1, c?.address_line_2, c?.suburb, c?.city, c?.province, c?.postcode]
-        .filter(Boolean)
-        .join(", ") ?? "",
+      [c?.address_line_1, c?.suburb, c?.city, c?.province, c?.postcode].filter(Boolean).join(", ") ?? "",
     google_place_id: "",
     latitude: null,
     longitude: null,
