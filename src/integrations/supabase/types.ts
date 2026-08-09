@@ -1309,6 +1309,8 @@ export type Database = {
           suburb: string | null
           tenant_id: string
           updated_at: string
+          verification_error: string | null
+          verification_failed_at: string | null
         }
         Insert: {
           access_notes?: string | null
@@ -1334,6 +1336,8 @@ export type Database = {
           suburb?: string | null
           tenant_id: string
           updated_at?: string
+          verification_error?: string | null
+          verification_failed_at?: string | null
         }
         Update: {
           access_notes?: string | null
@@ -1359,6 +1363,8 @@ export type Database = {
           suburb?: string | null
           tenant_id?: string
           updated_at?: string
+          verification_error?: string | null
+          verification_failed_at?: string | null
         }
         Relationships: [
           {
