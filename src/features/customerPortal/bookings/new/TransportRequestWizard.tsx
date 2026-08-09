@@ -38,11 +38,10 @@ export default function TransportRequestWizard() {
       serviceType: "pickup_dropoff",
       petIds,
       startAt,
+      service_address_id: serviceAddressId,
       notes: [notes, accessNotes ? `Access: ${accessNotes}` : null].filter(Boolean).join("\n") || null,
       transport: {
         direction,
-        pickup_address: addressLine || null,
-        suburb: suburb || null,
       },
     });
   }
