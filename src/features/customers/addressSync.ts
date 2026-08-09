@@ -13,6 +13,7 @@ export interface AddressSnapshot {
   google_place_id?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  access_notes?: string | null;
 }
 
 function hasAnyText(a: AddressSnapshot) {
@@ -59,10 +60,14 @@ export async function syncPrimaryCustomerAddress(
     longitude: addr.longitude ?? null,
     verification_failed_at: null,
     verification_error: null,
-  };
+  } as Record<string, any>;
+
+  // Only touch access notes when the caller actually captured them, so forms
+  // that don't show the field can't wipe a driver's gate code.
+  if (addr.access_notes !== undefined) payload.access_notes = addr.access_notes || null;
 
   if (existing?.id) {
-    const { error } = await supabase.from("customer_addresses").update(payload).eq("id", existing.id);
+    const { error } = await supabase.from("customer_addresses").update(payload as any).eq("id", existing.id);
     if (error) throw error;
   } else {
     const { error } = await supabase.from("customer_addresses").insert({

@@ -107,7 +107,7 @@ async function resolveAddressSnapshot(
   if (addressId) {
     const { data } = await admin
       .from("customer_addresses")
-      .select("id, formatted_address, google_place_id, suburb, city, postcode")
+      .select("id, formatted_address, address_line_2, google_place_id, suburb, city, postcode")
       .eq("id", addressId)
       .eq("tenant_id", tenantId)
       .maybeSingle();
@@ -116,7 +116,7 @@ async function resolveAddressSnapshot(
   if (!addr) {
     const { data } = await admin
       .from("customer_addresses")
-      .select("id, formatted_address, google_place_id, suburb, city, postcode")
+      .select("id, formatted_address, address_line_2, google_place_id, suburb, city, postcode")
       .eq("customer_id", customerId)
       .eq("tenant_id", tenantId)
       .eq("is_primary", true)
@@ -126,7 +126,7 @@ async function resolveAddressSnapshot(
   if (!addr) return {};
   return {
     service_address_id: addr.id,
-    service_address_text: addr.formatted_address,
+    service_address_text: [addr.address_line_2, addr.formatted_address].filter(Boolean).join(", "),
     service_place_id: addr.google_place_id,
     service_suburb: addr.suburb,
     service_city: addr.city,
@@ -521,7 +521,8 @@ Deno.serve(async (req) => {
       tenant_id: tenantId,
       booking_id: bookingId,
       direction: t.direction ?? "pickup",
-      pickup_address: t.pickup_address ?? customer.address_line_1 ?? null,
+      pickup_address:
+        t.pickup_address ?? addressSnapshot.service_address_text ?? customer.address_line_1 ?? null,
       pickup_address_id: addressSnapshot.service_address_id ?? null,
       pickup_place_id: addressSnapshot.service_place_id ?? null,
       dropoff_address: t.dropoff_address ?? null,
