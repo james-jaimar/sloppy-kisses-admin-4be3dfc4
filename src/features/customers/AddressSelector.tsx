@@ -102,7 +102,12 @@ export function AddressSelector({
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground truncate">
-                    {addr.formatted_address || [addr.address_line_1, addr.suburb].filter(Boolean).join(", ")}
+                    {[
+                      addr.address_line_2,
+                      addr.formatted_address || [addr.address_line_1, addr.suburb].filter(Boolean).join(", "),
+                    ]
+                      .filter(Boolean)
+                      .join(", ")}
                   </p>
                 </div>
               </button>
