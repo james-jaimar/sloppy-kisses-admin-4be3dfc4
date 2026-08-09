@@ -34,6 +34,7 @@ interface FormState {
   google_place_id: string;
   latitude: number | null;
   longitude: number | null;
+  access_notes: string;
   status: Status;
   notes_internal: string;
   id_number: string;
@@ -67,6 +68,7 @@ function fromCustomer(c?: CustomerRow | null): FormState {
     google_place_id: "",
     latitude: null,
     longitude: null,
+    access_notes: "",
     status: (c?.status as Status) ?? "active",
     notes_internal: c?.notes_internal ?? "",
     id_number: (c as any)?.id_number ?? "",
@@ -99,6 +101,8 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
       google_place_id: f.google_place_id || primary.google_place_id || "",
       latitude: f.latitude ?? primary.latitude ?? null,
       longitude: f.longitude ?? primary.longitude ?? null,
+      address_line_2: f.address_line_2 || primary.address_line_2 || "",
+      access_notes: f.access_notes || primary.access_notes || "",
     }));
   }, [existingAddresses]);
 
@@ -143,6 +147,7 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
         google_place_id: form.google_place_id || null,
         latitude: form.latitude,
         longitude: form.longitude,
+        access_notes: form.access_notes.trim() || null,
       },
       status: form.status,
       notes_internal: form.notes_internal.trim() || null,
