@@ -10,14 +10,15 @@ export const GOOGLE_MAPS_BROWSER_KEY =
 
 export const isGoogleMapsConfigured = () => GOOGLE_MAPS_BROWSER_KEY.length > 0;
 
-/** Bias Places autocomplete to Gauteng / Johannesburg. */
+/**
+ * Bias Places autocomplete to Gauteng / Johannesburg.
+ * NOTE: this is a Maps *JS* API request fragment — the circle uses a LatLng
+ * literal (`lat`/`lng`), not the REST `latitude`/`longitude` shape.
+ */
 export const ZA_BIAS = {
-  region: "ZA",
   includedRegionCodes: ["za"],
-  locationBias: {
-    // ~40 km around Bryanston
-    circle: { center: { latitude: -26.0567, longitude: 28.0348 }, radius: 40000 },
-  },
+  // ~40 km around Bryanston
+  locationBias: { center: { lat: -26.0567, lng: 28.0348 }, radius: 40000 },
 } as const;
 
 let loader: Promise<typeof google.maps> | null = null;
