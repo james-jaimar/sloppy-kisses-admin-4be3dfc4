@@ -67,7 +67,7 @@ export async function syncPrimaryCustomerAddress(
   if (addr.access_notes !== undefined) payload.access_notes = addr.access_notes || null;
 
   if (existing?.id) {
-    const { error } = await supabase.from("customer_addresses").update(payload).eq("id", existing.id);
+    const { error } = await supabase.from("customer_addresses").update(payload as any).eq("id", existing.id);
     if (error) throw error;
   } else {
     const { error } = await supabase.from("customer_addresses").insert({
