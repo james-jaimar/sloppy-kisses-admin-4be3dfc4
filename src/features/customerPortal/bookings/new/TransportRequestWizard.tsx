@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls, textareaCls } from "./WizardShell";
 import { usePortalPets, useCustomerBookings } from "./wizardHooks";
 import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
-import { useCustomerAddresses } from "@/features/customers/addressQueries";
-import AddressFormDrawer from "@/features/customers/AddressFormDrawer";
+import { AddressSelector } from "@/features/customers/AddressSelector";
 
 export default function TransportRequestWizard() {
   const cust = useCurrentCustomer();
@@ -19,10 +18,8 @@ export default function TransportRequestWizard() {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("08:00");
   const [serviceAddressId, setServiceAddressId] = useState<string | null>(null);
-  const [showAddressDrawer, setShowAddressDrawer] = useState(false);
   const [accessNotes, setAccessNotes] = useState("");
   const [notes, setNotes] = useState("");
-  const addressesQ = useCustomerAddresses(cust.data?.id ?? null, cust.data?.tenant_id ?? null);
 
   const canSubmit = cust.data && petIds.length > 0 && date && serviceAddressId && !submit.isPending;
 
