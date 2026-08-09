@@ -1,5 +1,8 @@
 import { AppHeader } from "@/components/layout/AppHeader";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Play, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
 const PROJECT_REF = "jsmsyezkfxtgmxvgfuxx";
 
