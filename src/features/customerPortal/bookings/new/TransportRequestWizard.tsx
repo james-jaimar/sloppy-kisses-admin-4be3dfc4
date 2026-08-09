@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls, textareaCls } from "./WizardShell";
 import { usePortalPets, useCustomerBookings } from "./wizardHooks";
 import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
+import { useCustomerAddresses } from "@/features/customers/addressQueries";
+import AddressFormDrawer from "@/features/customers/AddressFormDrawer";
 
 export default function TransportRequestWizard() {
   const cust = useCurrentCustomer();
