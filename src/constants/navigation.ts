@@ -36,6 +36,7 @@ export const customerNav = [
   { to: "/customer/invoices", label: "Invoices", icon: ReceiptText },
   { to: "/customer/payments", label: "Payments", icon: CreditCard },
   { to: "/customer/messages", label: "Messages", icon: MessageSquare },
+  { to: "/customer/addresses", label: "Addresses", icon: MapPin },
   { to: "/customer/profile", label: "Profile", icon: User },
 ] as const;
 
