@@ -56,7 +56,7 @@ function GoogleMapsSelfTest() {
       </div>
 
       {error && (
-        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">
+        <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -64,14 +64,14 @@ function GoogleMapsSelfTest() {
       {result && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm font-medium">
-            {result.ok ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : <XCircle className="h-4 w-4 text-red-600" />}
+            {result.ok ? <CheckCircle2 className="h-4 w-4 text-sk-green" /> : <XCircle className="h-4 w-4 text-destructive" />}
             {result.ok ? "All checks passed" : "Some checks failed"}
           </div>
           <ul className="divide-y rounded-lg border text-sm">
             {result.checks.map((c) => (
               <li key={c.name} className="flex items-start justify-between gap-3 p-2.5">
                 <span className="text-muted-foreground">{c.name}</span>
-                <span className={c.ok ? "text-green-700" : "text-red-700"}>{c.detail}</span>
+                <span className={c.ok ? "text-sk-green" : "text-destructive"}>{c.detail}</span>
               </li>
             ))}
           </ul>
