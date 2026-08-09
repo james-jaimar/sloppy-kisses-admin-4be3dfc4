@@ -65,6 +65,8 @@ export default function SystemPage() {
             <div><span className="text-muted-foreground">Published:</span> <a className="text-sk-coral-dark hover:underline" href="https://sloppykisses.lovable.app" target="_blank" rel="noopener noreferrer">sloppykisses.lovable.app</a></div>
           </div>
         </div>
+
+        <GoogleMapsSelfTest />
       </div>
     </>
   );
