@@ -23,9 +23,7 @@ Deno.serve(async (req) => {
     { global: { headers: { Authorization: authHeader } } },
   );
   const { data: { user } } = await supabase.auth.getUser();
-  // TEMP: allow an unauthenticated diagnostic run while credentials are being verified.
-  const diagnosticRun = req.headers.get("x-selftest") === "1";
-  if (!user && !diagnosticRun) {
+  if (!user) {
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -64,8 +62,9 @@ Deno.serve(async (req) => {
         { deliveries: [{ arrivalLocation: B, duration: "3600s" }] },
       ],
       vehicles: [{ startLocation: A, endLocation: A, costPerKilometer: 1 }],
-      globalStartTime: new Date(Date.now() + 3600_000).toISOString(),
-      globalEndTime: new Date(Date.now() + 12 * 3600_000).toISOString(),
+      // Route Optimization rejects sub-second precision on these timestamps.
+      globalStartTime: rfc3339Seconds(Date.now() + 3600_000),
+      globalEndTime: rfc3339Seconds(Date.now() + 12 * 3600_000),
     });
     const visits = res?.routes?.[0]?.visits?.length ?? 0;
     checks.push({
