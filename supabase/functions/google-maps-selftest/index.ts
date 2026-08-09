@@ -4,7 +4,7 @@
 // Returns a pass/fail line per check with Google's raw error text on failure.
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { computeRouteMatrix, optimizeTours, projectId } from "../_shared/google.ts";
+import { computeRouteMatrix, optimizeTours, projectId, rfc3339Seconds } from "../_shared/google.ts";
 
 // Two real Bryanston points (Nicolway and Bryanston shopping precinct).
 const A = { latitude: -26.0431, longitude: 28.0212 };
@@ -33,11 +33,11 @@ Deno.serve(async (req) => {
   const checks: Check[] = [];
 
   // 0. Secrets present
-  for (const name of ["GOOGLE_MAPS_SERVER_KEY", "GOOGLE_ROUTING_SA_JSON", "GOOGLE_CLOUD_PROJECT_ID"]) {
+  for (const name of ["GOOGLE_MAPS_SERVER_KEY", "GOOGLE_API_KEY", "GOOGLE_ROUTING_SA_JSON", "GOOGLE_CLOUD_PROJECT_ID"]) {
     checks.push({
       name: `secret ${name}`,
       ok: Boolean(Deno.env.get(name)),
-      detail: Deno.env.get(name) ? "configured" : "missing — add it in Supabase edge function secrets",
+      detail: Deno.env.get(name) ? "configured" : "not set",
     });
   }
 
@@ -62,8 +62,9 @@ Deno.serve(async (req) => {
         { deliveries: [{ arrivalLocation: B, duration: "3600s" }] },
       ],
       vehicles: [{ startLocation: A, endLocation: A, costPerKilometer: 1 }],
-      globalStartTime: new Date(Date.now() + 3600_000).toISOString(),
-      globalEndTime: new Date(Date.now() + 12 * 3600_000).toISOString(),
+      // Route Optimization rejects sub-second precision on these timestamps.
+      globalStartTime: rfc3339Seconds(Date.now() + 3600_000),
+      globalEndTime: rfc3339Seconds(Date.now() + 12 * 3600_000),
     });
     const visits = res?.routes?.[0]?.visits?.length ?? 0;
     checks.push({
