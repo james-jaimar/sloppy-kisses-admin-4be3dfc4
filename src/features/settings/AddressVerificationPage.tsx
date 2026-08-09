@@ -23,7 +23,8 @@ interface FailureRow {
 }
 
 export default function AddressVerificationPage() {
-  const { tenantId } = useTenant();
+  const { tenant } = useTenant();
+  const tenantId = tenant?.id;
   const [running, setRunning] = useState(false);
   const [totals, setTotals] = useState<Totals | null>(null);
   const [session, setSession] = useState({ processed: 0, updated: 0, failed: 0 });
