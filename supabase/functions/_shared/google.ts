@@ -16,8 +16,8 @@ export const GEOCODE_HOST = "https://maps.googleapis.com";
 export const ROUTE_OPT_HOST = "https://routeoptimization.googleapis.com";
 
 export function serverKey(): string {
-  const k = Deno.env.get("GOOGLE_MAPS_SERVER_KEY");
-  if (!k) throw new Error("GOOGLE_MAPS_SERVER_KEY is not configured");
+  const k = Deno.env.get("GOOGLE_MAPS_SERVER_KEY") ?? Deno.env.get("GOOGLE_API_KEY");
+  if (!k) throw new Error("GOOGLE_MAPS_SERVER_KEY (or GOOGLE_API_KEY) is not configured");
   return k;
 }
 
