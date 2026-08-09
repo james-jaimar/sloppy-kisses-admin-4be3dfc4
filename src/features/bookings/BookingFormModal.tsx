@@ -4,6 +4,7 @@ import { AlertTriangle } from "lucide-react";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { useCustomerPets } from "@/features/customers/queries";
 import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
+import { AddressSelector } from "@/features/customers/AddressSelector";
 import {
   useCreateBooking,
   useUpdateBooking,
@@ -236,6 +237,9 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(DEFAULT_RECURRENCE);
   const [hotelSurcharges, setHotelSurcharges] = useState<SurchargeSelection[]>([]);
   const [capacityIssue, setCapacityIssue] = useState<CapacityIssue | null>(null);
+  const [serviceAddressId, setServiceAddressId] = useState<string | null>(
+    booking?.service_address_id ?? null,
+  );
   const setBookingSurcharges = useSetBookingHotelSurcharges(tenantId);
   const [groomingAddons, setGroomingAddons] = useState<GroomingAddonSelection[]>([]);
   const setBookingGroomingAddons = useSetBookingGroomingAddons(tenantId);
@@ -477,6 +481,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             resource_id: resourceId,
             notes_internal: notesInternal.trim() || null,
             notes_customer: notesCustomer.trim() || null,
+            service_address_id: serviceAddressId,
           },
           pet_ids: petIds,
         });
@@ -501,6 +506,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             notes_internal: notesInternal.trim() || null,
             notes_customer: notesCustomer.trim() || null,
             rule,
+            service_address_id: serviceAddressId,
           });
           // Persist service-typed details for every occurrence.
           for (const b of res.bookings) {
@@ -525,6 +531,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           resource_id: resourceId,
           notes_internal: notesInternal.trim() || null,
           notes_customer: notesCustomer.trim() || null,
+          service_address_id: serviceAddressId,
         });
         await saveDetails(res.id);
         if (kind === "hotel") await persistSurcharges(res.id);
@@ -580,7 +587,15 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         },
       });
     } else if (kind === "transport") {
-      await upsertDetails.mutateAsync({ kind: "transport", bookingId, data: transport });
+      await upsertDetails.mutateAsync({
+        kind: "transport",
+        bookingId,
+        data: {
+          ...transport,
+          pickup_address_id: serviceAddressId,
+          dropoff_address_id: serviceAddressId,
+        },
+      });
     }
   }
 
@@ -861,6 +876,16 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             mode={serviceType === "grooming_mobile" ? "mobile" : "inhouse"}
           />
         )}
+        {kind === "grooming" && serviceType === "grooming_mobile" && (
+          <AddressSelector
+            customerId={customerId}
+            tenantId={tenantId}
+            value={serviceAddressId}
+            onChange={setServiceAddressId}
+            label="Mobile grooming address"
+            mobileOnly
+          />
+        )}
         {kind === "grooming" && (
           <GroomingExtrasPanel
             tenantId={tenantId}
@@ -956,6 +981,15 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           <TransportFields
             value={transport}
             onChange={(patch) => setTransport((p) => ({ ...p, ...patch }))}
+          />
+        )}
+        {kind === "transport" && (
+          <AddressSelector
+            customerId={customerId}
+            tenantId={tenantId}
+            value={serviceAddressId}
+            onChange={setServiceAddressId}
+            label="Pickup / drop-off address"
           />
         )}
 

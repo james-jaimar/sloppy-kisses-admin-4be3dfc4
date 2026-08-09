@@ -19,6 +19,7 @@ export interface CreateBookingArgs {
   startAt: string;
   endAt?: string | null;
   notes?: string | null;
+  service_address_id?: string | null;
   grooming?: Record<string, unknown>;
   hotel?: Record<string, unknown>;
   transport?: Record<string, unknown>;
@@ -60,6 +61,7 @@ export function useCreatePortalBooking() {
           start_at: args.startAt,
           end_at: args.endAt ?? null,
           notes: args.notes ?? null,
+          service_address_id: args.service_address_id ?? null,
           grooming: args.grooming,
           hotel: args.hotel,
           transport: args.transport,

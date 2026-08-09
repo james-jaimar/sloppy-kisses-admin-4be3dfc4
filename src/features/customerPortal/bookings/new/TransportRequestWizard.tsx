@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls, textareaCls } from "./WizardShell";
 import { usePortalPets, useCustomerBookings } from "./wizardHooks";
 import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
+import { useCustomerAddresses } from "@/features/customers/addressQueries";
+import AddressFormDrawer from "@/features/customers/AddressFormDrawer";
 
 export default function TransportRequestWizard() {
   const cust = useCurrentCustomer();
@@ -16,12 +18,13 @@ export default function TransportRequestWizard() {
   const [direction, setDirection] = useState<"pickup" | "dropoff" | "round_trip">("round_trip");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("08:00");
-  const [addressLine, setAddressLine] = useState(cust.data?.address_line_1 ?? "");
-  const [suburb, setSuburb] = useState(cust.data?.suburb ?? "");
+  const [serviceAddressId, setServiceAddressId] = useState<string | null>(null);
+  const [showAddressDrawer, setShowAddressDrawer] = useState(false);
   const [accessNotes, setAccessNotes] = useState("");
   const [notes, setNotes] = useState("");
+  const addressesQ = useCustomerAddresses(cust.data?.id ?? null, cust.data?.tenant_id ?? null);
 
-  const canSubmit = cust.data && petIds.length > 0 && date && addressLine && !submit.isPending;
+  const canSubmit = cust.data && petIds.length > 0 && date && serviceAddressId && !submit.isPending;
 
   function togglePet(id: string) {
     setPetIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -35,11 +38,10 @@ export default function TransportRequestWizard() {
       serviceType: "pickup_dropoff",
       petIds,
       startAt,
+      service_address_id: serviceAddressId,
       notes: [notes, accessNotes ? `Access: ${accessNotes}` : null].filter(Boolean).join("\n") || null,
       transport: {
         direction,
-        pickup_address: addressLine || null,
-        suburb: suburb || null,
       },
     });
   }
@@ -91,13 +93,60 @@ export default function TransportRequestWizard() {
         <Field label="Preferred time"><input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputCls} /></Field>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Address"><input value={addressLine} onChange={(e) => setAddressLine(e.target.value)} className={inputCls} /></Field>
-        <Field label="Suburb"><input value={suburb} onChange={(e) => setSuburb(e.target.value)} className={inputCls} /></Field>
-      </div>
+      <Field label="Address">
+        <div className="space-y-2">
+          {(addressesQ.data ?? []).length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
+              You don't have any saved addresses yet.
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              {(addressesQ.data ?? []).map((a: any) => (
+                <label
+                  key={a.id}
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm ${serviceAddressId === a.id ? "border-sk-coral bg-sk-coral-soft" : "border-border bg-white"}`}
+                >
+                  <input
+                    type="radio"
+                    name="service_address"
+                    value={a.id}
+                    checked={serviceAddressId === a.id}
+                    onChange={() => setServiceAddressId(a.id)}
+                    className="mt-0.5"
+                  />
+                  <span className="flex-1">
+                    <span className="font-medium">{a.label}</span>
+                    <span className="block text-muted-foreground">{a.formatted_address}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setShowAddressDrawer(true)}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-sk-coral hover:underline"
+          >
+            <Plus className="h-4 w-4" /> Add a new address
+          </button>
+        </div>
+      </Field>
 
       <Field label="Access / parking notes"><textarea rows={2} value={accessNotes} onChange={(e) => setAccessNotes(e.target.value)} className={textareaCls} /></Field>
       <Field label="Notes for our team"><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={textareaCls} /></Field>
+
+      {cust.data && showAddressDrawer && (
+        <AddressFormDrawer
+          customerId={cust.data.id}
+          tenantId={cust.data.tenant_id}
+          onClose={() => setShowAddressDrawer(false)}
+          onSave={async (addr) => {
+            setServiceAddressId(addr.id);
+            setShowAddressDrawer(false);
+            await addressesQ.refetch();
+          }}
+        />
+      )}
     </WizardShell>
   );
 }

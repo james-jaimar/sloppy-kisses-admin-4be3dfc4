@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, MapPin, Plus } from "lucide-react";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls, textareaCls } from "./WizardShell";
 import { usePortalPets, useGroomingPackages } from "./wizardHooks";
@@ -10,6 +10,8 @@ import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
 import { effectivePetSize, petSizeToBand } from "@/features/pets/sizeUtils";
 import { SizeOverrideBadge } from "@/features/pets/SizeOverrideControl";
+import { useCustomerAddresses } from "@/features/customers/addressQueries";
+import AddressFormDrawer from "@/features/customers/AddressFormDrawer";
 
 interface Props { mode: "inhouse" | "mobile" }
 
@@ -23,8 +25,8 @@ export default function GroomingRequestWizard({ mode }: Props) {
   const [slotStart, setSlotStart] = useState<string | null>(null);
   const [slotEnd, setSlotEnd] = useState<string | null>(null);
   const [packageId, setPackageId] = useState("");
-  const [addressLine, setAddressLine] = useState(cust.data?.address_line_1 ?? "");
-  const [suburb, setSuburb] = useState(cust.data?.suburb ?? "");
+  const [serviceAddressId, setServiceAddressId] = useState<string | null>(null);
+  const [showAddressDrawer, setShowAddressDrawer] = useState(false);
   const [accessNotes, setAccessNotes] = useState("");
   const [notes, setNotes] = useState("");
   const [stayPlay, setStayPlay] = useState(false);
@@ -32,6 +34,7 @@ export default function GroomingRequestWizard({ mode }: Props) {
   const [instructions, setInstructions] = useState<GroomingInstructionsValue>({
     selections: {}, medical_flags: [], notes: "",
   });
+  const addressesQ = useCustomerAddresses(cust.data?.id ?? null, cust.data?.tenant_id ?? null);
   const defaultsQ = usePetGroomingDefaults(petId || null);
   const catalogQ = useInstructionCatalog(cust.data?.tenant_id ?? null);
   const addonsQ = useGroomingAddons(cust.data?.tenant_id ?? undefined, { activeOnly: true });
@@ -89,7 +92,7 @@ export default function GroomingRequestWizard({ mode }: Props) {
     Boolean(
       cust.data && petId && slotStart &&
       (!packageRequired || packageId) &&
-      (mode === "inhouse" || (addressLine && suburb)),
+      (mode === "inhouse" || serviceAddressId),
     ) && !submit.isPending;
 
   function onSubmit() {
@@ -100,6 +103,7 @@ export default function GroomingRequestWizard({ mode }: Props) {
       startAt: new Date(slotStart).toISOString(),
       endAt: slotEnd ? new Date(slotEnd).toISOString() : null,
       notes,
+      service_address_id: serviceAddressId,
       grooming: {
         package_id: packageId || null,
         duration_minutes: 60,
@@ -109,10 +113,6 @@ export default function GroomingRequestWizard({ mode }: Props) {
           notes: instructions.notes,
         },
         ...(mode === "mobile" ? {
-          service_address: {
-            line_1: addressLine,
-            suburb,
-          },
           access_notes: accessNotes || null,
         } : {}),
         ...(mode === "inhouse" ? { stay_play: stayPlay, stay_play_collect_time: stayPlay ? collectTime : null } : {}),
@@ -181,10 +181,44 @@ export default function GroomingRequestWizard({ mode }: Props) {
 
       {mode === "mobile" && (
         <>
-          <div className="grid gap-3 md:grid-cols-2">
-            <Field label="Service address"><input value={addressLine} onChange={(e) => setAddressLine(e.target.value)} className={inputCls} placeholder="Street & number" /></Field>
-            <Field label="Suburb"><input value={suburb} onChange={(e) => setSuburb(e.target.value)} className={inputCls} /></Field>
-          </div>
+          <Field label="Service address">
+            <div className="space-y-2">
+              {(addressesQ.data ?? []).length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
+                  You don't have any saved addresses yet.
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  {(addressesQ.data ?? []).map((a: any) => (
+                    <label
+                      key={a.id}
+                      className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm ${serviceAddressId === a.id ? "border-sk-coral bg-sk-coral-soft" : "border-border bg-white"}`}
+                    >
+                      <input
+                        type="radio"
+                        name="service_address"
+                        value={a.id}
+                        checked={serviceAddressId === a.id}
+                        onChange={() => setServiceAddressId(a.id)}
+                        className="mt-0.5"
+                      />
+                      <span className="flex-1">
+                        <span className="font-medium">{a.label}</span>
+                        <span className="block text-muted-foreground">{a.formatted_address}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowAddressDrawer(true)}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-sk-coral hover:underline"
+              >
+                <Plus className="h-4 w-4" /> Add a new address
+              </button>
+            </div>
+          </Field>
           <Field label="Access / parking notes"><textarea rows={2} value={accessNotes} onChange={(e) => setAccessNotes(e.target.value)} className={textareaCls} placeholder="Gate code, where to park, dogs at home, etc." /></Field>
         </>
       )}
@@ -231,6 +265,18 @@ export default function GroomingRequestWizard({ mode }: Props) {
             sedation are added by our team on the day if needed.
           </p>
         </div>
+      )}
+      {cust.data && showAddressDrawer && (
+        <AddressFormDrawer
+          customerId={cust.data.id}
+          tenantId={cust.data.tenant_id}
+          onClose={() => setShowAddressDrawer(false)}
+          onSave={async (addr) => {
+            setServiceAddressId(addr.id);
+            setShowAddressDrawer(false);
+            await addressesQ.refetch();
+          }}
+        />
       )}
     </WizardShell>
   );

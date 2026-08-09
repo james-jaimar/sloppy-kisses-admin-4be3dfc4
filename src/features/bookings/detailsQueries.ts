@@ -48,7 +48,11 @@ export interface TransportDetails {
   tenant_id: string;
   direction: "pickup" | "dropoff" | "round_trip" | null;
   pickup_address: string | null;
+  pickup_address_id: string | null;
+  pickup_place_id: string | null;
   dropoff_address: string | null;
+  dropoff_address_id: string | null;
+  dropoff_place_id: string | null;
   suburb: string | null;
   gate_code: string | null;
   planned_window_start: string | null;

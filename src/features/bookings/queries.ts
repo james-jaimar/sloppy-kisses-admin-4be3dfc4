@@ -53,6 +53,12 @@ export interface BookingListRow {
   notes_customer: string | null;
   requires_transport: boolean;
   requires_grooming: boolean;
+  service_address_id: string | null;
+  service_address_text: string | null;
+  service_place_id: string | null;
+  service_suburb: string | null;
+  service_city: string | null;
+  service_postcode: string | null;
   created_at: string;
   updated_at: string;
   recurring_rule_id: string | null;
@@ -72,7 +78,9 @@ export interface BookingListRow {
 const BOOKING_SELECT = `
   id, booking_number, status, service_type, start_at, end_at, start_date, end_date,
   resource_id, customer_id, notes_internal, notes_customer, requires_transport,
-  requires_grooming, created_at, updated_at, recurring_rule_id,
+  requires_grooming, service_address_id, service_address_text, service_place_id,
+  service_suburb, service_city, service_postcode,
+  created_at, updated_at, recurring_rule_id,
   customer:customers(id, customer_number, full_name, email, mobile),
   resource:resources(id, name, type),
   booking_pets(pet:pets(id, pet_number, name, species, breed))
@@ -231,6 +239,8 @@ export interface CreateBookingInput {
   source?: "website_form" | "customer_portal" | "staff_capture" | "email" | "phone" | "whatsapp" | null;
   requires_transport?: boolean;
   requires_grooming?: boolean;
+  /** Optional explicit service address. Defaults to customer's primary address. */
+  service_address_id?: string | null;
 }
 
 export function useCreateBooking(tenantId: string) {
@@ -246,6 +256,53 @@ export function useCreateBooking(tenantId: string) {
 
       const startDate = input.start_at.slice(0, 10);
       const endDate = input.end_at.slice(0, 10);
+
+      // Snapshot the customer's selected or primary address onto the booking.
+      let addressSnapshot: {
+        service_address_id?: string | null;
+        service_address_text?: string | null;
+        service_place_id?: string | null;
+        service_suburb?: string | null;
+        service_city?: string | null;
+        service_postcode?: string | null;
+      } = {};
+      const addressId = input.service_address_id;
+      if (addressId) {
+        const { data: addr } = await supabase
+          .from("customer_addresses")
+          .select("id, formatted_address, google_place_id, suburb, city, postcode")
+          .eq("id", addressId)
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+        if (addr) {
+          addressSnapshot = {
+            service_address_id: addr.id,
+            service_address_text: addr.formatted_address,
+            service_place_id: addr.google_place_id,
+            service_suburb: addr.suburb,
+            service_city: addr.city,
+            service_postcode: addr.postcode,
+          };
+        }
+      } else {
+        const { data: addr } = await supabase
+          .from("customer_addresses")
+          .select("id, formatted_address, google_place_id, suburb, city, postcode")
+          .eq("customer_id", input.customer_id)
+          .eq("tenant_id", tenantId)
+          .eq("is_primary", true)
+          .maybeSingle();
+        if (addr) {
+          addressSnapshot = {
+            service_address_id: addr.id,
+            service_address_text: addr.formatted_address,
+            service_place_id: addr.google_place_id,
+            service_suburb: addr.suburb,
+            service_city: addr.city,
+            service_postcode: addr.postcode,
+          };
+        }
+      }
 
       const { data: created, error } = await supabase
         .from("bookings")
@@ -265,6 +322,7 @@ export function useCreateBooking(tenantId: string) {
           notes_customer: input.notes_customer ?? null,
           requires_transport: input.requires_transport ?? false,
           requires_grooming: input.requires_grooming ?? false,
+          ...addressSnapshot,
         })
         .select("id")
         .single();
@@ -300,6 +358,7 @@ export interface UpdateBookingInput {
     notes_customer: string | null;
     requires_transport: boolean;
     requires_grooming: boolean;
+    service_address_id: string | null;
   }>;
   pet_ids?: string[]; // if provided, replaces booking_pets
 }
@@ -311,6 +370,31 @@ export function useUpdateBooking(tenantId: string) {
       const update: any = { ...patch };
       if (patch.start_at) update.start_date = patch.start_at.slice(0, 10);
       if (patch.end_at) update.end_date = patch.end_at.slice(0, 10);
+
+      // When the service address changes, re-snapshot the address text/place_id.
+      if (patch.service_address_id !== undefined) {
+        if (patch.service_address_id) {
+          const { data: addr } = await supabase
+            .from("customer_addresses")
+            .select("id, formatted_address, google_place_id, suburb, city, postcode")
+            .eq("id", patch.service_address_id)
+            .eq("tenant_id", tenantId)
+            .maybeSingle();
+          if (addr) {
+            update.service_address_text = addr.formatted_address;
+            update.service_place_id = addr.google_place_id;
+            update.service_suburb = addr.suburb;
+            update.service_city = addr.city;
+            update.service_postcode = addr.postcode;
+          }
+        } else {
+          update.service_address_text = null;
+          update.service_place_id = null;
+          update.service_suburb = null;
+          update.service_city = null;
+          update.service_postcode = null;
+        }
+      }
 
       if (Object.keys(update).length) {
         const { error } = await supabase

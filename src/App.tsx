@@ -105,6 +105,7 @@ import XeroCustomersPage from "@/features/xero/XeroCustomersPage";
 import BillingItemCodesPage from "@/features/settings/BillingItemCodesPage";
 import TermsVersionsPage from "@/features/settings/TermsVersionsPage";
 import ConsentStatusPage from "@/features/settings/ConsentStatusPage";
+import AddressVerificationPage from "@/features/settings/AddressVerificationPage";
 import UsersPage from "@/features/users/UsersPage";
 import { RequirePermission } from "@/components/auth/Can";
 import RequirePlatform from "@/components/auth/RequirePlatform";
@@ -247,6 +248,7 @@ const App = () => (
                 <Route path="/admin/settings/xero-log" element={<XeroSyncLogPage />} />
                 <Route path="/admin/settings/xero-customers" element={<XeroCustomersPage />} />
                 <Route path="/admin/settings/billing-item-codes" element={<BillingItemCodesPage />} />
+                <Route path="/admin/settings/address-verification" element={<AddressVerificationPage />} />
                 <Route path="/admin/settings/terms" element={<TermsVersionsPage />} />
                 <Route path="/admin/settings/consent-status" element={<ConsentStatusPage />} />
                 <Route path="/admin/settings/job-checklists" element={<JobChecklistsPage />} />

@@ -38,6 +38,7 @@ const BodySchema = z.object({
   start_at: z.string().min(1),
   end_at: z.string().nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
+  service_address_id: z.string().uuid().nullable().optional(),
   grooming: z
     .object({
       package_id: z.string().uuid().nullable().optional(),
@@ -94,6 +95,43 @@ function serviceGroup(s: Body["service_type"]) {
   if (s.startsWith("hotel")) return "hotel" as const;
   if (s.startsWith("daycare")) return "daycare" as const;
   return "transport" as const;
+}
+
+async function resolveAddressSnapshot(
+  admin: any,
+  tenantId: string,
+  customerId: string,
+  addressId: string | null | undefined,
+) {
+  let addr: any = null;
+  if (addressId) {
+    const { data } = await admin
+      .from("customer_addresses")
+      .select("id, formatted_address, google_place_id, suburb, city, postcode")
+      .eq("id", addressId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+    addr = data;
+  }
+  if (!addr) {
+    const { data } = await admin
+      .from("customer_addresses")
+      .select("id, formatted_address, google_place_id, suburb, city, postcode")
+      .eq("customer_id", customerId)
+      .eq("tenant_id", tenantId)
+      .eq("is_primary", true)
+      .maybeSingle();
+    addr = data;
+  }
+  if (!addr) return {};
+  return {
+    service_address_id: addr.id,
+    service_address_text: addr.formatted_address,
+    service_place_id: addr.google_place_id,
+    service_suburb: addr.suburb,
+    service_city: addr.city,
+    service_postcode: addr.postcode,
+  };
 }
 
 const SETTINGS_TABLE = {
@@ -372,6 +410,8 @@ Deno.serve(async (req) => {
     }
   }
 
+  const addressSnapshot = await resolveAddressSnapshot(admin, tenantId, customer.id, body.service_address_id);
+
   const { data: booking, error: bErr } = await admin
     .from("bookings")
     .insert({
@@ -388,6 +428,7 @@ Deno.serve(async (req) => {
       end_date: endAt ? endAt.slice(0, 10) : null,
       notes_customer: body.notes?.trim() || null,
       requires_transport: group === "transport" || Boolean(body.hotel?.pickup_required || body.hotel?.dropoff_required),
+      ...addressSnapshot,
     })
     .select("id, booking_number")
     .single();
@@ -481,7 +522,11 @@ Deno.serve(async (req) => {
       booking_id: bookingId,
       direction: t.direction ?? "pickup",
       pickup_address: t.pickup_address ?? customer.address_line_1 ?? null,
+      pickup_address_id: addressSnapshot.service_address_id ?? null,
+      pickup_place_id: addressSnapshot.service_place_id ?? null,
       dropoff_address: t.dropoff_address ?? null,
+      dropoff_address_id: addressSnapshot.service_address_id ?? null,
+      dropoff_place_id: addressSnapshot.service_place_id ?? null,
       suburb: t.suburb ?? customer.suburb ?? null,
       gate_code: t.gate_code ?? null,
       planned_window_start: start.toISOString(),
