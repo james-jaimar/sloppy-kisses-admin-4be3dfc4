@@ -360,6 +360,22 @@ export default function ConsentWizard({ status, onDone, onDismiss, fullPage = fa
                 Please confirm or complete the details below. Anything you enter here you can edit
                 later from your profile.
               </p>
+              {needsAddress && (
+                <div className="space-y-2">
+                  <div>
+                    <h3 className="text-sm font-semibold">Home address</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Start typing and pick your address from the list so our vans can find you.
+                    </p>
+                  </div>
+                  <AddressField
+                    label="Address"
+                    allowManual={false}
+                    value={addr as any}
+                    onChange={(patch) => setAddr((s) => ({ ...s, ...patch }))}
+                  />
+                </div>
+              )}
               {FIELD_SECTIONS.map((sec) => {
                 const secFields = sec.fields.filter((f) => status.missingFields.includes(f.key));
                 if (secFields.length === 0) return null;
