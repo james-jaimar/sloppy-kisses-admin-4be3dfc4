@@ -2,7 +2,7 @@ import {
   Home, LayoutDashboard, Calendar, Users, PawPrint, CalendarCheck, Dog, Hotel,
   Scissors, Truck, ArrowLeftRight, ReceiptText, ShoppingBag, BarChart3, Settings,
   FileText, CreditCard, User, MessageSquare, Building2, ShieldCheck, Flag,
-  History, Activity, Database, FileMinus, CalendarPlus,
+  History, Activity, Database, FileMinus, CalendarPlus, MapPin,
 } from "lucide-react";
 
 export const adminNav = [
