@@ -137,6 +137,12 @@ export async function routingAccessToken(): Promise<string> {
 
 export interface LatLng { latitude: number; longitude: number }
 
+/** Route Optimization requires whole-second RFC3339 timestamps (`nanos` must be unset). */
+export function rfc3339Seconds(ms: number | Date): string {
+  const d = ms instanceof Date ? ms : new Date(ms);
+  return `${new Date(Math.floor(d.getTime() / 1000) * 1000).toISOString().slice(0, 19)}Z`;
+}
+
 /** Travel seconds + metres between every origin and destination pair. */
 export async function computeRouteMatrix(
   origins: LatLng[],
