@@ -32,16 +32,6 @@ interface Props {
   label?: string;
 }
 
-const componentTypeToField: Record<string, keyof Omit<AddressResult, "place_id" | "formatted_address" | "latitude" | "longitude" | "country_code">> = {
-  street_number: "address_line_1",
-  route: "address_line_1",
-  sublocality: "suburb",
-  sublocality_level_1: "suburb",
-  locality: "city",
-  administrative_area_level_1: "province",
-  postal_code: "postcode",
-};
-
 export default function AddressAutocomplete({
   value,
   onChange,
@@ -62,8 +52,8 @@ export default function AddressAutocomplete({
   const ensureSessionToken = useCallback(async () => {
     if (sessionTokenRef.current) return sessionTokenRef.current;
     const maps = await loadGoogleMaps();
-    const { AutocompleteSessionToken } = (await maps.importLibrary("places")) as google.maps.PlacesLibrary;
-    sessionTokenRef.current = new AutocompleteSessionToken();
+    const lib = (await maps.importLibrary("places")) as any;
+    sessionTokenRef.current = new lib.AutocompleteSessionToken();
     return sessionTokenRef.current;
   }, []);
 
@@ -78,9 +68,9 @@ export default function AddressAutocomplete({
         setLoading(true);
         setError(null);
         const maps = await loadGoogleMaps();
-        const { AutocompleteSuggestion } = (await maps.importLibrary("places")) as google.maps.PlacesLibrary;
+        const lib = (await maps.importLibrary("places")) as any;
         const sessionToken = await ensureSessionToken();
-        const { suggestions: raw } = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+        const { suggestions: raw } = await lib.AutocompleteSuggestion.fetchAutocompleteSuggestions({
           input: query,
           sessionToken,
           ...ZA_BIAS,
