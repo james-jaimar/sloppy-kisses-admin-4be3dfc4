@@ -14,6 +14,8 @@ export interface AddressValue {
   country_code?: string;
   latitude: number | null;
   longitude: number | null;
+  /** Gate code / directions for the driver. Never sent to Google. */
+  access_notes?: string;
 }
 
 interface Props {
@@ -22,12 +24,18 @@ interface Props {
   /** Staff can fall back to typing an address Google can't find. */
   allowManual?: boolean;
   label?: string;
+  /** Hide the gate code / access notes box (surfaces that capture it separately). */
+  showAccessNotes?: boolean;
 }
 
 const composed = (v: AddressValue) =>
   [v.address_line_1, v.address_line_2, v.suburb, v.city, v.province, v.postcode]
     .filter(Boolean)
     .join(", ");
+
+/** Street-only string, used for the Google search box (no unit / complex line). */
+const composedStreet = (v: AddressValue) =>
+  [v.address_line_1, v.suburb, v.city, v.province, v.postcode].filter(Boolean).join(", ");
 
 function Input({
   label,
@@ -55,20 +63,28 @@ function Input({
  * A single address control: Google search first, a read-only verified card
  * once picked, and (for staff) a manual escape hatch.
  */
-export default function AddressField({ value, onChange, allowManual = true, label = "Address" }: Props) {
+export default function AddressField({
+  value,
+  onChange,
+  allowManual = true,
+  label = "Address",
+  showAccessNotes = true,
+}: Props) {
   const verified = Boolean(value.google_place_id);
   const hasTyped = Boolean(composed(value) || value.formatted_address);
   const [mode, setMode] = useState<"search" | "manual">(
     !verified && hasTyped && allowManual ? "manual" : "search",
   );
-  const [query, setQuery] = useState(value.formatted_address || composed(value));
+  const [query, setQuery] = useState(value.formatted_address || composedStreet(value));
 
   const handleSelect = (r: AddressResult) => {
     onChange({
       formatted_address: r.formatted_address,
       google_place_id: r.place_id,
       address_line_1: r.address_line_1,
-      address_line_2: r.address_line_2,
+      // Keep whatever unit / complex detail the user already captured — Google
+      // rarely knows it and losing it strands the van at the complex gate.
+      address_line_2: value.address_line_2 || r.address_line_2,
       suburb: r.suburb,
       city: r.city,
       province: r.province,
@@ -85,6 +101,27 @@ export default function AddressField({ value, onChange, allowManual = true, labe
     onChange({ google_place_id: "", latitude: null, longitude: null });
   };
 
+  const unitFields = (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Input
+        label="Unit / complex (optional)"
+        value={value.address_line_2}
+        onChange={(v) => onChange({ address_line_2: v })}
+        hint="Flat, unit or complex name — helps our van find you."
+        placeholder="e.g. 7 Bryanston Villas"
+      />
+      {showAccessNotes && (
+        <Input
+          label="Gate code / access notes (optional)"
+          value={value.access_notes ?? ""}
+          onChange={(v) => onChange({ access_notes: v })}
+          hint="Anything the driver needs to get in."
+          placeholder="e.g. Buzz #12, dogs at side gate"
+        />
+      )}
+    </div>
+  );
+
   if (verified) {
     return (
       <div className="space-y-2">
@@ -92,7 +129,12 @@ export default function AddressField({ value, onChange, allowManual = true, labe
         <div className="rounded-xl border border-border bg-sk-surface-muted/40 p-3">
           <div className="flex items-start gap-2">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <div className="text-sm leading-snug">{value.formatted_address || composed(value)}</div>
+            <div className="text-sm leading-snug">
+              {value.address_line_2 && (
+                <div className="font-medium">{value.address_line_2}</div>
+              )}
+              <div>{value.formatted_address || composedStreet(value)}</div>
+            </div>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700">
@@ -119,6 +161,7 @@ export default function AddressField({ value, onChange, allowManual = true, labe
             )}
           </div>
         </div>
+        {unitFields}
       </div>
     );
   }
@@ -143,14 +186,12 @@ export default function AddressField({ value, onChange, allowManual = true, labe
           <div className="sm:col-span-2">
             <Input label="Address line 1" value={value.address_line_1} onChange={(v) => onChange({ address_line_1: v })} />
           </div>
-          <div className="sm:col-span-2">
-            <Input label="Address line 2" value={value.address_line_2} onChange={(v) => onChange({ address_line_2: v })} />
-          </div>
           <Input label="Suburb" value={value.suburb} onChange={(v) => onChange({ suburb: v })} />
           <Input label="City" value={value.city} onChange={(v) => onChange({ city: v })} />
           <Input label="Province" value={value.province} onChange={(v) => onChange({ province: v })} />
           <Input label="Postal code" value={value.postcode} onChange={(v) => onChange({ postcode: v })} />
         </div>
+        {unitFields}
         <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700">
           <AlertTriangle className="h-3.5 w-3.5" /> Not verified — van routing won't work for this address
         </div>
@@ -170,6 +211,7 @@ export default function AddressField({ value, onChange, allowManual = true, labe
         onSelect={handleSelect}
         placeholder="Start typing the address…"
       />
+      {unitFields}
       {allowManual && (
         <button
           type="button"
