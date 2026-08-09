@@ -389,6 +389,9 @@ export default function CustomerDetailPage() {
                 {tab === "History" && tenant?.id && (
                   <HistoryTab tenantId={tenant.id} customerId={customer.id} />
                 )}
+                {tab === "Addresses" && tenant?.id && (
+                  <AddressesTab tenantId={tenant.id} customerId={customer.id} />
+                )}
               </div>
             </div>
           </>
