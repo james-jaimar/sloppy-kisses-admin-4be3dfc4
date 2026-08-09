@@ -18,12 +18,13 @@ export default function TransportRequestWizard() {
   const [direction, setDirection] = useState<"pickup" | "dropoff" | "round_trip">("round_trip");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("08:00");
-  const [addressLine, setAddressLine] = useState(cust.data?.address_line_1 ?? "");
-  const [suburb, setSuburb] = useState(cust.data?.suburb ?? "");
+  const [serviceAddressId, setServiceAddressId] = useState<string | null>(null);
+  const [showAddressDrawer, setShowAddressDrawer] = useState(false);
   const [accessNotes, setAccessNotes] = useState("");
   const [notes, setNotes] = useState("");
+  const addressesQ = useCustomerAddresses(cust.data?.id ?? null, cust.data?.tenant_id ?? null);
 
-  const canSubmit = cust.data && petIds.length > 0 && date && addressLine && !submit.isPending;
+  const canSubmit = cust.data && petIds.length > 0 && date && serviceAddressId && !submit.isPending;
 
   function togglePet(id: string) {
     setPetIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
