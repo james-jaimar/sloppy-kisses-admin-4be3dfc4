@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
 import { ModalShell } from "@/components/modals/ModalShell";
@@ -252,6 +254,26 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [closureOverride, setClosureOverride] = useState<boolean>(
     (booking as any)?.closure_override ?? false,
   );
+  // Closure lookup for the chosen day — the DB blocks bookings on closed days
+  // unless staff tick the override.
+  const bookingDay = startAt ? startAt.slice(0, 10) : null;
+  const closureQ = useQuery({
+    queryKey: ["closure-check", tenantId, bookingDay, serviceType],
+    enabled: Boolean(tenantId && bookingDay),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("closures")
+        .select("id, name, services, bill_anyway")
+        .eq("tenant_id", tenantId)
+        .lte("start_date", bookingDay!)
+        .gte("end_date", bookingDay!);
+      if (error) throw error;
+      return (data ?? []).find(
+        (c) => !c.services?.length || c.services.includes(serviceType) || c.services.includes("all"),
+      ) ?? null;
+    },
+  });
+  const closureHit = closureQ.data ?? null;
   const setBookingSurcharges = useSetBookingHotelSurcharges(tenantId);
   const [groomingAddons, setGroomingAddons] = useState<GroomingAddonSelection[]>([]);
   const setBookingGroomingAddons = useSetBookingGroomingAddons(tenantId);
