@@ -189,6 +189,14 @@ export interface TransportWorkflowSettings {
   round_trip_multiplier: number;
   suburb_fees: Record<string, number> | null;
   photo_gate_mode: "off" | "soft" | "hard";
+  base_address: string | null;
+  base_place_id: string | null;
+  base_latitude: number | null;
+  base_longitude: number | null;
+  enforce_radius: boolean;
+  radius_gate_mode: "warn" | "block";
+  gate_code_required_by_time: string | null;
+  require_gate_code: boolean;
 }
 
 export function useTransportWorkflowSettings(tenantId: string | null | undefined) {
