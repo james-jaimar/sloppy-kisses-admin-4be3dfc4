@@ -29,6 +29,7 @@ export default function DaycareWorkflowPage() {
     late_arrival_cutoff: "10:00",
     auto_checkout_time: "18:00",
     block_unvaccinated: false,
+    require_assessment: false,
     photo_gate_mode: "hard" as "off" | "soft" | "hard",
     daily_capacity: "" as string,
     stay_play_default_collect_time: "16:30",
@@ -43,6 +44,7 @@ export default function DaycareWorkflowPage() {
         late_arrival_cutoff: trimTime(settingsQ.data.late_arrival_cutoff),
         auto_checkout_time: trimTime(settingsQ.data.auto_checkout_time),
         block_unvaccinated: settingsQ.data.block_unvaccinated,
+        require_assessment: Boolean((settingsQ.data as any).require_assessment),
         photo_gate_mode: ((settingsQ.data as any).photo_gate_mode ?? "hard") as "off" | "soft" | "hard",
         daily_capacity: settingsQ.data.daily_capacity == null ? "" : String(settingsQ.data.daily_capacity),
         stay_play_default_collect_time: trimTime(settingsQ.data.stay_play_default_collect_time) || "16:30",
@@ -100,6 +102,17 @@ export default function DaycareWorkflowPage() {
             <input type="checkbox" disabled={!canManage} checked={form.block_unvaccinated}
               onChange={(e) => setForm((f) => ({ ...f, block_unvaccinated: e.target.checked }))} />
             Block check-in for pets with missing or expired vaccinations
+          </label>
+
+          <label className="flex items-start gap-3 text-sm">
+            <input type="checkbox" className="mt-1" disabled={!canManage} checked={form.require_assessment}
+              onChange={(e) => setForm((f) => ({ ...f, require_assessment: e.target.checked }))} />
+            <span>
+              Require a completed assessment day before a daycare enrolment goes active
+              <span className="block text-[11px] text-muted-foreground">
+                Staff can still waive it on an individual enrolment.
+              </span>
+            </span>
           </label>
 
           <Field label="Pet photo required" hint="A photo on file lets staff match the right dog to the right owner at drop-off.">
