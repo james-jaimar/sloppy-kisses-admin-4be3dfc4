@@ -27,6 +27,7 @@ import {
   type TransportDetails,
 } from "./detailsQueries";
 import { GroomingFields, TransportFields } from "./BookingDetailsFields";
+import { HealthGateList } from "@/features/pets/HealthGateBanner";
 import { RecurrenceFields, DEFAULT_RECURRENCE, toRule, type RecurrenceValue } from "./RecurrenceFields";
 import { useCreateRecurringBooking } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
