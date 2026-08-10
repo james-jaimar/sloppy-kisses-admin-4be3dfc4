@@ -7,6 +7,7 @@ import { useCustomerPets } from "@/features/customers/queries";
 import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import { AddressSelector } from "@/features/customers/AddressSelector";
 import { useRadiusCheck, ServiceRadiusNotice } from "@/features/transport/ServiceRadiusNotice";
+import { useTransportWorkflowSettings } from "@/features/transport/queries";
 import { useCustomerAddresses } from "@/features/customers/addressQueries";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import {
@@ -261,6 +262,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const radiusBlocked = Boolean(
     radiusQ.data?.has_base && radiusQ.data.outside && radiusQ.data.gate_mode === "block",
   );
+  const transportSettingsQ = useTransportWorkflowSettings(isTransport ? tenantId : null);
   const [addressOverride, setAddressOverride] = useState(false);
   const [closureOverride, setClosureOverride] = useState<boolean>(
     (booking as any)?.closure_override ?? false,
