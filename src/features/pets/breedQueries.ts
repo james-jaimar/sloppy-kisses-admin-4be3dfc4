@@ -11,6 +11,7 @@ export interface DogBreed {
   size_band: BreedSizeBand;
   active: boolean;
   sort_order: number;
+  is_power_breed?: boolean;
 }
 
 export const BREED_SIZE_LABEL: Record<BreedSizeBand, string> = {

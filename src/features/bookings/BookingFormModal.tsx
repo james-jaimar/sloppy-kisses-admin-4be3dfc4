@@ -27,6 +27,7 @@ import {
   type TransportDetails,
 } from "./detailsQueries";
 import { GroomingFields, TransportFields } from "./BookingDetailsFields";
+import { HealthGateList } from "@/features/pets/HealthGateBanner";
 import { RecurrenceFields, DEFAULT_RECURRENCE, toRule, type RecurrenceValue } from "./RecurrenceFields";
 import { useCreateRecurringBooking } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -772,6 +773,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                     </button>
                   );
                 })}
+              </div>
+            )}
+            {petIds.length > 0 && (
+              <div className="mt-2">
+                <HealthGateList
+                  pets={petIds.map((id) => ({
+                    id,
+                    name: petsQ.data?.find((p) => p.id === id)?.name ?? null,
+                  }))}
+                  onDate={bookingDay || undefined}
+                />
               </div>
             )}
           </div>

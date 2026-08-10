@@ -9,6 +9,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { PetFormModal } from "./PetFormModal";
 import { PetVaccinationsPanel } from "./PetVaccinationsPanel";
+import { PetHealthPanel } from "./PetHealthPanel";
+import { HealthGateBanner } from "./HealthGateBanner";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -112,6 +114,11 @@ export default function PetDetailPage() {
                         tone={active ? "green" : "orange"}
                       />
                       <SizeOverrideBadge pet={pet as any} />
+                      {(pet as any).is_power_breed && (
+                        <span className="inline-flex rounded-full bg-sk-orange-soft px-2 py-0.5 text-xs font-medium text-sk-orange">
+                          Power breed
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -189,8 +196,23 @@ export default function PetDetailPage() {
             </div>
 
             {tenant && (
+              <div className="px-1">
+                <HealthGateBanner petId={pet.id} />
+              </div>
+            )}
+            {tenant && (
               <CollapsibleCard title="Vaccinations" subtitle="Dates, certificates and requirement status." storageKey={`admin-vax-${pet.id}`} defaultOpen>
                 <PetVaccinationsPanel tenantId={tenant.id} petId={pet.id} species={pet.species as any} />
+              </CollapsibleCard>
+            )}
+            {tenant && (
+              <CollapsibleCard
+                title="Health &amp; safety"
+                subtitle="Parasite treatments, deworming, kennel cough and not-fit-to-attend holds."
+                storageKey={`admin-health-${pet.id}`}
+                defaultOpen
+              >
+                <PetHealthPanel tenantId={tenant.id} petId={pet.id} />
               </CollapsibleCard>
             )}
             {tenant && (

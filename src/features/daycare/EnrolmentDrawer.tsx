@@ -67,6 +67,7 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
   const [days, setDays] = useState<Weekday[]>([]);
   const [notes, setNotes] = useState("");
   const [active, setActive] = useState(true);
+  const [assessmentWaived, setAssessmentWaived] = useState(false);
   const [pausedFrom, setPausedFrom] = useState("");
   const [pausedTo, setPausedTo] = useState("");
   const [noticeGivenAt, setNoticeGivenAt] = useState("");
@@ -82,6 +83,7 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
       setDays((editing.selected_days ?? []) as Weekday[]);
       setNotes(editing.notes ?? "");
       setActive(editing.active);
+      setAssessmentWaived(Boolean((editing as any).assessment_waived));
       setPausedFrom((editing as any).paused_from ?? "");
       setPausedTo((editing as any).paused_to ?? "");
       setNoticeGivenAt((editing as any).notice_given_at ?? "");
@@ -142,6 +144,7 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
             selected_days: days,
             notes: notes || null,
             active,
+            assessment_waived: assessmentWaived,
             paused_from: pausedFrom || null,
             paused_to: pausedTo || null,
             notice_given_at: noticeGivenAt || null,
@@ -158,7 +161,8 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
           selected_days: days,
           notes: notes || null,
           active,
-        });
+          assessment_waived: assessmentWaived,
+        } as any);
         if (showProrata) {
           // The DB trigger raises a standalone issued pro-rata invoice — email it.
           const { data: item } = await supabase
@@ -381,6 +385,15 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
             Active
+          </label>
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-1" checked={assessmentWaived} onChange={(e) => setAssessmentWaived(e.target.checked)} />
+            <span>
+              Waive the assessment day
+              <span className="block text-[11px] text-muted-foreground">
+                Only needed when assessments are required in daycare settings and this pet is already known to us.
+              </span>
+            </span>
           </label>
         </div>
         <SheetFooter className="mt-6">

@@ -11,6 +11,7 @@ import { useBookingServiceDetails } from "./detailsQueries";
 import { useCancelSeriesForward } from "./recurringQueries";
 import { CancelBookingDialog } from "./CancelBookingDialog";
 import { LateCollectionDialog } from "./LateCollectionDialog";
+import { ArrivalHealthGate } from "./ArrivalHealthGate";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useBookingInstructions, useInstructionCatalog } from "@/features/grooming/instructions/queries";
 import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
@@ -183,6 +184,15 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
               <div className="mt-1 text-muted-foreground">No pets linked</div>
             )}
           </section>
+
+          <ArrivalHealthGate
+            bookingId={booking.id}
+            pets={booking.booking_pets
+              .map((bp) => bp.pet)
+              .filter(Boolean)
+              .map((p: any) => ({ id: p.id, name: p.name }))}
+            onDate={booking.start_at ? String(booking.start_at).slice(0, 10) : undefined}
+          />
 
           {booking.notes_internal && (
             <section>
