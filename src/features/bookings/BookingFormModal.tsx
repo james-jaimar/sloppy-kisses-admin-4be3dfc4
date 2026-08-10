@@ -38,6 +38,8 @@ import { HotelCapacityNotice, type CapacityIssue } from "@/features/hotelCattery
 import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQueries";
 import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtrasPanel";
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
+import { useGroomingDayAvailability } from "@/features/grooming/availabilityQueries";
+import { layoutGroomingAppointments, type PetSlotRequest } from "@/features/grooming/multiPetSchedule";
 import { effectivePetSize } from "@/features/pets/sizeUtils";
 import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries";
 import { useGroomingPackages, useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
@@ -488,11 +490,56 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   );
   const confirm = useConfirm();
 
+  // ---- Multi-dog grooming -------------------------------------------------
+  // Each dog is its own appointment (own package, own groomer). Dogs run in
+  // parallel when more than one groomer is free, otherwise back-to-back.
+  const [petPackages, setPetPackages] = useState<Record<string, string>>({});
+  const isMultiPetGrooming = kind === "grooming" && !isEdit && petIds.length > 1;
+  const groomingDayKey = startAt ? startAt.slice(0, 10) : null;
+  const groomingAvailQ = useGroomingDayAvailability(
+    kind === "grooming" ? tenantId : null,
+    groomingDayKey,
+  );
+
+  function packageIdForPet(petId: string): string | null {
+    return petPackages[petId] || grooming.package_id || null;
+  }
+
+  function durationForPet(petId: string): number {
+    const pkg = (packagesQ.data ?? []).find((p) => p.id === packageIdForPet(petId));
+    const base = pkg ? Number(pkg.expected_minutes) || 60 : 0;
+    return Math.max(15, base + groomingAddonMinutes) || 60;
+  }
+
+  const petSlotRequests: PetSlotRequest[] = useMemo(
+    () =>
+      kind === "grooming"
+        ? petIds.map((id) => ({ petId: id, durationMinutes: durationForPet(id) }))
+        : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [kind, petIds, petPackages, grooming.package_id, packagesQ.data, groomingAddonMinutes],
+  );
+
+  const groomingPlan = useMemo(() => {
+    if (!isMultiPetGrooming || !startAt) return null;
+    return layoutGroomingAppointments({
+      resources: groomingAvailQ.data?.resources ?? [],
+      busy: groomingAvailQ.data?.busy ?? [],
+      baseStart: new Date(startAt),
+      pets: petSlotRequests,
+      preferredResourceId: resourceId,
+      excludeBookingIds: booking?.id ? [booking.id] : [],
+    });
+  }, [isMultiPetGrooming, startAt, groomingAvailQ.data, petSlotRequests, resourceId, booking?.id]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!customerId) return toast.error("Please select a customer");
     if (kind === "grooming" && !grooming.package_id && groomingAddons.length === 0) {
       return toast.error("Please choose a grooming package or at least one individual treatment");
+    }
+    if (isMultiPetGrooming && !groomingPlan) {
+      return toast.error("There isn't enough groomer time left that day for all the dogs. Pick an earlier slot.");
     }
     if (!startAt) {
       return toast.error(kind === "grooming" ? "Please pick a day and time slot" : "Please pick a start time");
@@ -610,6 +657,41 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           onClose();
           return;
         }
+        if (isMultiPetGrooming && groomingPlan) {
+          // One booking per dog, all sharing a group id so they land on one invoice.
+          const groupId =
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : String(Date.now());
+          const createdIds: string[] = [];
+          for (const slot of groomingPlan) {
+            const res = await create.mutateAsync({
+              customer_id: customerId,
+              pet_ids: [slot.petId],
+              service_type: serviceType,
+              status,
+              start_at: slot.start.toISOString(),
+              end_at: slot.end.toISOString(),
+              resource_id: slot.resourceId ?? resourceId,
+              notes_internal: notesInternalValue,
+              notes_customer: notesCustomer.trim() || null,
+              service_address_id: serviceAddressId,
+              closure_override: closureOverride,
+              booking_group_id: groupId,
+            });
+            createdIds.push(res.id);
+            await saveDetails(res.id, {
+              packageId: packageIdForPet(slot.petId),
+              durationMinutes: Math.round((slot.end.getTime() - slot.start.getTime()) / 60000),
+            });
+            await persistGroomingAddons(res.id);
+            await persistInstructions(res.id);
+          }
+          toast.success(`Created ${createdIds.length} grooming appointments on one invoice`);
+          onSaved?.(createdIds[0]);
+          onClose();
+          return;
+        }
         const res = await create.mutateAsync({
           customer_id: customerId,
           pet_ids: petIds,
@@ -617,7 +699,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           status,
           start_at: new Date(startAt).toISOString(),
           end_at: endComputed.toISOString(),
-          resource_id: resourceId,
+          resource_id:
+            resourceId ??
+            (kind === "grooming"
+              ? layoutGroomingAppointments({
+                  resources: groomingAvailQ.data?.resources ?? [],
+                  busy: groomingAvailQ.data?.busy ?? [],
+                  baseStart: new Date(startAt),
+                  pets: [{ petId: petIds[0] ?? "pet", durationMinutes: durationMins }],
+                  preferredResourceId: preferredGroomerId,
+                })?.[0]?.resourceId ?? null
+              : null),
           notes_internal: notesInternalValue,
           notes_customer: notesCustomer.trim() || null,
           service_address_id: serviceAddressId,
@@ -637,20 +729,25 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     }
   }
 
-  async function saveDetails(bookingId: string) {
+  async function saveDetails(
+    bookingId: string,
+    opts?: { packageId?: string | null; durationMinutes?: number },
+  ) {
     if (kind === "grooming") {
       // Source service_package label from selected rate-card package so we
       // don't double-enter it on the form. Duration lives on the booking
       // itself but we still stamp duration_minutes on the details row.
-      const pkg = (packagesQ.data ?? []).find((p) => p.id === grooming.package_id);
+      const packageId = opts?.packageId !== undefined ? opts.packageId : grooming.package_id;
+      const pkg = (packagesQ.data ?? []).find((p) => p.id === packageId);
       await upsertDetails.mutateAsync({
         kind: "grooming",
         bookingId,
         data: {
           ...grooming,
+          package_id: packageId ?? null,
           grooming_mode: serviceType === "grooming_mobile" ? "mobile" : "inhouse",
           service_package: pkg?.name ?? grooming.service_package ?? null,
-          duration_minutes: durationMins,
+          duration_minutes: opts?.durationMinutes ?? durationMins,
         },
       });
     } else if (kind === "hotel") {
