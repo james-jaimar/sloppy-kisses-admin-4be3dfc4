@@ -16,13 +16,18 @@ interface Props {
   tenantId: string;
   resource?: ResourceRow | null;
   onClose: () => void;
+  /** Lock the type picker (e.g. the Groomers screen only manages groomers). */
+  lockType?: ResourceType;
 }
 
-export function ResourceFormModal({ tenantId, resource, onClose }: Props) {
+export function ResourceFormModal({ tenantId, resource, onClose, lockType }: Props) {
   const isEdit = Boolean(resource);
   const [name, setName] = useState(resource?.name ?? "");
-  const [type, setType] = useState<ResourceType>(resource?.type ?? "inhouse_grooming");
+  const [type, setType] = useState<ResourceType>(resource?.type ?? lockType ?? "inhouse_grooming");
   const [description, setDescription] = useState(resource?.description ?? "");
+  const [colour, setColour] = useState<string>(resource?.colour ?? "#F97362");
+  const [workdayStart, setWorkdayStart] = useState<string>((resource?.workday_start ?? "08:00").slice(0, 5));
+  const [workdayEnd, setWorkdayEnd] = useState<string>((resource?.workday_end ?? "17:00").slice(0, 5));
   const [capacity, setCapacity] = useState<string>(
     resource?.capacity != null ? String(resource.capacity) : "",
   );
@@ -46,6 +51,9 @@ export function ResourceFormModal({ tenantId, resource, onClose }: Props) {
       capacity: capacity.trim() ? Number(capacity) : null,
       sort_order: sortOrder.trim() ? Number(sortOrder) : 100,
       active,
+      colour: colour || null,
+      workday_start: workdayStart || null,
+      workday_end: workdayEnd || null,
     };
     try {
       if (isEdit && resource) {
@@ -74,11 +82,38 @@ export function ResourceFormModal({ tenantId, resource, onClose }: Props) {
         </div>
         <div>
           <div className="mb-1 text-sm font-medium">Type</div>
-          <select value={type} onChange={(e) => setType(e.target.value as ResourceType)} className={inputCls}>
+          <select
+            value={type}
+            disabled={Boolean(lockType)}
+            onChange={(e) => setType(e.target.value as ResourceType)}
+            className={inputCls + (lockType ? " bg-muted text-muted-foreground" : "")}
+          >
             {RESOURCE_TYPES.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <div className="mb-1 text-sm font-medium">Diary colour</div>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={colour}
+                onChange={(e) => setColour(e.target.value)}
+                className="h-10 w-14 cursor-pointer rounded-lg border border-border bg-white p-1"
+              />
+              <span className="text-xs text-muted-foreground">Shown on the diary lane.</span>
+            </div>
+          </div>
+          <div>
+            <div className="mb-1 text-sm font-medium">Starts</div>
+            <input type="time" value={workdayStart} onChange={(e) => setWorkdayStart(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <div className="mb-1 text-sm font-medium">Finishes</div>
+            <input type="time" value={workdayEnd} onChange={(e) => setWorkdayEnd(e.target.value)} className={inputCls} />
+          </div>
         </div>
         <div>
           <div className="mb-1 text-sm font-medium">Description</div>

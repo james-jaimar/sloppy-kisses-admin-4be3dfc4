@@ -6,6 +6,7 @@ import { useCreateCustomer, useUpdateCustomer, useCustomerEmailLookup, type Cust
 import { Link } from "react-router-dom";
 import AddressField from "@/components/address/AddressField";
 import { useCustomerAddresses } from "./addressQueries";
+import { useGroomers } from "@/features/settings/resourceQueries";
 
 type Status = "active" | "inactive" | "archived";
 
@@ -45,6 +46,7 @@ interface FormState {
   vet_clinic_name: string;
   vet_clinic_contact: string;
   vet_clinic_address: string;
+  preferred_groomer_resource_id: string;
 }
 
 function fromCustomer(c?: CustomerRow | null): FormState {
@@ -78,6 +80,7 @@ function fromCustomer(c?: CustomerRow | null): FormState {
     vet_clinic_name: (c as any)?.vet_clinic_name ?? "",
     vet_clinic_contact: (c as any)?.vet_clinic_contact ?? "",
     vet_clinic_address: (c as any)?.vet_clinic_address ?? "",
+    preferred_groomer_resource_id: (c as any)?.preferred_groomer_resource_id ?? "",
   };
 }
 
@@ -89,6 +92,7 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
   const update = useUpdateCustomer(tenantId);
   const emailDupes = useCustomerEmailLookup(tenantId, form.email, customer?.id);
   const { data: existingAddresses } = useCustomerAddresses(customer?.id, tenantId);
+  const groomersQ = useGroomers(tenantId, { activeOnly: true });
 
   // Seed verification status from the customer's primary saved address.
   useEffect(() => {
@@ -158,6 +162,7 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
       vet_clinic_name: form.vet_clinic_name.trim() || null,
       vet_clinic_contact: form.vet_clinic_contact.trim() || null,
       vet_clinic_address: form.vet_clinic_address.trim() || null,
+      preferred_groomer_resource_id: form.preferred_groomer_resource_id || null,
     };
 
     if (!payload.first_name && !payload.last_name && payload.full_name === "Unnamed") {
@@ -255,6 +260,21 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
         </div>
         <Field label="Alternative phone">
           <Input value={form.phone_alt} onChange={(v) => set("phone_alt", v)} />
+        </Field>
+        <Field
+          label="Preferred groomer"
+          hint="Bookings go to this groomer whenever they're free. Leave on “No preference” to auto-assign."
+        >
+          <select
+            value={form.preferred_groomer_resource_id}
+            onChange={(e) => set("preferred_groomer_resource_id", e.target.value)}
+            className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40"
+          >
+            <option value="">No preference</option>
+            {(groomersQ.data ?? []).map((g) => (
+              <option key={g.id} value={g.id}>{g.name}</option>
+            ))}
+          </select>
         </Field>
         <AddressField
           label="Address"

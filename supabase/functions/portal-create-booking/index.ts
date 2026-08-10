@@ -43,6 +43,22 @@ const BodySchema = z.object({
     .object({
       package_id: z.string().uuid().nullable().optional(),
       duration_minutes: z.number().int().min(15).max(600).nullable().optional(),
+      /**
+       * Multi-dog grooming: one entry per dog, each with its own package, length
+       * and start time (worked out in the wizard so dogs run in parallel where a
+       * groomer is free, otherwise back-to-back). All dogs land on one invoice.
+       */
+      pets: z
+        .array(
+          z.object({
+            pet_id: z.string().uuid(),
+            package_id: z.string().uuid().nullable().optional(),
+            duration_minutes: z.number().int().min(15).max(600).default(60),
+            start_at: z.string().min(1),
+          }),
+        )
+        .max(6)
+        .optional(),
       instructions: z
         .object({
           selections: z.record(z.any()).default({}),
@@ -333,6 +349,147 @@ Deno.serve(async (req) => {
   }
 
   // --- Create the booking ----------------------------------------------
+  // --- Multi-dog grooming: one appointment per dog, one invoice ---------
+  const groomingPets = group === "grooming" ? (body.grooming?.pets ?? []) : [];
+  if (groomingPets.length > 1) {
+    const allowed = new Set(body.pet_ids);
+    if (groomingPets.some((p) => !allowed.has(p.pet_id))) return json({ error: "invalid_pets" }, 403);
+
+    const g = body.grooming ?? {};
+    const addressSnapshotMulti = await resolveAddressSnapshot(
+      admin, tenantId, customer.id, body.service_address_id,
+    );
+
+    // Add-on catalog once for the whole group.
+    const requestedAddons = (g.addons ?? []).filter((a) => a.code !== "stay_play_after");
+    const { data: addonCatalog } = requestedAddons.length
+      ? await admin
+          .from("grooming_addons")
+          .select("id, code, name, price_zar")
+          .eq("tenant_id", tenantId)
+          .eq("active", true)
+          .in("code", requestedAddons.map((a) => a.code))
+      : { data: [] as any[] };
+
+    const groupId = crypto.randomUUID();
+    const createdIds: string[] = [];
+    let firstNumber: string | null = null;
+    let groupInvoiceId: string | null = null;
+
+    const rollback = async (message: string, status = 500) => {
+      if (createdIds.length) await admin.from("bookings").delete().in("id", createdIds);
+      return json({ error: message }, status);
+    };
+
+    for (const slot of groomingPets) {
+      const slotStart = new Date(slot.start_at);
+      if (isNaN(slotStart.getTime())) return rollback("invalid_start_at", 400);
+      const slotEnd = new Date(slotStart.getTime() + (slot.duration_minutes ?? 60) * 60_000);
+
+      const { data: numRow, error: nErr } = await admin.rpc("next_booking_number", {
+        target_tenant_id: tenantId,
+      });
+      if (nErr) return rollback(nErr.message);
+
+      const { data: b, error: bErr2 } = await admin
+        .from("bookings")
+        .insert({
+          tenant_id: tenantId,
+          customer_id: customer.id,
+          booking_number: numRow as unknown as string,
+          service_type: body.service_type,
+          status: "confirmed",
+          source: "customer_portal",
+          booking_group_id: groupId,
+          start_at: slotStart.toISOString(),
+          end_at: slotEnd.toISOString(),
+          start_date: slotStart.toISOString().slice(0, 10),
+          end_date: slotEnd.toISOString().slice(0, 10),
+          notes_customer: body.notes?.trim() || null,
+          ...addressSnapshotMulti,
+        })
+        .select("id, booking_number")
+        .single();
+      if (bErr2) return rollback(bErr2.message);
+      createdIds.push(b.id as string);
+      firstNumber = firstNumber ?? (b.booking_number as string);
+
+      const { error: bpErr2 } = await admin
+        .from("booking_pets")
+        .insert({ tenant_id: tenantId, booking_id: b.id, pet_id: slot.pet_id });
+      if (bpErr2) return rollback(bpErr2.message);
+
+      const { error: dErr } = await admin.from("grooming_booking_details").insert({
+        tenant_id: tenantId,
+        booking_id: b.id,
+        grooming_mode: body.service_type === "grooming_inhouse" ? "in_house" : "mobile",
+        package_id: slot.package_id ?? null,
+        duration_minutes: slot.duration_minutes ?? 60,
+        grooming_notes: g.access_notes ?? null,
+      });
+      if (dErr) return rollback(dErr.message);
+
+      if (g.instructions) {
+        await admin.from("grooming_booking_instructions").insert({
+          tenant_id: tenantId,
+          booking_id: b.id,
+          selections: g.instructions.selections ?? {},
+          medical_flags: g.instructions.medical_flags ?? [],
+          notes: g.instructions.notes ?? null,
+        });
+      }
+
+      const addonRows = requestedAddons
+        .map((a) => {
+          const match = (addonCatalog ?? []).find((c: any) => c.code === a.code);
+          if (!match) return null;
+          return {
+            tenant_id: tenantId,
+            booking_id: b.id,
+            addon_id: match.id,
+            addon_code: match.code,
+            addon_name: match.name,
+            price_zar_snapshot: match.price_zar,
+            qty: a.qty ?? 1,
+          };
+        })
+        .filter(Boolean);
+      if (addonRows.length) await admin.from("grooming_booking_addons").insert(addonRows as never[]);
+
+      const { data: invId, error: iErr } = await admin.rpc("issue_booking_invoice", {
+        p_booking_id: b.id,
+      });
+      if (iErr) return rollback(iErr.message);
+      groupInvoiceId = (invId as string) ?? groupInvoiceId;
+    }
+
+    let groupBalance = 0;
+    if (groupInvoiceId) {
+      const { data: inv } = await admin
+        .from("invoices").select("balance_due").eq("id", groupInvoiceId).maybeSingle();
+      groupBalance = Number(inv?.balance_due ?? 0);
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-invoice-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}` },
+          body: JSON.stringify({ invoice_id: groupInvoiceId, kind: "send" }),
+        });
+      } catch (e) {
+        console.error("portal-create-booking: group invoice email failed", e);
+      }
+    }
+
+    return json({
+      booking_id: createdIds[0],
+      booking_number: firstNumber,
+      booking_ids: createdIds,
+      invoice_id: groupInvoiceId,
+      balance_due: groupBalance,
+      short_notice: shortNotice,
+      payment_required_now: shortNotice && requirePrepay,
+    });
+  }
+
   // --- Hotel capacity gate ---------------------------------------------
   // Portal stays are unassigned, so we compare total pets booked per night
   // against the sum of pens/spaces across all hotel/cattery areas.

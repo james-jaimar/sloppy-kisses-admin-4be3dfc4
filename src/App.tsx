@@ -43,6 +43,7 @@ import AuthAccept from "@/pages/AuthAccept";
 import ChangePasswordPage from "@/features/settings/ChangePasswordPage";
 import SettingsIndexPage from "@/features/settings/SettingsIndexPage";
 import ResourcesPage from "@/features/settings/ResourcesPage";
+import GroomersPage from "@/features/settings/GroomersPage";
 import GroomingPackagesPage from "@/features/settings/GroomingPackagesPage";
 import DogBreedsPage from "@/features/settings/DogBreedsPage";
 import GroomingAddonsPage from "@/features/settings/GroomingAddonsPage";
@@ -223,6 +224,7 @@ const App = () => (
                 </Route>
                 <Route path="/admin/settings" element={<SettingsIndexPage />} />
                 <Route path="/admin/settings/resources" element={<ResourcesPage />} />
+                <Route path="/admin/settings/groomers" element={<GroomersPage />} />
                 <Route path="/admin/settings/grooming-packages" element={<GroomingPackagesPage />} />
                 <Route path="/admin/settings/dog-breeds" element={<DogBreedsPage />} />
                 <Route path="/admin/settings/grooming-addons" element={<GroomingAddonsPage />} />
