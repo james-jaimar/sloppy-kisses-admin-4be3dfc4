@@ -63,9 +63,11 @@ Deno.serve(async (req) => {
         status: "pending",
         payload: {
           vaccination_id: r.id,
-          vaccine_type: r.vaccination_type,
-          expiry_date: r.expiry_date,
           pet_name: pet.name,
+          vaccine: {
+            type: r.vaccination_type,
+            expiry_date: r.expiry_date,
+          },
         },
       });
       if (insErr) { skipped++; continue; }
