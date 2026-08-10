@@ -9,6 +9,8 @@ import { DocumentsPanel } from "@/features/documents/DocumentsPanel";
 import { PetGroomingDefaultsPanel } from "@/features/grooming/instructions/PetGroomingDefaultsPanel";
 import { SizeOverrideBadge } from "@/features/pets/SizeOverrideControl";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { HealthGateBanner } from "@/features/pets/HealthGateBanner";
+import { PetHealthPanel } from "@/features/pets/PetHealthPanel";
 import { Syringe, FileText, CalendarPlus } from "lucide-react";
 import { useCurrentCustomer } from "../hooks";
 import { MyPetFormModal } from "./MyPetFormModal";
@@ -113,6 +115,17 @@ function PetDetailBody({ p, editOpen, setEditOpen, wantsGrooming }: { p: any; ed
           defaultOpen={vax.outstanding > 0}
         >
           <PetVaccinationsPanel tenantId={p.tenant_id} petId={p.id} species={p.species} canManage uploadedVia="portal" />
+        </CollapsibleCard>
+
+        <HealthGateBanner petId={p.id} />
+
+        <CollapsibleCard
+          title="Parasite treatments"
+          icon={<span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-sk-turquoise-soft text-sk-turquoise-dark"><Syringe className="h-4 w-4" /></span>}
+          subtitle="Tick & flea, deworming and kennel cough dates we need before a stay."
+          storageKey={`parasites-${p.id}`}
+        >
+          <PetHealthPanel tenantId={p.tenant_id} petId={p.id} readOnlyHolds />
         </CollapsibleCard>
 
         <CollapsibleCard
