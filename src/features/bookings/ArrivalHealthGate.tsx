@@ -8,6 +8,7 @@ import {
   usePetHealthGate,
 } from "@/features/pets/healthQueries";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
+import { BookingVaccinationGate } from "./VaccinationGatePanel";
 
 /**
  * Arrival gate for one booking: shows each pet's parasite / hold status and lets staff
@@ -33,6 +34,7 @@ export function ArrivalHealthGate({
   return (
     <section className="space-y-2">
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Health gate</div>
+      <BookingVaccinationGate bookingId={bookingId} />
       {pets.map((p) => (
         <div key={p.id} className="space-y-1.5">
           <HealthGateBanner petId={p.id} petName={pets.length > 1 ? p.name : null} onDate={onDate} showWhenClear />
