@@ -3734,9 +3734,17 @@ export type Database = {
           photo_gate_mode: string
           pickup_dropoff_fee_zar: number
           puppy_half_price_max_months: number
+          rebook_nudge_enabled: boolean
+          rebook_weeks_max: number
+          rebook_weeks_min: number
           require_prepayment_short_notice: boolean
           sedation_default_fee_zar: number
           sedation_enabled: boolean
+          sedation_fasting_hours: number
+          sedation_instructions_md: string | null
+          sedation_vet_location: string | null
+          senior_pet_age_years: number
+          senior_vet_check_mode: string
           tenant_id: string
           updated_at: string
           vax_gate_mode: string
@@ -3756,9 +3764,17 @@ export type Database = {
           photo_gate_mode?: string
           pickup_dropoff_fee_zar?: number
           puppy_half_price_max_months?: number
+          rebook_nudge_enabled?: boolean
+          rebook_weeks_max?: number
+          rebook_weeks_min?: number
           require_prepayment_short_notice?: boolean
           sedation_default_fee_zar?: number
           sedation_enabled?: boolean
+          sedation_fasting_hours?: number
+          sedation_instructions_md?: string | null
+          sedation_vet_location?: string | null
+          senior_pet_age_years?: number
+          senior_vet_check_mode?: string
           tenant_id: string
           updated_at?: string
           vax_gate_mode?: string
@@ -3778,9 +3794,17 @@ export type Database = {
           photo_gate_mode?: string
           pickup_dropoff_fee_zar?: number
           puppy_half_price_max_months?: number
+          rebook_nudge_enabled?: boolean
+          rebook_weeks_max?: number
+          rebook_weeks_min?: number
           require_prepayment_short_notice?: boolean
           sedation_default_fee_zar?: number
           sedation_enabled?: boolean
+          sedation_fasting_hours?: number
+          sedation_instructions_md?: string | null
+          sedation_vet_location?: string | null
+          senior_pet_age_years?: number
+          senior_vet_check_mode?: string
           tenant_id?: string
           updated_at?: string
           vax_gate_mode?: string
@@ -4241,16 +4265,20 @@ export type Database = {
           created_at: string
           daycare_credit_enabled: boolean
           deposit_split_enabled: boolean
+          extra_food_fee_zar: number
           guidelines_md: string
           guidelines_version: number
           id: string
           late_checkout_fee_zar: number
           min_lead_hours: number
+          no_refund_early_checkout: boolean
           overbooking_mode: string
           peak_end_month_day: string | null
           peak_start_month_day: string | null
           photo_gate_mode: string
+          photo_policy_note: string | null
           quote_validity_days: number
+          require_labelling_checklist: boolean
           require_prepayment_short_notice: boolean
           tenant_id: string
           updated_at: string
@@ -4264,16 +4292,20 @@ export type Database = {
           created_at?: string
           daycare_credit_enabled?: boolean
           deposit_split_enabled?: boolean
+          extra_food_fee_zar?: number
           guidelines_md?: string
           guidelines_version?: number
           id?: string
           late_checkout_fee_zar?: number
           min_lead_hours?: number
+          no_refund_early_checkout?: boolean
           overbooking_mode?: string
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
           photo_gate_mode?: string
+          photo_policy_note?: string | null
           quote_validity_days?: number
+          require_labelling_checklist?: boolean
           require_prepayment_short_notice?: boolean
           tenant_id: string
           updated_at?: string
@@ -4287,16 +4319,20 @@ export type Database = {
           created_at?: string
           daycare_credit_enabled?: boolean
           deposit_split_enabled?: boolean
+          extra_food_fee_zar?: number
           guidelines_md?: string
           guidelines_version?: number
           id?: string
           late_checkout_fee_zar?: number
           min_lead_hours?: number
+          no_refund_early_checkout?: boolean
           overbooking_mode?: string
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
           photo_gate_mode?: string
+          photo_policy_note?: string | null
           quote_validity_days?: number
+          require_labelling_checklist?: boolean
           require_prepayment_short_notice?: boolean
           tenant_id?: string
           updated_at?: string
@@ -7313,17 +7349,25 @@ export type Database = {
       }
       transport_workflow_settings: {
         Row: {
+          base_address: string | null
+          base_latitude: number | null
+          base_longitude: number | null
+          base_place_id: string | null
           created_at: string
           day_end_time: string
           day_start_time: string
           default_dropoff_trail_minutes: number
           default_fee_zar: number
           default_pickup_lead_minutes: number
+          enforce_radius: boolean
+          gate_code_required_by_time: string
           id: string
           max_leg_gap_minutes: number
           min_lead_hours: number
           min_leg_gap_minutes: number
           photo_gate_mode: string
+          radius_gate_mode: string
+          require_gate_code: boolean
           require_prepayment_short_notice: boolean
           round_trip_multiplier: number
           suburb_fees: Json
@@ -7331,17 +7375,25 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          base_address?: string | null
+          base_latitude?: number | null
+          base_longitude?: number | null
+          base_place_id?: string | null
           created_at?: string
           day_end_time?: string
           day_start_time?: string
           default_dropoff_trail_minutes?: number
           default_fee_zar?: number
           default_pickup_lead_minutes?: number
+          enforce_radius?: boolean
+          gate_code_required_by_time?: string
           id?: string
           max_leg_gap_minutes?: number
           min_lead_hours?: number
           min_leg_gap_minutes?: number
           photo_gate_mode?: string
+          radius_gate_mode?: string
+          require_gate_code?: boolean
           require_prepayment_short_notice?: boolean
           round_trip_multiplier?: number
           suburb_fees?: Json
@@ -7349,17 +7401,25 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          base_address?: string | null
+          base_latitude?: number | null
+          base_longitude?: number | null
+          base_place_id?: string | null
           created_at?: string
           day_end_time?: string
           day_start_time?: string
           default_dropoff_trail_minutes?: number
           default_fee_zar?: number
           default_pickup_lead_minutes?: number
+          enforce_radius?: boolean
+          gate_code_required_by_time?: string
           id?: string
           max_leg_gap_minutes?: number
           min_lead_hours?: number
           min_leg_gap_minutes?: number
           photo_gate_mode?: string
+          radius_gate_mode?: string
+          require_gate_code?: boolean
           require_prepayment_short_notice?: boolean
           round_trip_multiplier?: number
           suburb_fees?: Json
@@ -8293,6 +8353,14 @@ export type Database = {
         }
         Returns: Json
       }
+      charge_failed_collection: {
+        Args: { p_booking_id: string; p_note?: string; p_waive?: boolean }
+        Returns: Json
+      }
+      charge_hotel_extra_food: {
+        Args: { p_booking_id: string; p_days?: number; p_note?: string }
+        Returns: Json
+      }
       charge_overdue_interest: {
         Args: { p_as_of?: string; p_preview?: boolean; p_tenant_id: string }
         Returns: Json
@@ -8369,6 +8437,10 @@ export type Database = {
         Returns: undefined
       }
       delete_pet: { Args: { p_pet_id: string }; Returns: undefined }
+      distance_km: {
+        Args: { p_lat1: number; p_lat2: number; p_lng1: number; p_lng2: number }
+        Returns: number
+      }
       document_hard_delete: {
         Args: { p_document_id: string }
         Returns: undefined
@@ -8468,6 +8540,10 @@ export type Database = {
           resource_name: string
           used: number
         }[]
+      }
+      hotel_early_checkout: {
+        Args: { p_booking_id: string; p_collected_at?: string; p_note?: string }
+        Returns: Json
       }
       hotel_pay_in_full: { Args: { p_booking_id: string }; Returns: string }
       hotel_stay_lines: {
@@ -8637,6 +8713,10 @@ export type Database = {
       }
       transport_can_assign_leg: {
         Args: { _booking_id: string; _resource_id: string }
+        Returns: Json
+      }
+      transport_radius_check: {
+        Args: { p_lat: number; p_lng: number; p_tenant_id: string }
         Returns: Json
       }
       user_can_access_customer: {
