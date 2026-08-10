@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { GroomingBoard } from "./GroomingBoard";
+import { GroomingDiary } from "./GroomingDiary";
+
+type View = "diary" | "board";
+const VIEW_KEY = "sk.grooming.view";
 
 function addDays(d: Date, n: number) {
   const c = new Date(d); c.setDate(c.getDate() + n); return c;
@@ -15,14 +19,34 @@ function fmtDay(d: Date) {
 
 export default function GroomingBoardPage() {
   const [day, setDay] = useState<Date>(() => startOfDay(new Date()));
+  const [view, setView] = useState<View>(() => (localStorage.getItem(VIEW_KEY) as View) || "diary");
+  useEffect(() => { localStorage.setItem(VIEW_KEY, view); }, [view]);
 
   return (
     <>
       <AppHeader
         title="Grooming board"
-        subtitle="Drag cards across columns as pets move through the salon."
+        subtitle={
+          view === "diary"
+            ? "One lane per groomer — drag to change groomer or time."
+            : "Drag cards across columns as pets move through the salon."
+        }
         actions={
           <div className="flex items-center gap-2">
+            <div className="inline-flex overflow-hidden rounded-lg border border-border bg-white">
+              {(["diary", "board"] as View[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={
+                    "h-9 px-3 text-sm font-medium capitalize " +
+                    (view === v ? "bg-sk-coral text-white" : "hover:bg-sk-surface-muted")
+                  }
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => setDay(startOfDay(new Date()))}
               className="h-9 rounded-lg border border-border bg-white px-3 text-sm font-medium hover:bg-sk-surface-muted"
@@ -51,7 +75,7 @@ export default function GroomingBoardPage() {
         }
       />
       <div className="flex-1 p-6">
-        <GroomingBoard day={day} />
+        {view === "diary" ? <GroomingDiary day={day} /> : <GroomingBoard day={day} />}
       </div>
     </>
   );
