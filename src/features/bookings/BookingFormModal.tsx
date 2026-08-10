@@ -249,6 +249,9 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const selectedVanAddress = (vanAddressesQ.data ?? []).find((a) => a.id === serviceAddressId) ?? null;
   const vanAddressVerified = Boolean(selectedVanAddress?.google_place_id);
   const [addressOverride, setAddressOverride] = useState(false);
+  const [closureOverride, setClosureOverride] = useState<boolean>(
+    (booking as any)?.closure_override ?? false,
+  );
   const setBookingSurcharges = useSetBookingHotelSurcharges(tenantId);
   const [groomingAddons, setGroomingAddons] = useState<GroomingAddonSelection[]>([]);
   const setBookingGroomingAddons = useSetBookingGroomingAddons(tenantId);
