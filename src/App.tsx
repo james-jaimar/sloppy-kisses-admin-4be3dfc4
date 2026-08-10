@@ -271,6 +271,7 @@ const App = () => (
                   <Route path="/platform/tenants" element={<PlatformTenantsPage />} />
                   <Route path="/platform/users" element={<PlatformUsersPage />} />
                   <Route path="/platform/flags" element={<FeatureFlagsPage />} />
+                  <Route path="/platform/features" element={<TenantFeaturesPage />} />
                   <Route path="/platform/audit" element={<AuditViewerPage />} />
                   <Route path="/platform/activity" element={<ActivityPage />} />
                   <Route path="/platform/system" element={<SystemPage />} />
