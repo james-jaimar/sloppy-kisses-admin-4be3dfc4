@@ -36,7 +36,6 @@ import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtr
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
 import { effectivePetSize } from "@/features/pets/sizeUtils";
 import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries";
-import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { useGroomingPackages, useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { BookingGroomingInstructionsPanel } from "@/features/grooming/instructions/BookingGroomingInstructionsPanel";
 import { useSaveBookingInstructions } from "@/features/grooming/instructions/queries";
