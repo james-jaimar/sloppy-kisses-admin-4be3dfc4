@@ -10,6 +10,7 @@ import { BookingStatusChip } from "./statusMeta";
 import { useBookingServiceDetails } from "./detailsQueries";
 import { useCancelSeriesForward } from "./recurringQueries";
 import { CancelBookingDialog } from "./CancelBookingDialog";
+import { LateCollectionDialog } from "./LateCollectionDialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useBookingInstructions, useInstructionCatalog } from "@/features/grooming/instructions/queries";
 import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
@@ -35,6 +36,7 @@ interface Props {
 export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [lateOpen, setLateOpen] = useState(false);
   const confirm = useConfirm();
   const updateStatus = useUpdateBookingStatus(tenantId);
   const cancelSeries = useCancelSeriesForward(tenantId);
@@ -293,6 +295,14 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
                 </button>
               ))}
             </div>
+            {["daycare", "daycare_assessment", "hotel_dog", "hotel_cat"].includes(booking.service_type) && (
+              <button
+                onClick={() => setLateOpen(true)}
+                className="mt-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100"
+              >
+                Late collection…
+              </button>
+            )}
           </section>
 
           {(booking as any).recurring_rule_id && (
