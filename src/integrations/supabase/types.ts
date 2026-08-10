@@ -690,6 +690,7 @@ export type Database = {
         Row: {
           amendment_count: number
           assigned_staff_id: string | null
+          booking_group_id: string | null
           booking_number: string
           booking_request_id: string | null
           cancellation_fee_note: string | null
@@ -734,6 +735,7 @@ export type Database = {
         Insert: {
           amendment_count?: number
           assigned_staff_id?: string | null
+          booking_group_id?: string | null
           booking_number: string
           booking_request_id?: string | null
           cancellation_fee_note?: string | null
@@ -778,6 +780,7 @@ export type Database = {
         Update: {
           amendment_count?: number
           assigned_staff_id?: string | null
+          booking_group_id?: string | null
           booking_number?: string
           booking_request_id?: string | null
           cancellation_fee_note?: string | null
@@ -1638,6 +1641,7 @@ export type Database = {
           phone_alt: string | null
           portal_access_enabled: boolean
           postcode: string | null
+          preferred_groomer_resource_id: string | null
           province: string | null
           signup_status: string
           status: Database["public"]["Enums"]["customer_status"]
@@ -1686,6 +1690,7 @@ export type Database = {
           phone_alt?: string | null
           portal_access_enabled?: boolean
           postcode?: string | null
+          preferred_groomer_resource_id?: string | null
           province?: string | null
           signup_status?: string
           status?: Database["public"]["Enums"]["customer_status"]
@@ -1734,6 +1739,7 @@ export type Database = {
           phone_alt?: string | null
           portal_access_enabled?: boolean
           postcode?: string | null
+          preferred_groomer_resource_id?: string | null
           province?: string | null
           signup_status?: string
           status?: Database["public"]["Enums"]["customer_status"]
@@ -1760,6 +1766,13 @@ export type Database = {
             columns: ["linked_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_preferred_groomer_resource_id_fkey"
+            columns: ["preferred_groomer_resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
             referencedColumns: ["id"]
           },
           {
@@ -8507,6 +8520,17 @@ export type Database = {
       grooming_day_availability: {
         Args: { p_day: string; p_tenant_id: string }
         Returns: Json
+      }
+      grooming_pick_resource: {
+        Args: {
+          p_customer_id?: string
+          p_end: string
+          p_exclude_booking_id?: string
+          p_service_type?: string
+          p_start: string
+          p_tenant_id: string
+        }
+        Returns: string
       }
       grooming_sync_booking_addon_lines: {
         Args: { p_booking_id: string }
