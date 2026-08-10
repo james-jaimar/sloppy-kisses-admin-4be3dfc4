@@ -120,6 +120,7 @@ export function useCreateRecurringBooking(tenantId: string) {
         notes_customer: input.notes_customer ?? null,
         requires_transport: input.requires_transport ?? false,
         requires_grooming: input.requires_grooming ?? false,
+        closure_override: input.closure_override ?? false,
         recurring_rule_id: rule_id,
         ...addressSnapshot,
       }));
