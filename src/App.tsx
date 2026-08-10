@@ -114,6 +114,7 @@ import PlatformOverviewPage from "@/features/platform/PlatformOverviewPage";
 import PlatformTenantsPage from "@/features/platform/TenantsPage";
 import PlatformUsersPage from "@/features/platform/PlatformUsersPage";
 import FeatureFlagsPage from "@/features/platform/FeatureFlagsPage";
+import TenantFeaturesPage from "@/features/platform/TenantFeaturesPage";
 import AuditViewerPage from "@/features/platform/AuditViewerPage";
 import ActivityPage from "@/features/platform/ActivityPage";
 import SystemPage from "@/features/platform/SystemPage";
