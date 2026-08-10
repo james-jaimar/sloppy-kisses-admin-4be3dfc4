@@ -56,6 +56,10 @@ const BodySchema = z.object({
       access_notes: z.string().max(1000).nullable().optional(),
       stay_play: z.boolean().optional(),
       stay_play_collect_time: z.string().regex(/^\d{2}:\d{2}$/).nullable().optional(),
+      addons: z
+        .array(z.object({ code: z.string().max(60), qty: z.number().int().min(1).max(10).default(1) }))
+        .max(12)
+        .optional(),
     })
     .optional(),
   hotel: z
