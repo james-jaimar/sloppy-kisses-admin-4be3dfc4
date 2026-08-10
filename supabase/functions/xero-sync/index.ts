@@ -2,6 +2,7 @@
 // payments, credit notes, plus the queue worker used by auto-push.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { pace, xero, xeroConnections, xeroDate } from "../_shared/xero.ts";
+import { assertFeature } from "../_shared/features.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
