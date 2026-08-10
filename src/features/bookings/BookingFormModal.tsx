@@ -488,6 +488,13 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       if (!proceed) return;
     }
 
+    const overrideNote =
+      isMobileVan && addressOverride && !vanAddressVerified
+        ? "[Address override] Saved without a Google-verified address — confirm directions with the driver."
+        : "";
+    const notesInternalValue =
+      [notesInternal.trim(), overrideNote].filter(Boolean).join("\n") || null;
+
     try {
       if (isEdit && booking) {
         await update.mutateAsync({
@@ -498,7 +505,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             start_at: new Date(startAt).toISOString(),
             end_at: endComputed.toISOString(),
             resource_id: resourceId,
-            notes_internal: notesInternal.trim() || null,
+            notes_internal: notesInternalValue,
             notes_customer: notesCustomer.trim() || null,
             service_address_id: serviceAddressId,
           },
@@ -522,7 +529,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             start_at: new Date(startAt).toISOString(),
             end_at: endComputed.toISOString(),
             resource_id: resourceId,
-            notes_internal: notesInternal.trim() || null,
+            notes_internal: notesInternalValue,
             notes_customer: notesCustomer.trim() || null,
             rule,
             service_address_id: serviceAddressId,
@@ -548,7 +555,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           start_at: new Date(startAt).toISOString(),
           end_at: endComputed.toISOString(),
           resource_id: resourceId,
-          notes_internal: notesInternal.trim() || null,
+          notes_internal: notesInternalValue,
           notes_customer: notesCustomer.trim() || null,
           service_address_id: serviceAddressId,
         });
