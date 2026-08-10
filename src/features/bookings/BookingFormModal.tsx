@@ -1112,13 +1112,52 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           />
         )}
         {kind === "transport" && (
-          <AddressSelector
-            customerId={customerId}
-            tenantId={tenantId}
-            value={serviceAddressId}
-            onChange={setServiceAddressId}
-            label="Pickup / drop-off address"
-          />
+          <div className="space-y-2">
+            <AddressSelector
+              customerId={customerId}
+              tenantId={tenantId}
+              value={serviceAddressId}
+              onChange={setServiceAddressId}
+              label="Pickup / drop-off address"
+            />
+            <ServiceRadiusNotice check={radiusQ.data} />
+            {transportSettingsQ.data?.require_gate_code &&
+              selectedVanAddress &&
+              !((selectedVanAddress as any).access_notes ?? "").trim() && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <div>
+                    No gate code or access notes on this address. The customer must supply it by{" "}
+                    {String(transportSettingsQ.data.gate_code_required_by_time ?? "07:00").slice(0, 5)} on the
+                    collection day, or the trip may be charged as a failed collection.
+                  </div>
+                </div>
+              )}
+            {(!serviceAddressId || !vanAddressVerified || radiusBlocked) && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <div>
+                    {!serviceAddressId
+                      ? "Pick the collection address. Use “New address” above if it isn't on file yet."
+                      : !vanAddressVerified
+                        ? "This address isn't pinned on the map yet. Use “Confirm this address” above so the driver can navigate to it."
+                        : "This address falls outside the travel radius."}
+                    {canOverrideAddress && (
+                      <label className="mt-2 flex items-center gap-2 font-medium">
+                        <input
+                          type="checkbox"
+                          checked={addressOverride}
+                          onChange={(e) => setAddressOverride(e.target.checked)}
+                        />
+                        Save anyway (admin override)
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {!isEdit && (
