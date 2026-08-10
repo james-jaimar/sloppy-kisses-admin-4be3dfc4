@@ -24,6 +24,7 @@ export default function GroomingRequestWizard({ mode }: Props) {
   const [slotStart, setSlotStart] = useState<string | null>(null);
   const [slotEnd, setSlotEnd] = useState<string | null>(null);
   const [packageId, setPackageId] = useState("");
+  const [treatments, setTreatments] = useState<Record<string, number>>({});
   const [serviceAddressId, setServiceAddressId] = useState<string | null>(null);
   const [accessNotes, setAccessNotes] = useState("");
   const [notes, setNotes] = useState("");
@@ -36,6 +37,13 @@ export default function GroomingRequestWizard({ mode }: Props) {
   const catalogQ = useInstructionCatalog(cust.data?.tenant_id ?? null);
   const addonsQ = useGroomingAddons(cust.data?.tenant_id ?? undefined, { activeOnly: true });
   const stayPlayAddon = (addonsQ.data ?? []).find((a: any) => a.code === "stay_play_after") ?? null;
+  // Quick single treatments — bookable without a full package.
+  const standaloneAddons = (addonsQ.data ?? []).filter((a) => a.bookable_standalone && a.code !== "stay_play_after");
+  const selectedTreatments = standaloneAddons.filter((a) => treatments[a.id]);
+  // Clear quick treatments when a package is picked (they're included / handled as instructions).
+  useEffect(() => {
+    if (packageId) setTreatments({});
+  }, [packageId]);
   const selectedPet = (pets.data ?? []).find((p: any) => p.id === petId) ?? null;
   const petBand = petSizeToBand(effectivePetSize(selectedPet as any));
   const filteredPackages = (packages.data ?? []).filter((p: any) => {
@@ -79,12 +87,26 @@ export default function GroomingRequestWizard({ mode }: Props) {
       }
     }
     const extrasTotal = extras.reduce((s, e) => s + e.price, 0);
+    const treatmentTotal = selectedTreatments.reduce((s, a) => s + Number(a.price_zar) * (treatments[a.id] || 1), 0);
+    for (const a of selectedTreatments) extras.push({ label: a.name, price: Number(a.price_zar) * (treatments[a.id] || 1) });
     const spPrice = stayPlay && stayPlayAddon ? Number(stayPlayAddon.price_zar) : 0;
     if (spPrice > 0) extras.push({ label: stayPlayAddon!.name, price: spPrice });
-    return { base, extras, total: base + extrasTotal + spPrice, hasPackage: Boolean(pkg) };
-  }, [filteredPackages, packageId, addonsQ.data, catalogQ.data, instructions.selections, stayPlay, stayPlayAddon]);
+    return { base, extras, total: base + extrasTotal + treatmentTotal + spPrice, hasPackage: Boolean(pkg) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredPackages, packageId, addonsQ.data, catalogQ.data, instructions.selections, stayPlay, stayPlayAddon, treatments]);
 
-  const packageRequired = filteredPackages.length > 0;
+  // Appointment length = package time + each treatment's own time.
+  const durationMinutes = useMemo(() => {
+    const pkg = filteredPackages.find((p: any) => p.id === packageId);
+    const pkgMins = pkg ? Number(pkg.expected_minutes) || 60 : 0;
+    const treatMins = selectedTreatments.reduce(
+      (s, a) => s + Number(a.duration_minutes ?? 0) * (treatments[a.id] || 1), 0,
+    );
+    return Math.max(15, pkgMins + treatMins) || 60;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredPackages, packageId, treatments, addonsQ.data]);
+
+  const packageRequired = filteredPackages.length > 0 && selectedTreatments.length === 0;
   const canSubmit =
     Boolean(
       cust.data && petId && slotStart &&
@@ -103,7 +125,8 @@ export default function GroomingRequestWizard({ mode }: Props) {
       service_address_id: serviceAddressId,
       grooming: {
         package_id: packageId || null,
-        duration_minutes: 60,
+        duration_minutes: durationMinutes,
+        addons: selectedTreatments.map((a) => ({ code: a.code, qty: treatments[a.id] || 1 })),
         instructions: {
           selections: instructions.selections,
           medical_flags: instructions.medical_flags,
@@ -143,7 +166,7 @@ export default function GroomingRequestWizard({ mode }: Props) {
         <GroomingSlotPicker
           tenantId={cust.data?.tenant_id ?? null}
           value={slotStart}
-          durationMinutes={60}
+          durationMinutes={durationMinutes}
           onChange={(s, e) => { setSlotStart(s); setSlotEnd(e); }}
         />
       </Field>
@@ -159,6 +182,36 @@ export default function GroomingRequestWizard({ mode }: Props) {
           <div className="mt-1 text-[11px] text-sk-orange">No packages match {selectedPet?.name}'s size. Staff will confirm the right option.</div>
         )}
       </Field>
+
+      {!packageId && standaloneAddons.length > 0 && (
+        <Field label="Or book a quick treatment on its own">
+          <div className="space-y-2">
+            {standaloneAddons.map((a) => (
+              <label key={a.id} className="flex items-center gap-3 rounded-lg border border-border bg-white px-3 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={Boolean(treatments[a.id])}
+                  onChange={(e) =>
+                    setTreatments((prev) => {
+                      const next = { ...prev };
+                      if (e.target.checked) next[a.id] = 1; else delete next[a.id];
+                      return next;
+                    })
+                  }
+                />
+                <span className="flex-1 font-medium">{a.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  R{Number(a.price_zar).toFixed(2)}{a.duration_minutes ? ` · ${a.duration_minutes} min` : ""}
+                </span>
+              </label>
+            ))}
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            No package needed — pick one or more quick treatments and we'll book the right amount of time.
+          </p>
+        </Field>
+      )}
 
       {petId && (
         <Field label="Grooming instructions">
