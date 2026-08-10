@@ -172,3 +172,71 @@ export function useTableCount(table: string) {
     },
   });
 }
+export interface TenantFeatureRow {
+  tenant_id: string;
+  feature_key: string;
+  enabled: boolean;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+export function useTenantFeatures(tenantId: string | null) {
+  return useQuery({
+    queryKey: ["platform_tenant_features", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: async (): Promise<TenantFeatureRow[]> => {
+      const { data, error } = await supabase
+        .from("tenant_features")
+        .select("tenant_id, feature_key, enabled, updated_at, updated_by")
+        .eq("tenant_id", tenantId!);
+      if (error) throw error;
+      return (data ?? []) as TenantFeatureRow[];
+    },
+  });
+}
+
+export function useSetTenantFeature() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      tenantId,
+      featureKey,
+      enabled,
+    }: {
+      tenantId: string;
+      featureKey: string;
+      enabled: boolean;
+    }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      let actorProfileId: string | null = null;
+      if (auth.user) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("auth_user_id", auth.user.id)
+          .maybeSingle();
+        actorProfileId = prof?.id ?? null;
+      }
+
+      const { error } = await supabase
+        .from("tenant_features")
+        .upsert(
+          { tenant_id: tenantId, feature_key: featureKey, enabled, updated_at: new Date().toISOString(), updated_by: actorProfileId },
+          { onConflict: "tenant_id,feature_key" },
+        );
+      if (error) throw error;
+
+      await supabase.from("platform_audit").insert({
+        actor_profile_id: actorProfileId,
+        tenant_id: tenantId,
+        action: enabled ? "feature.enabled" : "feature.disabled",
+        target: featureKey,
+        payload: { feature_key: featureKey, enabled },
+      });
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["platform_tenant_features", vars.tenantId] });
+      qc.invalidateQueries({ queryKey: ["platform_audit"] });
+    },
+  });
+}
