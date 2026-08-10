@@ -8356,6 +8356,18 @@ export type Database = {
           status: string
         }[]
       }
+      booking_vaccination_gate: {
+        Args: { p_booking_id: string }
+        Returns: {
+          expiry_date: string
+          has_certificate: boolean
+          label: string
+          pet_id: string
+          pet_name: string
+          status: string
+          vaccine_type: string
+        }[]
+      }
       charge_arrival_parasite_treatment: {
         Args: {
           p_booking_id: string
@@ -8666,6 +8678,19 @@ export type Database = {
           waived_until: string
         }[]
       }
+      pet_vaccination_status: {
+        Args: { p_on?: string; p_pet_id: string; p_service_type?: string }
+        Returns: {
+          expiry_date: string
+          has_certificate: boolean
+          label: string
+          pet_id: string
+          pet_name: string
+          service_type: string
+          status: string
+          vaccine_type: string
+        }[]
+      }
       portal_cancel_booking: {
         Args: { p_booking_id: string; p_reason?: string }
         Returns: undefined
@@ -8763,6 +8788,7 @@ export type Database = {
         Args: { _booking_id: string; _resource_id: string }
         Returns: Json
       }
+      vax_code_norm: { Args: { p: string }; Returns: string }
       void_refund: { Args: { p_refund_id: string }; Returns: undefined }
       xero_drain_queue: { Args: never; Returns: undefined }
       xero_enqueue: {
