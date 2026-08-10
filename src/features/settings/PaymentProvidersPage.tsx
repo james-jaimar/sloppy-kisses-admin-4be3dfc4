@@ -89,9 +89,6 @@ export default function PaymentProvidersPage() {
             <Link to="/admin/settings/gateway-activity" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
               <Activity className="h-4 w-4" /> Gateway activity
             </Link>
-            <Link to="/admin/settings" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
-              <ArrowLeft className="h-4 w-4" /> Back to settings
-            </Link>
           </div>
         }
       />
