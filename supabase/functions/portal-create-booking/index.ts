@@ -316,36 +316,37 @@ Deno.serve(async (req) => {
   }
 
   // --- Vaccination gate -------------------------------------------------
-  const gateMode = (settings as any)?.vax_gate_mode ?? "soft";
-  if (gateMode === "hard") {
-    const { data: rules } = await admin
-      .from("vaccination_rules")
-      .select("vaccine_type, species, grace_days, required")
+  // Customers are always blocked (staff can override in admin). Only an explicit
+  // "off" gate mode lets an unvaccinated pet through the portal.
+  let gateMode = (settings as any)?.vax_gate_mode ?? "hard";
+  if (group === "daycare") {
+    const { data: dcs } = await admin
+      .from("daycare_workflow_settings")
+      .select("block_unvaccinated")
       .eq("tenant_id", tenantId)
-      .eq("service_type", body.service_type)
-      .eq("required", true);
-    if (rules?.length) {
-      const { data: vax } = await admin
-        .from("vaccinations")
-        .select("pet_id, vaccination_type, expiry_date")
-        .in("pet_id", body.pet_ids);
-      const missing: string[] = [];
-      for (const p of pets) {
-        // Admin waiver: pet passes the gate while the waiver covers the booking date.
-        const waivedUntil = (p as any).vax_waived_until as string | null;
-        if (waivedUntil && new Date(waivedUntil + "T23:59:59Z").getTime() >= start.getTime()) continue;
-        for (const r of rules) {
-          if (r.species !== "any" && r.species !== (p as any).species) continue;
-          const rec = (vax ?? []).find(
-            (v: any) => v.pet_id === p.id && v.vaccination_type === r.vaccine_type,
-          );
-          const graceMs = Number(r.grace_days ?? 0) * 86_400_000;
-          const ok = rec?.expiry_date && new Date(rec.expiry_date).getTime() + graceMs >= start.getTime();
-          if (!ok) missing.push(`${(p as any).name}: ${r.vaccine_type}`);
-        }
+      .maybeSingle();
+    gateMode = (dcs as any)?.block_unvaccinated === false ? "off" : "hard";
+  }
+  if (gateMode !== "off") {
+    const onDate = start.toISOString().slice(0, 10);
+    const missing: string[] = [];
+    for (const p of pets) {
+      const { data: statusRows, error: statusErr } = await admin.rpc("pet_vaccination_status", {
+        p_pet_id: p.id,
+        p_service_type: body.service_type,
+        p_on: onDate,
+      });
+      if (statusErr) return json({ error: "vaccination_check_failed", detail: statusErr.message }, 500);
+      const seen = new Set<string>();
+      for (const r of (statusRows ?? []) as any[]) {
+        if (r.status === "ok" || r.status === "waived") continue;
+        const key = `${r.pet_name}: ${r.label ?? r.vaccine_type}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        missing.push(key);
       }
-      if (missing.length) return json({ error: "vaccinations_required", missing }, 400);
     }
+    if (missing.length) return json({ error: "vaccinations_required", missing }, 400);
   }
 
   // --- Create the booking ----------------------------------------------
