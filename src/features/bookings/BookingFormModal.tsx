@@ -501,12 +501,21 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       return toast.error("Select at least one pet for this booking");
     }
 
-    if (isMobileVan && !addressOverride) {
+    if (needsVanAddress && !addressOverride) {
       if (!serviceAddressId) {
-        return toast.error("Pick the mobile grooming address — the van needs somewhere to go.");
+        return toast.error(
+          isTransport
+            ? "Pick the collection address — the driver needs somewhere to go."
+            : "Pick the mobile grooming address — the van needs somewhere to go.",
+        );
       }
       if (!vanAddressVerified) {
         return toast.error("Confirm this address on the map before saving the van booking.");
+      }
+      if (radiusBlocked) {
+        return toast.error(
+          `This address is outside the ${radiusQ.data?.radius_km} km travel radius. An admin override is needed.`,
+        );
       }
     }
 
@@ -537,8 +546,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     }
 
     const overrideNote =
-      isMobileVan && addressOverride && !vanAddressVerified
-        ? "[Address override] Saved without a Google-verified address — confirm directions with the driver."
+      needsVanAddress && addressOverride && (!vanAddressVerified || radiusBlocked)
+        ? radiusBlocked
+          ? "[Address override] Saved outside the travel radius — confirm the trip with the driver."
+          : "[Address override] Saved without a Google-verified address — confirm directions with the driver."
         : "";
     const notesInternalValue =
       [notesInternal.trim(), overrideNote].filter(Boolean).join("\n") || null;
