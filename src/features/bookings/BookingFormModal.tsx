@@ -454,6 +454,18 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     }
 
     if (conflicts.length > 0) {
+      // placeholder anchor
+    }
+    if (isMobileVan && !addressOverride) {
+      if (!serviceAddressId) {
+        return toast.error("Pick the mobile grooming address — the van needs somewhere to go.");
+      }
+      if (!vanAddressVerified) {
+        return toast.error("Confirm this address on the map before saving the van booking.");
+      }
+    }
+
+    if (conflicts.length > 0) {
       const proceed = await confirm({
         title: "Resource already booked in this window",
         description: `Overlaps with ${conflicts.map((c: any) => c.booking_number).join(", ")}. Save anyway?`,
