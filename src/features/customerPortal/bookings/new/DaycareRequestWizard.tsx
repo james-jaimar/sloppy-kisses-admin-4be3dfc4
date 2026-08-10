@@ -6,6 +6,7 @@ import { usePortalPets, useDaycarePlans } from "./wizardHooks";
 import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
 import { usePhotoGateMode } from "@/features/bookings/PhotoGatePanel";
 import { usePetPhotoStatus, isPhotoWaiverActive } from "@/features/pets/photoGateQueries";
+import { PetsVaccinationGate, usePetsVaxBlocked } from "@/features/bookings/VaccinationGatePanel";
 
 const WEEKDAYS = [
   { code: "mon", label: "Mon" },
@@ -48,10 +49,12 @@ export default function DaycareRequestWizard() {
     .map((p: any) => p.name as string);
   const photoBlocked = photoMode === "hard" && petsMissingPhoto.length > 0;
 
+  const vax = usePetsVaxBlocked(petIds, assessment ? "daycare_assessment" : "daycare", assessment ? assessDate : startDate);
+
   const canSubmit = Boolean(
     cust.data && petIds.length > 0 &&
     (assessment ? assessDate : startDate && planId),
-  ) && !photoBlocked && !submit.isPending;
+  ) && !photoBlocked && !vax.blocked && !submit.isPending;
 
   function togglePet(id: string) {
     setPetIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -98,6 +101,14 @@ export default function DaycareRequestWizard() {
         </button>
       }
     >
+      {petIds.length > 0 && (
+        <PetsVaccinationGate
+          petIds={petIds}
+          serviceType={assessment ? "daycare_assessment" : "daycare"}
+          onDate={assessment ? assessDate : startDate}
+          mode="portal"
+        />
+      )}
       <Field label="Which dogs?">
         <div className="flex flex-wrap gap-2">
           {(pets.data ?? []).map((p: any) => {
