@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -45,6 +46,9 @@ export default function ChangePasswordPage() {
   return (
     <div className="mx-auto max-w-lg p-6">
       <div className="mb-6">
+        <Link to="/admin/settings" className="mb-2 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to settings
+        </Link>
         <h1 className="text-2xl font-semibold tracking-tight">Change password</h1>
         <p className="text-sm text-muted-foreground mt-0.5">Update the password for {authUser?.email}.</p>
       </div>
