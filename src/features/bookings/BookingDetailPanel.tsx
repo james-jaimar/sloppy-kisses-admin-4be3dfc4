@@ -11,6 +11,9 @@ import { useBookingServiceDetails } from "./detailsQueries";
 import { useCancelSeriesForward } from "./recurringQueries";
 import { CancelBookingDialog } from "./CancelBookingDialog";
 import { LateCollectionDialog } from "./LateCollectionDialog";
+import { FailedCollectionDialog } from "./FailedCollectionDialog";
+import { EarlyCheckoutDialog } from "./EarlyCheckoutDialog";
+import { ExtraFoodDialog } from "./ExtraFoodDialog";
 import { ArrivalHealthGate } from "./ArrivalHealthGate";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useBookingInstructions, useInstructionCatalog } from "@/features/grooming/instructions/queries";
@@ -38,6 +41,9 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
   const [editOpen, setEditOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [lateOpen, setLateOpen] = useState(false);
+  const [failedOpen, setFailedOpen] = useState(false);
+  const [earlyOpen, setEarlyOpen] = useState(false);
+  const [foodOpen, setFoodOpen] = useState(false);
   const confirm = useConfirm();
   const updateStatus = useUpdateBookingStatus(tenantId);
   const cancelSeries = useCancelSeriesForward(tenantId);
@@ -313,6 +319,32 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
                 Late collection…
               </button>
             )}
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {booking.service_type === "pickup_dropoff" && (
+                <button
+                  onClick={() => setFailedOpen(true)}
+                  className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                >
+                  Failed collection…
+                </button>
+              )}
+              {String(booking.service_type).startsWith("hotel") && (
+                <>
+                  <button
+                    onClick={() => setEarlyOpen(true)}
+                    className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                  >
+                    Early check-out…
+                  </button>
+                  <button
+                    onClick={() => setFoodOpen(true)}
+                    className="rounded-full border border-border bg-white px-3 py-1 text-xs font-medium hover:bg-muted"
+                  >
+                    Charge extra food…
+                  </button>
+                </>
+              )}
+            </div>
           </section>
 
           {(booking as any).recurring_rule_id && (
@@ -353,6 +385,27 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
           bookingId={booking.id}
           bookingNumber={booking.booking_number}
           onClose={() => setLateOpen(false)}
+        />
+      )}
+      {failedOpen && (
+        <FailedCollectionDialog
+          bookingId={booking.id}
+          bookingNumber={booking.booking_number}
+          onClose={() => setFailedOpen(false)}
+        />
+      )}
+      {earlyOpen && (
+        <EarlyCheckoutDialog
+          bookingId={booking.id}
+          bookingNumber={booking.booking_number}
+          onClose={() => setEarlyOpen(false)}
+        />
+      )}
+      {foodOpen && (
+        <ExtraFoodDialog
+          bookingId={booking.id}
+          bookingNumber={booking.booking_number}
+          onClose={() => setFoodOpen(false)}
         />
       )}
     </>
