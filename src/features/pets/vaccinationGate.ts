@@ -26,6 +26,26 @@ export function isVaxOutstanding(status: string) {
   return status !== "ok" && status !== "waived";
 }
 
+const SEVERITY: Record<string, number> = {
+  ok: 0,
+  waived: 1,
+  no_certificate: 2,
+  no_expiry: 3,
+  expired: 4,
+  missing: 5,
+};
+
+/** One row per pet + vaccine, keeping the worst status across services. */
+export function dedupeVaxRows(rows: VaxGateRow[]): VaxGateRow[] {
+  const map = new Map<string, VaxGateRow>();
+  for (const r of rows) {
+    const key = `${r.pet_id}:${r.vaccine_type}`;
+    const prev = map.get(key);
+    if (!prev || (SEVERITY[r.status] ?? 9) > (SEVERITY[prev.status] ?? 9)) map.set(key, r);
+  }
+  return [...map.values()];
+}
+
 /** Every required vaccination for one booking (all pets on it). */
 export function useBookingVaccinationGate(bookingId: string | null | undefined) {
   return useQuery({
@@ -36,7 +56,7 @@ export function useBookingVaccinationGate(bookingId: string | null | undefined) 
         p_booking_id: bookingId,
       });
       if (error) throw error;
-      return (data ?? []) as unknown as VaxGateRow[];
+      return dedupeVaxRows((data ?? []) as unknown as VaxGateRow[]);
     },
   });
 }
@@ -57,7 +77,7 @@ export function usePetVaccinationStatus(
         p_on: onDate ?? null,
       });
       if (error) throw error;
-      return (data ?? []) as unknown as VaxGateRow[];
+      return dedupeVaxRows((data ?? []) as unknown as VaxGateRow[]);
     },
   });
 }
@@ -84,7 +104,7 @@ export function usePetsVaccinationStatus(
           return (data ?? []) as unknown as VaxGateRow[];
         }),
       );
-      return results.flat();
+      return dedupeVaxRows(results.flat());
     },
   });
 }
