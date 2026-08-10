@@ -219,7 +219,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   }, [customerId, petsQ.data, isEdit]);
   const resourcesQ = useResources(tenantId);
   const packagesQ = useGroomingPackages(tenantId, { activeOnly: true });
-  const groomingAddonsQ = useGroomingAddons(tenantId, { activeOnly: true });
   const create = useCreateBooking(tenantId);
   const update = useUpdateBooking(tenantId);
   const upsertDetails = useUpsertBookingDetails(tenantId);
@@ -432,10 +431,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const groomingAddonMinutes = useMemo(() => {
     if (kind !== "grooming") return 0;
     return groomingAddons.reduce((sum, s) => {
-      const a = (groomingAddonsQ.data ?? []).find((x) => x.id === s.addon_id);
+      const a = (addonsCatalogQ.data ?? []).find((x) => x.id === s.addon_id);
       return sum + Number(a?.duration_minutes ?? 0) * (s.qty || 1);
     }, 0);
-  }, [kind, groomingAddons, groomingAddonsQ.data]);
+  }, [kind, groomingAddons, addonsCatalogQ.data]);
   const groomingHasTreatments = kind === "grooming" && groomingAddons.length > 0;
   useEffect(() => {
     if (kind !== "grooming") return;
@@ -973,10 +972,12 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               <div className="text-[11px] text-muted-foreground">
                 {selectedGroomingPackage
                   ? `${durationMins} min — ${selectedGroomingPackage.name}`
-                  : "Pick a package first"}
+                  : groomingHasTreatments
+                    ? `${durationMins} min — individual treatments`
+                    : "Pick a package or treatment first"}
               </div>
             </div>
-            {selectedGroomingPackage ? (
+            {selectedGroomingPackage || groomingHasTreatments ? (
               <GroomingSlotPicker
                 tenantId={tenantId}
                 value={startAt || null}
@@ -989,7 +990,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               />
             ) : (
               <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-                Choose a grooming package above and the available times will show here.
+                Choose a grooming package or an individual treatment above and the available times will show here.
               </div>
             )}
           </div>
