@@ -223,13 +223,34 @@ export default function GroomingRequestWizard({ mode }: Props) {
         </button>
       }
     >
-      <Field label="Pet">
-        <select value={petId} onChange={(e) => setPetId(e.target.value)} className={selectCls}>
-          <option value="">Select pet…</option>
-          {(pets.data ?? []).map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        {selectedPet && (selectedPet as any).size_override && (
-          <div className="mt-2"><SizeOverrideBadge pet={selectedPet as any} /></div>
+      <Field label={(pets.data ?? []).length > 1 ? "Which dogs are coming?" : "Pet"}>
+        <div className="space-y-2">
+          {(pets.data ?? []).map((p: any) => {
+            const checked = petIds.includes(p.id);
+            return (
+              <label key={p.id} className="flex items-center gap-3 rounded-lg border border-border bg-white px-3 py-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={checked}
+                  onChange={(e) =>
+                    setPetIds((prev) => (e.target.checked ? [...prev, p.id] : prev.filter((id) => id !== p.id)))
+                  }
+                />
+                <span className="flex-1 font-medium">{p.name}</span>
+                {p.size_override && <SizeOverrideBadge pet={p} />}
+              </label>
+            );
+          })}
+          {(pets.data ?? []).length === 0 && (
+            <p className="text-xs text-muted-foreground">No pets on your profile yet.</p>
+          )}
+        </div>
+        {multiPet && (
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Each dog gets their own appointment — they'll run side by side if two groomers are free,
+            otherwise one after the other. Everything lands on a single invoice.
+          </p>
         )}
       </Field>
 
@@ -238,23 +259,82 @@ export default function GroomingRequestWizard({ mode }: Props) {
           tenantId={cust.data?.tenant_id ?? null}
           value={slotStart}
           durationMinutes={durationMinutes}
+          petSlots={multiPet ? petSlotRequests : undefined}
           onChange={(s, e) => { setSlotStart(s); setSlotEnd(e); }}
         />
       </Field>
 
-      <Field label={petBand ? `Package for ${selectedPet?.name ?? "your pet"} (${petBand.toUpperCase()})` : "Package"}>
-        <select value={packageId} onChange={(e) => setPackageId(e.target.value)} className={selectCls}>
-          <option value="">Select a package…</option>
-          {filteredPackages.map((p: any) => (
-            <option key={p.id} value={p.id}>{p.name} — R{Number(p.price_zar ?? 0).toFixed(2)}</option>
-          ))}
-        </select>
-        {petBand && filteredPackages.length === 0 && (
-          <div className="mt-1 text-[11px] text-sk-orange">No packages match {selectedPet?.name}'s size. Staff will confirm the right option.</div>
-        )}
-      </Field>
+      {multiPet ? (
+        <Field label="Package for each dog">
+          <div className="space-y-3">
+            {selectedPets.map((p: any) => {
+              const opts = packagesForPet(p);
+              const band = petSizeToBand(effectivePetSize(p));
+              return (
+                <div key={p.id}>
+                  <div className="mb-1 text-xs font-medium">
+                    {p.name}{band ? ` (${band.toUpperCase()})` : ""}
+                  </div>
+                  <select
+                    value={petPackages[p.id] ?? ""}
+                    onChange={(e) => setPetPackages((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                    className={selectCls}
+                  >
+                    <option value="">Select a package…</option>
+                    {opts.map((op: any) => (
+                      <option key={op.id} value={op.id}>{op.name} — R{Number(op.price_zar ?? 0).toFixed(2)}</option>
+                    ))}
+                  </select>
+                  {opts.length === 0 && (
+                    <div className="mt-1 text-[11px] text-sk-orange">No packages match {p.name}'s size. Staff will confirm the right option.</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Field>
+      ) : (
+        <Field label={petBand ? `Package for ${selectedPet?.name ?? "your pet"} (${petBand.toUpperCase()})` : "Package"}>
+          <select value={packageId} onChange={(e) => setPackageId(e.target.value)} className={selectCls}>
+            <option value="">Select a package…</option>
+            {filteredPackages.map((p: any) => (
+              <option key={p.id} value={p.id}>{p.name} — R{Number(p.price_zar ?? 0).toFixed(2)}</option>
+            ))}
+          </select>
+          {petBand && filteredPackages.length === 0 && (
+            <div className="mt-1 text-[11px] text-sk-orange">No packages match {selectedPet?.name}'s size. Staff will confirm the right option.</div>
+          )}
+        </Field>
+      )}
 
-      {!packageId && standaloneAddons.length > 0 && (
+      {multiPet && slotStart && (
+        <Field label="Running order">
+          {plan ? (
+            <div className="space-y-1 rounded-lg border border-border bg-white p-3 text-sm">
+              {plan.map((s) => {
+                const p = selectedPets.find((x: any) => x.id === s.petId);
+                return (
+                  <div key={s.petId} className="flex items-center justify-between gap-3">
+                    <span className="font-medium">{p?.name ?? "Dog"}</span>
+                    <span className="text-muted-foreground">
+                      {s.start.toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                      –{s.end.toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                      {s.resourceName ? ` · ${s.resourceName}` : ""}
+                      {s.chained ? " · after the first dog" : ""}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-lg border border-sk-orange/40 bg-sk-orange/10 p-3 text-sm text-sk-orange">
+              We can't fit all {petIds.length} dogs from that time — please pick an earlier slot or another day.
+            </div>
+          )}
+        </Field>
+      )}
+
+      {!anyPackageChosen && standaloneAddons.length > 0 && (
         <Field label="Or book a quick treatment on its own">
           <div className="space-y-2">
             {standaloneAddons.map((a) => (
