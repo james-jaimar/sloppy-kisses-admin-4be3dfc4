@@ -327,6 +327,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       hasPermission: (code: string) => isPlatform || state.permissions.includes(code),
       hasFeature: (key: string) => {
         if (!isSellable(key)) return true;
+        if (isPlatform) return true;
         const explicit = state.features[key];
         return explicit === undefined ? featureDefault(key) : explicit;
       },
