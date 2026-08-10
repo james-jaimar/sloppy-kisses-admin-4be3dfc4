@@ -11,6 +11,9 @@ export interface ResourceRow {
   capacity: number | null;
   active: boolean;
   sort_order: number;
+  colour: string | null;
+  workday_start: string | null;
+  workday_end: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -48,6 +51,30 @@ export interface ResourceInput {
   capacity?: number | null;
   active?: boolean;
   sort_order?: number;
+  colour?: string | null;
+  workday_start?: string | null;
+  workday_end?: string | null;
+}
+
+/** Groomers only — used by the Groomers settings screen and booking auto-assign. */
+export function useGroomers(tenantId: string | null | undefined, opts?: { activeOnly?: boolean }) {
+  return useQuery({
+    queryKey: ["resources", "groomers", tenantId, opts?.activeOnly ?? false],
+    enabled: Boolean(tenantId),
+    queryFn: async (): Promise<ResourceRow[]> => {
+      let q = supabase
+        .from("resources")
+        .select("*")
+        .eq("tenant_id", tenantId as string)
+        .eq("type", "inhouse_grooming")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+      if (opts?.activeOnly) q = q.eq("active", true);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as ResourceRow[];
+    },
+  });
 }
 
 export function useCreateResource(tenantId: string) {
@@ -64,6 +91,9 @@ export function useCreateResource(tenantId: string) {
           capacity: input.capacity ?? null,
           active: input.active ?? true,
           sort_order: input.sort_order ?? 100,
+          colour: input.colour ?? null,
+          workday_start: input.workday_start ?? null,
+          workday_end: input.workday_end ?? null,
         })
         .select("id")
         .single();
