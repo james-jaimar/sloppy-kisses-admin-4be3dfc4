@@ -43,6 +43,22 @@ const BodySchema = z.object({
     .object({
       package_id: z.string().uuid().nullable().optional(),
       duration_minutes: z.number().int().min(15).max(600).nullable().optional(),
+      /**
+       * Multi-dog grooming: one entry per dog, each with its own package, length
+       * and start time (worked out in the wizard so dogs run in parallel where a
+       * groomer is free, otherwise back-to-back). All dogs land on one invoice.
+       */
+      pets: z
+        .array(
+          z.object({
+            pet_id: z.string().uuid(),
+            package_id: z.string().uuid().nullable().optional(),
+            duration_minutes: z.number().int().min(15).max(600).default(60),
+            start_at: z.string().min(1),
+          }),
+        )
+        .max(6)
+        .optional(),
       instructions: z
         .object({
           selections: z.record(z.any()).default({}),
