@@ -7,13 +7,15 @@ import { SERVICE_LABEL, fmtDateTime, statusTone } from "./portalCommon";
 import { PawPrint, CalendarPlus, ReceiptText, Upload, Loader2, Inbox, Scissors } from "lucide-react";
 import { fmtZar, effectiveInvoiceStatus, InvoiceStatusChip } from "@/features/invoices/status";
 import { useConsentStatus } from "@/features/consent/consentQueries";
-import { ClipboardCheck, ArrowRight } from "lucide-react";
+import { ClipboardCheck, ArrowRight, Syringe } from "lucide-react";
+import { useVaxOutstanding } from "@/features/pets/vaccinationGate";
 
 export default function CustomerDashboard() {
   const cust = useCurrentCustomer();
   const customerId = cust.data?.id ?? null;
   const tenantId = cust.data?.tenant_id ?? null;
   const consent = useConsentStatus();
+  const vaxTodo = useVaxOutstanding(tenantId, customerId);
 
   const upcoming = useQuery({
     queryKey: ["portal_dash_upcoming", customerId],
@@ -106,6 +108,34 @@ export default function CustomerDashboard() {
     <>
       <AppHeader title={`Welcome back, ${first} 👋`} subtitle={cust.data.email ?? ""} />
       <div className="flex-1 space-y-6 p-6">
+        {(vaxTodo.data ?? []).some((r) => r.outstanding > 0) && (
+          <div className="sk-card border-l-4 border-l-sk-coral bg-sk-coral-soft/30 p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sk-coral text-white">
+                <Syringe className="h-5 w-5" />
+              </span>
+              <div className="flex-1">
+                <div className="text-sm font-semibold">Vaccination certificates needed</div>
+                <div className="text-xs text-muted-foreground">
+                  Upload the certificate and add the date given and expiry date. We can't take bookings until these are on file.
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(vaxTodo.data ?? [])
+                    .filter((r) => r.outstanding > 0)
+                    .map((r) => (
+                      <Link
+                        key={r.pet_id}
+                        to={`/customer/pets/${r.pet_id}`}
+                        className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-semibold text-sk-coral-dark hover:bg-sk-coral-soft"
+                      >
+                        {r.pet_name} — {r.outstanding} outstanding <ArrowRight className="h-3 w-3" />
+                      </Link>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {consent.data?.needsWizard && (
           <Link
             to="/customer/registration"
