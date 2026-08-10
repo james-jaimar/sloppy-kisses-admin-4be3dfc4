@@ -774,6 +774,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 })}
               </div>
             )}
+            {petIds.length > 0 && (
+              <div className="mt-2">
+                <HealthGateList
+                  pets={petIds.map((id) => ({
+                    id,
+                    name: petsQ.data?.find((p) => p.id === id)?.name ?? null,
+                  }))}
+                  onDate={startDate || undefined}
+                />
+              </div>
+            )}
           </div>
         )}
 
