@@ -278,9 +278,58 @@ export default function HotelWorkflowPage() {
             </Field>
           </div>
 
+          <div className="sk-card space-y-4 p-4">
+            <div className="text-sm font-semibold">Stay rules</div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Extra food fee (ZAR)" hint="Charged per stay when the hotel supplies food from the Deli.">
+                <input
+                  type="number" min={0} step="0.01" disabled={!canManage}
+                  value={form.extra_food_fee_zar}
+                  onChange={(e) => setForm((f) => ({ ...f, extra_food_fee_zar: Number(e.target.value) }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                />
+              </Field>
+              <Field label="Photo policy note" hint="Shown with the photo consent option on the accommodation form.">
+                <input
+                  type="text" disabled={!canManage}
+                  value={form.photo_policy_note}
+                  onChange={(e) => setForm((f) => ({ ...f, photo_policy_note: e.target.value }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                />
+              </Field>
+            </div>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox" disabled={!canManage}
+                checked={form.no_refund_early_checkout}
+                onChange={(e) => setForm((f) => ({ ...f, no_refund_early_checkout: e.target.checked }))}
+                className="mt-1 h-4 w-4 rounded border-border"
+              />
+              <span className="text-sm">
+                No refund for early check-out
+                <span className="block text-[11px] text-muted-foreground">
+                  Ending a stay early keeps the full booked amount on the invoice.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox" disabled={!canManage}
+                checked={form.require_labelling_checklist}
+                onChange={(e) => setForm((f) => ({ ...f, require_labelling_checklist: e.target.checked }))}
+                className="mt-1 h-4 w-4 rounded border-border"
+              />
+              <span className="text-sm">
+                Require the food &amp; medication labelling checklist at check-in
+                <span className="block text-[11px] text-muted-foreground">
+                  Staff must tick that all containers are named and dated before the stay starts.
+                </span>
+              </span>
+            </label>
+          </div>
+
           <div className="sk-card space-y-3 p-4">
             <div className="text-sm font-semibold">Hotel guidelines</div>
-          </div>
             <p className="text-xs text-muted-foreground">
               Shown to customers on the accommodation form before they confirm a stay. Markdown-lite: use # for headings and - for bullets.
               Saving a change bumps the version customers acknowledge.
