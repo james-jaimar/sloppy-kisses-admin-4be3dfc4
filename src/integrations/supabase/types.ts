@@ -2033,6 +2033,8 @@ export type Database = {
       daycare_enrolments: {
         Row: {
           active: boolean
+          assessment_booking_id: string | null
+          assessment_waived: boolean
           created_at: string
           customer_id: string
           daycare_plan_id: string | null
@@ -2052,6 +2054,8 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          assessment_booking_id?: string | null
+          assessment_waived?: boolean
           created_at?: string
           customer_id: string
           daycare_plan_id?: string | null
@@ -2071,6 +2075,8 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          assessment_booking_id?: string | null
+          assessment_waived?: boolean
           created_at?: string
           customer_id?: string
           daycare_plan_id?: string | null
@@ -2089,6 +2095,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "daycare_enrolments_assessment_booking_id_fkey"
+            columns: ["assessment_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "daycare_enrolments_customer_id_fkey"
             columns: ["customer_id"]
@@ -2275,6 +2288,7 @@ export type Database = {
           id: string
           late_arrival_cutoff: string
           photo_gate_mode: string
+          require_assessment: boolean
           stay_play_default_collect_time: string
           stay_play_grace_minutes: number
           tenant_id: string
@@ -2290,6 +2304,7 @@ export type Database = {
           id?: string
           late_arrival_cutoff?: string
           photo_gate_mode?: string
+          require_assessment?: boolean
           stay_play_default_collect_time?: string
           stay_play_grace_minutes?: number
           tenant_id: string
@@ -2305,6 +2320,7 @@ export type Database = {
           id?: string
           late_arrival_cutoff?: string
           photo_gate_mode?: string
+          require_assessment?: boolean
           stay_play_default_collect_time?: string
           stay_play_grace_minutes?: number
           tenant_id?: string
@@ -2545,6 +2561,7 @@ export type Database = {
           active: boolean
           created_at: string
           id: string
+          is_power_breed: boolean
           name: string
           size_band: string
           sort_order: number
@@ -2554,6 +2571,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           id?: string
+          is_power_breed?: boolean
           name: string
           size_band: string
           sort_order?: number
@@ -2563,6 +2581,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           id?: string
+          is_power_breed?: boolean
           name?: string
           size_band?: string
           sort_order?: number
@@ -5203,6 +5222,62 @@ export type Database = {
           },
         ]
       }
+      parasite_treatment_rules: {
+        Row: {
+          active: boolean
+          chargeable_on_arrival: boolean
+          created_at: string
+          gate_mode: string
+          grace_days: number
+          id: string
+          interval_days: number
+          kind: string
+          label: string
+          sort_order: number
+          species: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          chargeable_on_arrival?: boolean
+          created_at?: string
+          gate_mode?: string
+          grace_days?: number
+          id?: string
+          interval_days?: number
+          kind: string
+          label: string
+          sort_order?: number
+          species?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          chargeable_on_arrival?: boolean
+          created_at?: string
+          gate_mode?: string
+          grace_days?: number
+          id?: string
+          interval_days?: number
+          kind?: string
+          label?: string
+          sort_order?: number
+          species?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parasite_treatment_rules_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_allocations: {
         Row: {
           amount: number
@@ -5780,6 +5855,96 @@ export type Database = {
           },
           {
             foreignKeyName: "pet_grooming_defaults_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pet_health_holds: {
+        Row: {
+          blocks_attendance: boolean
+          clearance_document_id: string | null
+          clearance_notes: string | null
+          cleared_at: string | null
+          cleared_by: string | null
+          created_at: string
+          created_by: string | null
+          expected_clear_on: string | null
+          id: string
+          notes: string | null
+          pet_id: string
+          reason: string
+          started_on: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          blocks_attendance?: boolean
+          clearance_document_id?: string | null
+          clearance_notes?: string | null
+          cleared_at?: string | null
+          cleared_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_clear_on?: string | null
+          id?: string
+          notes?: string | null
+          pet_id: string
+          reason: string
+          started_on?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          blocks_attendance?: boolean
+          clearance_document_id?: string | null
+          clearance_notes?: string | null
+          cleared_at?: string | null
+          cleared_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          expected_clear_on?: string | null
+          id?: string
+          notes?: string | null
+          pet_id?: string
+          reason?: string
+          started_on?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pet_health_holds_clearance_document_id_fkey"
+            columns: ["clearance_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_health_holds_cleared_by_fkey"
+            columns: ["cleared_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_health_holds_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_health_holds_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_health_holds_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -8118,6 +8283,16 @@ export type Database = {
           status: string
         }[]
       }
+      charge_arrival_parasite_treatment: {
+        Args: {
+          p_booking_id: string
+          p_kind?: string
+          p_note?: string
+          p_pet_id: string
+          p_product?: string
+        }
+        Returns: Json
+      }
       charge_overdue_interest: {
         Args: { p_as_of?: string; p_preview?: boolean; p_tenant_id: string }
         Returns: Json
@@ -8377,6 +8552,10 @@ export type Database = {
           invoice_status: string
           paid: boolean
         }[]
+      }
+      pet_health_gate: {
+        Args: { p_on?: string; p_pet_id: string }
+        Returns: Json
       }
       pet_photo_status: {
         Args: { p_pet_ids: string[] }
