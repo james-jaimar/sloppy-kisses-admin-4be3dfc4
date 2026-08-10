@@ -544,6 +544,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             notes_internal: notesInternalValue,
             notes_customer: notesCustomer.trim() || null,
             service_address_id: serviceAddressId,
+            closure_override: closureOverride,
           },
           pet_ids: petIds,
         });
@@ -569,6 +570,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             notes_customer: notesCustomer.trim() || null,
             rule,
             service_address_id: serviceAddressId,
+            closure_override: closureOverride,
           });
           // Persist service-typed details for every occurrence.
           for (const b of res.bookings) {
@@ -594,6 +596,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           notes_internal: notesInternalValue,
           notes_customer: notesCustomer.trim() || null,
           service_address_id: serviceAddressId,
+          closure_override: closureOverride,
         });
         await saveDetails(res.id);
         if (kind === "hotel") await persistSurcharges(res.id);
