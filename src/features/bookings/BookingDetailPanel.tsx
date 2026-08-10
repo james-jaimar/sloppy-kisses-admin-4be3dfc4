@@ -338,6 +338,13 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
           onCancelled={onClose}
         />
       )}
+      {lateOpen && (
+        <LateCollectionDialog
+          bookingId={booking.id}
+          bookingNumber={booking.booking_number}
+          onClose={() => setLateOpen(false)}
+        />
+      )}
     </>
   );
 }
