@@ -154,13 +154,15 @@ export default function GroomingRequestWizard({ mode }: Props) {
   const anyPackageChosen = multiPet ? petIds.some((id) => Boolean(petPackages[id])) : Boolean(packageId);
   const packageRequired = (packages.data ?? []).length > 0 && selectedTreatments.length === 0;
   const allPetsHavePackages = !packageRequired || petIds.every((id) => Boolean(packageForPet(id)));
+  const vaxService = mode === "inhouse" ? "grooming_inhouse" : "grooming_mobile";
+  const vax = usePetsVaxBlocked(petIds, vaxService, slotDayKey);
   const canSubmit =
     Boolean(
       cust.data && petIds.length > 0 && slotStart &&
       allPetsHavePackages &&
       (!multiPet || plan) &&
       (mode === "inhouse" || serviceAddressId),
-    ) && !submit.isPending;
+    ) && !vax.blocked && !submit.isPending;
 
   function onSubmit() {
     if (!cust.data || !slotStart) return;
@@ -223,6 +225,9 @@ export default function GroomingRequestWizard({ mode }: Props) {
         </button>
       }
     >
+      {petIds.length > 0 && (
+        <PetsVaccinationGate petIds={petIds} serviceType={vaxService} onDate={slotDayKey} mode="portal" />
+      )}
       <Field label={(pets.data ?? []).length > 1 ? "Which dogs are coming?" : "Pet"}>
         <div className="space-y-2">
           {(pets.data ?? []).map((p: any) => {
