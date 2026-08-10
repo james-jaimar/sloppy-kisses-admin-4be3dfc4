@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls } from "./WizardShell";
+import { PetsVaccinationGate, usePetsVaxBlocked } from "@/features/bookings/VaccinationGatePanel";
 import { usePortalPets, useResources } from "./wizardHooks";
 import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
 import {
@@ -175,8 +176,10 @@ export default function HotelRequestWizard() {
     .map((p: any) => p.name as string);
   const photoBlocked = photoMode === "hard" && petsMissingPhoto.length > 0;
 
+  const vax = usePetsVaxBlocked(petIds, serviceType, checkInDate || null);
+
   const canSubmit =
-    stayReady && !photoBlocked && form.acknowledgement.accepted &&
+    stayReady && !photoBlocked && !vax.blocked && form.acknowledgement.accepted &&
     form.acknowledgement.signed_name.trim().length > 1 && !submit.isPending;
 
   function togglePet(id: string) {
@@ -278,6 +281,9 @@ export default function HotelRequestWizard() {
         </>
       }
     >
+      {petIds.length > 0 && (
+        <PetsVaccinationGate petIds={petIds} serviceType={serviceType} onDate={checkInDate || null} mode="portal" />
+      )}
       <ol className="flex flex-wrap gap-2 text-xs">
         {STEPS.map((s, i) => (
           <li

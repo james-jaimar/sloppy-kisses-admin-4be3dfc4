@@ -13,6 +13,7 @@ import { layoutGroomingAppointments, type PetSlotRequest } from "@/features/groo
 import { effectivePetSize, petSizeToBand } from "@/features/pets/sizeUtils";
 import { SizeOverrideBadge } from "@/features/pets/SizeOverrideControl";
 import { AddressSelector } from "@/features/customers/AddressSelector";
+import { PetsVaccinationGate, usePetsVaxBlocked } from "@/features/bookings/VaccinationGatePanel";
 
 interface Props { mode: "inhouse" | "mobile" }
 
