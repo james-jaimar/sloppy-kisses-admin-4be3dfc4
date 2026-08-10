@@ -696,6 +696,7 @@ export type Database = {
           cancellation_fee_waived: boolean
           cancellation_fee_zar: number | null
           cancellation_reason: string | null
+          closure_override: boolean
           created_at: string
           created_by: string | null
           customer_id: string
@@ -739,6 +740,7 @@ export type Database = {
           cancellation_fee_waived?: boolean
           cancellation_fee_zar?: number | null
           cancellation_reason?: string | null
+          closure_override?: boolean
           created_at?: string
           created_by?: string | null
           customer_id: string
@@ -782,6 +784,7 @@ export type Database = {
           cancellation_fee_waived?: boolean
           cancellation_fee_zar?: number | null
           cancellation_reason?: string | null
+          closure_override?: boolean
           created_at?: string
           created_by?: string | null
           customer_id?: string
@@ -1858,6 +1861,103 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daycare_catchup_credits: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          enrolment_id: string | null
+          expires_on: string
+          id: string
+          missed_date: string
+          notes: string | null
+          pet_id: string | null
+          reason: string
+          status: string
+          tenant_id: string
+          updated_at: string
+          used_booking_id: string | null
+          used_on: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          enrolment_id?: string | null
+          expires_on: string
+          id?: string
+          missed_date: string
+          notes?: string | null
+          pet_id?: string | null
+          reason?: string
+          status?: string
+          tenant_id: string
+          updated_at?: string
+          used_booking_id?: string | null
+          used_on?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          enrolment_id?: string | null
+          expires_on?: string
+          id?: string
+          missed_date?: string
+          notes?: string | null
+          pet_id?: string | null
+          reason?: string
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+          used_booking_id?: string | null
+          used_on?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daycare_catchup_credits_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_catchup_credits_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_catchup_credits_enrolment_id_fkey"
+            columns: ["enrolment_id"]
+            isOneToOne: false
+            referencedRelation: "daycare_enrolments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_catchup_credits_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_catchup_credits_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_catchup_credits_used_booking_id_fkey"
+            columns: ["used_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
         ]
@@ -6068,10 +6168,13 @@ export type Database = {
       }
       policy_settings: {
         Row: {
+          abandonment_hours: number
+          annual_increase_percent: number
           consent_grace_days: number
           created_at: string
           daycare_catchup_window_days: number
           daycare_notice_months: number
+          failed_collection_fee_zar: number
           grooming_cancellation_hours: number
           hotel_amendment_fee: number
           hotel_balance_due_days_before: number
@@ -6079,15 +6182,26 @@ export type Database = {
           hotel_deposit_percent: number
           hotel_free_amendments: number
           hotel_prearrival_reminder_days: number[]
+          late_pickup_cutoff_time: string
+          late_pickup_fee_per_15min: number
+          late_pickup_fee_zar: number
+          late_pickup_grace_minutes: number
           overdue_interest_percent_per_month: number
+          overnight_conversion_after_time: string
+          overnight_conversion_rate_zar: number
+          parasite_treatment_fee_zar: number
           tenant_id: string
+          transport_radius_km: number
           updated_at: string
         }
         Insert: {
+          abandonment_hours?: number
+          annual_increase_percent?: number
           consent_grace_days?: number
           created_at?: string
           daycare_catchup_window_days?: number
           daycare_notice_months?: number
+          failed_collection_fee_zar?: number
           grooming_cancellation_hours?: number
           hotel_amendment_fee?: number
           hotel_balance_due_days_before?: number
@@ -6095,15 +6209,26 @@ export type Database = {
           hotel_deposit_percent?: number
           hotel_free_amendments?: number
           hotel_prearrival_reminder_days?: number[]
+          late_pickup_cutoff_time?: string
+          late_pickup_fee_per_15min?: number
+          late_pickup_fee_zar?: number
+          late_pickup_grace_minutes?: number
           overdue_interest_percent_per_month?: number
+          overnight_conversion_after_time?: string
+          overnight_conversion_rate_zar?: number
+          parasite_treatment_fee_zar?: number
           tenant_id: string
+          transport_radius_km?: number
           updated_at?: string
         }
         Update: {
+          abandonment_hours?: number
+          annual_increase_percent?: number
           consent_grace_days?: number
           created_at?: string
           daycare_catchup_window_days?: number
           daycare_notice_months?: number
+          failed_collection_fee_zar?: number
           grooming_cancellation_hours?: number
           hotel_amendment_fee?: number
           hotel_balance_due_days_before?: number
@@ -6111,8 +6236,16 @@ export type Database = {
           hotel_deposit_percent?: number
           hotel_free_amendments?: number
           hotel_prearrival_reminder_days?: number[]
+          late_pickup_cutoff_time?: string
+          late_pickup_fee_per_15min?: number
+          late_pickup_fee_zar?: number
+          late_pickup_grace_minutes?: number
           overdue_interest_percent_per_month?: number
+          overnight_conversion_after_time?: string
+          overnight_conversion_rate_zar?: number
+          parasite_treatment_fee_zar?: number
           tenant_id?: string
+          transport_radius_km?: number
           updated_at?: string
         }
         Relationships: [
@@ -7953,6 +8086,26 @@ export type Database = {
         }
         Returns: string
       }
+      apply_late_collection: {
+        Args: {
+          p_booking_id: string
+          p_collected_at?: string
+          p_convert_overnight?: boolean
+          p_note?: string
+          p_waive?: boolean
+        }
+        Returns: Json
+      }
+      apply_price_increase: {
+        Args: {
+          p_dry_run?: boolean
+          p_percent: number
+          p_round_to?: number
+          p_targets?: string[]
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       booking_cancellation_quote: {
         Args: { p_at?: string; p_booking_id: string }
         Returns: Json
@@ -7991,11 +8144,45 @@ export type Database = {
           expected: number
         }[]
       }
+      daycare_expire_catchup_credits: {
+        Args: { p_tenant_id?: string }
+        Returns: number
+      }
+      daycare_grant_closure_credits: {
+        Args: { p_end: string; p_start: string; p_tenant_id: string }
+        Returns: number
+      }
       daycare_notice_quote: {
         Args: { p_enrolment_id: string; p_notice_date?: string }
         Returns: Json
       }
       daycare_prorata_quote: { Args: { p_enrolment_id: string }; Returns: Json }
+      daycare_redeem_catchup_credit: {
+        Args: { p_booking_id?: string; p_credit_id: string; p_used_on: string }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          enrolment_id: string | null
+          expires_on: string
+          id: string
+          missed_date: string
+          notes: string | null
+          pet_id: string | null
+          reason: string
+          status: string
+          tenant_id: string
+          updated_at: string
+          used_booking_id: string | null
+          used_on: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "daycare_catchup_credits"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       decline_hotel_groom: {
         Args: { p_reason: string; p_request_id: string }
         Returns: undefined
@@ -8242,6 +8429,7 @@ export type Database = {
         }
         Returns: string
       }
+      service_group: { Args: { p_service: string }; Returns: string }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       stay_play_ensure_sessions: {
