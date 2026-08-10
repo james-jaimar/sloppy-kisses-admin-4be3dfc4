@@ -55,6 +55,7 @@ async function findContact(ctx: { tenantId: string }, c: any): Promise<string | 
 }
 
 async function getSettings(tenantId: string): Promise<Settings> {
+  await assertFeature(admin, tenantId, "integrations.xero", "The Xero integration");
   const { data, error } = await admin.from("xero_settings").select("*").eq("tenant_id", tenantId).maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Xero is not configured for this tenant yet.");
