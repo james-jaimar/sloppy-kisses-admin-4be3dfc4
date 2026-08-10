@@ -228,6 +228,76 @@ export default function GroomingWorkflowPage() {
             </Field>
           </div>
 
+          {form.sedation_enabled && (
+            <div className="space-y-4 rounded-lg border border-border p-4">
+              <div className="text-sm font-semibold">Sedation preparation</div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Fasting hours before appointment" hint="Shown to the owner when a sedated groom is booked.">
+                  <input type="number" min={0} max={24} disabled={!canManage}
+                    value={form.sedation_fasting_hours}
+                    onChange={(e) => setForm((f) => ({ ...f, sedation_fasting_hours: Number(e.target.value) }))}
+                    className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                </Field>
+                <Field label="Vet / sedation location" hint="Where the sedation is administered, e.g. the partner vet practice.">
+                  <input type="text" disabled={!canManage}
+                    value={form.sedation_vet_location}
+                    onChange={(e) => setForm((f) => ({ ...f, sedation_vet_location: e.target.value }))}
+                    className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                </Field>
+              </div>
+              <Field label="Owner instructions" hint="Included on the booking confirmation for sedated grooms.">
+                <textarea disabled={!canManage} rows={4}
+                  value={form.sedation_instructions_md}
+                  onChange={(e) => setForm((f) => ({ ...f, sedation_instructions_md: e.target.value }))}
+                  className="w-full rounded-lg border border-border bg-white p-3 text-sm" />
+              </Field>
+            </div>
+          )}
+
+          <div className="space-y-4 rounded-lg border border-border p-4">
+            <div className="text-sm font-semibold">Senior pets &amp; rebooking</div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Senior pet age (years)" hint="Pets at or above this age are flagged as senior at booking.">
+                <input type="number" min={0} max={25} disabled={!canManage}
+                  value={form.senior_pet_age_years}
+                  onChange={(e) => setForm((f) => ({ ...f, senior_pet_age_years: Number(e.target.value) }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+              </Field>
+              <Field label="Senior vet-check requirement">
+                <select disabled={!canManage}
+                  value={form.senior_vet_check_mode}
+                  onChange={(e) => setForm((f) => ({ ...f, senior_vet_check_mode: e.target.value as "off" | "warn" | "block" }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm">
+                  <option value="off">Off — no senior check</option>
+                  <option value="warn">Warn — flag that a vet clearance is advised</option>
+                  <option value="block">Block — require a logged vet clearance first</option>
+                </select>
+              </Field>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" disabled={!canManage}
+                checked={form.rebook_nudge_enabled}
+                onChange={(e) => setForm((f) => ({ ...f, rebook_nudge_enabled: e.target.checked }))} />
+              Nudge owners to rebook after each groom
+            </label>
+            {form.rebook_nudge_enabled && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Rebook window from (weeks)">
+                  <input type="number" min={1} max={52} disabled={!canManage}
+                    value={form.rebook_weeks_min}
+                    onChange={(e) => setForm((f) => ({ ...f, rebook_weeks_min: Number(e.target.value) }))}
+                    className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                </Field>
+                <Field label="Rebook window to (weeks)">
+                  <input type="number" min={1} max={52} disabled={!canManage}
+                    value={form.rebook_weeks_max}
+                    onChange={(e) => setForm((f) => ({ ...f, rebook_weeks_max: Number(e.target.value) }))}
+                    className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                </Field>
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end">
             <button
               disabled={!canManage || update.isPending}
