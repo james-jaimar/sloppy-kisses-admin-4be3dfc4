@@ -247,9 +247,19 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const isMobileVan = serviceType === "grooming_mobile";
   const { hasPermission, profile } = useCurrentUser();
   const canOverrideAddress = profile?.user_type === "platform" || hasPermission("settings.manage");
-  const vanAddressesQ = useCustomerAddresses(isMobileVan ? customerId || null : null, tenantId);
+  const isTransport = serviceType === "pickup_dropoff";
+  const needsVanAddress = isMobileVan || isTransport;
+  const vanAddressesQ = useCustomerAddresses(needsVanAddress ? customerId || null : null, tenantId);
   const selectedVanAddress = (vanAddressesQ.data ?? []).find((a) => a.id === serviceAddressId) ?? null;
   const vanAddressVerified = Boolean(selectedVanAddress?.google_place_id);
+  const radiusQ = useRadiusCheck(
+    needsVanAddress ? tenantId : null,
+    (selectedVanAddress as any)?.latitude ?? null,
+    (selectedVanAddress as any)?.longitude ?? null,
+  );
+  const radiusBlocked = Boolean(
+    radiusQ.data?.has_base && radiusQ.data.outside && radiusQ.data.gate_mode === "block",
+  );
   const [addressOverride, setAddressOverride] = useState(false);
   const [closureOverride, setClosureOverride] = useState<boolean>(
     (booking as any)?.closure_override ?? false,
