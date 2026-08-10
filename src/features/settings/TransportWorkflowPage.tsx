@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { Save, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
+import AddressAutocomplete from "@/components/address/AddressAutocomplete";
 import {
   useTransportWorkflowSettings, useUpdateTransportWorkflowSettings,
 } from "@/features/transport/queries";
@@ -48,6 +49,14 @@ export default function TransportWorkflowPage() {
     default_fee_zar: 0,
     round_trip_multiplier: 1.8,
     photo_gate_mode: "off" as "off" | "soft" | "hard",
+    base_address: "",
+    base_place_id: "" as string | null,
+    base_latitude: null as number | null,
+    base_longitude: null as number | null,
+    enforce_radius: true,
+    radius_gate_mode: "warn" as "warn" | "block",
+    require_gate_code: true,
+    gate_code_required_by_time: "07:00",
   });
   const [suburbFees, setSuburbFees] = useState<SuburbFee[]>([]);
 
@@ -63,6 +72,14 @@ export default function TransportWorkflowPage() {
         default_fee_zar: Number(settingsQ.data.default_fee_zar ?? 0),
         round_trip_multiplier: Number(settingsQ.data.round_trip_multiplier ?? 1.8),
         photo_gate_mode: ((settingsQ.data as any).photo_gate_mode ?? "off") as "off" | "soft" | "hard",
+        base_address: (settingsQ.data as any).base_address ?? "",
+        base_place_id: (settingsQ.data as any).base_place_id ?? null,
+        base_latitude: (settingsQ.data as any).base_latitude ?? null,
+        base_longitude: (settingsQ.data as any).base_longitude ?? null,
+        enforce_radius: (settingsQ.data as any).enforce_radius ?? true,
+        radius_gate_mode: ((settingsQ.data as any).radius_gate_mode ?? "warn") as "warn" | "block",
+        require_gate_code: (settingsQ.data as any).require_gate_code ?? true,
+        gate_code_required_by_time: trimTime((settingsQ.data as any).gate_code_required_by_time) || "07:00",
       });
       setSuburbFees(fromMap(settingsQ.data.suburb_fees));
     }
