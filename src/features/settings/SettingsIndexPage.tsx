@@ -333,7 +333,7 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
   {
     id: "pricing",
     label: "Pricing & billing",
-    members: ["Hotel & Cattery rates", "Invoicing", "Payment methods", "Payment providers", "Gateway activity"],
+    members: ["Hotel & Cattery rates", "Annual price increase", "Invoicing", "Payment methods", "Payment providers", "Gateway activity"],
   },
   {
     id: "comms",
@@ -343,7 +343,7 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
   {
     id: "compliance",
     label: "Compliance",
-    members: ["Vaccination rules", "Documents & retention", "Policies", "Closures & holidays", "Terms & Registration", "Registration status"],
+    members: ["Vaccination rules", "Documents & retention", "Policies", "Closures & holidays", "Catch-up credits", "Terms & Registration", "Registration status"],
   },
   {
     id: "retail",
