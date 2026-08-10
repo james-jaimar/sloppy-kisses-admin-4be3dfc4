@@ -4,6 +4,15 @@ import { Sliders, Users, KeyRound, Building2, ChevronRight, Scissors, PlusCircle
 import { Archive, Link2, ListChecks } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useFeature } from "@/lib/features/useFeature";
+import { FEATURE } from "@/lib/features/catalog";
+
+/** Settings entries that only exist when the tenant has the module. */
+const FEATURE_GATED_SECTIONS: Record<string, string> = {
+  Xero: FEATURE.xero,
+  "Xero sync log": FEATURE.xero,
+  "Xero customers": FEATURE.xero,
+};
 
 const SECTIONS = [
   {
@@ -342,6 +351,8 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
 export default function SettingsIndexPage() {
   const [q, setQ] = useState("");
   const query = q.trim().toLowerCase();
+  const xeroOn = useFeature(FEATURE.xero);
+  const featureOn: Record<string, boolean> = { [FEATURE.xero]: xeroOn };
 
   const groups = useMemo(() => {
     const byLabel = new Map(SECTIONS.map((s) => [s.label, s] as const));
@@ -350,15 +361,19 @@ export default function SettingsIndexPage() {
       items: g.members
         .map((m) => byLabel.get(m))
         .filter(Boolean)
+        .filter((s) => {
+          const key = FEATURE_GATED_SECTIONS[s!.label];
+          return !key || featureOn[key];
+        })
         .filter((s) =>
           !query ||
           s!.label.toLowerCase().includes(query) ||
           s!.description.toLowerCase().includes(query),
         ) as typeof SECTIONS,
     }));
-  }, [query]);
+  }, [query, xeroOn]);
 
-  const visibleGroups = query ? groups.filter((g) => g.items.length > 0) : groups;
+  const visibleGroups = groups.filter((g) => g.items.length > 0);
 
   function renderGrid(items: typeof SECTIONS) {
     return (
