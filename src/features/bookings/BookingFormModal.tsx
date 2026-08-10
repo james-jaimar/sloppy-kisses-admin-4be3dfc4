@@ -495,6 +495,28 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   // parallel when more than one groomer is free, otherwise back-to-back.
   const [petPackages, setPetPackages] = useState<Record<string, string>>({});
   const isMultiPetGrooming = kind === "grooming" && !isEdit && petIds.length > 1;
+  // Customers can nominate a groomer they always want.
+  const preferredGroomerQ = useQuery({
+    queryKey: ["customer_preferred_groomer", customerId],
+    enabled: Boolean(customerId && kind === "grooming"),
+    queryFn: async (): Promise<string | null> => {
+      const { data, error } = await supabase
+        .from("customers")
+        .select("preferred_groomer_resource_id")
+        .eq("id", customerId as string)
+        .maybeSingle();
+      if (error) throw error;
+      return ((data as any)?.preferred_groomer_resource_id ?? null) as string | null;
+    },
+  });
+  const preferredGroomerId = preferredGroomerQ.data ?? null;
+  // Default new in-house grooming bookings to the customer's preferred groomer.
+  useEffect(() => {
+    if (isEdit || serviceType !== "grooming_inhouse") return;
+    if (!preferredGroomerId || resourceId) return;
+    setResourceId(preferredGroomerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferredGroomerId, serviceType, isEdit]);
   const groomingDayKey = startAt ? startAt.slice(0, 10) : null;
   const groomingAvailQ = useGroomingDayAvailability(
     kind === "grooming" ? tenantId : null,
