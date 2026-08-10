@@ -38,13 +38,6 @@ const SECTIONS = [
   },
   {
     to: "/admin/settings/grooming-addons",
-    label: "Grooming rate card",
-    description: "Package prices by species and size. Admin-editable.",
-    icon: Scissors,
-    ready: true,
-  },
-  {
-    to: "/admin/settings/grooming-addons",
     label: "Grooming add-ons",
     description: "Teeth, nails, ear clean, shampoo upgrades, travel fee.",
     icon: PlusCircle,
