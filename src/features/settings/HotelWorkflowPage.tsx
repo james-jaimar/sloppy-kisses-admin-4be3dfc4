@@ -280,6 +280,7 @@ export default function HotelWorkflowPage() {
 
           <div className="sk-card space-y-3 p-4">
             <div className="text-sm font-semibold">Hotel guidelines</div>
+          </div>
             <p className="text-xs text-muted-foreground">
               Shown to customers on the accommodation form before they confirm a stay. Markdown-lite: use # for headings and - for bullets.
               Saving a change bumps the version customers acknowledge.
