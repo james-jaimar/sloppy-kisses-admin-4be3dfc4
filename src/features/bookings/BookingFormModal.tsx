@@ -5,6 +5,8 @@ import { ModalShell } from "@/components/modals/ModalShell";
 import { useCustomerPets } from "@/features/customers/queries";
 import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import { AddressSelector } from "@/features/customers/AddressSelector";
+import { useCustomerAddresses } from "@/features/customers/addressQueries";
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import {
   useCreateBooking,
   useUpdateBooking,
@@ -240,6 +242,14 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [serviceAddressId, setServiceAddressId] = useState<string | null>(
     booking?.service_address_id ?? null,
   );
+  // Mobile van bookings need an address the vans can actually navigate to.
+  const isMobileVan = serviceType === "grooming_mobile";
+  const { hasPermission, profile } = useCurrentUser();
+  const canOverrideAddress = profile?.user_type === "platform" || hasPermission("settings.manage");
+  const vanAddressesQ = useCustomerAddresses(isMobileVan ? customerId || null : null, tenantId);
+  const selectedVanAddress = (vanAddressesQ.data ?? []).find((a) => a.id === serviceAddressId) ?? null;
+  const vanAddressVerified = Boolean(selectedVanAddress?.google_place_id);
+  const [addressOverride, setAddressOverride] = useState(false);
   const setBookingSurcharges = useSetBookingHotelSurcharges(tenantId);
   const [groomingAddons, setGroomingAddons] = useState<GroomingAddonSelection[]>([]);
   const setBookingGroomingAddons = useSetBookingGroomingAddons(tenantId);
