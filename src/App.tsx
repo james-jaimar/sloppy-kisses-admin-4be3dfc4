@@ -100,6 +100,7 @@ import DocumentRetentionPage from "@/features/settings/DocumentRetentionPage";
 import PolicySettingsPage from "@/features/settings/PolicySettingsPage";
 import ClosuresPage from "@/features/settings/ClosuresPage";
 import CatchupCreditsPage from "@/features/settings/CatchupCreditsPage";
+import ParasiteTreatmentsPage from "@/features/settings/ParasiteTreatmentsPage";
 import PriceIncreasePage from "@/features/settings/PriceIncreasePage";
 import XeroSettingsPage from "@/features/xero/XeroSettingsPage";
 import XeroSyncLogPage from "@/features/xero/XeroSyncLogPage";
@@ -250,6 +251,7 @@ const App = () => (
                 <Route path="/admin/settings/policies" element={<PolicySettingsPage />} />
                 <Route path="/admin/settings/closures" element={<ClosuresPage />} />
                 <Route path="/admin/settings/catchup-credits" element={<CatchupCreditsPage />} />
+                <Route path="/admin/settings/parasite-treatments" element={<ParasiteTreatmentsPage />} />
                 <Route path="/admin/settings/price-increase" element={<PriceIncreasePage />} />
                 <Route element={<RequireFeature code={FEATURE.xero} />}>
                   <Route path="/admin/settings/xero" element={<XeroSettingsPage />} />
