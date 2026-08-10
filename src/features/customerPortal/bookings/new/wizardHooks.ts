@@ -51,7 +51,7 @@ export function useGroomingPackages(tenantId: string | null | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("grooming_packages")
-        .select("id, name, species, size_band, price_zar, package_type")
+        .select("id, name, species, size_band, price_zar, package_type, expected_minutes")
         .eq("tenant_id", tenantId!)
         .eq("active", true)
         .order("sort_order");
