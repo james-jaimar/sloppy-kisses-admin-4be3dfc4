@@ -37,7 +37,7 @@ import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
 import { effectivePetSize } from "@/features/pets/sizeUtils";
 import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries";
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
-import { useGroomingPackages } from "@/features/settings/groomingRateCardQueries";
+import { useGroomingPackages, useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { BookingGroomingInstructionsPanel } from "@/features/grooming/instructions/BookingGroomingInstructionsPanel";
 import { useSaveBookingInstructions } from "@/features/grooming/instructions/queries";
 import { useInstructionCatalog } from "@/features/grooming/instructions/queries";
@@ -220,6 +220,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   }, [customerId, petsQ.data, isEdit]);
   const resourcesQ = useResources(tenantId);
   const packagesQ = useGroomingPackages(tenantId, { activeOnly: true });
+  const groomingAddonsQ = useGroomingAddons(tenantId, { activeOnly: true });
   const create = useCreateBooking(tenantId);
   const update = useUpdateBooking(tenantId);
   const upsertDetails = useUpsertBookingDetails(tenantId);
@@ -428,11 +429,24 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     () => (packagesQ.data ?? []).find((p) => p.id === grooming.package_id) ?? null,
     [packagesQ.data, grooming.package_id],
   );
+  // Add-ons add their own time to the appointment (and can stand alone without a package).
+  const groomingAddonMinutes = useMemo(() => {
+    if (kind !== "grooming") return 0;
+    return groomingAddons.reduce((sum, s) => {
+      const a = (groomingAddonsQ.data ?? []).find((x) => x.id === s.addon_id);
+      return sum + Number(a?.duration_minutes ?? 0) * (s.qty || 1);
+    }, 0);
+  }, [kind, groomingAddons, groomingAddonsQ.data]);
+  const groomingHasTreatments = kind === "grooming" && groomingAddons.length > 0;
   useEffect(() => {
-    if (kind !== "grooming" || !selectedGroomingPackage) return;
-    const mins = Number(selectedGroomingPackage.expected_minutes) || 60;
-    setDurationMins((prev) => (prev === mins ? prev : mins));
-  }, [kind, selectedGroomingPackage]);
+    if (kind !== "grooming") return;
+    if (!selectedGroomingPackage && groomingAddonMinutes === 0) return;
+    const mins =
+      (selectedGroomingPackage ? Number(selectedGroomingPackage.expected_minutes) || 60 : 0) +
+      groomingAddonMinutes;
+    const next = Math.max(15, mins);
+    setDurationMins((prev) => (prev === next ? prev : next));
+  }, [kind, selectedGroomingPackage, groomingAddonMinutes]);
   const filteredResources = (resourcesQ.data ?? []).filter(
     (r) => !resourceType || r.type === resourceType,
   );
@@ -441,8 +455,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!customerId) return toast.error("Please select a customer");
-    if (kind === "grooming" && !grooming.package_id) {
-      return toast.error("Please choose a grooming package");
+    if (kind === "grooming" && !grooming.package_id && groomingAddons.length === 0) {
+      return toast.error("Please choose a grooming package or at least one individual treatment");
     }
     if (!startAt) {
       return toast.error(kind === "grooming" ? "Please pick a day and time slot" : "Please pick a start time");
