@@ -14,8 +14,7 @@ import { BookingInvoicePanel } from "./BookingInvoicePanel";
 import { BookingCommsPanel } from "./BookingCommsPanel";
 import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { HotelVaxGatePanel } from "./HotelVaxGatePanel";
-import { GroomingVaxGatePanel } from "./GroomingVaxGatePanel";
+import { BookingVaccinationGate } from "./VaccinationGatePanel";
 import { PhotoGatePanel } from "./PhotoGatePanel";
 import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
 import { HotelGroomRequestsPanel } from "@/features/hotelGrooming/HotelGroomRequestsPanel";
@@ -127,17 +126,16 @@ export default function BookingDetailPage() {
           <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-6">
               <PinnedNotesBanner customerId={b.customer_id} tenantId={tenantId} />
-              {tenantId && (b.service_type === "hotel_dog" || b.service_type === "hotel_cat") && (
-                <HotelVaxGatePanel tenantId={tenantId} bookingId={b.id} />
-              )}
+              <BookingVaccinationGate
+                bookingId={b.id}
+                overriddenBy={(b as any).vax_override_by}
+                overrideReason={(b as any).vax_override_reason}
+              />
               {(b.service_type === "hotel_dog" || b.service_type === "hotel_cat") && (
                 <HotelGroomRequestsPanel tenantId={tenantId} bookingId={b.id} />
               )}
               {(b.service_type === "hotel_dog" || b.service_type === "hotel_cat") && (
                 <HotelMoneyStrip bookingId={b.id} mode="admin" />
-              )}
-              {tenantId && (b.service_type === "grooming_inhouse" || b.service_type === "grooming_mobile") && (
-                <GroomingVaxGatePanel tenantId={tenantId} bookingId={b.id} />
               )}
               {tenantId && (
                 <PhotoGatePanel tenantId={tenantId} bookingId={b.id} serviceType={b.service_type} />

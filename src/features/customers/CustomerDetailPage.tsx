@@ -29,6 +29,7 @@ import type { PetRow } from "./queries";
 import { CustomerCreditPanel } from "@/features/customerCredit/CustomerCreditPanel";
 import PortalAccessPanel from "./PortalAccessPanel";
 import { PinnedNotesBanner } from "./PinnedNotesBanner";
+import { CustomerVaxFlag } from "./CustomerVaxFlag";
 import { CollectionsHoldToggle } from "./CollectionsHoldToggle";
 import { BookingsTab } from "./tabs/BookingsTab";
 import { InvoicesTab } from "./tabs/InvoicesTab";
@@ -141,6 +142,7 @@ export default function CustomerDetailPage() {
         {customer && (
           <>
             <PinnedNotesBanner customerId={customer.id} tenantId={tenant?.id} />
+            <CustomerVaxFlag customerId={customer.id} tenantId={tenant?.id} />
             {emailDupes && emailDupes.length > 0 && (
               <div className="sk-card flex items-start gap-3 border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
                 <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />

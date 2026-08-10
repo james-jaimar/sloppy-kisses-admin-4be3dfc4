@@ -30,6 +30,7 @@ import {
 } from "./detailsQueries";
 import { GroomingFields, TransportFields } from "./BookingDetailsFields";
 import { HealthGateList } from "@/features/pets/HealthGateBanner";
+import { PetsVaccinationGate } from "./VaccinationGatePanel";
 import { RecurrenceFields, DEFAULT_RECURRENCE, toRule, type RecurrenceValue } from "./RecurrenceFields";
 import { useCreateRecurringBooking } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -920,6 +921,14 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             )}
             {petIds.length > 0 && (
               <div className="mt-2">
+                <div className="mb-2">
+                  <PetsVaccinationGate
+                    petIds={petIds}
+                    serviceType={serviceType}
+                    onDate={bookingDay || undefined}
+                    mode="staff"
+                  />
+                </div>
                 <HealthGateList
                   pets={petIds.map((id) => ({
                     id,

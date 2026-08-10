@@ -5,6 +5,7 @@ import { WizardShell, Field, inputCls, selectCls, textareaCls } from "./WizardSh
 import { usePortalPets, useCustomerBookings } from "./wizardHooks";
 import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
 import { AddressSelector } from "@/features/customers/AddressSelector";
+import { PetsVaccinationGate, usePetsVaxBlocked } from "@/features/bookings/VaccinationGatePanel";
 
 export default function TransportRequestWizard() {
   const cust = useCurrentCustomer();
@@ -21,7 +22,8 @@ export default function TransportRequestWizard() {
   const [accessNotes, setAccessNotes] = useState("");
   const [notes, setNotes] = useState("");
 
-  const canSubmit = cust.data && petIds.length > 0 && date && serviceAddressId && !submit.isPending;
+  const vax = usePetsVaxBlocked(petIds, "pickup_dropoff", date || null);
+  const canSubmit = cust.data && petIds.length > 0 && date && serviceAddressId && !vax.blocked && !submit.isPending;
 
   function togglePet(id: string) {
     setPetIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -55,6 +57,9 @@ export default function TransportRequestWizard() {
         </button>
       }
     >
+      {petIds.length > 0 && (
+        <PetsVaccinationGate petIds={petIds} serviceType="pickup_dropoff" onDate={date || null} mode="portal" />
+      )}
       <Field label="Which pets?">
         <div className="flex flex-wrap gap-2">
           {(pets.data ?? []).map((p: any) => {
