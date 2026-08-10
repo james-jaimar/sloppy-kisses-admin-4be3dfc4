@@ -5,6 +5,8 @@ import { ModalShell } from "@/components/modals/ModalShell";
 import { useCustomerPets } from "@/features/customers/queries";
 import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import { AddressSelector } from "@/features/customers/AddressSelector";
+import { useCustomerAddresses } from "@/features/customers/addressQueries";
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import {
   useCreateBooking,
   useUpdateBooking,
@@ -240,6 +242,14 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [serviceAddressId, setServiceAddressId] = useState<string | null>(
     booking?.service_address_id ?? null,
   );
+  // Mobile van bookings need an address the vans can actually navigate to.
+  const isMobileVan = serviceType === "grooming_mobile";
+  const { hasPermission, profile } = useCurrentUser();
+  const canOverrideAddress = profile?.user_type === "platform" || hasPermission("settings.manage");
+  const vanAddressesQ = useCustomerAddresses(isMobileVan ? customerId || null : null, tenantId);
+  const selectedVanAddress = (vanAddressesQ.data ?? []).find((a) => a.id === serviceAddressId) ?? null;
+  const vanAddressVerified = Boolean(selectedVanAddress?.google_place_id);
+  const [addressOverride, setAddressOverride] = useState(false);
   const setBookingSurcharges = useSetBookingHotelSurcharges(tenantId);
   const [groomingAddons, setGroomingAddons] = useState<GroomingAddonSelection[]>([]);
   const setBookingGroomingAddons = useSetBookingGroomingAddons(tenantId);
@@ -443,6 +453,15 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       return toast.error("Select at least one pet for this booking");
     }
 
+    if (isMobileVan && !addressOverride) {
+      if (!serviceAddressId) {
+        return toast.error("Pick the mobile grooming address — the van needs somewhere to go.");
+      }
+      if (!vanAddressVerified) {
+        return toast.error("Confirm this address on the map before saving the van booking.");
+      }
+    }
+
     if (conflicts.length > 0) {
       const proceed = await confirm({
         title: "Resource already booked in this window",
@@ -469,6 +488,13 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       if (!proceed) return;
     }
 
+    const overrideNote =
+      isMobileVan && addressOverride && !vanAddressVerified
+        ? "[Address override] Saved without a Google-verified address — confirm directions with the driver."
+        : "";
+    const notesInternalValue =
+      [notesInternal.trim(), overrideNote].filter(Boolean).join("\n") || null;
+
     try {
       if (isEdit && booking) {
         await update.mutateAsync({
@@ -479,7 +505,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             start_at: new Date(startAt).toISOString(),
             end_at: endComputed.toISOString(),
             resource_id: resourceId,
-            notes_internal: notesInternal.trim() || null,
+            notes_internal: notesInternalValue,
             notes_customer: notesCustomer.trim() || null,
             service_address_id: serviceAddressId,
           },
@@ -503,7 +529,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             start_at: new Date(startAt).toISOString(),
             end_at: endComputed.toISOString(),
             resource_id: resourceId,
-            notes_internal: notesInternal.trim() || null,
+            notes_internal: notesInternalValue,
             notes_customer: notesCustomer.trim() || null,
             rule,
             service_address_id: serviceAddressId,
@@ -529,7 +555,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           start_at: new Date(startAt).toISOString(),
           end_at: endComputed.toISOString(),
           resource_id: resourceId,
-          notes_internal: notesInternal.trim() || null,
+          notes_internal: notesInternalValue,
           notes_customer: notesCustomer.trim() || null,
           service_address_id: serviceAddressId,
         });
@@ -877,14 +903,38 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           />
         )}
         {kind === "grooming" && serviceType === "grooming_mobile" && (
-          <AddressSelector
-            customerId={customerId}
-            tenantId={tenantId}
-            value={serviceAddressId}
-            onChange={setServiceAddressId}
-            label="Mobile grooming address"
-            mobileOnly
-          />
+          <div className="space-y-2">
+            <AddressSelector
+              customerId={customerId}
+              tenantId={tenantId}
+              value={serviceAddressId}
+              onChange={setServiceAddressId}
+              label="Mobile grooming address"
+              mobileOnly
+            />
+            {(!serviceAddressId || !vanAddressVerified) && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <div>
+                    {!serviceAddressId
+                      ? "Pick the address the van must drive to. Use “New address” above if it isn't on file yet."
+                      : "This address isn't pinned on the map yet. Use “Confirm this address” above so the van can navigate to it."}
+                    {canOverrideAddress && (
+                      <label className="mt-2 flex items-center gap-2 font-medium">
+                        <input
+                          type="checkbox"
+                          checked={addressOverride}
+                          onChange={(e) => setAddressOverride(e.target.checked)}
+                        />
+                        Save anyway — Google doesn't know this address (admin override)
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
         {kind === "grooming" && (
           <GroomingExtrasPanel

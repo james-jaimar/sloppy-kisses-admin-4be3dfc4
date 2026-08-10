@@ -1,6 +1,8 @@
 import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
+import { useFeature } from "@/lib/features/useFeature";
+import { FEATURE } from "@/lib/features/catalog";
 import { useXeroPush, useXeroSettings } from "./queries";
 
 type Props = {
@@ -15,10 +17,11 @@ export function SyncToXeroButton({ entityType, entityId, synced, className }: Pr
   const { tenant } = useCurrentTenant();
   const { hasPermission, profile } = useCurrentUser();
   const can = profile?.user_type === "platform" || hasPermission("settings.xero.manage");
+  const xeroOn = useFeature(FEATURE.xero);
   const settings = useXeroSettings(tenant?.id ?? null);
   const push = useXeroPush(tenant?.id ?? null);
 
-  if (!can || !settings.data?.enabled) return null;
+  if (!xeroOn || !can || !settings.data?.enabled) return null;
 
   return (
     <button

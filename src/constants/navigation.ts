@@ -2,7 +2,7 @@ import {
   Home, LayoutDashboard, Calendar, Users, PawPrint, CalendarCheck, Dog, Hotel,
   Scissors, Truck, ArrowLeftRight, ReceiptText, ShoppingBag, BarChart3, Settings,
   FileText, CreditCard, User, MessageSquare, Building2, ShieldCheck, Flag,
-  History, Activity, Database, FileMinus, CalendarPlus, MapPin,
+  History, Activity, Database, FileMinus, CalendarPlus, MapPin, PackageCheck,
 } from "lucide-react";
 
 export const adminNav = [
@@ -46,6 +46,7 @@ export const platformNav = [
   { to: "/platform/tenants", label: "Tenants", icon: Building2 },
   { to: "/platform/users", label: "Platform users", icon: Users },
   { to: "/platform/flags", label: "Feature flags", icon: Flag },
+  { to: "/platform/features", label: "Tenant features", icon: PackageCheck },
   { to: "/platform/audit", label: "Audit log", icon: History },
   { to: "/platform/activity", label: "Activity & events", icon: Activity },
   { to: "/platform/system", label: "System & secrets", icon: Database },

@@ -2,6 +2,7 @@
 // payments, credit notes, plus the queue worker used by auto-push.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { pace, xero, xeroConnections, xeroDate } from "../_shared/xero.ts";
+import { assertFeature } from "../_shared/features.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -55,6 +56,7 @@ async function findContact(ctx: { tenantId: string }, c: any): Promise<string | 
 }
 
 async function getSettings(tenantId: string): Promise<Settings> {
+  await assertFeature(admin, tenantId, "integrations.xero", "The Xero integration");
   const { data, error } = await admin.from("xero_settings").select("*").eq("tenant_id", tenantId).maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Xero is not configured for this tenant yet.");
