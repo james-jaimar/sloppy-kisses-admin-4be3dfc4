@@ -356,11 +356,6 @@ export default function DaycareImportPage() {
       <AppHeader
         title="Import daycare register"
         subtitle="Reconcile the 30 June weekly sheet against the customer & pet database."
-        actions={
-          <button onClick={() => navigate("/admin/settings")} className="inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm hover:bg-sk-surface-muted">
-            <ArrowLeft className="h-4 w-4" /> Back to settings
-          </button>
-        }
       />
 
       <div className="flex-1 space-y-4 p-6">
