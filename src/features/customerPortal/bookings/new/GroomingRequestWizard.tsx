@@ -89,8 +89,11 @@ export default function GroomingRequestWizard({ mode }: Props) {
 
   // Running estimate: package price + any add-ons triggered by the chosen instructions.
   const estimate = useMemo(() => {
-    const pkg = filteredPackages.find((p: any) => p.id === packageId);
-    const base = Number(pkg?.price_zar ?? 0);
+    const dogCount = Math.max(1, petIds.length);
+    const chosenPkgs = (petIds.length ? petIds : [""])
+      .map((id) => (packages.data ?? []).find((p: any) => p.id === packageForPet(id)))
+      .filter(Boolean) as any[];
+    const base = chosenPkgs.reduce((s, p) => s + Number(p.price_zar ?? 0), 0);
     const priceByCode = new Map<string, number>();
     for (const a of addonsQ.data ?? []) priceByCode.set(a.code, Number(a.price_zar));
     const options = catalogQ.data?.options ?? [];
@@ -101,40 +104,98 @@ export default function GroomingRequestWizard({ mode }: Props) {
       const codes = Array.isArray(val) ? (val as string[]) : typeof val === "string" ? [val] : [];
       for (const code of codes) {
         const opt = options.find((o) => o.group_id === g.id && o.code === code);
-        const price = opt?.addon_code ? priceByCode.get(opt.addon_code) ?? 0 : 0;
-        if (price > 0) extras.push({ label: opt!.label, price });
+        const unit = opt?.addon_code ? priceByCode.get(opt.addon_code) ?? 0 : 0;
+        const price = unit * dogCount;
+        if (price > 0) extras.push({ label: dogCount > 1 ? `${opt!.label} × ${dogCount} dogs` : opt!.label, price });
       }
     }
     const extrasTotal = extras.reduce((s, e) => s + e.price, 0);
-    const treatmentTotal = selectedTreatments.reduce((s, a) => s + Number(a.price_zar) * (treatments[a.id] || 1), 0);
-    for (const a of selectedTreatments) extras.push({ label: a.name, price: Number(a.price_zar) * (treatments[a.id] || 1) });
-    const spPrice = stayPlay && stayPlayAddon ? Number(stayPlayAddon.price_zar) : 0;
-    if (spPrice > 0) extras.push({ label: stayPlayAddon!.name, price: spPrice });
-    return { base, extras, total: base + extrasTotal + treatmentTotal + spPrice, hasPackage: Boolean(pkg) };
+    const treatmentTotal = selectedTreatments.reduce(
+      (s, a) => s + Number(a.price_zar) * (treatments[a.id] || 1) * dogCount, 0,
+    );
+    for (const a of selectedTreatments) {
+      extras.push({
+        label: dogCount > 1 ? `${a.name} × ${dogCount} dogs` : a.name,
+        price: Number(a.price_zar) * (treatments[a.id] || 1) * dogCount,
+      });
+    }
+    const spPrice = stayPlay && stayPlayAddon ? Number(stayPlayAddon.price_zar) * dogCount : 0;
+    if (spPrice > 0) {
+      extras.push({ label: dogCount > 1 ? `${stayPlayAddon!.name} × ${dogCount} dogs` : stayPlayAddon!.name, price: spPrice });
+    }
+    return { base, extras, total: base + extrasTotal + treatmentTotal + spPrice, hasPackage: chosenPkgs.length > 0 };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredPackages, packageId, addonsQ.data, catalogQ.data, instructions.selections, stayPlay, stayPlayAddon, treatments]);
+  }, [packages.data, petIds, petPackages, packageId, addonsQ.data, catalogQ.data, instructions.selections, stayPlay, stayPlayAddon, treatments]);
 
   // Appointment length = package time + each treatment's own time.
   const durationMinutes = useMemo(() => {
-    const pkg = filteredPackages.find((p: any) => p.id === packageId);
-    const pkgMins = pkg ? Number(pkg.expected_minutes) || 60 : 0;
-    const treatMins = selectedTreatments.reduce(
-      (s, a) => s + Number(a.duration_minutes ?? 0) * (treatments[a.id] || 1), 0,
-    );
-    return Math.max(15, pkgMins + treatMins) || 60;
+    return petId ? minutesForPet(petId) : 60;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredPackages, packageId, treatments, addonsQ.data]);
+  }, [petId, packages.data, packageId, petPackages, treatments, addonsQ.data]);
 
-  const packageRequired = filteredPackages.length > 0 && selectedTreatments.length === 0;
+  // Multi-dog: one appointment per dog, run in parallel where a groomer is free.
+  const petSlotRequests: PetSlotRequest[] = useMemo(
+    () => petIds.map((id) => ({ petId: id, durationMinutes: minutesForPet(id) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [petIds, packages.data, packageId, petPackages, treatments, addonsQ.data],
+  );
+  const slotDayKey = slotStart ? slotStart.slice(0, 10) : null;
+  const availQ = useGroomingDayAvailability(multiPet ? cust.data?.tenant_id ?? null : null, slotDayKey);
+  const plan = useMemo(() => {
+    if (!multiPet || !slotStart) return null;
+    return layoutGroomingAppointments({
+      resources: availQ.data?.resources ?? [],
+      busy: availQ.data?.busy ?? [],
+      baseStart: new Date(slotStart),
+      pets: petSlotRequests,
+    });
+  }, [multiPet, slotStart, availQ.data, petSlotRequests]);
+
+  const anyPackageChosen = multiPet ? petIds.some((id) => Boolean(petPackages[id])) : Boolean(packageId);
+  const packageRequired = (packages.data ?? []).length > 0 && selectedTreatments.length === 0;
+  const allPetsHavePackages = !packageRequired || petIds.every((id) => Boolean(packageForPet(id)));
   const canSubmit =
     Boolean(
-      cust.data && petId && slotStart &&
-      (!packageRequired || packageId) &&
+      cust.data && petIds.length > 0 && slotStart &&
+      allPetsHavePackages &&
+      (!multiPet || plan) &&
       (mode === "inhouse" || serviceAddressId),
     ) && !submit.isPending;
 
   function onSubmit() {
     if (!cust.data || !slotStart) return;
+    const groomingCommon = {
+      addons: selectedTreatments.map((a) => ({ code: a.code, qty: treatments[a.id] || 1 })),
+      instructions: {
+        selections: instructions.selections,
+        medical_flags: instructions.medical_flags,
+        notes: instructions.notes,
+      },
+      ...(mode === "mobile" ? { access_notes: accessNotes || null } : {}),
+      ...(mode === "inhouse" ? { stay_play: stayPlay, stay_play_collect_time: stayPlay ? collectTime : null } : {}),
+    };
+
+    if (multiPet && plan) {
+      submit.mutate({
+        serviceType: mode === "inhouse" ? "grooming_inhouse" : "grooming_mobile",
+        petIds,
+        startAt: new Date(slotStart).toISOString(),
+        endAt: null,
+        notes,
+        service_address_id: serviceAddressId,
+        grooming: {
+          ...groomingCommon,
+          pets: plan.map((s) => ({
+            pet_id: s.petId,
+            package_id: packageForPet(s.petId) || null,
+            duration_minutes: Math.round((s.end.getTime() - s.start.getTime()) / 60000),
+            start_at: s.start.toISOString(),
+          })),
+        },
+      });
+      return;
+    }
+
     submit.mutate({
       serviceType: mode === "inhouse" ? "grooming_inhouse" : "grooming_mobile",
       petIds: [petId],
@@ -143,18 +204,9 @@ export default function GroomingRequestWizard({ mode }: Props) {
       notes,
       service_address_id: serviceAddressId,
       grooming: {
+        ...groomingCommon,
         package_id: packageId || null,
         duration_minutes: durationMinutes,
-        addons: selectedTreatments.map((a) => ({ code: a.code, qty: treatments[a.id] || 1 })),
-        instructions: {
-          selections: instructions.selections,
-          medical_flags: instructions.medical_flags,
-          notes: instructions.notes,
-        },
-        ...(mode === "mobile" ? {
-          access_notes: accessNotes || null,
-        } : {}),
-        ...(mode === "inhouse" ? { stay_play: stayPlay, stay_play_collect_time: stayPlay ? collectTime : null } : {}),
       },
     });
   }
