@@ -1091,6 +1091,23 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
         <div>
           <div className="mb-1 text-sm font-medium">Internal notes</div>
+          {closureHit && (
+            <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+              <div className="flex items-start gap-2 font-medium text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{closureHit.name} — we are closed on this day.</span>
+              </div>
+              <label className="mt-2 flex items-center gap-2 text-amber-900">
+                <input
+                  type="checkbox"
+                  checked={closureOverride}
+                  onChange={(e) => setClosureOverride(e.target.checked)}
+                  className="h-4 w-4 rounded border-amber-400"
+                />
+                Book anyway (override the closure)
+              </label>
+            </div>
+          )}
           <textarea
             value={notesInternal}
             onChange={(e) => setNotesInternal(e.target.value)}
