@@ -162,7 +162,7 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
           notes: notes || null,
           active,
           assessment_waived: assessmentWaived,
-        });
+        } as any);
         if (showProrata) {
           // The DB trigger raises a standalone issued pro-rata invoice — email it.
           const { data: item } = await supabase
