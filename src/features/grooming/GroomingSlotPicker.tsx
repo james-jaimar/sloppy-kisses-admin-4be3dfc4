@@ -1,33 +1,7 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
-
-interface DayAvailability {
-  pool: number;
-  busy: { id: string; start_at: string; end_at: string | null; resource_id: string | null }[];
-}
-
-/**
- * Day availability via a security-definer RPC so both staff and portal customers
- * get the same view. Customers cannot read `bookings`/`resources` directly, and the
- * RPC returns only anonymous busy intervals — no customer or pet details.
- */
-function useDayAvailability(tenantId: string | null | undefined, date: string) {
-  return useQuery({
-    queryKey: ["grooming_day_availability", tenantId, date],
-    enabled: Boolean(tenantId && date),
-    queryFn: async (): Promise<DayAvailability> => {
-      const { data, error } = await supabase.rpc("grooming_day_availability" as any, {
-        p_tenant_id: tenantId as string,
-        p_day: date,
-      });
-      if (error) throw error;
-      const row = (data ?? {}) as any;
-      return { pool: Math.max(1, Number(row.pool ?? 1)), busy: (row.busy ?? []) as DayAvailability["busy"] };
-    },
-  });
-}
+import { useGroomingDayAvailability } from "./availabilityQueries";
+import { canSeatAll, type PetSlotRequest } from "./multiPetSchedule";
 
 function toLocalIso(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -52,6 +26,12 @@ export interface GroomingSlotPickerProps {
   /** Operating window; defaults 08:00–17:00 local. */
   openHour?: number;
   closeHour?: number;
+  /**
+   * Multi-dog bookings: one entry per dog with its own appointment length. When
+   * supplied, a slot only shows as free if every dog can be seated (in parallel
+   * on different groomers, or chained back-to-back).
+   */
+  petSlots?: PetSlotRequest[];
 }
 
 export function GroomingSlotPicker({
@@ -63,14 +43,16 @@ export function GroomingSlotPicker({
   excludeBookingId = null,
   openHour = 8,
   closeHour = 17,
+  petSlots,
 }: GroomingSlotPickerProps) {
   const initial = value ? new Date(value) : new Date();
   const [monthCursor, setMonthCursor] = useState(new Date(initial.getFullYear(), initial.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState<Date>(initial);
   const dateKey = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
 
-  const availabilityQ = useDayAvailability(tenantId, dateKey);
+  const availabilityQ = useGroomingDayAvailability(tenantId, dateKey);
   const poolSize = availabilityQ.data?.pool ?? 1;
+  const multiPet = (petSlots?.length ?? 0) > 1;
 
   // Compute all 15-min slots for the day between open/close.
   const slots = useMemo(() => {
@@ -93,6 +75,16 @@ export function GroomingSlotPicker({
   // For each slot: how many concurrent bookings overlap.
   function slotIsFull(start: Date, end: Date) {
     const rows = (availabilityQ.data?.busy ?? []).filter((b) => (excludeBookingId ? b.id !== excludeBookingId : true));
+    if (multiPet) {
+      return !canSeatAll({
+        resources: availabilityQ.data?.resources ?? [],
+        busy: rows,
+        baseStart: start,
+        pets: petSlots as PetSlotRequest[],
+        preferredResourceId: resourceId,
+        closeHour,
+      });
+    }
     const overlapping = rows.filter((b) => {
       const bStart = new Date(b.start_at);
       const bEnd = b.end_at ? new Date(b.end_at) : new Date(bStart.getTime() + 60 * 60000);
@@ -213,6 +205,7 @@ export function GroomingSlotPicker({
             <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-sk-coral" /> Selected</span>
             <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-muted" /> Taken</span>
             {resourceId ? <span>Filtered to selected resource</span> : <span>{poolSize} groomer{poolSize === 1 ? "" : "s"} in pool</span>}
+            {multiPet && <span>{petSlots!.length} dogs — parallel or back-to-back</span>}
           </div>
         </div>
       </div>
