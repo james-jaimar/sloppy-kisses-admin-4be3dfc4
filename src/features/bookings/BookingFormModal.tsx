@@ -781,7 +781,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                     id,
                     name: petsQ.data?.find((p) => p.id === id)?.name ?? null,
                   }))}
-                  onDate={startDate || undefined}
+                  onDate={bookingDay || undefined}
                 />
               </div>
             )}
