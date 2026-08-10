@@ -197,9 +197,6 @@ export default function XeroSettingsPage() {
             <Link to="/admin/settings/xero-log" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
               <ListChecks className="h-4 w-4" /> Sync log
             </Link>
-            <Link to="/admin/settings" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
-              <ArrowLeft className="h-4 w-4" /> Back to settings
-            </Link>
           </div>
         }
       />
