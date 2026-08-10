@@ -1176,6 +1176,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 durationMinutes={durationMins}
                 resourceId={resourceId}
                 excludeBookingId={booking?.id ?? null}
+                petSlots={isMultiPetGrooming ? petSlotRequests : undefined}
                 onChange={(startLocal) => {
                   if (startLocal) setStartAt(startLocal);
                 }}
@@ -1183,6 +1184,69 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             ) : (
               <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
                 Choose a grooming package or an individual treatment above and the available times will show here.
+              </div>
+            )}
+            {isMultiPetGrooming && startAt && (
+              <div className="mt-3 rounded-xl border border-border bg-muted/30 p-3">
+                <div className="text-sm font-semibold">Running order</div>
+                {groomingPlan ? (
+                  <>
+                    <ul className="mt-2 space-y-1 text-sm">
+                      {groomingPlan.map((s) => (
+                        <li key={s.petId} className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-medium">
+                            {petsQ.data?.find((p) => p.id === s.petId)?.name ?? "Pet"}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {s.start.toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                            {" – "}
+                            {s.end.toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                            {s.resourceName ? ` · ${s.resourceName}` : ""}
+                            {s.chained ? " · after the previous dog" : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      One appointment per dog, all on a single invoice for this owner.
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1 text-xs text-sk-orange">
+                    Not enough groomer time left that day for all {petIds.length} dogs — pick an earlier slot.
+                  </p>
+                )}
+              </div>
+            )}
+            {isMultiPetGrooming && (
+              <div className="mt-3 rounded-xl border border-border bg-white p-3">
+                <div className="text-sm font-semibold">Package per dog</div>
+                <p className="mb-2 text-[11px] text-muted-foreground">
+                  Defaults to the package chosen above. Change it where a dog needs something different.
+                </p>
+                <div className="space-y-2">
+                  {petIds.map((id) => (
+                    <div key={id} className="flex flex-wrap items-center gap-2">
+                      <span className="w-28 shrink-0 text-sm font-medium">
+                        {petsQ.data?.find((p) => p.id === id)?.name ?? "Pet"}
+                      </span>
+                      <select
+                        value={petPackages[id] ?? grooming.package_id ?? ""}
+                        onChange={(e) =>
+                          setPetPackages((prev) => ({ ...prev, [id]: e.target.value }))
+                        }
+                        className={inputCls + " flex-1"}
+                      >
+                        <option value="">No package (treatments only)</option>
+                        {(packagesQ.data ?? []).map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} — R{Number(p.price_zar ?? 0).toFixed(2)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
