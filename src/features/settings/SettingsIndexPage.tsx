@@ -226,6 +226,13 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/parasite-treatments",
+    label: "Parasite treatments",
+    description: "Tick & flea, deworming and kennel cough intervals, whether they warn or block at arrival, and the on-arrival treatment charge.",
+    icon: Gavel,
+    ready: true,
+  },
+  {
     to: "/admin/settings/price-increase",
     label: "Annual price increase",
     description: "Lift daycare plans, hotel rates and grooming prices by a percentage. Preview before applying.",
