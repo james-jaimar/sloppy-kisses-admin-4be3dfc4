@@ -19,7 +19,7 @@ const PERMISSION = "settings.grooming.manage";
 type Draft = Partial<DogBreed>;
 
 function empty(): Draft {
-  return { name: "", size_band: "medium", active: true, sort_order: 100 };
+  return { name: "", size_band: "medium", active: true, sort_order: 100, is_power_breed: false };
 }
 
 export default function DogBreedsPage() {
@@ -57,6 +57,7 @@ export default function DogBreedsPage() {
         size_band: (draft.size_band ?? "medium") as BreedSizeBand,
         active: draft.active ?? true,
         sort_order: Number(draft.sort_order ?? 100),
+        is_power_breed: draft.is_power_breed ?? false,
       });
       toast.success("Breed added");
       setCreating(false); setDraft({});
@@ -73,6 +74,7 @@ export default function DogBreedsPage() {
           size_band: draft.size_band as BreedSizeBand,
           active: draft.active,
           sort_order: Number(draft.sort_order ?? 100),
+          is_power_breed: draft.is_power_breed ?? false,
         },
       });
       toast.success("Breed updated");
@@ -84,7 +86,7 @@ export default function DogBreedsPage() {
     <>
       <AppHeader
         title="Dog breeds"
-        subtitle="Master list of dog breeds and their size band. Used to auto-set a pet's size when the owner picks a breed."
+        subtitle="Master list of dog breeds, their size band and whether they count as a power breed. Used to auto-set a pet's size and flag power breeds at booking."
         actions={canManage ? (
           <button
             onClick={() => { setCreating(true); setEditingId(null); setDraft(empty()); }}
@@ -127,6 +129,7 @@ export default function DogBreedsPage() {
               <tr>
                 <th className="px-4 py-3">Breed</th>
                 <th className="px-4 py-3">Size band</th>
+                <th className="px-4 py-3">Power breed</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
@@ -142,6 +145,9 @@ export default function DogBreedsPage() {
                       {Object.entries(BREED_SIZE_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                     </select>
                   </td>
+                  <td className="px-4 py-2">
+                    <input type="checkbox" checked={draft.is_power_breed ?? false} onChange={(e) => setDraft({ ...draft, is_power_breed: e.target.checked })} className="h-4 w-4" />
+                  </td>
                   <td className="px-4 py-2 text-muted-foreground">New</td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">
@@ -151,9 +157,9 @@ export default function DogBreedsPage() {
                   </td>
                 </tr>
               )}
-              {listQ.isLoading && <tr><td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">Loading…</td></tr>}
+              {listQ.isLoading && <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">Loading…</td></tr>}
               {!listQ.isLoading && rows.length === 0 && !creating && (
-                <tr><td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">No breeds found.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No breeds found.</td></tr>
               )}
               {rows.map((r) => {
                 const isEditing = editingId === r.id;
@@ -170,6 +176,15 @@ export default function DogBreedsPage() {
                           {Object.entries(BREED_SIZE_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                         </select>
                       ) : BREED_SIZE_LABEL[r.size_band]}
+                    </td>
+                    <td className="px-4 py-3">
+                      {isEditing ? (
+                        <input type="checkbox" checked={draft.is_power_breed ?? false} onChange={(e) => setDraft({ ...draft, is_power_breed: e.target.checked })} className="h-4 w-4" />
+                      ) : r.is_power_breed ? (
+                        <span className="inline-flex rounded-full bg-sk-orange-soft px-2 py-0.5 text-xs font-medium text-sk-orange">Power breed</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {isEditing ? (
