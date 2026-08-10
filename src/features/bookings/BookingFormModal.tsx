@@ -985,14 +985,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               label="Mobile grooming address"
               mobileOnly
             />
-            {(!serviceAddressId || !vanAddressVerified) && (
+            <ServiceRadiusNotice check={radiusQ.data} />
+            {(!serviceAddressId || !vanAddressVerified || radiusBlocked) && (
               <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <div>
                     {!serviceAddressId
                       ? "Pick the address the van must drive to. Use “New address” above if it isn't on file yet."
-                      : "This address isn't pinned on the map yet. Use “Confirm this address” above so the van can navigate to it."}
+                      : !vanAddressVerified
+                        ? "This address isn't pinned on the map yet. Use “Confirm this address” above so the van can navigate to it."
+                        : "This address falls outside the travel radius."}
                     {canOverrideAddress && (
                       <label className="mt-2 flex items-center gap-2 font-medium">
                         <input
@@ -1000,7 +1003,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                           checked={addressOverride}
                           onChange={(e) => setAddressOverride(e.target.checked)}
                         />
-                        Save anyway — Google doesn't know this address (admin override)
+                        Save anyway (admin override)
                       </label>
                     )}
                   </div>
