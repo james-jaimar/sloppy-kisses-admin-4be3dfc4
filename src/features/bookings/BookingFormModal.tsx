@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
 import { ModalShell } from "@/components/modals/ModalShell";
