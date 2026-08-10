@@ -115,6 +115,8 @@ import PlatformTenantsPage from "@/features/platform/TenantsPage";
 import PlatformUsersPage from "@/features/platform/PlatformUsersPage";
 import FeatureFlagsPage from "@/features/platform/FeatureFlagsPage";
 import TenantFeaturesPage from "@/features/platform/TenantFeaturesPage";
+import { RequireFeature } from "@/lib/features/useFeature";
+import { FEATURE } from "@/lib/features/catalog";
 import AuditViewerPage from "@/features/platform/AuditViewerPage";
 import ActivityPage from "@/features/platform/ActivityPage";
 import SystemPage from "@/features/platform/SystemPage";
@@ -245,9 +247,11 @@ const App = () => (
                 <Route path="/admin/settings/documents" element={<DocumentRetentionPage />} />
                 <Route path="/admin/settings/policies" element={<PolicySettingsPage />} />
                 <Route path="/admin/settings/closures" element={<ClosuresPage />} />
-                <Route path="/admin/settings/xero" element={<XeroSettingsPage />} />
-                <Route path="/admin/settings/xero-log" element={<XeroSyncLogPage />} />
-                <Route path="/admin/settings/xero-customers" element={<XeroCustomersPage />} />
+                <Route element={<RequireFeature code={FEATURE.xero} />}>
+                  <Route path="/admin/settings/xero" element={<XeroSettingsPage />} />
+                  <Route path="/admin/settings/xero-log" element={<XeroSyncLogPage />} />
+                  <Route path="/admin/settings/xero-customers" element={<XeroCustomersPage />} />
+                </Route>
                 <Route path="/admin/settings/billing-item-codes" element={<BillingItemCodesPage />} />
                 <Route path="/admin/settings/address-verification" element={<AddressVerificationPage />} />
                 <Route path="/admin/settings/terms" element={<TermsVersionsPage />} />

@@ -438,14 +438,14 @@ export default function SettingsIndexPage() {
         ) : (
           <Tabs defaultValue={GROUPS[0].id}>
             <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-1">
-              {groups.map((g) => (
+              {visibleGroups.map((g) => (
                 <TabsTrigger key={g.id} value={g.id} className="text-xs sm:text-sm">
                   {g.label}
                   <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{g.items.length}</span>
                 </TabsTrigger>
               ))}
             </TabsList>
-            {groups.map((g) => (
+            {visibleGroups.map((g) => (
               <TabsContent key={g.id} value={g.id} className="mt-0">
                 {renderGrid(g.items)}
               </TabsContent>
