@@ -19,6 +19,17 @@ type Row = {
   overdue_interest_percent_per_month: number;
   consent_grace_days: number;
   hotel_prearrival_reminder_days: number[];
+  late_pickup_cutoff_time: string;
+  late_pickup_grace_minutes: number;
+  late_pickup_fee_zar: number;
+  late_pickup_fee_per_15min: number;
+  overnight_conversion_after_time: string;
+  overnight_conversion_rate_zar: number;
+  abandonment_hours: number;
+  failed_collection_fee_zar: number;
+  transport_radius_km: number;
+  parasite_treatment_fee_zar: number;
+  annual_increase_percent: number;
 };
 
 const DEFAULTS: Omit<Row, "tenant_id"> = {
@@ -33,6 +44,17 @@ const DEFAULTS: Omit<Row, "tenant_id"> = {
   overdue_interest_percent_per_month: 3,
   consent_grace_days: 30,
   hotel_prearrival_reminder_days: [3, 2, 1],
+  late_pickup_cutoff_time: "17:30",
+  late_pickup_grace_minutes: 15,
+  late_pickup_fee_zar: 0,
+  late_pickup_fee_per_15min: 0,
+  overnight_conversion_after_time: "18:30",
+  overnight_conversion_rate_zar: 0,
+  abandonment_hours: 48,
+  failed_collection_fee_zar: 0,
+  transport_radius_km: 20,
+  parasite_treatment_fee_zar: 0,
+  annual_increase_percent: 10,
 };
 
 export default function PolicySettingsPage() {
@@ -99,6 +121,19 @@ export default function PolicySettingsPage() {
     </label>
   );
 
+  const time = (label: string, key: keyof typeof form, hint?: string) => (
+    <label className="flex flex-col gap-1 text-sm">
+      <span className="font-medium">{label}</span>
+      <input
+        type="time"
+        value={String(form[key] ?? "").slice(0, 5)}
+        onChange={(e) => set(key, e.target.value as any)}
+        className="w-32 rounded-md border px-3 py-2"
+      />
+      {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+    </label>
+  );
+
   return (
     <>
       <AppHeader
@@ -155,9 +190,32 @@ export default function PolicySettingsPage() {
           </section>
 
           <section className="space-y-3">
+            <h2 className="text-base font-semibold">Late collection</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {time("Collection cutoff", "late_pickup_cutoff_time", "Pets collected after this time are late")}
+              {num("Grace period", "late_pickup_grace_minutes", "Free minutes after the cutoff", "minutes")}
+              {num("Late collection fee", "late_pickup_fee_zar", "Flat fee once the grace period passes", "ZAR")}
+              {num("Plus per 15 minutes", "late_pickup_fee_per_15min", "Charged on top of the flat fee", "ZAR")}
+              {time("Converts to overnight after", "overnight_conversion_after_time", "Staff can convert the day into a boarding night")}
+              {num("Overnight conversion rate", "overnight_conversion_rate_zar", "Boarding charge when a day converts", "ZAR")}
+              {num("Abandonment after", "abandonment_hours", "No contact from the owner for this long", "hours")}
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-base font-semibold">Transport & health</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {num("Collection radius", "transport_radius_km", "Maximum distance for pickup / drop-off", "km")}
+              {num("Failed collection fee", "failed_collection_fee_zar", "Nobody home when the van arrives", "ZAR")}
+              {num("On-arrival tick & flea treatment", "parasite_treatment_fee_zar", "Charged when proof of treatment is missing", "ZAR")}
+            </div>
+          </section>
+
+          <section className="space-y-3">
             <h2 className="text-base font-semibold">Accounts</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               {num("Overdue interest", "overdue_interest_percent_per_month", "Charged on overdue invoices", "% per month")}
+              {num("Default annual increase", "annual_increase_percent", "Suggested percentage in the price increase tool", "%")}
             </div>
           </section>
 

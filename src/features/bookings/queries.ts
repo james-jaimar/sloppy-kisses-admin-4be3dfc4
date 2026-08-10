@@ -241,6 +241,8 @@ export interface CreateBookingInput {
   requires_grooming?: boolean;
   /** Optional explicit service address. Defaults to customer's primary address. */
   service_address_id?: string | null;
+  /** Book on a closure day anyway (staff override). */
+  closure_override?: boolean;
 }
 
 export function useCreateBooking(tenantId: string) {
@@ -322,6 +324,7 @@ export function useCreateBooking(tenantId: string) {
           notes_customer: input.notes_customer ?? null,
           requires_transport: input.requires_transport ?? false,
           requires_grooming: input.requires_grooming ?? false,
+          closure_override: input.closure_override ?? false,
           ...addressSnapshot,
         })
         .select("id")
@@ -359,6 +362,7 @@ export interface UpdateBookingInput {
     requires_transport: boolean;
     requires_grooming: boolean;
     service_address_id: string | null;
+    closure_override: boolean;
   }>;
   pet_ids?: string[]; // if provided, replaces booking_pets
 }

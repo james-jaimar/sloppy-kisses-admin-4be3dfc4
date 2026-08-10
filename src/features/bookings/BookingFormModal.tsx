@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertTriangle } from "lucide-react";
 import { ModalShell } from "@/components/modals/ModalShell";
@@ -249,6 +250,29 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const selectedVanAddress = (vanAddressesQ.data ?? []).find((a) => a.id === serviceAddressId) ?? null;
   const vanAddressVerified = Boolean(selectedVanAddress?.google_place_id);
   const [addressOverride, setAddressOverride] = useState(false);
+  const [closureOverride, setClosureOverride] = useState<boolean>(
+    (booking as any)?.closure_override ?? false,
+  );
+  // Closure lookup for the chosen day — the DB blocks bookings on closed days
+  // unless staff tick the override.
+  const bookingDay = startAt ? startAt.slice(0, 10) : null;
+  const closureQ = useQuery({
+    queryKey: ["closure-check", tenantId, bookingDay, serviceType],
+    enabled: Boolean(tenantId && bookingDay),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("closures")
+        .select("id, name, services, bill_anyway")
+        .eq("tenant_id", tenantId)
+        .lte("start_date", bookingDay!)
+        .gte("end_date", bookingDay!);
+      if (error) throw error;
+      return (data ?? []).find(
+        (c) => !c.services?.length || c.services.includes(serviceType) || c.services.includes("all"),
+      ) ?? null;
+    },
+  });
+  const closureHit = closureQ.data ?? null;
   const setBookingSurcharges = useSetBookingHotelSurcharges(tenantId);
   const [groomingAddons, setGroomingAddons] = useState<GroomingAddonSelection[]>([]);
   const setBookingGroomingAddons = useSetBookingGroomingAddons(tenantId);
@@ -520,6 +544,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             notes_internal: notesInternalValue,
             notes_customer: notesCustomer.trim() || null,
             service_address_id: serviceAddressId,
+            closure_override: closureOverride,
           },
           pet_ids: petIds,
         });
@@ -545,6 +570,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             notes_customer: notesCustomer.trim() || null,
             rule,
             service_address_id: serviceAddressId,
+            closure_override: closureOverride,
           });
           // Persist service-typed details for every occurrence.
           for (const b of res.bookings) {
@@ -570,6 +596,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           notes_internal: notesInternalValue,
           notes_customer: notesCustomer.trim() || null,
           service_address_id: serviceAddressId,
+          closure_override: closureOverride,
         });
         await saveDetails(res.id);
         if (kind === "hotel") await persistSurcharges(res.id);
@@ -1067,6 +1094,23 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
         <div>
           <div className="mb-1 text-sm font-medium">Internal notes</div>
+          {closureHit && (
+            <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+              <div className="flex items-start gap-2 font-medium text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>{closureHit.name} — we are closed on this day.</span>
+              </div>
+              <label className="mt-2 flex items-center gap-2 text-amber-900">
+                <input
+                  type="checkbox"
+                  checked={closureOverride}
+                  onChange={(e) => setClosureOverride(e.target.checked)}
+                  className="h-4 w-4 rounded border-amber-400"
+                />
+                Book anyway (override the closure)
+              </label>
+            </div>
+          )}
           <textarea
             value={notesInternal}
             onChange={(e) => setNotesInternal(e.target.value)}

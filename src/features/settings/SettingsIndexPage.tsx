@@ -219,6 +219,20 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/catchup-credits",
+    label: "Catch-up credits",
+    description: "Daycare days missed through closures or illness, when they expire and when they were used.",
+    icon: CalendarDays,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/price-increase",
+    label: "Annual price increase",
+    description: "Lift daycare plans, hotel rates and grooming prices by a percentage. Preview before applying.",
+    icon: Receipt,
+    ready: true,
+  },
+  {
     to: "/admin/settings/terms",
     label: "Terms & Registration",
     description: "Versioned Terms & Conditions and daycare registration text customers accept on portal login.",
@@ -319,7 +333,7 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
   {
     id: "pricing",
     label: "Pricing & billing",
-    members: ["Hotel & Cattery rates", "Invoicing", "Payment methods", "Payment providers", "Gateway activity"],
+    members: ["Hotel & Cattery rates", "Annual price increase", "Invoicing", "Payment methods", "Payment providers", "Gateway activity"],
   },
   {
     id: "comms",
@@ -329,7 +343,7 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
   {
     id: "compliance",
     label: "Compliance",
-    members: ["Vaccination rules", "Documents & retention", "Policies", "Closures & holidays", "Terms & Registration", "Registration status"],
+    members: ["Vaccination rules", "Documents & retention", "Policies", "Closures & holidays", "Catch-up credits", "Terms & Registration", "Registration status"],
   },
   {
     id: "retail",

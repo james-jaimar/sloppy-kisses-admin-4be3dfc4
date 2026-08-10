@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Plus, Trash2, Pencil, CalendarOff } from "lucide-react";
+import { Plus, Trash2, Pencil, CalendarOff, Gift } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { ModalShell } from "@/components/modals/ModalShell";
@@ -87,6 +87,23 @@ export default function ClosuresPage() {
     },
   });
 
+  const grant = useMutation({
+    mutationFn: async (c: Closure) => {
+      const { data, error } = await supabase.rpc("daycare_grant_closure_credits" as any, {
+        p_tenant_id: tenantId,
+        p_start: c.start_date,
+        p_end: c.end_date,
+      });
+      if (error) throw error;
+      return data as number;
+    },
+    onSuccess: (n) => {
+      qc.invalidateQueries({ queryKey: ["daycare_catchup_credits"] });
+      toast.success(n ? `${n} catch-up credit${n === 1 ? "" : "s"} granted` : "No enrolled daycare days in that closure");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Could not grant credits"),
+  });
+
   return (
     <>
       <AppHeader
@@ -130,6 +147,14 @@ export default function ClosuresPage() {
                 className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted"
               >
                 <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                title="Grant daycare catch-up credits for this closure"
+                disabled={grant.isPending}
+                onClick={() => grant.mutate(c)}
+                className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-60"
+              >
+                <Gift className="h-4 w-4" />
               </button>
               <button
                 onClick={async () => {
