@@ -125,7 +125,7 @@ function PetDetailBody({ p, editOpen, setEditOpen, wantsGrooming }: { p: any; ed
           subtitle="Tick & flea, deworming and kennel cough dates we need before a stay."
           storageKey={`parasites-${p.id}`}
         >
-          <PetHealthPanel tenantId={p.tenant_id} petId={p.id} readOnlyHolds />
+          <PetHealthPanel tenantId={p.tenant_id} petId={p.id} readOnly />
         </CollapsibleCard>
 
         <CollapsibleCard
