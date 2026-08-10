@@ -219,6 +219,20 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/catchup-credits",
+    label: "Catch-up credits",
+    description: "Daycare days missed through closures or illness, when they expire and when they were used.",
+    icon: CalendarDays,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/price-increase",
+    label: "Annual price increase",
+    description: "Lift daycare plans, hotel rates and grooming prices by a percentage. Preview before applying.",
+    icon: Receipt,
+    ready: true,
+  },
+  {
     to: "/admin/settings/terms",
     label: "Terms & Registration",
     description: "Versioned Terms & Conditions and daycare registration text customers accept on portal login.",
