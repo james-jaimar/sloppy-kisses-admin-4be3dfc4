@@ -29,6 +29,10 @@ export interface GroomingAddon {
   kind: GroomingAddonKind;
   active: boolean;
   sort_order: number;
+  /** How much time this extra adds to (or takes, when booked alone) the appointment. */
+  duration_minutes: number;
+  /** Can a customer book this treatment on its own, without a full package? */
+  bookable_standalone: boolean;
 }
 
 export const SIZE_LABEL: Record<GroomingSizeBand, string> = {

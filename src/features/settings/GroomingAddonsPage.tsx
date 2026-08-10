@@ -27,7 +27,7 @@ const KINDS: { value: GroomingAddonKind; label: string }[] = [
 type Draft = Partial<GroomingAddon>;
 
 function emptyRow(): Draft {
-  return { code: "", name: "", price_zar: 0, kind: "fixed", active: true, sort_order: 100 };
+  return { code: "", name: "", price_zar: 0, kind: "fixed", active: true, sort_order: 100, duration_minutes: 0, bookable_standalone: false };
 }
 
 export default function GroomingAddonsPage() {
@@ -62,6 +62,8 @@ export default function GroomingAddonsPage() {
           price_zar: Number(draft.price_zar ?? 0),
           kind: draft.kind,
           active: draft.active,
+          duration_minutes: Number(draft.duration_minutes ?? 0),
+          bookable_standalone: draft.bookable_standalone ?? false,
         },
       });
       toast.success("Add-on updated"); setEditingId(null);
@@ -77,6 +79,8 @@ export default function GroomingAddonsPage() {
         kind: (draft.kind ?? "fixed") as GroomingAddonKind,
         active: draft.active ?? true,
         sort_order: Number(draft.sort_order ?? 100),
+        duration_minutes: Number(draft.duration_minutes ?? 0),
+        bookable_standalone: draft.bookable_standalone ?? false,
       });
       toast.success("Add-on created"); setCreating(false); setDraft({});
     } catch (err: any) { toast.error(err?.message ?? "Failed to create"); }
@@ -116,6 +120,8 @@ export default function GroomingAddonsPage() {
                 <th className="px-4 py-3">Kind</th>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3 text-right">Price (ZAR)</th>
+                <th className="px-4 py-3 text-right">Minutes</th>
+                <th className="px-4 py-3">Bookable alone</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
@@ -135,6 +141,12 @@ export default function GroomingAddonsPage() {
                   <td className="px-4 py-2 text-right">
                     <input type="number" value={draft.price_zar ?? 0} onChange={(e) => setDraft({ ...draft, price_zar: Number(e.target.value) })} className="h-8 w-24 rounded border border-border bg-white px-2 text-right text-sm" />
                   </td>
+                  <td className="px-4 py-2 text-right">
+                    <input type="number" min={0} step={5} value={draft.duration_minutes ?? 0} onChange={(e) => setDraft({ ...draft, duration_minutes: Number(e.target.value) })} className="h-8 w-20 rounded border border-border bg-white px-2 text-right text-sm" />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input type="checkbox" checked={draft.bookable_standalone ?? false} onChange={(e) => setDraft({ ...draft, bookable_standalone: e.target.checked })} className="h-4 w-4" />
+                  </td>
                   <td className="px-4 py-2 text-muted-foreground">New</td>
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-1">
@@ -144,9 +156,9 @@ export default function GroomingAddonsPage() {
                   </td>
                 </tr>
               )}
-              {listQ.isLoading && <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">Loading…</td></tr>}
+              {listQ.isLoading && <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Loading…</td></tr>}
               {!listQ.isLoading && rows.length === 0 && !creating && (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No add-ons yet.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">No add-ons yet.</td></tr>
               )}
               {rows.map((r) => {
                 const isEditing = editingId === r.id;
@@ -167,6 +179,23 @@ export default function GroomingAddonsPage() {
                       {isEditing ? (
                         <input type="number" value={draft.price_zar ?? 0} onChange={(e) => setDraft({ ...draft, price_zar: Number(e.target.value) })} className="h-8 w-24 rounded border border-border bg-white px-2 text-right text-sm" />
                       ) : `R ${r.price_zar}`}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {isEditing ? (
+                        <input type="number" min={0} step={5} value={draft.duration_minutes ?? 0} onChange={(e) => setDraft({ ...draft, duration_minutes: Number(e.target.value) })} className="h-8 w-20 rounded border border-border bg-white px-2 text-right text-sm" />
+                      ) : r.duration_minutes ? `${r.duration_minutes} min` : <span className="text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      {isEditing ? (
+                        <label className="flex items-center gap-2 text-xs">
+                          <input type="checkbox" checked={draft.bookable_standalone ?? false} onChange={(e) => setDraft({ ...draft, bookable_standalone: e.target.checked })} className="h-4 w-4" />
+                          Yes
+                        </label>
+                      ) : (
+                        <span className={"inline-flex rounded-full px-2 py-0.5 text-xs font-medium " + (r.bookable_standalone ? "bg-sk-coral-soft text-sk-coral-dark" : "bg-muted text-muted-foreground")}>
+                          {r.bookable_standalone ? "Yes" : "No"}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {isEditing ? (
