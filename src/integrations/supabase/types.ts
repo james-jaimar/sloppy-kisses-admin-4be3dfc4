@@ -3015,8 +3015,10 @@ export type Database = {
       grooming_addons: {
         Row: {
           active: boolean
+          bookable_standalone: boolean
           code: string
           created_at: string
+          duration_minutes: number
           id: string
           kind: string
           name: string
@@ -3027,8 +3029,10 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          bookable_standalone?: boolean
           code: string
           created_at?: string
+          duration_minutes?: number
           id?: string
           kind: string
           name: string
@@ -3039,8 +3043,10 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          bookable_standalone?: boolean
           code?: string
           created_at?: string
+          duration_minutes?: number
           id?: string
           kind?: string
           name?: string
@@ -8067,6 +8073,10 @@ export type Database = {
       grooming_day_availability: {
         Args: { p_day: string; p_tenant_id: string }
         Returns: Json
+      }
+      grooming_sync_booking_addon_lines: {
+        Args: { p_booking_id: string }
+        Returns: undefined
       }
       grooming_sync_instruction_addons: {
         Args: { p_booking_id: string }
