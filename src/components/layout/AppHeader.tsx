@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bell, KeyRound, LogOut, MessageSquare, Plus, ShieldCheck, CalendarPlus, UserPlus, Dog, FileText, ChevronDown, HardHat } from "lucide-react";
+import { Bell, KeyRound, LogOut, MessageSquare, Plus, ShieldCheck, CalendarPlus, UserPlus, Dog, FileText, ChevronDown, HardHat, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useQuickAdd, type QuickAddKind } from "@/components/quickAdd/QuickAddProvider";
@@ -21,6 +21,8 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
   const isPlatform = profile?.user_type === "platform";
   const inPlatform = location.pathname.startsWith("/platform");
   const isPortal = location.pathname.startsWith("/customer");
+  const inSettingsSubPage =
+    location.pathname.startsWith("/admin/settings/") && location.pathname !== "/admin/settings/";
   const passwordPath = isPortal
     ? "/customer/profile/password"
     : "/admin/settings/password";
@@ -216,9 +218,17 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
               )}
             </div>
           </div>
-          {(title || tabs || actions) && (
+          {(title || tabs || actions || inSettingsSubPage) && (
             <div className="flex flex-col gap-3 border-t border-border px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between">
               <div className="min-w-0">
+                {inSettingsSubPage && (
+                  <Link
+                    to="/admin/settings"
+                    className="mb-1.5 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5" /> Back to settings
+                  </Link>
+                )}
                 {title && <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">{title}</h1>}
                 {subtitle && <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>}
                 {tabs && (
