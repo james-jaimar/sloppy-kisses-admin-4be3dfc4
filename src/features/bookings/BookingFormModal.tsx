@@ -6,6 +6,8 @@ import { ModalShell } from "@/components/modals/ModalShell";
 import { useCustomerPets } from "@/features/customers/queries";
 import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import { AddressSelector } from "@/features/customers/AddressSelector";
+import { useRadiusCheck, ServiceRadiusNotice } from "@/features/transport/ServiceRadiusNotice";
+import { useTransportWorkflowSettings } from "@/features/transport/queries";
 import { useCustomerAddresses } from "@/features/customers/addressQueries";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import {
@@ -247,9 +249,20 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const isMobileVan = serviceType === "grooming_mobile";
   const { hasPermission, profile } = useCurrentUser();
   const canOverrideAddress = profile?.user_type === "platform" || hasPermission("settings.manage");
-  const vanAddressesQ = useCustomerAddresses(isMobileVan ? customerId || null : null, tenantId);
+  const isTransport = serviceType === "pickup_dropoff";
+  const needsVanAddress = isMobileVan || isTransport;
+  const vanAddressesQ = useCustomerAddresses(needsVanAddress ? customerId || null : null, tenantId);
   const selectedVanAddress = (vanAddressesQ.data ?? []).find((a) => a.id === serviceAddressId) ?? null;
   const vanAddressVerified = Boolean(selectedVanAddress?.google_place_id);
+  const radiusQ = useRadiusCheck(
+    needsVanAddress ? tenantId : null,
+    (selectedVanAddress as any)?.latitude ?? null,
+    (selectedVanAddress as any)?.longitude ?? null,
+  );
+  const radiusBlocked = Boolean(
+    radiusQ.data?.has_base && radiusQ.data.outside && radiusQ.data.gate_mode === "block",
+  );
+  const transportSettingsQ = useTransportWorkflowSettings(isTransport ? tenantId : null);
   const [addressOverride, setAddressOverride] = useState(false);
   const [closureOverride, setClosureOverride] = useState<boolean>(
     (booking as any)?.closure_override ?? false,
@@ -490,12 +503,21 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       return toast.error("Select at least one pet for this booking");
     }
 
-    if (isMobileVan && !addressOverride) {
+    if (needsVanAddress && !addressOverride) {
       if (!serviceAddressId) {
-        return toast.error("Pick the mobile grooming address — the van needs somewhere to go.");
+        return toast.error(
+          isTransport
+            ? "Pick the collection address — the driver needs somewhere to go."
+            : "Pick the mobile grooming address — the van needs somewhere to go.",
+        );
       }
       if (!vanAddressVerified) {
         return toast.error("Confirm this address on the map before saving the van booking.");
+      }
+      if (radiusBlocked) {
+        return toast.error(
+          `This address is outside the ${radiusQ.data?.radius_km} km travel radius. An admin override is needed.`,
+        );
       }
     }
 
@@ -526,8 +548,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     }
 
     const overrideNote =
-      isMobileVan && addressOverride && !vanAddressVerified
-        ? "[Address override] Saved without a Google-verified address — confirm directions with the driver."
+      needsVanAddress && addressOverride && (!vanAddressVerified || radiusBlocked)
+        ? radiusBlocked
+          ? "[Address override] Saved outside the travel radius — confirm the trip with the driver."
+          : "[Address override] Saved without a Google-verified address — confirm directions with the driver."
         : "";
     const notesInternalValue =
       [notesInternal.trim(), overrideNote].filter(Boolean).join("\n") || null;
@@ -963,14 +987,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               label="Mobile grooming address"
               mobileOnly
             />
-            {(!serviceAddressId || !vanAddressVerified) && (
+            <ServiceRadiusNotice check={radiusQ.data} />
+            {(!serviceAddressId || !vanAddressVerified || radiusBlocked) && (
               <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <div>
                     {!serviceAddressId
                       ? "Pick the address the van must drive to. Use “New address” above if it isn't on file yet."
-                      : "This address isn't pinned on the map yet. Use “Confirm this address” above so the van can navigate to it."}
+                      : !vanAddressVerified
+                        ? "This address isn't pinned on the map yet. Use “Confirm this address” above so the van can navigate to it."
+                        : "This address falls outside the travel radius."}
                     {canOverrideAddress && (
                       <label className="mt-2 flex items-center gap-2 font-medium">
                         <input
@@ -978,7 +1005,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                           checked={addressOverride}
                           onChange={(e) => setAddressOverride(e.target.checked)}
                         />
-                        Save anyway — Google doesn't know this address (admin override)
+                        Save anyway (admin override)
                       </label>
                     )}
                   </div>
@@ -1087,13 +1114,52 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           />
         )}
         {kind === "transport" && (
-          <AddressSelector
-            customerId={customerId}
-            tenantId={tenantId}
-            value={serviceAddressId}
-            onChange={setServiceAddressId}
-            label="Pickup / drop-off address"
-          />
+          <div className="space-y-2">
+            <AddressSelector
+              customerId={customerId}
+              tenantId={tenantId}
+              value={serviceAddressId}
+              onChange={setServiceAddressId}
+              label="Pickup / drop-off address"
+            />
+            <ServiceRadiusNotice check={radiusQ.data} />
+            {transportSettingsQ.data?.require_gate_code &&
+              selectedVanAddress &&
+              !((selectedVanAddress as any).access_notes ?? "").trim() && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <div>
+                    No gate code or access notes on this address. The customer must supply it by{" "}
+                    {String(transportSettingsQ.data.gate_code_required_by_time ?? "07:00").slice(0, 5)} on the
+                    collection day, or the trip may be charged as a failed collection.
+                  </div>
+                </div>
+              )}
+            {(!serviceAddressId || !vanAddressVerified || radiusBlocked) && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <div>
+                    {!serviceAddressId
+                      ? "Pick the collection address. Use “New address” above if it isn't on file yet."
+                      : !vanAddressVerified
+                        ? "This address isn't pinned on the map yet. Use “Confirm this address” above so the driver can navigate to it."
+                        : "This address falls outside the travel radius."}
+                    {canOverrideAddress && (
+                      <label className="mt-2 flex items-center gap-2 font-medium">
+                        <input
+                          type="checkbox"
+                          checked={addressOverride}
+                          onChange={(e) => setAddressOverride(e.target.checked)}
+                        />
+                        Save anyway (admin override)
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {!isEdit && (

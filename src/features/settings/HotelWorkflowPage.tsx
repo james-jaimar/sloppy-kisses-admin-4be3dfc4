@@ -39,6 +39,10 @@ export default function HotelWorkflowPage() {
     checkout_groom_discount_pct: 50,
     daycare_credit_enabled: true,
     guidelines_md: "",
+    extra_food_fee_zar: 0,
+    no_refund_early_checkout: true,
+    require_labelling_checklist: true,
+    photo_policy_note: "",
   });
 
   useEffect(() => {
@@ -57,6 +61,10 @@ export default function HotelWorkflowPage() {
         checkout_groom_discount_pct: Number(settingsQ.data.checkout_groom_discount_pct ?? 50),
         daycare_credit_enabled: settingsQ.data.daycare_credit_enabled ?? true,
         guidelines_md: (settingsQ.data as any).guidelines_md ?? "",
+        extra_food_fee_zar: Number((settingsQ.data as any).extra_food_fee_zar ?? 0),
+        no_refund_early_checkout: (settingsQ.data as any).no_refund_early_checkout ?? true,
+        require_labelling_checklist: (settingsQ.data as any).require_labelling_checklist ?? true,
+        photo_policy_note: (settingsQ.data as any).photo_policy_note ?? "",
       });
     }
   }, [settingsQ.data]);
@@ -76,11 +84,15 @@ export default function HotelWorkflowPage() {
         deposit_split_enabled: form.deposit_split_enabled,
         checkout_groom_discount_pct: form.checkout_groom_discount_pct,
         daycare_credit_enabled: form.daycare_credit_enabled,
+        extra_food_fee_zar: form.extra_food_fee_zar,
+        no_refund_early_checkout: form.no_refund_early_checkout,
+        require_labelling_checklist: form.require_labelling_checklist,
+        photo_policy_note: form.photo_policy_note.trim() || null,
         guidelines_md: form.guidelines_md.trim() || null,
         ...(form.guidelines_md.trim() !== (((settingsQ.data as any)?.guidelines_md ?? "").trim())
           ? { guidelines_version: Number((settingsQ.data as any)?.guidelines_version ?? 0) + 1 }
           : {}),
-      });
+      } as any);
       toast.success("Hotel workflow settings saved");
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to save");
@@ -264,6 +276,56 @@ export default function HotelWorkflowPage() {
                 className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
               />
             </Field>
+          </div>
+
+          <div className="sk-card space-y-4 p-4">
+            <div className="text-sm font-semibold">Stay rules</div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Extra food fee (ZAR)" hint="Charged per stay when the hotel supplies food from the Deli.">
+                <input
+                  type="number" min={0} step="0.01" disabled={!canManage}
+                  value={form.extra_food_fee_zar}
+                  onChange={(e) => setForm((f) => ({ ...f, extra_food_fee_zar: Number(e.target.value) }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                />
+              </Field>
+              <Field label="Photo policy note" hint="Shown with the photo consent option on the accommodation form.">
+                <input
+                  type="text" disabled={!canManage}
+                  value={form.photo_policy_note}
+                  onChange={(e) => setForm((f) => ({ ...f, photo_policy_note: e.target.value }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                />
+              </Field>
+            </div>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox" disabled={!canManage}
+                checked={form.no_refund_early_checkout}
+                onChange={(e) => setForm((f) => ({ ...f, no_refund_early_checkout: e.target.checked }))}
+                className="mt-1 h-4 w-4 rounded border-border"
+              />
+              <span className="text-sm">
+                No refund for early check-out
+                <span className="block text-[11px] text-muted-foreground">
+                  Ending a stay early keeps the full booked amount on the invoice.
+                </span>
+              </span>
+            </label>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox" disabled={!canManage}
+                checked={form.require_labelling_checklist}
+                onChange={(e) => setForm((f) => ({ ...f, require_labelling_checklist: e.target.checked }))}
+                className="mt-1 h-4 w-4 rounded border-border"
+              />
+              <span className="text-sm">
+                Require the food &amp; medication labelling checklist at check-in
+                <span className="block text-[11px] text-muted-foreground">
+                  Staff must tick that all containers are named and dated before the stay starts.
+                </span>
+              </span>
+            </label>
           </div>
 
           <div className="sk-card space-y-3 p-4">

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { Save, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
+import AddressAutocomplete from "@/components/address/AddressAutocomplete";
 import {
   useTransportWorkflowSettings, useUpdateTransportWorkflowSettings,
 } from "@/features/transport/queries";
@@ -48,6 +49,14 @@ export default function TransportWorkflowPage() {
     default_fee_zar: 0,
     round_trip_multiplier: 1.8,
     photo_gate_mode: "off" as "off" | "soft" | "hard",
+    base_address: "",
+    base_place_id: "" as string | null,
+    base_latitude: null as number | null,
+    base_longitude: null as number | null,
+    enforce_radius: true,
+    radius_gate_mode: "warn" as "warn" | "block",
+    require_gate_code: true,
+    gate_code_required_by_time: "07:00",
   });
   const [suburbFees, setSuburbFees] = useState<SuburbFee[]>([]);
 
@@ -63,6 +72,14 @@ export default function TransportWorkflowPage() {
         default_fee_zar: Number(settingsQ.data.default_fee_zar ?? 0),
         round_trip_multiplier: Number(settingsQ.data.round_trip_multiplier ?? 1.8),
         photo_gate_mode: ((settingsQ.data as any).photo_gate_mode ?? "off") as "off" | "soft" | "hard",
+        base_address: (settingsQ.data as any).base_address ?? "",
+        base_place_id: (settingsQ.data as any).base_place_id ?? null,
+        base_latitude: (settingsQ.data as any).base_latitude ?? null,
+        base_longitude: (settingsQ.data as any).base_longitude ?? null,
+        enforce_radius: (settingsQ.data as any).enforce_radius ?? true,
+        radius_gate_mode: ((settingsQ.data as any).radius_gate_mode ?? "warn") as "warn" | "block",
+        require_gate_code: (settingsQ.data as any).require_gate_code ?? true,
+        gate_code_required_by_time: trimTime((settingsQ.data as any).gate_code_required_by_time) || "07:00",
       });
       setSuburbFees(fromMap(settingsQ.data.suburb_fees));
     }
@@ -154,6 +171,75 @@ export default function TransportWorkflowPage() {
               <option value="hard">Required — block the booking until a photo is on file</option>
             </select>
           </Field>
+
+          <div className="border-t border-border pt-6 space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold">Service area &amp; access</h3>
+              <p className="text-xs text-muted-foreground">
+                The depot address is the centre of the travel radius. Bookings further than the radius set in
+                Policies are flagged (or blocked) when staff pick a verified address.
+              </p>
+            </div>
+            <div>
+              <AddressAutocomplete
+                label="Depot / base address"
+                disabled={!canManage}
+                value={form.base_address}
+                onChange={(v) => setForm((f) => ({ ...f, base_address: v }))}
+                onSelect={(r) =>
+                  setForm((f) => ({
+                    ...f,
+                    base_address: r.formatted_address,
+                    base_place_id: r.place_id,
+                    base_latitude: r.latitude,
+                    base_longitude: r.longitude,
+                  }))
+                }
+              />
+              <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
+                <MapPin className="h-3 w-3" />
+                {form.base_latitude != null && form.base_longitude != null
+                  ? `Pinned at ${form.base_latitude.toFixed(5)}, ${form.base_longitude.toFixed(5)}`
+                  : "Not pinned yet — pick an address from the list so distances can be measured."}
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Radius check" hint="Uses the travel radius (km) set under Policies.">
+                <select
+                  disabled={!canManage}
+                  value={!form.enforce_radius ? "off" : form.radius_gate_mode}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setForm((f) => ({
+                      ...f,
+                      enforce_radius: v !== "off",
+                      radius_gate_mode: v === "block" ? "block" : "warn",
+                    }));
+                  }}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                >
+                  <option value="off">Off — never check distance</option>
+                  <option value="warn">Warn — flag out-of-area collections</option>
+                  <option value="block">Block — staff must override to book out of area</option>
+                </select>
+              </Field>
+              <Field label="Gate code needed by" hint="Prompt staff and customers to supply the gate code before this time on the collection day.">
+                <input
+                  type="time" disabled={!canManage}
+                  value={form.gate_code_required_by_time}
+                  onChange={(e) => setForm((f) => ({ ...f, gate_code_required_by_time: e.target.value }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                />
+              </Field>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox" disabled={!canManage} checked={form.require_gate_code}
+                onChange={(e) => setForm((f) => ({ ...f, require_gate_code: e.target.checked }))}
+              />
+              Prompt for a gate code / access note on every transport booking
+            </label>
+          </div>
 
           <div className="border-t border-border pt-6 space-y-4">
             <div>
