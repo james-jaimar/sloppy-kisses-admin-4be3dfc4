@@ -11,6 +11,7 @@ import {
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
+import { featureDefault, isSellable } from "@/lib/features/catalog";
 
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Tenant = Database["public"]["Tables"]["tenants"]["Row"];
@@ -33,6 +34,7 @@ interface CurrentUserState {
   currentTenant: Tenant | null;
   roles: RoleInfo[];
   permissions: string[];
+  features: Record<string, boolean>;
   loading: boolean;
   error: string | null;
 }
@@ -41,12 +43,13 @@ interface TenantContextValue extends CurrentUserState {
   setCurrentTenantId: (id: string) => void;
   refresh: () => Promise<void>;
   hasPermission: (code: string) => boolean;
+  hasFeature: (key: string) => boolean;
 }
 
 const TenantContext = createContext<TenantContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "sk.currentTenantId";
-const CACHE_KEY = "sk.currentUserCache.v2";
+const CACHE_KEY = "sk.currentUserCache.v3";
 
 type CachedState = Omit<CurrentUserState, "loading" | "error"> & { authUserId: string };
 
@@ -71,6 +74,7 @@ function writeCache(authUserId: string, s: CurrentUserState) {
       currentTenant: s.currentTenant,
       roles: s.roles,
       permissions: s.permissions,
+      features: s.features,
     };
     window.sessionStorage.setItem(CACHE_KEY, JSON.stringify(payload));
   } catch {
@@ -98,6 +102,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         currentTenant: cached.currentTenant,
         roles: cached.roles,
         permissions: cached.permissions,
+        features: cached.features ?? {},
         loading: false,
         error: null,
       };
@@ -108,6 +113,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       currentTenant: null,
       roles: [],
       permissions: [],
+      features: {},
       loading: true,
       error: null,
     };
@@ -129,6 +135,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         currentTenant: null,
         roles: [],
         permissions: [],
+        features: {},
         loading: false,
         error: null,
       });
@@ -164,6 +171,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
         currentTenant: null,
         roles: [],
         permissions: [],
+        features: {},
         loading: false,
         error: null,
       });
@@ -211,9 +219,18 @@ export function TenantProvider({ children }: { children: ReactNode }) {
     // 4. Roles + permissions for the tenant_user in the current tenant
     let roles: RoleInfo[] = [];
     let permissions: string[] = [];
+    let features: Record<string, boolean> = {};
 
     if (current) {
       const tenantUserId = memberships.find((m) => m.tenant.id === current!.id)!.tenantUser.id;
+
+      const { data: featureRows } = await supabase
+        .from("tenant_features")
+        .select("feature_key, enabled")
+        .eq("tenant_id", current.id);
+      features = Object.fromEntries(
+        (featureRows ?? []).map((r: any) => [r.feature_key as string, Boolean(r.enabled)]),
+      );
 
       const { data: roleRows, error: rolesErr } = await supabase
         .from("user_roles")
@@ -279,6 +296,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       currentTenant: current,
       roles,
       permissions,
+      features,
       loading: false,
       error: null,
     };
@@ -307,6 +325,11 @@ export function TenantProvider({ children }: { children: ReactNode }) {
       setCurrentTenantId,
       refresh: load,
       hasPermission: (code: string) => isPlatform || state.permissions.includes(code),
+      hasFeature: (key: string) => {
+        if (!isSellable(key)) return true;
+        const explicit = state.features[key];
+        return explicit === undefined ? featureDefault(key) : explicit;
+      },
     }),
     [state, setCurrentTenantId, load, isPlatform],
   );
