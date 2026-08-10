@@ -125,9 +125,6 @@ export default function GatewayActivityPage() {
               className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
               <RefreshCw className="h-4 w-4" /> Refresh
             </button>
-            <Link to="/admin/settings" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
-              <ArrowLeft className="h-4 w-4" /> Back to settings
-            </Link>
           </div>
         }
       />
