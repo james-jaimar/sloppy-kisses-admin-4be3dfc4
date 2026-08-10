@@ -30,6 +30,20 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/groomers",
+    label: "Groomers",
+    description: "Who is on the floor, their hours and diary colour. Used for auto-assign and preferred groomers.",
+    icon: Scissors,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/grooming-addons",
+    label: "Grooming rate card",
+    description: "Package prices by species and size. Admin-editable.",
+    icon: Scissors,
+    ready: true,
+  },
+  {
     to: "/admin/settings/grooming-addons",
     label: "Grooming add-ons",
     description: "Teeth, nails, ear clean, shampoo upgrades, travel fee.",
