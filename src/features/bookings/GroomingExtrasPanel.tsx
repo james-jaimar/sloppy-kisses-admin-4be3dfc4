@@ -77,13 +77,21 @@ export function GroomingExtrasPanel({
   const activePkgEarly = speciesPackagesAll.find((p) => p.id === packageId) ?? null;
   const isFullPackage = activePkgEarly?.package_type === "full";
 
+  // Individual treatments the customer can book on their own (nails only, ears only…).
+  // Only offered when no package is picked — inside a package they're extras/instructions.
+  const standaloneAddons = useMemo(
+    () => (packageId ? [] : (addonsQ.data ?? []).filter((a) => a.bookable_standalone)),
+    [addonsQ.data, packageId],
+  );
+
   const visibleAddons = useMemo(
     () => (addonsQ.data ?? []).filter((a) => {
+      if (standaloneAddons.some((s) => s.id === a.id)) return false;
       if (linkedAddonCodes.has(a.code)) return false;
       if (isFullPackage && BUNDLED_IN_FULL.has(a.code)) return false;
       return true;
     }),
-    [addonsQ.data, linkedAddonCodes, isFullPackage],
+    [addonsQ.data, linkedAddonCodes, isFullPackage, standaloneAddons],
   );
 
   // Seed selection from existing addons in edit mode.
@@ -114,7 +122,12 @@ export function GroomingExtrasPanel({
     const travel = mode === "mobile" ? Number(travelFee ?? 0) : 0;
     const discountAmt = pensionerDiscount ? (base * discountPct) / 100 : 0;
     const total = base - discountAmt + addonTotal + matted + sedation + travel;
-    return { base, addonRows, addonTotal, matted, sedation, travel, discountAmt, total };
+    const addonMinutes = addonSelection.reduce((sum, s) => {
+      const a = (addonsQ.data ?? []).find((x: GroomingAddon) => x.id === s.addon_id);
+      return sum + (Number(a?.duration_minutes ?? 0) * (s.qty || 1));
+    }, 0);
+    const minutes = Number(activePkg?.expected_minutes ?? 0) + addonMinutes;
+    return { base, addonRows, addonTotal, matted, sedation, travel, discountAmt, total, addonMinutes, minutes };
   }, [activePkg, addonSelection, addonsQ.data, mode, travelFee, mattedSurchargeZar, sedationSurchargeZar, pensionerDiscount, discountPct]);
 
   function toggleAddon(id: string) {
@@ -165,10 +178,45 @@ export function GroomingExtrasPanel({
               </div>
             </>
           ) : (
-            <span className="text-muted-foreground">Pick a package to price this booking.</span>
+            <span className="text-muted-foreground">
+              Pick a package — or choose individual treatments below for a quick visit.
+            </span>
           )}
         </div>
       </div>
+
+      {standaloneAddons.length > 0 && (
+        <div className="mt-4">
+          <div className="mb-2 text-xs font-medium">Individual treatments (no package)</div>
+          <div className="mb-2 text-[11px] text-muted-foreground">
+            Quick single treatments — nails, ears, teeth, anal glands, hand stripping. Each one adds its own time to the appointment.
+          </div>
+          <div className="space-y-2">
+            {standaloneAddons.map((a) => {
+              const sel = addonSelection.find((s) => s.addon_id === a.id);
+              return (
+                <div key={a.id} className="flex items-center gap-3 rounded-lg border border-border bg-white px-3 py-2 text-sm">
+                  <label className="flex flex-1 items-center gap-2">
+                    <input type="checkbox" className="h-4 w-4" checked={!!sel} onChange={() => toggleAddon(a.id)} />
+                    <span className="font-medium">{a.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {fmtZar(Number(a.price_zar))}{a.duration_minutes ? ` · ${a.duration_minutes} min` : ""}
+                    </span>
+                  </label>
+                  {sel && (
+                    <input
+                      type="number" min={1} step={1} value={sel.qty}
+                      onChange={(e) => setQty(a.id, Number(e.target.value))}
+                      className="h-8 w-20 rounded-md border border-border bg-white px-2 text-sm"
+                      title="Quantity"
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="mt-4">
         <div className="mb-2 text-xs font-medium">Extras & fees</div>
@@ -186,7 +234,9 @@ export function GroomingExtrasPanel({
                   <label className="flex flex-1 items-center gap-2">
                     <input type="checkbox" className="h-4 w-4" checked={!!sel} onChange={() => toggleAddon(a.id)} />
                     <span className="font-medium">{a.name}</span>
-                    <span className="text-xs text-muted-foreground">{fmtZar(Number(a.price_zar))}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {fmtZar(Number(a.price_zar))}{a.duration_minutes ? ` · +${a.duration_minutes} min` : ""}
+                    </span>
                   </label>
                   {sel && (
                     <input
@@ -225,9 +275,15 @@ export function GroomingExtrasPanel({
             {preview.sedation > 0 && <Row label="Sedation surcharge" value={fmtZar(preview.sedation)} />}
             {preview.travel > 0 && <Row label="Mobile travel fee" value={fmtZar(preview.travel)} />}
             <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm font-semibold">
-              <span>Total (excl. VAT changes)</span>
+              <span>Total (VAT incl.)</span>
               <span>{fmtZar(preview.total)}</span>
             </div>
+            {preview.minutes > 0 && (
+              <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
+                <span>Appointment length</span>
+                <span>{preview.minutes} min{preview.addonMinutes > 0 ? ` (incl. ${preview.addonMinutes} min extras)` : ""}</span>
+              </div>
+            )}
           </div>
           <div className="mt-2 text-[11px] text-muted-foreground">
             The booking's invoice is re-priced automatically after save (until it is sent or paid).
