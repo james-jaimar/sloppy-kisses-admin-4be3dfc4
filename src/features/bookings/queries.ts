@@ -243,6 +243,8 @@ export interface CreateBookingInput {
   service_address_id?: string | null;
   /** Book on a closure day anyway (staff override). */
   closure_override?: boolean;
+  /** Links the per-pet bookings created together for one owner. */
+  booking_group_id?: string | null;
 }
 
 export function useCreateBooking(tenantId: string) {
@@ -325,6 +327,7 @@ export function useCreateBooking(tenantId: string) {
           requires_transport: input.requires_transport ?? false,
           requires_grooming: input.requires_grooming ?? false,
           closure_override: input.closure_override ?? false,
+          booking_group_id: input.booking_group_id ?? null,
           ...addressSnapshot,
         })
         .select("id")
