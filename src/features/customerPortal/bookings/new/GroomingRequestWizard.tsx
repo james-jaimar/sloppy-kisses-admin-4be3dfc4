@@ -8,6 +8,8 @@ import { GroomingInstructionsForm, type GroomingInstructionsValue } from "@/feat
 import { usePetGroomingDefaults, useInstructionCatalog } from "@/features/grooming/instructions/queries";
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
+import { useGroomingDayAvailability } from "@/features/grooming/availabilityQueries";
+import { layoutGroomingAppointments, type PetSlotRequest } from "@/features/grooming/multiPetSchedule";
 import { effectivePetSize, petSizeToBand } from "@/features/pets/sizeUtils";
 import { SizeOverrideBadge } from "@/features/pets/SizeOverrideControl";
 import { AddressSelector } from "@/features/customers/AddressSelector";
@@ -20,7 +22,9 @@ export default function GroomingRequestWizard({ mode }: Props) {
   const packages = useGroomingPackages(cust.data?.tenant_id);
   const submit = useCreatePortalBooking();
 
-  const [petId, setPetId] = useState("");
+  const [petIds, setPetIds] = useState<string[]>([]);
+  const petId = petIds[0] ?? "";
+  const [petPackages, setPetPackages] = useState<Record<string, string>>({});
   const [slotStart, setSlotStart] = useState<string | null>(null);
   const [slotEnd, setSlotEnd] = useState<string | null>(null);
   const [packageId, setPackageId] = useState("");
@@ -44,12 +48,27 @@ export default function GroomingRequestWizard({ mode }: Props) {
   useEffect(() => {
     if (packageId) setTreatments({});
   }, [packageId]);
-  const selectedPet = (pets.data ?? []).find((p: any) => p.id === petId) ?? null;
+  const selectedPets = (pets.data ?? []).filter((p: any) => petIds.includes(p.id));
+  const selectedPet = selectedPets[0] ?? null;
+  const multiPet = petIds.length > 1;
   const petBand = petSizeToBand(effectivePetSize(selectedPet as any));
-  const filteredPackages = (packages.data ?? []).filter((p: any) => {
-    if (!petBand) return true;
-    return !p.size_band || p.size_band === petBand;
-  });
+  function packagesForPet(pet: any) {
+    const band = petSizeToBand(effectivePetSize(pet));
+    return (packages.data ?? []).filter((p: any) => (!band ? true : !p.size_band || p.size_band === band));
+  }
+  const filteredPackages = selectedPet ? packagesForPet(selectedPet) : (packages.data ?? []);
+  /** The package chosen for a given dog (single-dog flow uses the shared picker). */
+  function packageForPet(id: string) {
+    return multiPet ? petPackages[id] || "" : packageId;
+  }
+  function minutesForPet(id: string) {
+    const pkg = (packages.data ?? []).find((p: any) => p.id === packageForPet(id));
+    const pkgMins = pkg ? Number(pkg.expected_minutes) || 60 : 0;
+    const treatMins = selectedTreatments.reduce(
+      (s, a) => s + Number(a.duration_minutes ?? 0) * (treatments[a.id] || 1), 0,
+    );
+    return Math.max(15, pkgMins + treatMins) || 60;
+  }
 
   // Seed instructions from selected pet's saved defaults whenever the pet changes.
   useEffect(() => {
