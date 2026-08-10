@@ -8789,6 +8789,15 @@ export type Database = {
         Returns: Json
       }
       vax_code_norm: { Args: { p: string }; Returns: string }
+      vax_outstanding_by_pet: {
+        Args: { p_customer?: string; p_tenant: string }
+        Returns: {
+          customer_id: string
+          outstanding: number
+          pet_id: string
+          pet_name: string
+        }[]
+      }
       void_refund: { Args: { p_refund_id: string }; Returns: undefined }
       xero_drain_queue: { Args: never; Returns: undefined }
       xero_enqueue: {
