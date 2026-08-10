@@ -29,11 +29,14 @@ export interface GroomingBoardCard {
   start_at: string | null;
   end_at: string | null;
   resource_id: string | null;
-  resource: { id: string; name: string } | null;
+  resource: { id: string; name: string; colour?: string | null } | null;
+  /** Set when this dog is part of a multi-dog booking made in one go. */
+  booking_group_id: string | null;
   customer: { id: string; full_name: string | null; mobile: string | null } | null;
   pets: { id: string; name: string | null; species: string | null; breed: string | null }[];
   details: {
     package_id: string | null;
+    duration_minutes: number | null;
     actual_start_at: string | null;
     actual_end_at: string | null;
   } | null;
@@ -63,11 +66,11 @@ export function useGroomingBoardBookings(params: { tenantId: string | null | und
       const { data, error } = await supabase
         .from("bookings")
         .select(`
-          id, booking_number, status, service_type, start_at, end_at, resource_id,
-          resource:resources(id, name),
+          id, booking_number, status, service_type, start_at, end_at, resource_id, booking_group_id,
+          resource:resources(id, name, colour),
           customer:customers(id, full_name, mobile),
           booking_pets(pet:pets(id, name, species, breed)),
-          details:grooming_booking_details(package_id, actual_start_at, actual_end_at)
+          details:grooming_booking_details(package_id, duration_minutes, actual_start_at, actual_end_at)
         `)
         .eq("tenant_id", tenantId as string)
         .in("service_type", GROOMING_SERVICE_TYPES as any)
@@ -84,10 +87,48 @@ export function useGroomingBoardBookings(params: { tenantId: string | null | und
         end_at: b.end_at,
         resource_id: b.resource_id,
         resource: b.resource ?? null,
+        booking_group_id: b.booking_group_id ?? null,
         customer: b.customer ?? null,
         pets: (b.booking_pets ?? []).map((bp: any) => bp.pet).filter(Boolean),
         details: Array.isArray(b.details) ? (b.details[0] ?? null) : (b.details ?? null),
       }));
+    },
+  });
+}
+
+/**
+ * Diary edit: move a grooming appointment to another groomer and/or another time.
+ * Keeps `grooming_booking_details.duration_minutes` in step with the new window.
+ */
+export function useRescheduleGrooming(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      bookingId, resourceId, start, end,
+    }: { bookingId: string; resourceId: string | null; start: Date; end: Date }) => {
+      const { error } = await supabase
+        .from("bookings")
+        .update({
+          resource_id: resourceId,
+          start_at: start.toISOString(),
+          end_at: end.toISOString(),
+          start_date: start.toISOString().slice(0, 10),
+          end_date: end.toISOString().slice(0, 10),
+        } as any)
+        .eq("id", bookingId)
+        .eq("tenant_id", tenantId);
+      if (error) throw error;
+
+      const minutes = Math.max(15, Math.round((end.getTime() - start.getTime()) / 60000));
+      await supabase
+        .from("grooming_booking_details")
+        .update({ duration_minutes: minutes } as any)
+        .eq("booking_id", bookingId);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["grooming_board"] });
+      qc.invalidateQueries({ queryKey: ["grooming_day_availability"] });
+      qc.invalidateQueries({ queryKey: ["bookings"] });
     },
   });
 }

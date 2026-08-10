@@ -20,6 +20,7 @@ import { PhotoGatePanel } from "./PhotoGatePanel";
 import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
 import { HotelGroomRequestsPanel } from "@/features/hotelGrooming/HotelGroomRequestsPanel";
 import { HotelMoneyStrip } from "@/features/hotelCattery/HotelMoneyStrip";
+import { GroomerPicker } from "@/features/grooming/GroomerPicker";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -165,8 +166,18 @@ export default function BookingDetailPage() {
                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                   <Field label="Start">{fmt(b.start_at)}</Field>
                   <Field label="End">{fmt(b.end_at)}</Field>
-                  <Field label="Resource">
-                    {b.resource?.name ?? <span className="text-muted-foreground">Unassigned</span>}
+                  <Field label={b.service_type === "grooming_inhouse" ? "Groomer" : "Resource"}>
+                    {b.service_type === "grooming_inhouse" && tenantId ? (
+                      <GroomerPicker
+                        tenantId={tenantId}
+                        bookingId={b.id}
+                        resourceId={b.resource_id ?? null}
+                        startAt={b.start_at}
+                        endAt={b.end_at}
+                      />
+                    ) : (
+                      b.resource?.name ?? <span className="text-muted-foreground">Unassigned</span>
+                    )}
                   </Field>
                   <Field label="Created">{fmt(b.created_at)}</Field>
                   <Field label="Updated">{fmt(b.updated_at)}</Field>

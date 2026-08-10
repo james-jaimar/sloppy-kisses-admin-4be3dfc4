@@ -97,7 +97,11 @@ export function GroomingCard({
           </span>
         )}
         {card.resource && (
-          <span className="truncate rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+          <span className="inline-flex items-center gap-1 truncate rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+            <span
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: card.resource.colour ?? "#F97362" }}
+            />
             {card.resource.name}
           </span>
         )}
