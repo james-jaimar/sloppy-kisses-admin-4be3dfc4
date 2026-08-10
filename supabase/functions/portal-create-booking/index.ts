@@ -475,6 +475,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Individual treatments / extras chosen in the portal wizard.
+    const requestedAddons = (g.addons ?? []).filter((a) => a.code !== "stay_play_after");
+    if (requestedAddons.length > 0) {
+      const { data: catalog } = await admin
+        .from("grooming_addons")
+        .select("id, code, name, price_zar")
+        .eq("tenant_id", tenantId)
+        .eq("active", true)
+        .in("code", requestedAddons.map((a) => a.code));
+      const rows = requestedAddons
+        .map((a) => {
+          const match = (catalog ?? []).find((c) => c.code === a.code);
+          if (!match) return null;
+          return {
+            tenant_id: tenantId,
+            booking_id: bookingId,
+            addon_id: match.id,
+            addon_code: match.code,
+            addon_name: match.name,
+            price_zar_snapshot: match.price_zar,
+            qty: a.qty ?? 1,
+          };
+        })
+        .filter(Boolean);
+      if (rows.length > 0) await admin.from("grooming_booking_addons").insert(rows as never[]);
+    }
+
     // After-groom Stay & Play — billed as an add-on; a DB trigger opens the session.
     if (g.stay_play) {
       const { data: addon } = await admin
