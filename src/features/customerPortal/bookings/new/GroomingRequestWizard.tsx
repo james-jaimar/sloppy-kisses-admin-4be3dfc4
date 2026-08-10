@@ -46,8 +46,8 @@ export default function GroomingRequestWizard({ mode }: Props) {
   const selectedTreatments = standaloneAddons.filter((a) => treatments[a.id]);
   // Clear quick treatments when a package is picked (they're included / handled as instructions).
   useEffect(() => {
-    if (packageId) setTreatments({});
-  }, [packageId]);
+    if (packageId || Object.values(petPackages).some(Boolean)) setTreatments({});
+  }, [packageId, petPackages]);
   const selectedPets = (pets.data ?? []).filter((p: any) => petIds.includes(p.id));
   const selectedPet = selectedPets[0] ?? null;
   const multiPet = petIds.length > 1;
