@@ -1058,11 +1058,18 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               onChange={(e) => setResourceId(e.target.value || null)}
               className={inputCls}
             >
-              <option value="">— Unassigned —</option>
+              <option value="">
+                {kind === "grooming" ? "Auto-assign — next free groomer" : "— Unassigned —"}
+              </option>
               {filteredResources.map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </select>
+            {kind === "grooming" && preferredGroomerId && resourceId === preferredGroomerId && (
+              <div className="mt-1 text-[11px] text-muted-foreground">
+                This customer's preferred groomer.
+              </div>
+            )}
             {conflicts.length > 0 && (
               <div className="mt-2 flex items-start gap-2 rounded-lg border border-sk-orange bg-sk-orange-soft p-2 text-xs text-sk-orange">
                 <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
