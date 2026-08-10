@@ -35,6 +35,14 @@ export default function GroomingWorkflowPage() {
     cancellation_notice_hours: 24,
     sedation_enabled: true,
     sedation_default_fee_zar: 0,
+    sedation_fasting_hours: 8,
+    sedation_instructions_md: "",
+    sedation_vet_location: "",
+    senior_pet_age_years: 8,
+    senior_vet_check_mode: "warn" as "off" | "warn" | "block",
+    rebook_nudge_enabled: true,
+    rebook_weeks_min: 4,
+    rebook_weeks_max: 6,
   });
 
   useEffect(() => {
@@ -55,13 +63,25 @@ export default function GroomingWorkflowPage() {
         cancellation_notice_hours: Number(d.cancellation_notice_hours ?? 24),
         sedation_enabled: Boolean(d.sedation_enabled ?? true),
         sedation_default_fee_zar: Number(d.sedation_default_fee_zar ?? 0),
+        sedation_fasting_hours: Number((d as any).sedation_fasting_hours ?? 8),
+        sedation_instructions_md: (d as any).sedation_instructions_md ?? "",
+        sedation_vet_location: (d as any).sedation_vet_location ?? "",
+        senior_pet_age_years: Number((d as any).senior_pet_age_years ?? 8),
+        senior_vet_check_mode: ((d as any).senior_vet_check_mode ?? "warn") as "off" | "warn" | "block",
+        rebook_nudge_enabled: Boolean((d as any).rebook_nudge_enabled ?? true),
+        rebook_weeks_min: Number((d as any).rebook_weeks_min ?? 4),
+        rebook_weeks_max: Number((d as any).rebook_weeks_max ?? 6),
       });
     }
   }, [settingsQ.data]);
 
   async function save() {
     try {
-      await update.mutateAsync(form);
+      await update.mutateAsync({
+        ...form,
+        sedation_instructions_md: form.sedation_instructions_md.trim() || null,
+        sedation_vet_location: form.sedation_vet_location.trim() || null,
+      } as any);
       toast.success("Grooming workflow settings saved");
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to save");
