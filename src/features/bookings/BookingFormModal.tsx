@@ -6,6 +6,7 @@ import { ModalShell } from "@/components/modals/ModalShell";
 import { useCustomerPets } from "@/features/customers/queries";
 import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import { AddressSelector } from "@/features/customers/AddressSelector";
+import { useRadiusCheck, ServiceRadiusNotice } from "@/features/transport/ServiceRadiusNotice";
 import { useCustomerAddresses } from "@/features/customers/addressQueries";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import {
