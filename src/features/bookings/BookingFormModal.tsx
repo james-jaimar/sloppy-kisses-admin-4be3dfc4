@@ -453,9 +453,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       return toast.error("Select at least one pet for this booking");
     }
 
-    if (conflicts.length > 0) {
-      // placeholder anchor
-    }
     if (isMobileVan && !addressOverride) {
       if (!serviceAddressId) {
         return toast.error("Pick the mobile grooming address — the van needs somewhere to go.");
