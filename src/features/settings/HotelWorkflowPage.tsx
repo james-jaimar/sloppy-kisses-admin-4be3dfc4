@@ -39,6 +39,10 @@ export default function HotelWorkflowPage() {
     checkout_groom_discount_pct: 50,
     daycare_credit_enabled: true,
     guidelines_md: "",
+    extra_food_fee_zar: 0,
+    no_refund_early_checkout: true,
+    require_labelling_checklist: true,
+    photo_policy_note: "",
   });
 
   useEffect(() => {
@@ -57,6 +61,10 @@ export default function HotelWorkflowPage() {
         checkout_groom_discount_pct: Number(settingsQ.data.checkout_groom_discount_pct ?? 50),
         daycare_credit_enabled: settingsQ.data.daycare_credit_enabled ?? true,
         guidelines_md: (settingsQ.data as any).guidelines_md ?? "",
+        extra_food_fee_zar: Number((settingsQ.data as any).extra_food_fee_zar ?? 0),
+        no_refund_early_checkout: (settingsQ.data as any).no_refund_early_checkout ?? true,
+        require_labelling_checklist: (settingsQ.data as any).require_labelling_checklist ?? true,
+        photo_policy_note: (settingsQ.data as any).photo_policy_note ?? "",
       });
     }
   }, [settingsQ.data]);
@@ -76,11 +84,15 @@ export default function HotelWorkflowPage() {
         deposit_split_enabled: form.deposit_split_enabled,
         checkout_groom_discount_pct: form.checkout_groom_discount_pct,
         daycare_credit_enabled: form.daycare_credit_enabled,
+        extra_food_fee_zar: form.extra_food_fee_zar,
+        no_refund_early_checkout: form.no_refund_early_checkout,
+        require_labelling_checklist: form.require_labelling_checklist,
+        photo_policy_note: form.photo_policy_note.trim() || null,
         guidelines_md: form.guidelines_md.trim() || null,
         ...(form.guidelines_md.trim() !== (((settingsQ.data as any)?.guidelines_md ?? "").trim())
           ? { guidelines_version: Number((settingsQ.data as any)?.guidelines_version ?? 0) + 1 }
           : {}),
-      });
+      } as any);
       toast.success("Hotel workflow settings saved");
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to save");
