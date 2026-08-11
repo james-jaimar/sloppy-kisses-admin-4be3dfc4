@@ -2956,6 +2956,8 @@ export type Database = {
           end_at: string | null
           estimate_number: string
           expiry_date: string | null
+          extras: Json
+          hold_until: string | null
           id: string
           issue_date: string | null
           notes: string | null
@@ -2983,6 +2985,8 @@ export type Database = {
           end_at?: string | null
           estimate_number: string
           expiry_date?: string | null
+          extras?: Json
+          hold_until?: string | null
           id?: string
           issue_date?: string | null
           notes?: string | null
@@ -3010,6 +3014,8 @@ export type Database = {
           end_at?: string | null
           estimate_number?: string
           expiry_date?: string | null
+          extras?: Json
+          hold_until?: string | null
           id?: string
           issue_date?: string | null
           notes?: string | null
@@ -6630,6 +6636,47 @@ export type Database = {
         }
         Relationships: []
       }
+      public_holidays: {
+        Row: {
+          blocks_collection: boolean
+          blocks_dropoff: boolean
+          created_at: string
+          holiday_date: string
+          id: string
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          blocks_collection?: boolean
+          blocks_dropoff?: boolean
+          created_at?: string
+          holiday_date: string
+          id?: string
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          blocks_collection?: boolean
+          blocks_dropoff?: boolean
+          created_at?: string
+          holiday_date?: string
+          id?: string
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_holidays_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurring_rules: {
         Row: {
           active: boolean
@@ -8488,6 +8535,7 @@ export type Database = {
         }
         Returns: string
       }
+      expire_quote_holds: { Args: never; Returns: number }
       find_customer_email_duplicates: {
         Args: { target_customer_id: string }
         Returns: {
@@ -8581,7 +8629,24 @@ export type Database = {
         Args: { p_booking_id: string; p_collected_at?: string; p_note?: string }
         Returns: Json
       }
+      hotel_movement_block: {
+        Args: { p_date: string; p_kind: string; p_tenant_id: string }
+        Returns: string
+      }
       hotel_pay_in_full: { Args: { p_booking_id: string }; Returns: string }
+      hotel_pencilled_by_day: {
+        Args: {
+          p_end: string
+          p_exclude_estimate_id?: string
+          p_start: string
+          p_tenant_id: string
+        }
+        Returns: {
+          accommodation_type: string
+          day: string
+          pets: number
+        }[]
+      }
       hotel_stay_lines: {
         Args: {
           p_accommodation_type: string
