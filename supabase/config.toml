@@ -7,3 +7,6 @@ verify_jwt = true
 verify_jwt = false
 [functions.snap-upload]
 verify_jwt = false
+
+[functions.public-quote-accept]
+verify_jwt = false
