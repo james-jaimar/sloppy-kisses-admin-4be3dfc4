@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${SERVICE_KEY}`,
-      apikey: ANON_KEY,
+      apikey: SERVICE_KEY,
     },
     body: JSON.stringify({ quote_id: q.id }),
   });
