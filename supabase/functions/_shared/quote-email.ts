@@ -1,0 +1,257 @@
+// Marketing-quality HTML email for a hotel quote.
+//
+// The wording of the intro comes from the tenant's `quote_sent` message
+// template when one exists (Settings -> Message templates), so the owner can
+// change the copy without a developer. Everything below the intro — the stay
+// card, the arrival windows, the packing list, the accommodation areas — is
+// rendered here so the layout always stays on brand.
+
+export interface QuoteEmailInput {
+  tenantName: string;
+  brandColour: string;
+  logoUrl?: string | null;
+  appUrl?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  customerFirstName: string;
+  quoteNumber: string;
+  startAt?: string | null;
+  endAt?: string | null;
+  nights?: number | null;
+  accommodationType?: string | null;
+  petNames: string[];
+  checkInWindow?: string | null;
+  checkOutWindow?: string | null;
+  total: number;
+  deposit: number;
+  validUntil?: string | null;
+  /** Rendered intro copy (plain text, blank-line separated paragraphs). */
+  intro: string;
+  /** Tenant hotel guidelines markdown, appended as a plain-text section. */
+  guidelines?: string | null;
+}
+
+export const esc = (s: unknown) =>
+  String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+export const fmtDate = (d: string | null | undefined) =>
+  d ? new Date(d).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+export const fmtZar = (n: number) =>
+  "R " + (Number.isFinite(n) ? n : 0).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** Default intro copy, used when the tenant has no `quote_sent` template. */
+export const DEFAULT_QUOTE_INTRO =
+  "Hi {{customer.first_name}},\n\n" +
+  "Thank you for thinking of us for {{pet.names}}. Your quote {{quote.number}} for {{quote.dates}} is attached, " +
+  "and we have pencilled the dates in for you until {{quote.valid_until}}.\n\n" +
+  "A 50% deposit secures the booking and the balance is settled before arrival. " +
+  "Everything you need to know before the stay is below — if it is your first time with us, this is the short version of our accommodation form.";
+
+function paragraphs(text: string): string {
+  return String(text ?? "")
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#3f3f46">${esc(p).replace(/\n/g, "<br/>")}</p>`)
+    .join("");
+}
+
+function bulletCard(brand: string, title: string, icon: string, items: string[]): string {
+  return `
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ececf1;border-radius:14px;margin:0 0 14px;background:#ffffff">
+    <tr><td style="padding:18px 20px">
+      <div style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${brand};margin-bottom:10px">${icon} ${esc(title)}</div>
+      <ul style="margin:0;padding-left:18px">
+        ${items.map((i) => `<li style="font-size:14px;line-height:1.6;color:#3f3f46;margin-bottom:6px">${i}</li>`).join("")}
+      </ul>
+    </td></tr>
+  </table>`;
+}
+
+export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: string } {
+  const brand = /^#[0-9a-f]{6}$/i.test(i.brandColour ?? "") ? i.brandColour : "#FF5A5A";
+  const stayLine = i.startAt
+    ? `${fmtDate(i.startAt)} – ${fmtDate(i.endAt)}${i.nights ? ` · ${i.nights} night${i.nights === 1 ? "" : "s"}` : ""}`
+    : "—";
+  const pets = i.petNames.length ? i.petNames.join(", ") : "your dog";
+  const ctaUrl = (i.appUrl ?? "").replace(/\/+$/, "");
+
+  const facts: Array<[string, string]> = [
+    ["Guests", pets],
+    ["Dates", stayLine],
+  ];
+  if (i.accommodationType) facts.push(["Accommodation", i.accommodationType]);
+  if (i.checkInWindow) facts.push(["Arrival", i.checkInWindow]);
+  if (i.checkOutWindow) facts.push(["Collection", i.checkOutWindow]);
+
+  const factRows = facts.map(([k, v]) => `
+    <tr>
+      <td style="padding:7px 0;font-size:13px;color:#71717a;width:38%">${esc(k)}</td>
+      <td style="padding:7px 0;font-size:14px;color:#18181b;font-weight:600">${esc(v)}</td>
+    </tr>`).join("");
+
+  const guidelinesBlock = i.guidelines?.trim()
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ececf1;border-radius:14px;margin:0 0 14px;background:#fafafa">
+         <tr><td style="padding:18px 20px">
+           <div style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${brand};margin-bottom:10px">House guidelines</div>
+           <div style="font-size:13.5px;line-height:1.6;color:#52525b;white-space:pre-wrap">${esc(i.guidelines.trim())}</div>
+         </td></tr>
+       </table>`
+    : "";
+
+  const html = `<!doctype html>
+<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>${esc(i.quoteNumber)}</title></head>
+<body style="margin:0;padding:0;background:#f4f4f6">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0">Your quote ${esc(i.quoteNumber)} for ${esc(pets)} — ${esc(stayLine)}.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f6;padding:24px 12px">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+
+        <!-- Hero -->
+        <tr><td style="background:${brand};border-radius:18px 18px 0 0;padding:28px 28px 26px;text-align:center">
+          ${i.logoUrl
+            ? `<img src="${esc(i.logoUrl)}" alt="${esc(i.tenantName)}" width="150" style="max-width:150px;height:auto;margin:0 auto 12px;display:block"/>`
+            : `<div style="font-size:20px;font-weight:800;color:#ffffff;margin-bottom:10px">${esc(i.tenantName)}</div>`}
+          <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.85);font-weight:700">Hotel quote ${esc(i.quoteNumber)}</div>
+          <div style="font-size:27px;line-height:1.25;font-weight:800;color:#ffffff;margin-top:8px">A holiday for ${esc(pets)}</div>
+        </td></tr>
+
+        <!-- Intro -->
+        <tr><td style="background:#ffffff;padding:26px 28px 6px">
+          ${paragraphs(i.intro)}
+        </td></tr>
+
+        <!-- Stay card -->
+        <tr><td style="background:#ffffff;padding:6px 28px 4px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ececf1;border-radius:16px;overflow:hidden">
+            <tr><td style="padding:20px 22px 6px">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${factRows}</table>
+            </td></tr>
+            <tr><td style="padding:14px 22px 20px">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ececf1">
+                <tr>
+                  <td style="padding:14px 0 0;width:50%">
+                    <div style="font-size:12px;color:#71717a">Total for the stay</div>
+                    <div style="font-size:22px;font-weight:800;color:#18181b">${esc(fmtZar(i.total))}</div>
+                  </td>
+                  <td style="padding:14px 0 0;width:50%">
+                    <div style="font-size:12px;color:#71717a">50% deposit to secure</div>
+                    <div style="font-size:22px;font-weight:800;color:${brand}">${esc(fmtZar(i.deposit))}</div>
+                  </td>
+                </tr>
+              </table>
+            </td></tr>
+          </table>
+          ${i.validUntil
+            ? `<div style="text-align:center;font-size:13px;color:#71717a;margin:14px 0 4px">These dates are held for you until <strong style="color:#18181b">${esc(fmtDate(i.validUntil))}</strong>.</div>`
+            : ""}
+          ${ctaUrl
+            ? `<div style="text-align:center;margin:16px 0 6px">
+                 <a href="${esc(ctaUrl)}/portal/quotes" style="display:inline-block;background:${brand};color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px">Accept this quote</a>
+                 <div style="font-size:12px;color:#a1a1aa;margin-top:9px">Prefer to chat? Just reply to this email.</div>
+               </div>`
+            : ""}
+        </td></tr>
+
+        <!-- Divider -->
+        <tr><td style="background:#ffffff;padding:18px 28px 0">
+          <div style="border-top:1px solid #ececf1"></div>
+          <div style="font-size:17px;font-weight:800;color:#18181b;margin:18px 0 14px">Everything you need before the stay</div>
+        </td></tr>
+
+        <!-- Info cards -->
+        <tr><td style="background:#ffffff;padding:0 28px">
+          ${bulletCard(brand, "Arrival &amp; collection", "&#128340;", [
+            "<strong>Arrivals</strong>: Mon–Sat, 09:00–11:00. No arrivals on Sundays or public holidays.",
+            "<strong>Collection</strong>: 09:00–09:30, Mon–Sun.",
+            "<strong>Stay &amp; Play collection</strong>: 16:00–16:30, Mon–Sun (additional fee).",
+            "Closed for drop-offs and collections on 25 &amp; 26 December and 1 January.",
+            "Our gates are only open during these windows, so please keep to the times booked.",
+          ])}
+          ${bulletCard(brand, "Before you arrive", "&#9989;", [
+            "Dogs must be sterilised, fully vaccinated and dewormed.",
+            "Kennel Cough (Bordetella) must be done at least <strong>10 days before</strong> arrival.",
+            "Bring or upload the vaccination card — we cannot check in without it.",
+            "Tick, flea and deworming treatment (e.g. NexGard Spectra / Revolution) up to date.",
+            "All guests must be social with other dogs, and wear a collar with a name tag and contact number.",
+          ])}
+          ${bulletCard(brand, "What to pack", "&#127890;", [
+            "Food in individually labelled ziplock bags, marked with your dog's <strong>name and breed</strong>.",
+            "Written feeding instructions — only food you supply is fed.",
+            "Medication with clear written instructions.",
+            "No beds, bowls, pillows or extras needed; anything extra must be clearly labelled.",
+          ])}
+          ${bulletCard(brand, "Where they'll stay", "&#127968;", [
+            "<strong>Cuddle Inn – Puppy Paradise</strong>: small dogs, common space with TV and private garden.",
+            "<strong>Barkside Inn – Cabanas</strong>: private room, two beds, private garden, up to 3 dogs.",
+            "<strong>Bark Avenue – Deluxe</strong>: private room, queen bed, TV, aircon and private garden.",
+          ])}
+          ${bulletCard(brand, "Good to know", "&#128054;", [
+            "<strong>50% off grooming</strong> when booked with the stay — most dogs go home fresh after all the play.",
+            "Daily photos go up on our Facebook page; emergencies are always communicated directly.",
+            "Hotel viewings are welcome Mon–Fri, 10:00–13:00.",
+            "Your dog may be tired for a day or two after all the fun — that's completely normal.",
+          ])}
+          ${guidelinesBlock}
+        </td></tr>
+
+        <!-- Sign-off -->
+        <tr><td style="background:#ffffff;padding:6px 28px 26px;border-radius:0 0 0 0">
+          <p style="margin:0;font-size:15px;line-height:1.65;color:#3f3f46">We can't wait to spoil ${esc(pets)}.</p>
+          <p style="margin:6px 0 0;font-size:15px;line-height:1.65;color:#3f3f46">Warmly,<br/><strong>The ${esc(i.tenantName)} team</strong></p>
+        </td></tr>
+
+        <!-- Footer -->
+        <tr><td style="background:#18181b;border-radius:0 0 18px 18px;padding:20px 28px;text-align:center">
+          <div style="font-size:13px;color:#e4e4e7;font-weight:700">${esc(i.tenantName)}</div>
+          <div style="font-size:12px;color:#a1a1aa;margin-top:6px">
+            ${i.contactPhone ? esc(i.contactPhone) : ""}${i.contactPhone && i.contactEmail ? " &nbsp;·&nbsp; " : ""}${i.contactEmail ? esc(i.contactEmail) : ""}
+          </div>
+          <div style="font-size:11px;color:#71717a;margin-top:10px">Quote ${esc(i.quoteNumber)} · valid until ${esc(fmtDate(i.validUntil))}</div>
+        </td></tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  const text = [
+    i.intro,
+    "",
+    `Guests: ${pets}`,
+    `Dates: ${stayLine}`,
+    i.accommodationType ? `Accommodation: ${i.accommodationType}` : "",
+    i.checkInWindow ? `Arrival: ${i.checkInWindow}` : "",
+    i.checkOutWindow ? `Collection: ${i.checkOutWindow}` : "",
+    `Total: ${fmtZar(i.total)}  |  50% deposit to secure: ${fmtZar(i.deposit)}`,
+    i.validUntil ? `Dates held until ${fmtDate(i.validUntil)}.` : "",
+    "",
+    "ARRIVAL & COLLECTION",
+    "- Arrivals Mon-Sat 09:00-11:00 (no arrivals Sundays or public holidays)",
+    "- Collection 09:00-09:30 daily; Stay & Play collection 16:00-16:30",
+    "- Closed for drop-offs/collections 25 & 26 December and 1 January",
+    "",
+    "BEFORE YOU ARRIVE",
+    "- Sterilised, fully vaccinated and dewormed; Kennel Cough at least 10 days prior",
+    "- Vaccination card required at check-in",
+    "- Dogs must be social; collar with name tag and contact number",
+    "",
+    "WHAT TO PACK",
+    "- Food in labelled ziplock bags with name and breed",
+    "- Written feeding and medication instructions",
+    "- No beds, bowls or pillows needed",
+    "",
+    "GOOD TO KNOW",
+    "- 50% off grooming when booked with the stay",
+    "- Daily photos on Facebook; emergencies communicated directly",
+    "- Hotel viewings Mon-Fri 10:00-13:00",
+    i.guidelines?.trim() ? "\nHOUSE GUIDELINES\n" + i.guidelines.trim() : "",
+    "",
+    `${i.tenantName}`,
+    [i.contactPhone, i.contactEmail].filter(Boolean).join(" | "),
+  ].filter((l) => l !== "").join("\n");
+
+  return { html, text };
+}

@@ -2,6 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { guardSend } from "../_shared/send-guard.ts";
+import { buildQuoteEmail, DEFAULT_QUOTE_INTRO, fmtZar, fmtDate as fmtD } from "../_shared/quote-email.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -17,6 +18,15 @@ const j = (s: number, b: unknown) =>
 
 const fmtDate = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+/** Replace {{token}} placeholders from a flat/nested context. */
+function render(tpl: string, ctx: Record<string, any>): string {
+  return String(tpl ?? "").replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_m, path) => {
+    let cur: any = ctx;
+    for (const p of String(path).split(".")) { if (cur == null) return ""; cur = cur[p]; }
+    return cur == null ? "" : String(cur);
+  });
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
@@ -50,7 +60,7 @@ Deno.serve(async (req) => {
   const [{ data: customer }, { data: smtp }, { data: tenant }] = await Promise.all([
     admin.from("customers").select("id, full_name, email, notify_email").eq("id", q.customer_id).maybeSingle(),
     admin.from("email_transport_settings").select("*").eq("tenant_id", q.tenant_id).maybeSingle(),
-    admin.from("tenants").select("id, name").eq("id", q.tenant_id).maybeSingle(),
+    admin.from("tenants").select("id, name, primary_colour, logo_url, app_url, contact_email, contact_phone").eq("id", q.tenant_id).maybeSingle(),
   ]);
 
   const recipient = overrideTo || customer?.email;
@@ -62,18 +72,84 @@ Deno.serve(async (req) => {
     return j(400, { error: "SMTP is not configured. Set it up in Settings → Email server." });
   }
 
-  const subject = `Quote ${q.estimate_number} from ${tenant?.name ?? "us"}`;
-  const text =
-    `Hi ${customer?.full_name ?? "there"},\n\n` +
-    `Thank you for your enquiry. Your quote ${q.estimate_number} is attached.\n` +
-    (q.start_at ? `Stay: ${fmtDate(q.start_at)} to ${fmtDate(q.end_at)}\n` : "") +
-    `Total: R${Number(q.total ?? 0).toFixed(2)}\n` +
-    (q.expiry_date ? `This quote is valid until ${fmtDate(q.expiry_date)}.\n` : "") +
-    `\nA 50% deposit secures the booking, with the balance due before arrival.\n\n` +
-    `Thank you,\n${tenant?.name ?? ""}`;
-  const html = `<div style="font-family:system-ui,sans-serif;line-height:1.5;color:#1a1a2e">${
-    text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br/>")
-  }</div>`;
+  // ── Build the branded quote email ─────────────────────────────────────────
+  const extras = (q.extras ?? {}) as any;
+  const petIds: string[] = Array.isArray(q.pet_ids) ? q.pet_ids : [];
+  const [{ data: pets }, { data: tpl }, { data: guidelinesRow }] = await Promise.all([
+    petIds.length
+      ? admin.from("pets").select("id, name").in("id", petIds)
+      : Promise.resolve({ data: [] as any[] }),
+    admin.from("message_templates")
+      .select("subject, body, is_active")
+      .eq("tenant_id", q.tenant_id).eq("event_code", "quote_sent").eq("channel", "email")
+      .maybeSingle(),
+    admin.rpc("get_hotel_guidelines", { p_tenant: q.tenant_id }),
+  ]);
+
+  const petNames: string[] = (pets ?? []).map((p: any) => p.name).filter(Boolean);
+  const nights = q.start_at && q.end_at
+    ? Math.max(1, Math.round((new Date(q.end_at).getTime() - new Date(q.start_at).getTime()) / 86400000))
+    : null;
+  const total = Number(q.total ?? 0);
+  const deposit = Math.round(total * 50) / 100;
+  const validUntil = q.hold_until ?? q.expiry_date ?? null;
+  const firstName = (customer?.full_name ?? "there").split(/\s+/)[0];
+
+  const ctx = {
+    customer: { first_name: firstName, full_name: customer?.full_name ?? "", email: customer?.email ?? "" },
+    tenant: { name: tenant?.name ?? "" },
+    pet: { names: petNames.length ? petNames.join(" and ") : "your dog" },
+    quote: {
+      number: q.estimate_number ?? "",
+      dates: q.start_at ? `${fmtD(q.start_at)} to ${fmtD(q.end_at)}` : "your requested dates",
+      nights: nights ?? "",
+      accommodation: q.accommodation_type ?? "",
+      total: fmtZar(total),
+      deposit: fmtZar(deposit),
+      valid_until: fmtD(validUntil),
+    },
+  };
+
+  const useTpl = tpl && tpl.is_active !== false && String(tpl.body ?? "").trim().length > 0;
+  const intro = render(useTpl ? String(tpl!.body) : DEFAULT_QUOTE_INTRO, ctx);
+  const subject = useTpl && tpl!.subject
+    ? render(String(tpl!.subject), ctx)
+    : `Your stay quote ${q.estimate_number} from ${tenant?.name ?? "us"}`;
+
+  // Logo for the email header (best effort, long-lived signed URL).
+  let logoUrl: string | null = null;
+  if (tenant?.logo_url) {
+    try {
+      const { data: signed } = await admin.storage.from("tenant-branding")
+        .createSignedUrl(tenant.logo_url, 60 * 60 * 24 * 60);
+      logoUrl = signed?.signedUrl ?? null;
+    } catch { logoUrl = null; }
+  }
+
+  const guidelines = (Array.isArray(guidelinesRow) ? guidelinesRow[0] : guidelinesRow)?.guidelines_md ?? null;
+
+  const { html, text } = buildQuoteEmail({
+    tenantName: tenant?.name ?? "Sloppy Kisses",
+    brandColour: (tenant as any)?.primary_colour ?? "#FF5A5A",
+    logoUrl,
+    appUrl: (tenant as any)?.app_url ?? null,
+    contactEmail: (tenant as any)?.contact_email ?? null,
+    contactPhone: (tenant as any)?.contact_phone ?? null,
+    customerFirstName: firstName,
+    quoteNumber: q.estimate_number ?? "",
+    startAt: q.start_at,
+    endAt: q.end_at,
+    nights,
+    accommodationType: q.accommodation_type,
+    petNames,
+    checkInWindow: extras?.check_in_window ?? null,
+    checkOutWindow: extras?.check_out_window ?? null,
+    total,
+    deposit,
+    validUntil,
+    intro,
+    guidelines,
+  });
 
   const pdfRes = await fetch(`${SUPABASE_URL}/functions/v1/generate-quote-pdf`, {
     method: "POST",
