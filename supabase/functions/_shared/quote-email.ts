@@ -25,6 +25,8 @@ export interface QuoteEmailInput {
   total: number;
   deposit: number;
   validUntil?: string | null;
+  /** Public quote link token — powers the "Accept this quote" button. */
+  publicToken?: string | null;
   /** Rendered intro copy (plain text, blank-line separated paragraphs). */
   intro: string;
   /** Tenant hotel guidelines markdown, appended as a plain-text section. */
@@ -55,6 +57,57 @@ function paragraphs(text: string): string {
     .filter(Boolean)
     .map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#3f3f46">${esc(p).replace(/\n/g, "<br/>")}</p>`)
     .join("");
+}
+
+/** Minimal, safe markdown -> HTML for the tenant's house guidelines. */
+function markdown(src: string, brand: string): string {
+  const inline = (s: string) =>
+    esc(s)
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, `<a href="$2" style="color:${brand}">$1</a>`)
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+
+  const out: string[] = [];
+  let list: string[] = [];
+  const flush = () => {
+    if (list.length) {
+      out.push(
+        `<ul style="margin:0 0 12px;padding-left:18px">${list
+          .map((li) => `<li style="font-size:13.5px;line-height:1.6;color:#52525b;margin-bottom:5px">${li}</li>`)
+          .join("")}</ul>`,
+      );
+      list = [];
+    }
+  };
+
+  for (const raw of String(src ?? "").split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) { flush(); continue; }
+    const h = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (h) {
+      flush();
+      const size = h[1].length <= 2 ? 15 : 14;
+      out.push(
+        `<div style="font-size:${size}px;font-weight:700;color:#18181b;margin:14px 0 8px">${inline(h[2])}</div>`,
+      );
+      continue;
+    }
+    const li = /^[-*•]\s+(.*)$/.exec(line) ?? /^\d+[.)]\s+(.*)$/.exec(line);
+    if (li) { list.push(inline(li[1])); continue; }
+    flush();
+    out.push(`<p style="margin:0 0 10px;font-size:13.5px;line-height:1.65;color:#52525b">${inline(line)}</p>`);
+  }
+  flush();
+  return out.join("");
+}
+
+/** Strip markdown syntax for the plain-text part. */
+function stripMarkdown(src: string): string {
+  return String(src ?? "")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "$1 ($2)")
+    .replace(/^[*]\s+/gm, "- ");
 }
 
 function bulletCard(brand: string, title: string, items: string[]): string {
