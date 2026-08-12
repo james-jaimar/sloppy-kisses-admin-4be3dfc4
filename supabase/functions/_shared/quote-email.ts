@@ -148,12 +148,12 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ececf1;border-radius:14px;margin:0 0 14px;background:#fafafa">
          <tr><td style="padding:18px 20px">
            <div style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${brand};margin-bottom:10px">House guidelines</div>
-           <div style="font-size:13.5px;line-height:1.6;color:#52525b;white-space:pre-wrap">${esc(i.guidelines.trim())}</div>
+           <div>${markdown(i.guidelines.trim(), brand)}</div>
          </td></tr>
        </table>`
     : "";
 
-  const html = `<!doctype html>
+  const htmlRaw = `<!doctype html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>${esc(i.quoteNumber)}</title></head>
 <body style="margin:0;padding:0;background:#f4f4f6">
@@ -202,7 +202,7 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
             : ""}
           ${ctaUrl
             ? `<div style="text-align:center;margin:16px 0 6px">
-                 <a href="${esc(ctaUrl)}/portal/quotes" style="display:inline-block;background:${brand};color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px">Accept this quote</a>
+                 <a href="${esc(ctaUrl)}${i.publicToken ? `/q/${esc(i.publicToken)}` : "/portal"}" style="display:inline-block;background:${brand};color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px">Accept this quote</a>
                  <div style="font-size:12px;color:#a1a1aa;margin-top:9px">Prefer to chat? Just reply to this email.</div>
                </div>`
             : ""}
