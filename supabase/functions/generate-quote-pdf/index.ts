@@ -70,6 +70,7 @@ Deno.serve(async (req) => {
     admin.from("tenants").select("name, primary_colour, contact_email, contact_phone").eq("id", q.tenant_id).maybeSingle(),
   ]);
 
+  try {
   const brand = hexToRgb(tenant?.primary_colour);
   const text = rgb(0.1, 0.1, 0.15);
   const muted = rgb(0.45, 0.45, 0.5);
@@ -152,4 +153,9 @@ Deno.serve(async (req) => {
   return new Response(bytes, {
     headers: { ...cors, "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="${q.estimate_number ?? "quote"}.pdf"` },
   });
+  } catch (e) {
+    const msg = (e as Error)?.message ?? String(e);
+    console.error("generate-quote-pdf failed:", msg);
+    return jerr(500, `PDF build failed: ${msg}`);
+  }
 });
