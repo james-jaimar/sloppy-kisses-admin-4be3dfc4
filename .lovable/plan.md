@@ -1,60 +1,34 @@
-# Hotel quote: same rules as a real booking, plus a proper hold
+# Flag grooming appointments with no styling preferences
 
-## 1. Modal padding
+## What I checked
 
-`ModalShell` gives its scroll area no horizontal padding — each screen supplies its own, and the New quote drawer forgot to. Add the standard `px-6 py-5` to the quote body so fields stop touching the edges, and give `ModalShell` a sensible default so any future screen can't repeat it.
+Grooming preferences live in two places: `pet_grooming_defaults` (the pet's standing preferences) and `grooming_booking_instructions` (what was agreed for this specific appointment). Both are optional today, and nothing on the board, diary or booking card tells front desk when they are empty — so the groomer only finds out at the table.
 
-## 2. Pick up the dog's size
+## What I'll build
 
-Rate cards are keyed by species and accommodation type only, so nothing in the quote ever looks at the pet. Change the pets step to:
+### 1. A "Prefs" status chip everywhere grooming appointments appear
+Three states, computed per booking:
+- **Prefs missing** (amber/alert) — no booking instructions and no pet defaults.
+- **From pet profile** (neutral) — no booking instructions, but the pet has saved defaults that will be used.
+- **Prefs set** (quiet green tick) — instructions captured for this appointment.
 
-- show each selected pet as a chip with its size (using the staff size override when one is set),
-- mark the accommodation options that suit those pets, and show an amber note when the chosen area doesn't match (e.g. a large dog put into "Puppy & Small Breeds Area"),
-- default the accommodation to the best match when all pets are the same size band.
+Shown on:
+- Grooming board cards (kanban) and diary blocks
+- Booking detail page header
+- Work Mode grooming job card
+- Pet detail page grooming section (pet has no defaults at all)
 
-Sizing stays advisory — front desk can still override, because rooms get juggled.
+### 2. Set them straight from the board
+Clicking the "Prefs missing" chip opens the existing grooming instructions form in a modal for that booking — pre-seeded from the pet's defaults if any — with a "Also save as this pet's defaults" tick. Front desk can capture what the owner says on the phone without leaving the board, and it stays permission-gated the same way the booking edit is.
 
-## 3. Arrival and collection rules from the accommodation form
+### 3. A "Preferences outstanding" worklist
+A small counter on the grooming board header ("3 upcoming grooms without preferences") that filters the day/week to just those, so front desk can work the list ahead of time.
 
-Rules to enforce (hotel bookings and quotes alike):
-
-- Check-in 09:00–11:00, Monday to Saturday. No check-in on Sundays or public holidays.
-- Check-out 09:00–09:30, seven days a week.
-- Stay & Play collection 16:00–16:30, seven days a week.
-- No drop-offs on any public holiday; no collections or drop-offs on 25 and 26 December or 1 January.
-
-To do that we need a holiday list the owner controls: a Settings screen (Hotel workflow → Arrival & collection) with South African public holidays seeded for the current and next year, plus the three hard-closed dates flagged as "no movement at all". The date pickers then grey out blocked arrival/departure days and explain why, and the same check runs server-side when the booking is created so the portal can't sneak one through.
-
-## 4. Quote should mirror the booking form
-
-The quote drawer is missing what the booking modal already has. Add to it:
-
-- **Stay & Play / late collection** tick, which sets the 16:00–16:30 collection window and prices the existing late-checkout surcharge.
-- **Grooming during the stay** tick with notes, priced from grooming packages by pet size, carried into a hotel groom request when the quote is accepted.
-- Other hotel surcharges (same picker the booking uses).
-- Check-in and check-out window pickers, respecting the day rules above.
-
-Accepting the quote then creates the booking with all of it already attached, instead of a bare stay.
-
-## 5. Holding the dates (and letting them go)
-
-Today a quote reserves nothing — capacity is only consumed when it's accepted, so two quotes can promise the same last kennel. Proposed behaviour:
-
-- A sent quote places a **pencil hold** on the room for those dates until its expiry date (validity days already exist in Hotel workflow settings, default 14 — the form's own wording suggests 7 for hotel).
-- Occupancy and the capacity notice count pencil holds separately from confirmed stays: "3 confirmed, 1 pencilled" with the amber styling, so front desk always sees what's real.
-- A confirmed booking always outranks a pencil hold; if the room fills, the hold shows as "at risk" on the quotes list and the quote can be re-quoted or waitlisted.
-- A nightly job expires quotes past their date, releases the hold, marks them expired and emails the customer that the dates are no longer held.
-- Accepting a quote converts the hold into the real booking, re-checking capacity at that moment and refusing with a clear message if it went in the meantime.
+### 4. Ask the owner
+On the same modal, a "Request from customer" action that queues the existing notification pipeline with a link to the pet's grooming preferences page in the portal, so the owner can fill it in themselves.
 
 ## Technical notes
 
-- Padding: `NewQuoteDrawer` body wrapper + default padding in `ModalShell`'s scroll container.
-- Size: read `pets.size` / `size_override`; add an optional `size_bands text[]` to `hotel_rate_cards` with a Settings control so the owner defines which area suits which size, rather than hard-coding "Puppy & Small Breeds".
-- Holidays: new `public_holidays` table (tenant, date, name, `blocks_dropoff`, `blocks_collection`) seeded for SA; validation helper shared by the date pickers, `bookings_block_closed_days`-style trigger and `portal-create-booking`.
-- Windows: reuse `CHECK_IN_WINDOWS` / `checkOutWindowsFor` from `src/features/hotelForm/accommodationForm.ts`; extend `checkOutWindowsFor` to also handle blocked days, and add a matching `checkInAllowed(date)`.
-- Quote extras: store Stay & Play / surcharges / groom request on the estimate (new `extras jsonb` or estimate item metadata) so `accept_estimate` can write `hotel_booking_surcharges` and `hotel_grooming_requests`.
-- Holds: `estimates.hold_until` + status `sent` counted by `hotel_day_availability` as provisional; cron function `expire-quote-holds` running daily.
-
-## Open choice
-
-Hold length: the accommodation form implies dates aren't guaranteed until paid. Default is the existing quote validity (14 days) — say the word and I'll set hotel quotes to 7 days, or make the hold only start once the quote is sent rather than created.
+- New hook fetching `grooming_booking_instructions` + `pet_grooming_defaults` for the day's bookings in two batched queries, exposing a `prefsState` per booking; used by board, diary and detail page.
+- New `GroomingPrefsChip` component and `BookingGroomingPrefsDialog` wrapping the existing `BookingGroomingInstructionsPanel` and `useSaveBookingInstructions` / `useSavePetGroomingDefaults`.
+- No schema changes. The customer request uses the existing `notification_events` flow with a new template code.
