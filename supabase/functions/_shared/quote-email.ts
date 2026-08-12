@@ -270,6 +270,14 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
   </table>
 </body></html>`;
 
+  // Quoted-printable turns whitespace-only line endings into literal "=20" in
+  // some clients — strip trailing spaces and blank-only lines before sending.
+  const html = htmlRaw
+    .split("\n")
+    .map((l) => l.replace(/[ \t]+$/, ""))
+    .filter((l, idx, arr) => !(l === "" && arr[idx - 1] === ""))
+    .join("\n");
+
   const text = [
     i.intro,
     "",
@@ -300,7 +308,8 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
     "- 50% off grooming when booked with the stay",
     "- Daily photos on Facebook; emergencies communicated directly",
     "- Hotel viewings Mon-Fri 10:00-13:00",
-    i.guidelines?.trim() ? "\nHOUSE GUIDELINES\n" + i.guidelines.trim() : "",
+    ctaUrl && i.publicToken ? `\nAccept this quote: ${ctaUrl}/q/${i.publicToken}` : "",
+    i.guidelines?.trim() ? "\nHOUSE GUIDELINES\n" + stripMarkdown(i.guidelines.trim()) : "",
     "",
     `${i.tenantName}`,
     [i.contactPhone, i.contactEmail].filter(Boolean).join(" | "),
