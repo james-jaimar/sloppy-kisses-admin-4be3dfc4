@@ -16,6 +16,9 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { PaymentChip, PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 import { useGroomingBoardBookings, useRescheduleGrooming, type GroomingBoardCard } from "./queries";
+import { useGroomingPrefsStates } from "./instructions/prefsQueries";
+import { GroomingPrefsChip } from "./instructions/GroomingPrefsChip";
+import { BookingGroomingPrefsDialog } from "./instructions/BookingGroomingPrefsDialog";
 
 const PX_PER_MIN = 1.15;
 const SNAP = 15;
@@ -83,6 +86,13 @@ export function GroomingDiary({ day }: { day: Date }) {
 
   const cards = bookingsQ.data ?? [];
   const unassigned = cards.filter((c) => !c.resource_id);
+  const prefs = useGroomingPrefsStates(
+    useMemo(() => cards.map((c) => ({ id: c.id, petIds: c.pets.map((p) => p.id) })), [cards]),
+  );
+  const [prefsCard, setPrefsCard] = useState<GroomingBoardCard | null>(null);
+  const [onlyMissingPrefs, setOnlyMissingPrefs] = useState(false);
+  const isMissing = (c: GroomingBoardCard) =>
+    !prefs.isLoading && prefs.forBooking(c.id, c.pets.map((p) => p.id)) === "missing";
 
   const openMin = groomers.length
     ? Math.min(...groomers.map((g) => hhmmToMinutes(g.workday_start, 8 * 60)))
@@ -100,7 +110,9 @@ export function GroomingDiary({ day }: { day: Date }) {
   }, [openMin, closeMin]);
 
   function cardsFor(resourceId: string) {
-    return cards.filter((c) => c.resource_id === resourceId);
+    return cards.filter(
+      (c) => c.resource_id === resourceId && (!onlyMissingPrefs || isMissing(c)),
+    );
   }
 
   async function handleDrop(groomer: ResourceRow, clientY: number, laneTop: number) {
@@ -191,6 +203,46 @@ export function GroomingDiary({ day }: { day: Date }) {
   return (
     <PaymentFlagsProvider bookingIds={cards.map((c) => c.id)}>
       <div className="space-y-4">
+        {prefsCard && tenantId && (
+          <BookingGroomingPrefsDialog
+            open
+            tenantId={tenantId}
+            bookingId={prefsCard.id}
+            petId={prefsCard.pets[0]?.id ?? null}
+            petName={prefsCard.pets[0]?.name}
+            customerId={prefsCard.customer?.id ?? null}
+            onClose={() => setPrefsCard(null)}
+          />
+        )}
+
+        {/* Preferences outstanding worklist */}
+        {!prefs.isLoading && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs">
+            {prefs.missingCount === 0 ? (
+              <span className="text-muted-foreground">
+                Every groom today has grooming preferences.
+              </span>
+            ) : (
+              <>
+                <span className="inline-flex items-center gap-1 font-semibold text-sk-orange">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {prefs.missingCount} groom{prefs.missingCount === 1 ? "" : "s"} without preferences
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOnlyMissingPrefs((v) => !v)}
+                  className={
+                    "rounded-full border px-3 py-1 font-medium " +
+                    (onlyMissingPrefs ? "border-sk-coral bg-sk-coral text-white" : "border-border bg-white hover:bg-muted")
+                  }
+                >
+                  {onlyMissingPrefs ? "Showing only these" : "Show only these"}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Hidden-groomer chips */}
         <div className="flex flex-wrap items-center gap-2">
           {groomers.map((g) => {
@@ -309,6 +361,18 @@ export function GroomingDiary({ day }: { day: Date }) {
                             <div className="mt-1 flex flex-wrap items-center gap-1">
                               <BookingStatusChip status={c.status} />
                               <PaymentChip bookingId={c.id} />
+                              {!prefs.isLoading && (
+                                <GroomingPrefsChip
+                                  state={prefs.forBooking(c.id, c.pets.map((p) => p.id))}
+                                  onClick={() => setPrefsCard(c)}
+                                  compact
+                                />
+                              )}
+                            </div>
+                          )}
+                          {dur < 45 && isMissing(c) && (
+                            <div className="mt-0.5">
+                              <GroomingPrefsChip state="missing" onClick={() => setPrefsCard(c)} compact />
                             </div>
                           )}
                         </Link>

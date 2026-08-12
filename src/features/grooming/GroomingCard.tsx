@@ -6,6 +6,8 @@ import { PaymentChip } from "@/features/shared/payments/paymentFlags";
 import { StayPlayBadge } from "@/features/daycare/StayPlayBadge";
 import type { StayPlaySession } from "@/features/daycare/stayPlayQueries";
 import type { GroomingBoardCard } from "./queries";
+import { GroomingPrefsChip } from "./instructions/GroomingPrefsChip";
+import type { PrefsState } from "./instructions/prefsQueries";
 
 function fmtTime(iso: string | null): string {
   if (!iso) return "—";
@@ -44,6 +46,8 @@ export function GroomingCard({
   stayPlayGraceMinutes,
   draggable,
   onDragStart,
+  prefsState,
+  onSetPrefs,
 }: {
   card: GroomingBoardCard;
   expectedMinutes: number | null;
@@ -51,6 +55,8 @@ export function GroomingCard({
   stayPlayGraceMinutes?: number;
   draggable: boolean;
   onDragStart?: (e: React.DragEvent) => void;
+  prefsState?: PrefsState;
+  onSetPrefs?: () => void;
 }) {
   const pet = card.pets[0];
   const otherPets = card.pets.length - 1;
@@ -106,6 +112,7 @@ export function GroomingCard({
           </span>
         )}
         <PaymentChip bookingId={card.id} />
+        {prefsState && <GroomingPrefsChip state={prefsState} onClick={onSetPrefs} compact />}
         <StayPlayBadge sessions={stayPlay} graceMinutes={stayPlayGraceMinutes} />
         {card.details?.actual_start_at && !card.details?.actual_end_at && (
           <Timer startIso={card.details.actual_start_at} expectedMinutes={expectedMinutes} />

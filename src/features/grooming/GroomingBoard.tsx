@@ -16,6 +16,8 @@ import {
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 import { useStayPlayFlags } from "@/features/daycare/stayPlayQueries";
+import { useGroomingPrefsStates } from "./instructions/prefsQueries";
+import { BookingGroomingPrefsDialog } from "./instructions/BookingGroomingPrefsDialog";
 
 export function GroomingBoard({ day }: { day: Date }) {
   const { tenant } = useCurrentTenant();
@@ -27,6 +29,13 @@ export function GroomingBoard({ day }: { day: Date }) {
   const updateStatus = useUpdateGroomingStatus(tenantId ?? "");
   const bookingIds = useMemo(() => (bookingsQ.data ?? []).map((c) => c.id), [bookingsQ.data]);
   const stayPlay = useStayPlayFlags(tenantId, bookingIds);
+  const prefs = useGroomingPrefsStates(
+    useMemo(
+      () => (bookingsQ.data ?? []).map((c) => ({ id: c.id, petIds: c.pets.map((p) => p.id) })),
+      [bookingsQ.data],
+    ),
+  );
+  const [prefsCard, setPrefsCard] = useState<GroomingBoardCard | null>(null);
 
   const [dragId, setDragId] = useState<string | null>(null);
   const [hoverCol, setHoverCol] = useState<GroomingColumn | null>(null);
@@ -82,6 +91,17 @@ export function GroomingBoard({ day }: { day: Date }) {
 
   return (
     <PaymentFlagsProvider bookingIds={(bookingsQ.data ?? []).map((c) => c.id)}>
+    {prefsCard && tenantId && (
+      <BookingGroomingPrefsDialog
+        open
+        tenantId={tenantId}
+        bookingId={prefsCard.id}
+        petId={prefsCard.pets[0]?.id ?? null}
+        petName={prefsCard.pets[0]?.name}
+        customerId={prefsCard.customer?.id ?? null}
+        onClose={() => setPrefsCard(null)}
+      />
+    )}
     <div className="grid gap-4 lg:grid-cols-4">
       {GROOMING_COLUMNS.map((col) => {
         const cards = cardsByColumn[col.key];
@@ -128,6 +148,8 @@ export function GroomingBoard({ day }: { day: Date }) {
                   expectedMinutes={c.details?.package_id ? (packagesById.get(c.details.package_id) ?? null) : null}
                   stayPlay={stayPlay.forBooking(c.id)}
                   stayPlayGraceMinutes={stayPlay.graceMinutes}
+                  prefsState={prefs.isLoading ? undefined : prefs.forBooking(c.id, c.pets.map((p) => p.id))}
+                  onSetPrefs={() => setPrefsCard(c)}
                   draggable
                   onDragStart={(e) => {
                     setDragId(c.id);

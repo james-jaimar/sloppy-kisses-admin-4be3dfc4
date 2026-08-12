@@ -20,6 +20,7 @@ import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPl
 import { HotelGroomRequestsPanel } from "@/features/hotelGrooming/HotelGroomRequestsPanel";
 import { HotelMoneyStrip } from "@/features/hotelCattery/HotelMoneyStrip";
 import { GroomerPicker } from "@/features/grooming/GroomerPicker";
+import { BookingGroomingPrefsBanner } from "@/features/grooming/instructions/BookingGroomingPrefsBanner";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -133,6 +134,15 @@ export default function BookingDetailPage() {
               />
               {(b.service_type === "hotel_dog" || b.service_type === "hotel_cat") && (
                 <HotelGroomRequestsPanel tenantId={tenantId} bookingId={b.id} />
+              )}
+              {(b.service_type === "grooming_inhouse" || b.service_type === "grooming_mobile") && (
+                <BookingGroomingPrefsBanner
+                  tenantId={tenantId}
+                  bookingId={b.id}
+                  petId={b.booking_pets?.[0]?.pet?.id ?? null}
+                  petName={b.booking_pets?.[0]?.pet?.name}
+                  customerId={b.customer_id}
+                />
               )}
               {(b.service_type === "hotel_dog" || b.service_type === "hotel_cat") && (
                 <HotelMoneyStrip bookingId={b.id} mode="admin" />
