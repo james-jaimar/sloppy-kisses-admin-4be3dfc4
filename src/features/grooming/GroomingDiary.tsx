@@ -86,6 +86,13 @@ export function GroomingDiary({ day }: { day: Date }) {
 
   const cards = bookingsQ.data ?? [];
   const unassigned = cards.filter((c) => !c.resource_id);
+  const prefs = useGroomingPrefsStates(
+    useMemo(() => cards.map((c) => ({ id: c.id, petIds: c.pets.map((p) => p.id) })), [cards]),
+  );
+  const [prefsCard, setPrefsCard] = useState<GroomingBoardCard | null>(null);
+  const [onlyMissingPrefs, setOnlyMissingPrefs] = useState(false);
+  const isMissing = (c: GroomingBoardCard) =>
+    !prefs.isLoading && prefs.forBooking(c.id, c.pets.map((p) => p.id)) === "missing";
 
   const openMin = groomers.length
     ? Math.min(...groomers.map((g) => hhmmToMinutes(g.workday_start, 8 * 60)))
