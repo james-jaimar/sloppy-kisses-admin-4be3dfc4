@@ -37,8 +37,11 @@ Deno.serve(async (req) => {
   });
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-  const { data: userRes, error: userErr } = await asCaller.auth.getUser();
-  if (userErr || !userRes?.user) return json(401, { error: "Not authenticated" });
+  // Server-to-server calls (e.g. accepting a quote from the public link) come
+  // in with the service key and skip the staff permission check.
+  const isServiceCall = authHeader.includes(SERVICE_KEY);
+  const { data: userRes } = isServiceCall ? { data: null as any } : await asCaller.auth.getUser();
+  if (!isServiceCall && !userRes?.user) return json(401, { error: "Not authenticated" });
 
   let payload: { tenant_id?: string; customer_id?: string; mode?: "invite" | "resend" };
   try {
@@ -51,11 +54,13 @@ Deno.serve(async (req) => {
   const mode = payload.mode ?? "invite";
   if (!tenantId || !customerId) return json(400, { error: "tenant_id and customer_id are required" });
 
-  const { data: canManage } = await asCaller.rpc("user_has_permission", {
-    target_tenant_id: tenantId,
-    permission_code: "customers.portal.manage",
-  });
-  if (!canManage) return json(403, { error: "Missing permission customers.portal.manage" });
+  if (!isServiceCall) {
+    const { data: canManage } = await asCaller.rpc("user_has_permission", {
+      target_tenant_id: tenantId,
+      permission_code: "customers.portal.manage",
+    });
+    if (!canManage) return json(403, { error: "Missing permission customers.portal.manage" });
+  }
 
   // Load customer
   const { data: cust, error: cErr } = await admin
@@ -72,6 +77,7 @@ Deno.serve(async (req) => {
   // Inviter name for the email copy
   let inviterName: string | null = null;
   try {
+    if (!userRes?.user) throw new Error("service call");
     const { data: inviter } = await admin
       .from("profiles")
       .select("full_name,email")

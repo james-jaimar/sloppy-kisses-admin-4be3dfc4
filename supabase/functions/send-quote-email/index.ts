@@ -147,6 +147,7 @@ Deno.serve(async (req) => {
     total,
     deposit,
     validUntil,
+    publicToken: (q as any).public_token ?? null,
     intro,
     guidelines,
   });
