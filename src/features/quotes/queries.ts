@@ -21,7 +21,18 @@ export interface QuoteRow {
   sent_at: string | null;
   accepted_at: string | null;
   declined_at: string | null;
+  extras: QuoteExtras | null;
+  hold_until: string | null;
   customer?: { id: string; full_name: string | null; email: string | null } | null;
+}
+
+/** Everything the quote carries over to the booking when it is accepted. */
+export interface QuoteExtras {
+  check_in_window?: string | null;
+  check_out_window?: string | null;
+  notes?: string | null;
+  surcharges?: { surcharge_id: string; quantity: number }[];
+  pets?: { pet_id: string; name?: string | null; grooming_required?: boolean; grooming_notes?: string | null }[];
 }
 
 export interface QuoteItemRow {
@@ -95,6 +106,7 @@ export interface NewQuoteInput {
   notes: string | null;
   items: { description: string; quantity: number; unit_price: number }[];
   expiry_date?: string | null;
+  extras?: QuoteExtras | null;
 }
 
 export interface HotelStayLine {
@@ -234,6 +246,7 @@ export function useCreateQuote(tenantId: string) {
           pet_ids: input.pet_ids,
           notes: input.notes,
           expiry_date: input.expiry_date ?? null,
+          extras: (input.extras ?? null) as any,
           subtotal,
           total: subtotal,
         } as any)
@@ -264,9 +277,19 @@ export function useCreateQuote(tenantId: string) {
 export function useUpdateQuoteStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "sent" | "cancelled" | "draft" }) => {
+    mutationFn: async ({
+      id, status, validityDays,
+    }: { id: string; status: "sent" | "cancelled" | "draft"; validityDays?: number }) => {
       const patch: Record<string, any> = { status, updated_at: new Date().toISOString() };
-      if (status === "sent") patch.sent_at = new Date().toISOString();
+      if (status === "sent") {
+        const now = new Date();
+        patch.sent_at = now.toISOString();
+        // The hold on the dates starts the moment the quote is sent.
+        const days = validityDays && validityDays > 0 ? validityDays : 14;
+        const until = new Date(now.getTime() + days * 86400000).toISOString().slice(0, 10);
+        patch.hold_until = until;
+        patch.expiry_date = until;
+      }
       if (status === "cancelled") patch.declined_at = new Date().toISOString();
       const { error } = await supabase.from("estimates" as any).update(patch).eq("id", id);
       if (error) throw error;
@@ -274,6 +297,37 @@ export function useUpdateQuoteStatus() {
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["estimates"] });
       qc.invalidateQueries({ queryKey: ["estimate", v.id] });
+      qc.invalidateQueries({ queryKey: ["hotel_pencilled"] });
+    },
+  });
+}
+
+export interface PencilledDay { day: string; accommodation_type: string; pets: number }
+
+/** Pets pencilled in by unaccepted, still-held quotes for each night in the range. */
+export function usePencilledDays(params: {
+  tenantId: string | null | undefined;
+  start: string | null;
+  end: string | null;
+  excludeEstimateId?: string | null;
+}) {
+  const { tenantId, start, end, excludeEstimateId } = params;
+  return useQuery({
+    queryKey: ["hotel_pencilled", tenantId, start, end, excludeEstimateId ?? null],
+    enabled: Boolean(tenantId && start && end && end > start),
+    queryFn: async (): Promise<PencilledDay[]> => {
+      const { data, error } = await supabase.rpc("hotel_pencilled_by_day" as any, {
+        p_tenant_id: tenantId,
+        p_start: start,
+        p_end: end,
+        p_exclude_estimate_id: excludeEstimateId ?? null,
+      });
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({
+        day: r.day,
+        accommodation_type: r.accommodation_type,
+        pets: Number(r.pets),
+      }));
     },
   });
 }

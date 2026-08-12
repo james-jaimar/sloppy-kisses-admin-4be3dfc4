@@ -142,9 +142,20 @@ Deno.serve(async (req) => {
 
   if (!ok) return j(502, { ok: false, error });
 
+  // The hold on the dates starts the moment the quote is sent.
+  const { data: wf } = await admin
+    .from("hotel_workflow_settings")
+    .select("quote_validity_days")
+    .eq("tenant_id", q.tenant_id)
+    .maybeSingle();
+  const validityDays = Number((wf as any)?.quote_validity_days ?? 14) || 14;
+  const holdUntil = new Date(Date.now() + validityDays * 86400000).toISOString().slice(0, 10);
+  const firstSend = !q.sent_at;
+
   await admin.from("estimates").update({
     status: q.status === "draft" ? "sent" : q.status,
     sent_at: new Date().toISOString(),
+    ...(firstSend || !q.hold_until ? { hold_until: holdUntil, expiry_date: holdUntil } : {}),
     updated_at: new Date().toISOString(),
   }).eq("id", q.id);
 

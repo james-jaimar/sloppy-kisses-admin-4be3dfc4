@@ -67,7 +67,7 @@ const SECTIONS = [
   {
     to: "/admin/settings/hotel-workflow",
     label: "Hotel & Cattery workflow",
-    description: "Vaccination gate, check-in window, late-checkout fee.",
+    description: "Vaccination gate, check-in window, late-checkout fee, quote validity.",
     icon: Hotel,
     ready: true,
   },
@@ -75,6 +75,13 @@ const SECTIONS = [
     to: "/admin/settings/hotel-rates",
     label: "Hotel & Cattery rates",
     description: "Nightly rates by species/accommodation, peak uplift, extra-pet fee, and surcharges.",
+    icon: Hotel,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/public-holidays",
+    label: "Public holidays",
+    description: "Days the gates are closed for hotel drop-offs and collections.",
     icon: Hotel,
     ready: true,
   },

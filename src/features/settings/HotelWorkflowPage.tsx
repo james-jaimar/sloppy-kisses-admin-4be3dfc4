@@ -33,6 +33,7 @@ export default function HotelWorkflowPage() {
     check_in_close_time: "18:00",
     check_out_by_time: "11:00",
     late_checkout_fee_zar: 0,
+    quote_validity_days: 14,
     peak_start_month_day: "",
     peak_end_month_day: "",
     deposit_split_enabled: true,
@@ -55,6 +56,7 @@ export default function HotelWorkflowPage() {
         check_in_close_time: trimTime(settingsQ.data.check_in_close_time),
         check_out_by_time: trimTime(settingsQ.data.check_out_by_time),
         late_checkout_fee_zar: Number(settingsQ.data.late_checkout_fee_zar ?? 0),
+        quote_validity_days: Number((settingsQ.data as any).quote_validity_days ?? 14),
         peak_start_month_day: settingsQ.data.peak_start_month_day ?? "",
         peak_end_month_day: settingsQ.data.peak_end_month_day ?? "",
         deposit_split_enabled: settingsQ.data.deposit_split_enabled ?? true,
@@ -79,6 +81,7 @@ export default function HotelWorkflowPage() {
         check_in_close_time: form.check_in_close_time,
         check_out_by_time: form.check_out_by_time,
         late_checkout_fee_zar: form.late_checkout_fee_zar,
+        quote_validity_days: form.quote_validity_days,
         peak_start_month_day: form.peak_start_month_day || null,
         peak_end_month_day: form.peak_end_month_day || null,
         deposit_split_enabled: form.deposit_split_enabled,
@@ -190,6 +193,21 @@ export default function HotelWorkflowPage() {
                 disabled={!canManage}
                 value={form.late_checkout_fee_zar}
                 onChange={(e) => setForm((f) => ({ ...f, late_checkout_fee_zar: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+              />
+            </Field>
+            <Field
+              label="Quote validity (days)"
+              hint="How long a hotel quote holds the dates. The countdown starts the moment the quote is emailed; when it lapses the quote expires and the dates are released."
+            >
+              <input
+                type="number"
+                min={1}
+                max={90}
+                step={1}
+                disabled={!canManage}
+                value={form.quote_validity_days}
+                onChange={(e) => setForm((f) => ({ ...f, quote_validity_days: Number(e.target.value) }))}
                 className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
               />
             </Field>

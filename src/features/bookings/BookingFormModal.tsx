@@ -35,6 +35,7 @@ import { RecurrenceFields, DEFAULT_RECURRENCE, toRule, type RecurrenceValue } fr
 import { useCreateRecurringBooking } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { HotelExtrasPanel, type SurchargeSelection } from "./HotelExtrasPanel";
+import { usePublicHolidays, movementBlockReason, MOVEMENT_RULES_NOTE } from "@/features/hotelForm/dayRules";
 import { HotelCapacityNotice, type CapacityIssue } from "@/features/hotelCattery/HotelCapacityNotice";
 import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQueries";
 import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtrasPanel";
@@ -244,6 +245,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   );
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(DEFAULT_RECURRENCE);
   const [hotelSurcharges, setHotelSurcharges] = useState<SurchargeSelection[]>([]);
+  const holidaysQ = usePublicHolidays(tenantId);
   const [capacityIssue, setCapacityIssue] = useState<CapacityIssue | null>(null);
   const [serviceAddressId, setServiceAddressId] = useState<string | null>(
     booking?.service_address_id ?? null,
@@ -1269,6 +1271,19 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             onChange={setGroomingInstructions}
           />
         )}
+        {kind === "hotel" && (() => {
+          const inBlock = movementBlockReason(startAt ? startAt.slice(0, 10) : null, "dropoff", holidaysQ.data);
+          const outBlock = movementBlockReason(endAtLocal ? endAtLocal.slice(0, 10) : null, "collection", holidaysQ.data);
+          if (!inBlock && !outBlock) return null;
+          return (
+            <div className="rounded-xl border border-sk-orange/40 bg-sk-orange-soft p-3 text-sm text-sk-orange">
+              <div className="font-semibold">Gates are closed</div>
+              {inBlock && <div>Check-in: {inBlock}</div>}
+              {outBlock && <div>Collection: {outBlock}</div>}
+              <p className="mt-1 text-xs">{MOVEMENT_RULES_NOTE}</p>
+            </div>
+          );
+        })()}
         {kind === "hotel" && (
           <HotelExtrasPanel
             tenantId={tenantId}
