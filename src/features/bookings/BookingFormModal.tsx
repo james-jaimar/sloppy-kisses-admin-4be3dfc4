@@ -245,6 +245,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   );
   const [recurrence, setRecurrence] = useState<RecurrenceValue>(DEFAULT_RECURRENCE);
   const [hotelSurcharges, setHotelSurcharges] = useState<SurchargeSelection[]>([]);
+  const holidaysQ = usePublicHolidays(tenantId);
   const [capacityIssue, setCapacityIssue] = useState<CapacityIssue | null>(null);
   const [serviceAddressId, setServiceAddressId] = useState<string | null>(
     booking?.service_address_id ?? null,
