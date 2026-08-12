@@ -361,6 +361,18 @@ export function GroomingDiary({ day }: { day: Date }) {
                             <div className="mt-1 flex flex-wrap items-center gap-1">
                               <BookingStatusChip status={c.status} />
                               <PaymentChip bookingId={c.id} />
+                              {!prefs.isLoading && (
+                                <GroomingPrefsChip
+                                  state={prefs.forBooking(c.id, c.pets.map((p) => p.id))}
+                                  onClick={() => setPrefsCard(c)}
+                                  compact
+                                />
+                              )}
+                            </div>
+                          )}
+                          {dur < 45 && isMissing(c) && (
+                            <div className="mt-0.5">
+                              <GroomingPrefsChip state="missing" onClick={() => setPrefsCard(c)} compact />
                             </div>
                           )}
                         </Link>
