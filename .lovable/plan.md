@@ -1,49 +1,40 @@
-# Branded quote PDF + a proper "before your stay" quote email
+# Quote email snags + a real "Accept this quote" flow
 
-Two changes: make the quote PDF look exactly like the invoice, and move all the "what you need to know / bring" information out of the PDF and into a well-designed, editable email.
+## 1. Fix the email rendering snags
 
-## 1. Quote PDF matches the invoice
+**The stray `=20` lines.** The HTML is sent as quoted-printable, and any line in the template that contains only spaces becomes a literal `=20` in some clients. Fix by stripping trailing whitespace from every line of the generated HTML (and collapsing blank whitespace-only lines) before handing it to the mailer, in `_shared/quote-email.ts`.
 
-Today the quote PDF is a plain one-off layout (no logo, no boxes, no branding) while the invoice PDF has the full branded treatment. The quote will be rebuilt on the same layout:
+**House guidelines showing raw markdown.** The tenant guidelines are stored as markdown (`## 1. What to Pack`, `**bold**`, `-` bullets) but are currently printed as escaped plain text. Add a small, safe markdown-to-HTML renderer in `_shared/quote-email.ts` (headings, bold, italics, bullet lists, paragraphs, links — escape everything else) and render the guidelines block as styled sections instead of one grey blob. The plain-text version keeps the raw markdown stripped of `**`/`##`.
 
-- Brand bar and tenant logo (with company-name fallback)
-- "QUOTE" title and quote number on the right
-- FROM / QUOTE FOR boxes (business details + VAT vs. customer name, number, address, email, mobile)
-- Metadata strip: Quote #, Issued, Valid until (hold date), Status
-- Same items table (Description / Qty / Unit / VAT% / Total) with brand-coloured header
-- Totals block: Subtotal, VAT, Total, plus a 50% deposit-to-secure line and balance due before arrival
-- Stay summary line (dates, accommodation type, arrival/collection windows, extras such as Stay & Play or grooming)
-- Banking details box and notes/footer, same as the invoice
-- Unicode-safe font (Noto Sans) so arrows, dashes and pasted characters can never crash the PDF again
+## 2. "Accept this quote" goes somewhere real
 
-To avoid two drifting layouts, the shared drawing helpers (fonts, wrapping, boxes, table, totals) move into a shared module used by both the invoice and the quote generator.
+Today the button links to `{app}/portal/quotes`, which does not exist.
 
-## 2. Quote email carries the accommodation information
+**Public quote page, mirroring the existing public invoice link (`/i/:token`).**
 
-The quote stays a quote; everything a first-time hotel customer needs goes in the email body:
+- Add a `public_token` to `estimates` (generated on insert, backfilled for existing quotes).
+- New read-only RPC `get_public_quote(token)` returning the quote, its line items, pets, dates, totals, deposit and hold date — no login required.
+- New RPC `accept_public_quote(token)` that validates the token, checks the quote is still `sent` and inside its hold window, then calls the existing `accept_estimate` (which creates the booking and the deposit invoice).
+- New route `/q/:token` — a branded page showing the quote summary, the stay details and a single **Accept quote** button. Expired or already-accepted quotes show a clear message instead of the button.
+- The email CTA links to `{app}/q/{token}`.
 
-- Greeting, quote number, stay dates, accommodation area, total, deposit terms and validity date
-- Check-in / check-out: Mon-Sat 09:00-11:00 arrivals, no arrivals Sundays or public holidays; collections 09:00-09:30 daily, Stay & Play collection 16:00-16:30; closed 25 & 26 Dec and 1 Jan
-- Before arrival: sterilised, fully vaccinated (Kennel Cough at least 10 days prior) and dewormed; vaccination card attached; dogs must be social; collar with name tag and contact number
-- What to pack: food in individually labelled ziplock bags with name and breed, written feeding and medication instructions, no beds/bowls/pillows
-- Good to know: 50% grooming discount when booked with the stay, daily photos on Facebook, emergencies communicated directly, hotel viewings Mon-Fri 10:00-13:00
-- Accommodation areas explained (Cuddle Inn, Barkside Inn cabanas, Bark Avenue deluxe)
-- Contact details footer
+**After they accept — the thank-you page.**
 
-The email is HTML, branded in the tenant's colours, plus a plain-text fallback.
+- Confirmation screen: quote accepted, dates confirmed, and "your invoice is on its way by email".
+- Their portal login is activated automatically at that moment (same mechanism the admin "Give portal access" panel uses): if the customer has no portal user yet, one is created with a temporary password and a "must change password on first sign-in" flag, and a welcome email with the temporary details is sent.
+- The thank-you page then shows a **Pay the deposit now** button that takes them to the invoice in their portal.
+- If the customer already has a portal login, no new credentials are sent — just the sign-in link.
 
-## 3. Admin control over the wording
+**Portal feature setting.** Auto-activation is driven by the existing feature gate for the customer portal plus a new Hotel workflow setting, "Activate portal access when a quote is accepted" (default on). With the portal feature off, the thank-you page drops the portal button and simply says the invoice will be emailed.
 
-Rather than hard-coding this text, it becomes an editable template:
+## 3. Where the settings live
 
-- New `quote_sent` event code in Settings → Message templates, with quote variables (quote number, stay dates, total, deposit, valid-until, accommodation type, pet names, portal link)
-- Seeded with the full default wording above, so it works out of the box and the owner can edit it later without a developer
-- The hotel guidelines already stored per tenant (Settings → Hotel workflow) are appended automatically, so guideline edits flow straight into the email
-- `send-quote-email` renders that template when present and falls back to the built-in default if it has been deleted
+- Settings → Hotel workflow: "Activate portal access when a quote is accepted".
+- Settings → Message templates: `quote_sent` already editable; add a `portal_welcome` template for the temporary-login email if one is not already present.
 
 ## Technical notes
 
-- New `supabase/functions/_shared/pdf-brand.ts` with font loading, the `safe()` sanitiser, wrapping and layout primitives; `generate-quote-pdf` and `generate-invoice-pdf` both consume it.
-- `generate-quote-pdf` gains reads of `invoicing_settings` (company name, VAT, banking, footer), `tenants.logo_url`, and `estimates.extras` for the stay summary.
-- `send-quote-email` looks up `message_templates` for `quote_sent`/email, renders `{{...}}` tokens with the existing renderer, and appends `get_hotel_guidelines`.
-- Migration: insert the default `quote_sent` template per tenant if absent; add `quote_sent` to the event-code list in `MessageTemplatesPage.tsx` and to `templateVariables.ts`.
+- Migration: `estimates.public_token uuid default gen_random_uuid()` + unique index + backfill; grants for `anon` limited to the two security-definer RPCs, not the table.
+- `accept_public_quote` runs `security definer`, `search_path = public`, and re-checks `hold_until`/status server-side so the link cannot be replayed.
+- Temporary password generation and the welcome email reuse the existing `customer-portal-invite` edge function rather than new code.
+- Files touched: `supabase/functions/_shared/quote-email.ts`, `supabase/functions/send-quote-email/index.ts`, new `PublicQuotePage.tsx` + route in `src/App.tsx`, `src/features/quotes/queries.ts`, `HotelWorkflowPage.tsx`, one migration.
