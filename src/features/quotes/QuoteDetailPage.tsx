@@ -123,6 +123,26 @@ export default function QuoteDetailPage() {
           </div>
         )}
 
+        {q && q.status === "sent" && q.hold_until && !q.booking_id && (
+          <div className="rounded-lg border border-sk-coral/30 bg-sk-coral-soft p-3 text-sm text-sk-coral-dark">
+            These dates are pencilled in until {format(parseISO(q.hold_until), "dd MMM yyyy")}. If the quote isn't
+            accepted by then the hold is released automatically and the dates go back on sale.
+          </div>
+        )}
+
+        {q && (q.extras?.check_in_window || q.extras?.check_out_window || (q.extras?.pets ?? []).some((p) => p.grooming_required)) && (
+          <div className="sk-card grid gap-4 p-4 text-sm sm:grid-cols-3">
+            <Info label="Check-in window" value={q.extras?.check_in_window ?? "—"} />
+            <Info label="Collection window" value={q.extras?.check_out_window ?? "—"} />
+            <Info
+              label="Grooming during stay"
+              value={
+                (q.extras?.pets ?? []).filter((p) => p.grooming_required).map((p) => p.name ?? "Pet").join(", ") || "—"
+              }
+            />
+          </div>
+        )}
+
         <div className="sk-card overflow-x-auto">
           <table className="w-full min-w-[560px] text-sm">
             <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
