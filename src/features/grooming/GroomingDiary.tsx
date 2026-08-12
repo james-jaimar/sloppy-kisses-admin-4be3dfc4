@@ -110,7 +110,9 @@ export function GroomingDiary({ day }: { day: Date }) {
   }, [openMin, closeMin]);
 
   function cardsFor(resourceId: string) {
-    return cards.filter((c) => c.resource_id === resourceId);
+    return cards.filter(
+      (c) => c.resource_id === resourceId && (!onlyMissingPrefs || isMissing(c)),
+    );
   }
 
   async function handleDrop(groomer: ResourceRow, clientY: number, laneTop: number) {
