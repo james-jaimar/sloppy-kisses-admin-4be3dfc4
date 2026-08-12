@@ -34,6 +34,7 @@ export default function HotelWorkflowPage() {
     check_out_by_time: "11:00",
     late_checkout_fee_zar: 0,
     quote_validity_days: 14,
+    portal_activate_on_quote_accept: true,
     peak_start_month_day: "",
     peak_end_month_day: "",
     deposit_split_enabled: true,
@@ -57,6 +58,7 @@ export default function HotelWorkflowPage() {
         check_out_by_time: trimTime(settingsQ.data.check_out_by_time),
         late_checkout_fee_zar: Number(settingsQ.data.late_checkout_fee_zar ?? 0),
         quote_validity_days: Number((settingsQ.data as any).quote_validity_days ?? 14),
+        portal_activate_on_quote_accept: (settingsQ.data as any).portal_activate_on_quote_accept ?? true,
         peak_start_month_day: settingsQ.data.peak_start_month_day ?? "",
         peak_end_month_day: settingsQ.data.peak_end_month_day ?? "",
         deposit_split_enabled: settingsQ.data.deposit_split_enabled ?? true,
@@ -82,6 +84,7 @@ export default function HotelWorkflowPage() {
         check_out_by_time: form.check_out_by_time,
         late_checkout_fee_zar: form.late_checkout_fee_zar,
         quote_validity_days: form.quote_validity_days,
+        portal_activate_on_quote_accept: form.portal_activate_on_quote_accept,
         peak_start_month_day: form.peak_start_month_day || null,
         peak_end_month_day: form.peak_end_month_day || null,
         deposit_split_enabled: form.deposit_split_enabled,
@@ -259,6 +262,23 @@ export default function HotelWorkflowPage() {
                 <span className="block text-[11px] text-muted-foreground">
                   Uses the deposit % and balance-due days from Settings → Policies. The deposit invoice secures the
                   booking; the balance invoice is due before arrival.
+                </span>
+              </span>
+            </label>
+
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                disabled={!canManage}
+                checked={form.portal_activate_on_quote_accept}
+                onChange={(e) => setForm((f) => ({ ...f, portal_activate_on_quote_accept: e.target.checked }))}
+                className="mt-1 h-4 w-4 rounded border-border"
+              />
+              <span className="text-sm">
+                Activate portal access when a quote is accepted
+                <span className="block text-[11px] text-muted-foreground">
+                  When a customer accepts a quote from the emailed link, they are sent an invitation to set a password
+                  so they can see the booking, the invoice and pay online. Switch off to simply email the invoice.
                 </span>
               </span>
             </label>
