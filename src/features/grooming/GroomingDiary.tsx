@@ -203,6 +203,46 @@ export function GroomingDiary({ day }: { day: Date }) {
   return (
     <PaymentFlagsProvider bookingIds={cards.map((c) => c.id)}>
       <div className="space-y-4">
+        {prefsCard && tenantId && (
+          <BookingGroomingPrefsDialog
+            open
+            tenantId={tenantId}
+            bookingId={prefsCard.id}
+            petId={prefsCard.pets[0]?.id ?? null}
+            petName={prefsCard.pets[0]?.name}
+            customerId={prefsCard.customer?.id ?? null}
+            onClose={() => setPrefsCard(null)}
+          />
+        )}
+
+        {/* Preferences outstanding worklist */}
+        {!prefs.isLoading && (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs">
+            {prefs.missingCount === 0 ? (
+              <span className="text-muted-foreground">
+                Every groom today has grooming preferences.
+              </span>
+            ) : (
+              <>
+                <span className="inline-flex items-center gap-1 font-semibold text-sk-orange">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {prefs.missingCount} groom{prefs.missingCount === 1 ? "" : "s"} without preferences
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setOnlyMissingPrefs((v) => !v)}
+                  className={
+                    "rounded-full border px-3 py-1 font-medium " +
+                    (onlyMissingPrefs ? "border-sk-coral bg-sk-coral text-white" : "border-border bg-white hover:bg-muted")
+                  }
+                >
+                  {onlyMissingPrefs ? "Showing only these" : "Show only these"}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Hidden-groomer chips */}
         <div className="flex flex-wrap items-center gap-2">
           {groomers.map((g) => {
