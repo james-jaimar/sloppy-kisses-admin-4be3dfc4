@@ -21,7 +21,18 @@ export interface QuoteRow {
   sent_at: string | null;
   accepted_at: string | null;
   declined_at: string | null;
+  extras: QuoteExtras | null;
+  hold_until: string | null;
   customer?: { id: string; full_name: string | null; email: string | null } | null;
+}
+
+/** Everything the quote carries over to the booking when it is accepted. */
+export interface QuoteExtras {
+  check_in_window?: string | null;
+  check_out_window?: string | null;
+  notes?: string | null;
+  surcharges?: { surcharge_id: string; quantity: number }[];
+  pets?: { pet_id: string; name?: string | null; grooming_required?: boolean; grooming_notes?: string | null }[];
 }
 
 export interface QuoteItemRow {
@@ -95,6 +106,7 @@ export interface NewQuoteInput {
   notes: string | null;
   items: { description: string; quantity: number; unit_price: number }[];
   expiry_date?: string | null;
+  extras?: QuoteExtras | null;
 }
 
 export interface HotelStayLine {
