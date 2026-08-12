@@ -196,6 +196,21 @@ export default function HotelWorkflowPage() {
                 className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
               />
             </Field>
+            <Field
+              label="Quote validity (days)"
+              hint="How long a hotel quote holds the dates. The countdown starts the moment the quote is emailed; when it lapses the quote expires and the dates are released."
+            >
+              <input
+                type="number"
+                min={1}
+                max={90}
+                step={1}
+                disabled={!canManage}
+                value={form.quote_validity_days}
+                onChange={(e) => setForm((f) => ({ ...f, quote_validity_days: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+              />
+            </Field>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
