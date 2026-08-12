@@ -2963,6 +2963,7 @@ export type Database = {
           notes: string | null
           pdf_path: string | null
           pet_ids: string[]
+          public_token: string
           sent_at: string | null
           service_type: Database["public"]["Enums"]["service_type"] | null
           start_at: string | null
@@ -2992,6 +2993,7 @@ export type Database = {
           notes?: string | null
           pdf_path?: string | null
           pet_ids?: string[]
+          public_token?: string
           sent_at?: string | null
           service_type?: Database["public"]["Enums"]["service_type"] | null
           start_at?: string | null
@@ -3021,6 +3023,7 @@ export type Database = {
           notes?: string | null
           pdf_path?: string | null
           pet_ids?: string[]
+          public_token?: string
           sent_at?: string | null
           service_type?: Database["public"]["Enums"]["service_type"] | null
           start_at?: string | null
@@ -4296,6 +4299,7 @@ export type Database = {
           peak_start_month_day: string | null
           photo_gate_mode: string
           photo_policy_note: string | null
+          portal_activate_on_quote_accept: boolean
           quote_validity_days: number
           require_labelling_checklist: boolean
           require_prepayment_short_notice: boolean
@@ -4323,6 +4327,7 @@ export type Database = {
           peak_start_month_day?: string | null
           photo_gate_mode?: string
           photo_policy_note?: string | null
+          portal_activate_on_quote_accept?: boolean
           quote_validity_days?: number
           require_labelling_checklist?: boolean
           require_prepayment_short_notice?: boolean
@@ -4350,6 +4355,7 @@ export type Database = {
           peak_start_month_day?: string | null
           photo_gate_mode?: string
           photo_policy_note?: string | null
+          portal_activate_on_quote_accept?: boolean
           quote_validity_days?: number
           require_labelling_checklist?: boolean
           require_prepayment_short_notice?: boolean
@@ -8342,6 +8348,7 @@ export type Database = {
         Returns: undefined
       }
       accept_estimate: { Args: { p_estimate_id: string }; Returns: string }
+      accept_public_quote: { Args: { p_token: string }; Returns: Json }
       adjust_customer_credit: {
         Args: { p_amount: number; p_customer_id: string; p_notes: string }
         Returns: string
@@ -8563,6 +8570,7 @@ export type Database = {
         }[]
       }
       get_public_invoice: { Args: { p_token: string }; Returns: Json }
+      get_public_quote: { Args: { p_token: string }; Returns: Json }
       grooming_can_confirm_booking: {
         Args: { p_booking_id: string }
         Returns: {

@@ -25,6 +25,8 @@ export interface QuoteEmailInput {
   total: number;
   deposit: number;
   validUntil?: string | null;
+  /** Public quote link token — powers the "Accept this quote" button. */
+  publicToken?: string | null;
   /** Rendered intro copy (plain text, blank-line separated paragraphs). */
   intro: string;
   /** Tenant hotel guidelines markdown, appended as a plain-text section. */
@@ -55,6 +57,57 @@ function paragraphs(text: string): string {
     .filter(Boolean)
     .map((p) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#3f3f46">${esc(p).replace(/\n/g, "<br/>")}</p>`)
     .join("");
+}
+
+/** Minimal, safe markdown -> HTML for the tenant's house guidelines. */
+function markdown(src: string, brand: string): string {
+  const inline = (s: string) =>
+    esc(s)
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, `<a href="$2" style="color:${brand}">$1</a>`)
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+
+  const out: string[] = [];
+  let list: string[] = [];
+  const flush = () => {
+    if (list.length) {
+      out.push(
+        `<ul style="margin:0 0 12px;padding-left:18px">${list
+          .map((li) => `<li style="font-size:13.5px;line-height:1.6;color:#52525b;margin-bottom:5px">${li}</li>`)
+          .join("")}</ul>`,
+      );
+      list = [];
+    }
+  };
+
+  for (const raw of String(src ?? "").split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) { flush(); continue; }
+    const h = /^(#{1,6})\s+(.*)$/.exec(line);
+    if (h) {
+      flush();
+      const size = h[1].length <= 2 ? 15 : 14;
+      out.push(
+        `<div style="font-size:${size}px;font-weight:700;color:#18181b;margin:14px 0 8px">${inline(h[2])}</div>`,
+      );
+      continue;
+    }
+    const li = /^[-*•]\s+(.*)$/.exec(line) ?? /^\d+[.)]\s+(.*)$/.exec(line);
+    if (li) { list.push(inline(li[1])); continue; }
+    flush();
+    out.push(`<p style="margin:0 0 10px;font-size:13.5px;line-height:1.65;color:#52525b">${inline(line)}</p>`);
+  }
+  flush();
+  return out.join("");
+}
+
+/** Strip markdown syntax for the plain-text part. */
+function stripMarkdown(src: string): string {
+  return String(src ?? "")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "$1 ($2)")
+    .replace(/^[*]\s+/gm, "- ");
 }
 
 function bulletCard(brand: string, title: string, items: string[]): string {
@@ -95,12 +148,12 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ececf1;border-radius:14px;margin:0 0 14px;background:#fafafa">
          <tr><td style="padding:18px 20px">
            <div style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${brand};margin-bottom:10px">House guidelines</div>
-           <div style="font-size:13.5px;line-height:1.6;color:#52525b;white-space:pre-wrap">${esc(i.guidelines.trim())}</div>
+           <div>${markdown(i.guidelines.trim(), brand)}</div>
          </td></tr>
        </table>`
     : "";
 
-  const html = `<!doctype html>
+  const htmlRaw = `<!doctype html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>${esc(i.quoteNumber)}</title></head>
 <body style="margin:0;padding:0;background:#f4f4f6">
@@ -149,7 +202,7 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
             : ""}
           ${ctaUrl
             ? `<div style="text-align:center;margin:16px 0 6px">
-                 <a href="${esc(ctaUrl)}/portal/quotes" style="display:inline-block;background:${brand};color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px">Accept this quote</a>
+                 <a href="${esc(ctaUrl)}${i.publicToken ? `/q/${esc(i.publicToken)}` : "/portal"}" style="display:inline-block;background:${brand};color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px">Accept this quote</a>
                  <div style="font-size:12px;color:#a1a1aa;margin-top:9px">Prefer to chat? Just reply to this email.</div>
                </div>`
             : ""}
@@ -217,6 +270,14 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
   </table>
 </body></html>`;
 
+  // Quoted-printable turns whitespace-only line endings into literal "=20" in
+  // some clients — strip trailing spaces and blank-only lines before sending.
+  const html = htmlRaw
+    .split("\n")
+    .map((l) => l.replace(/[ \t]+$/, ""))
+    .filter((l, idx, arr) => !(l === "" && arr[idx - 1] === ""))
+    .join("\n");
+
   const text = [
     i.intro,
     "",
@@ -247,7 +308,8 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
     "- 50% off grooming when booked with the stay",
     "- Daily photos on Facebook; emergencies communicated directly",
     "- Hotel viewings Mon-Fri 10:00-13:00",
-    i.guidelines?.trim() ? "\nHOUSE GUIDELINES\n" + i.guidelines.trim() : "",
+    ctaUrl && i.publicToken ? `\nAccept this quote: ${ctaUrl}/q/${i.publicToken}` : "",
+    i.guidelines?.trim() ? "\nHOUSE GUIDELINES\n" + stripMarkdown(i.guidelines.trim()) : "",
     "",
     `${i.tenantName}`,
     [i.contactPhone, i.contactEmail].filter(Boolean).join(" | "),

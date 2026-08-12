@@ -146,6 +146,7 @@ import MyMessagesPage from "@/features/customerPortal/messages/MyMessagesPage";
 import RegistrationPage from "@/features/customerPortal/registration/RegistrationPage";
 import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
 import PublicInvoicePage from "@/features/invoices/PublicInvoicePage";
+import PublicQuotePage from "@/features/quotes/PublicQuotePage";
 import { PaySuccessPage, PayCancelPage } from "@/features/invoices/PayResultPages";
 import ReportsIndexPage from "@/features/reports/ReportsIndexPage";
 import AgingReportPage from "@/features/reports/AgingReportPage";
@@ -173,6 +174,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/auth/accept" element={<AuthAccept />} />
               <Route path="/i/:token" element={<PublicInvoicePage />} />
+              <Route path="/q/:token" element={<PublicQuotePage />} />
               <Route path="/pay/success" element={<PaySuccessPage />} />
               <Route path="/pay/cancel" element={<PayCancelPage />} />
              <Route path="/snap/:token" element={<SnapUpload />} />
