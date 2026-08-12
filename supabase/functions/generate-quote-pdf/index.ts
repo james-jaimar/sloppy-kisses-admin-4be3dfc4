@@ -29,6 +29,22 @@ Deno.serve(async (req) => {
   }
 
   let body: any;
+  try { body = await req.json(); } catch { return jerr(400, "Invalid JSON"); }
+  const quoteId: string | undefined = body?.quote_id;
+  if (!quoteId) return jerr(400, "quote_id required");
+
+  const { data: q } = await admin.from("estimates").select("*").eq("id", quoteId).maybeSingle();
+  if (!q) return jerr(404, "Quote not found");
+
+  const [{ data: items }, { data: customer }, { data: settings }, { data: tenant }] = await Promise.all([
+    admin.from("estimate_items").select("*").eq("estimate_id", quoteId).order("sort_order"),
+    admin.from("customers")
+      .select("id, full_name, customer_number, email, mobile, phone_alt, address_line_1, address_line_2, suburb, city, province, postcode")
+      .eq("id", q.customer_id).maybeSingle(),
+    admin.from("invoicing_settings").select("*").eq("tenant_id", q.tenant_id).maybeSingle(),
+    admin.from("tenants").select("id, name, primary_colour, logo_url, contact_email, contact_phone").eq("id", q.tenant_id).maybeSingle(),
+  ]);
+
   try {
     const bytes = await renderQuotePdf({ q, items: items ?? [], customer, settings, tenant, admin });
     return new Response(bytes, {
