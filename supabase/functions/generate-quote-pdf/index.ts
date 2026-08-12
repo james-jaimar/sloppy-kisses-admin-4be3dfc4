@@ -101,8 +101,8 @@ Deno.serve(async (req) => {
 
   if (q.start_at || q.end_at) {
     y -= 8;
-    page.drawText(safe()
-      `Stay: ${fmtDate(q.start_at)} to ${fmtDate(q.end_at)}${q.accommodation_type ? `  ·  ${q.accommodation_type}` : ""}`,
+    page.drawText(
+      safe(`Stay: ${fmtDate(q.start_at)} to ${fmtDate(q.end_at)}${q.accommodation_type ? `  ·  ${q.accommodation_type}` : ""}`),
       { x: M, y, size: 10, font: reg, color: text });
     y -= 12;
   }
@@ -144,8 +144,8 @@ Deno.serve(async (req) => {
     }
   }
 
-  page.drawText(safe()
-    `${tenant?.contact_email ?? ""}   ${tenant?.contact_phone ?? ""}`.trim(),
+  page.drawText(
+    safe(`${tenant?.contact_email ?? ""}   ${tenant?.contact_phone ?? ""}`.trim()),
     { x: M, y: 40, size: 8, font: reg, color: muted });
 
   const bytes = await pdf.save();
