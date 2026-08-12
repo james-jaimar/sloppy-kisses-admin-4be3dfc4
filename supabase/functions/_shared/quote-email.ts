@@ -57,11 +57,11 @@ function paragraphs(text: string): string {
     .join("");
 }
 
-function bulletCard(brand: string, title: string, icon: string, items: string[]): string {
+function bulletCard(brand: string, title: string, items: string[]): string {
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ececf1;border-radius:14px;margin:0 0 14px;background:#ffffff">
     <tr><td style="padding:18px 20px">
-      <div style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${brand};margin-bottom:10px">${icon} ${esc(title)}</div>
+      <div style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${brand};margin-bottom:10px">${title}</div>
       <ul style="margin:0;padding-left:18px">
         ${items.map((i) => `<li style="font-size:14px;line-height:1.6;color:#3f3f46;margin-bottom:6px">${i}</li>`).join("")}
       </ul>
@@ -163,32 +163,32 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
 
         <!-- Info cards -->
         <tr><td style="background:#ffffff;padding:0 28px">
-          ${bulletCard(brand, "Arrival &amp; collection", "&#128340;", [
+          ${bulletCard(brand, "Arrival &amp; collection", [
             "<strong>Arrivals</strong>: Mon–Sat, 09:00–11:00. No arrivals on Sundays or public holidays.",
             "<strong>Collection</strong>: 09:00–09:30, Mon–Sun.",
             "<strong>Stay &amp; Play collection</strong>: 16:00–16:30, Mon–Sun (additional fee).",
             "Closed for drop-offs and collections on 25 &amp; 26 December and 1 January.",
             "Our gates are only open during these windows, so please keep to the times booked.",
           ])}
-          ${bulletCard(brand, "Before you arrive", "&#9989;", [
+          ${bulletCard(brand, "Before you arrive", [
             "Dogs must be sterilised, fully vaccinated and dewormed.",
             "Kennel Cough (Bordetella) must be done at least <strong>10 days before</strong> arrival.",
             "Bring or upload the vaccination card — we cannot check in without it.",
             "Tick, flea and deworming treatment (e.g. NexGard Spectra / Revolution) up to date.",
             "All guests must be social with other dogs, and wear a collar with a name tag and contact number.",
           ])}
-          ${bulletCard(brand, "What to pack", "&#127890;", [
+          ${bulletCard(brand, "What to pack", [
             "Food in individually labelled ziplock bags, marked with your dog's <strong>name and breed</strong>.",
             "Written feeding instructions — only food you supply is fed.",
             "Medication with clear written instructions.",
             "No beds, bowls, pillows or extras needed; anything extra must be clearly labelled.",
           ])}
-          ${bulletCard(brand, "Where they'll stay", "&#127968;", [
+          ${bulletCard(brand, "Where they'll stay", [
             "<strong>Cuddle Inn – Puppy Paradise</strong>: small dogs, common space with TV and private garden.",
             "<strong>Barkside Inn – Cabanas</strong>: private room, two beds, private garden, up to 3 dogs.",
             "<strong>Bark Avenue – Deluxe</strong>: private room, queen bed, TV, aircon and private garden.",
           ])}
-          ${bulletCard(brand, "Good to know", "&#128054;", [
+          ${bulletCard(brand, "Good to know", [
             "<strong>50% off grooming</strong> when booked with the stay — most dogs go home fresh after all the play.",
             "Daily photos go up on our Facebook page; emergencies are always communicated directly.",
             "Hotel viewings are welcome Mon–Fri, 10:00–13:00.",

@@ -31,6 +31,17 @@ const INVOICE_VARS: TemplateVariable[] = [
   { path: "invoice.public_url", label: "Public view URL", sample: "https://sloppykisses.co.za/i/abc123" },
 ];
 
+const QUOTE_VARS: TemplateVariable[] = [
+  { path: "quote.number", label: "Quote number", sample: "QU-00001" },
+  { path: "quote.dates", label: "Stay dates", sample: "20 Aug 2026 to 24 Aug 2026" },
+  { path: "quote.nights", label: "Nights", sample: "4" },
+  { path: "quote.accommodation", label: "Accommodation area", sample: "Barkside Inn - Cabanas" },
+  { path: "quote.total", label: "Quote total", sample: "R 2 400.00" },
+  { path: "quote.deposit", label: "50% deposit", sample: "R 1 200.00" },
+  { path: "quote.valid_until", label: "Dates held until", sample: "26 Aug 2026" },
+  { path: "pet.names", label: "Pet name(s)", sample: "Charlie and Maia" },
+];
+
 export const TEMPLATE_VARIABLE_MAP: Record<string, TemplateVariable[]> = {
   booking_created: [...CUSTOMER_VARS, ...BOOKING_VARS],
   booking_reminder_24h: [...CUSTOMER_VARS, ...BOOKING_VARS],
@@ -40,6 +51,7 @@ export const TEMPLATE_VARIABLE_MAP: Record<string, TemplateVariable[]> = {
   invoice_issued: [...CUSTOMER_VARS, ...INVOICE_VARS],
   invoice_reminder: [...CUSTOMER_VARS, ...INVOICE_VARS],
   invoice_paid: [...CUSTOMER_VARS, ...INVOICE_VARS],
+  quote_sent: [...CUSTOMER_VARS, ...QUOTE_VARS],
   vax_expiring_30d: [...CUSTOMER_VARS, { path: "pet.name", label: "Pet name", sample: "Charlie" }, { path: "vaccine.name", label: "Vaccine", sample: "Rabies" }, { path: "vaccine.expires_on", label: "Expires", sample: "20 Aug 2026" }],
   vax_expiring_7d: [...CUSTOMER_VARS, { path: "pet.name", label: "Pet name", sample: "Charlie" }, { path: "vaccine.name", label: "Vaccine", sample: "Rabies" }, { path: "vaccine.expires_on", label: "Expires", sample: "20 Aug 2026" }],
   vax_expired: [...CUSTOMER_VARS, { path: "pet.name", label: "Pet name", sample: "Charlie" }, { path: "vaccine.name", label: "Vaccine", sample: "Rabies" }, { path: "vaccine.expires_on", label: "Expires", sample: "20 Jul 2026" }],
