@@ -84,7 +84,22 @@ Deno.serve(async (req) => {
     },
     body: JSON.stringify({ quote_id: q.id }),
   });
-  if (!pdfRes.ok) return j(502, { error: `PDF generation failed: ${await pdfRes.text()}` });
+  if (!pdfRes.ok) {
+    let detail = await pdfRes.text();
+    try { detail = JSON.parse(detail)?.error ?? detail; } catch { /* keep raw text */ }
+    const reason = `PDF generation failed: ${detail}`;
+    await admin.from("email_log").insert({
+      tenant_id: q.tenant_id,
+      customer_id: q.customer_id,
+      template_code: "quote_send",
+      to_email: recipient,
+      subject,
+      status: "failed",
+      error_message: reason,
+      sent_at: null,
+    } as any);
+    return j(200, { ok: false, error: reason });
+  }
   const pdfBytes = new Uint8Array(await pdfRes.arrayBuffer());
 
   const gate = await guardSend(admin, {

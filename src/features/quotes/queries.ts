@@ -210,7 +210,18 @@ export function useSendQuote() {
       const { data, error } = await supabase.functions.invoke("send-quote-email", {
         body: { quote_id: id },
       });
-      if (error) throw error;
+      if (error) {
+        // invoke() masks server errors as "non-2xx status code" — read the body.
+        let detail = error.message;
+        const ctx = (error as any)?.context;
+        if (ctx?.text) {
+          try {
+            const raw = await ctx.text();
+            detail = (() => { try { return JSON.parse(raw)?.error ?? raw; } catch { return raw; } })() || detail;
+          } catch { /* keep original message */ }
+        }
+        throw new Error(detail);
+      }
       if ((data as any)?.ok === false) throw new Error((data as any)?.error ?? "Could not send the quote");
       return data;
     },
