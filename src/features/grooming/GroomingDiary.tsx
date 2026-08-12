@@ -16,6 +16,9 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { PaymentChip, PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 import { useGroomingBoardBookings, useRescheduleGrooming, type GroomingBoardCard } from "./queries";
+import { useGroomingPrefsStates } from "./instructions/prefsQueries";
+import { GroomingPrefsChip } from "./instructions/GroomingPrefsChip";
+import { BookingGroomingPrefsDialog } from "./instructions/BookingGroomingPrefsDialog";
 
 const PX_PER_MIN = 1.15;
 const SNAP = 15;
