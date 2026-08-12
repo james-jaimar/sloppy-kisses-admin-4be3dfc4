@@ -1271,6 +1271,19 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             onChange={setGroomingInstructions}
           />
         )}
+        {kind === "hotel" && (() => {
+          const inBlock = movementBlockReason(startAt ? startAt.slice(0, 10) : null, "dropoff", holidaysQ.data);
+          const outBlock = movementBlockReason(endAtLocal ? endAtLocal.slice(0, 10) : null, "collection", holidaysQ.data);
+          if (!inBlock && !outBlock) return null;
+          return (
+            <div className="rounded-xl border border-sk-orange/40 bg-sk-orange-soft p-3 text-sm text-sk-orange">
+              <div className="font-semibold">Gates are closed</div>
+              {inBlock && <div>Check-in: {inBlock}</div>}
+              {outBlock && <div>Collection: {outBlock}</div>}
+              <p className="mt-1 text-xs">{MOVEMENT_RULES_NOTE}</p>
+            </div>
+          );
+        })()}
         {kind === "hotel" && (
           <HotelExtrasPanel
             tenantId={tenantId}
