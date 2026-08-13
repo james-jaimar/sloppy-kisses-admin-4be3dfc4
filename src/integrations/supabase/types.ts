@@ -4172,6 +4172,68 @@ export type Database = {
           },
         ]
       }
+      hotel_quote_email_settings: {
+        Row: {
+          cards: Json
+          created_at: string
+          cta_label: string
+          cta_subtext: string
+          deposit_label: string
+          hero_headline: string
+          hero_label: string
+          hold_line: string
+          id: string
+          section_heading: string
+          show_guidelines: boolean
+          signoff_html: string
+          tenant_id: string
+          total_label: string
+          updated_at: string
+        }
+        Insert: {
+          cards?: Json
+          created_at?: string
+          cta_label?: string
+          cta_subtext?: string
+          deposit_label?: string
+          hero_headline?: string
+          hero_label?: string
+          hold_line?: string
+          id?: string
+          section_heading?: string
+          show_guidelines?: boolean
+          signoff_html?: string
+          tenant_id: string
+          total_label?: string
+          updated_at?: string
+        }
+        Update: {
+          cards?: Json
+          created_at?: string
+          cta_label?: string
+          cta_subtext?: string
+          deposit_label?: string
+          hero_headline?: string
+          hero_label?: string
+          hold_line?: string
+          id?: string
+          section_heading?: string
+          show_guidelines?: boolean
+          signoff_html?: string
+          tenant_id?: string
+          total_label?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_quote_email_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotel_rate_cards: {
         Row: {
           accommodation_type: string
