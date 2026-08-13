@@ -8,6 +8,7 @@ export function useWorkDepts() {
   return useMemo(() => {
     const depts: WorkDept[] = [];
     if (hasPermission("work.grooming")) depts.push("grooming");
+    if (hasPermission("work.grooming_mobile")) depts.push("grooming_mobile");
     if (hasPermission("work.hotel")) depts.push("hotel");
     if (hasPermission("work.daycare")) depts.push("daycare");
     if (hasPermission("work.transport")) depts.push("transport");
