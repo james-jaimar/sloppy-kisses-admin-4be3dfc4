@@ -51,6 +51,7 @@ import GroomingBoardPage from "@/features/grooming/GroomingBoardPage";
 import HotelBoardPage from "@/features/hotelCattery/HotelBoardPage";
 import HotelGroomQueuePage from "@/features/hotelGrooming/HotelGroomQueuePage";
 import HotelWorkflowPage from "@/features/settings/HotelWorkflowPage";
+import HotelQuoteEmailPage from "@/features/settings/HotelQuoteEmailPage";
 import HotelRatesPage from "@/features/settings/HotelRatesPage";
 import PublicHolidaysPage from "@/features/settings/PublicHolidaysPage";
 import GroomingWorkflowPage from "@/features/settings/GroomingWorkflowPage";
@@ -232,6 +233,7 @@ const App = () => (
                 <Route path="/admin/settings/dog-breeds" element={<DogBreedsPage />} />
                 <Route path="/admin/settings/grooming-addons" element={<GroomingAddonsPage />} />
                 <Route path="/admin/settings/hotel-workflow" element={<HotelWorkflowPage />} />
+                <Route path="/admin/settings/hotel-quote-email" element={<HotelQuoteEmailPage />} />
                 <Route path="/admin/settings/hotel-rates" element={<HotelRatesPage />} />
                 <Route path="/admin/settings/public-holidays" element={<PublicHolidaysPage />} />
                 <Route path="/admin/settings/grooming-workflow" element={<GroomingWorkflowPage />} />
