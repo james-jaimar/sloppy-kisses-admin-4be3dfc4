@@ -6,6 +6,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { loadTransport, loadTenantBrand, renderBrandedHtml, sendMail } from "../_shared/comms-transport.ts";
+import { htmlToText, looksLikeHtml } from "../_shared/html-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -144,8 +145,11 @@ Deno.serve(async (req) => {
       const tenantName = (tenantRes.data as any)?.name ?? "Sloppy Kisses";
       const fallbackSubject = `${ev.event_type} — ${tenantName}`;
       const subject = (tpl.subject ? render(tpl.subject, ctx) : "") || fallbackSubject;
-      const body = render(tpl.body, ctx);
-      const html = renderBrandedHtml(brand, tenantName, body);
+      const rendered = render(tpl.body, ctx);
+      const isHtml = (tpl as any).body_format === "html" || looksLikeHtml(rendered);
+      // WhatsApp/SMS always get the plain-text form.
+      const body = isHtml ? htmlToText(rendered) : rendered;
+      const html = renderBrandedHtml(brand, tenantName, isHtml ? rendered : body, { isHtml });
 
       if (ev.channel === "email") {
         const transport = await loadTransport(sb, ev.tenant_id);

@@ -5113,6 +5113,7 @@ export type Database = {
         Row: {
           auto_send: boolean
           body: string
+          body_format: string
           channel: Database["public"]["Enums"]["comms_channel"]
           created_at: string
           event_code: string
@@ -5127,6 +5128,7 @@ export type Database = {
         Insert: {
           auto_send?: boolean
           body: string
+          body_format?: string
           channel?: Database["public"]["Enums"]["comms_channel"]
           created_at?: string
           event_code: string
@@ -5141,6 +5143,7 @@ export type Database = {
         Update: {
           auto_send?: boolean
           body?: string
+          body_format?: string
           channel?: Database["public"]["Enums"]["comms_channel"]
           created_at?: string
           event_code?: string
