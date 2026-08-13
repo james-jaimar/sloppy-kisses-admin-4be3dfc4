@@ -2,31 +2,31 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { landingFor } from "@/lib/auth/landing";
+import { useWorkDepts } from "@/features/work/useWorkDepts";
 import { Logo } from "@/components/layout/Logo";
 import { Loader2 } from "lucide-react";
 import loginBg from "@/assets/login-dogs.jpg.asset.json";
 
 export default function Login() {
   const { authUser, loading, signIn } = useAuth();
-  const { profile } = useCurrentUser();
+  const { profile, hasPermission } = useCurrentUser();
+  const { depts } = useWorkDepts();
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as { from?: string; justReset?: boolean } | null;
   const justReset = state?.justReset ?? false;
 
-  function homeFor(userType: string | undefined): string {
-    if (userType === "customer") return "/customer/dashboard";
-    if (userType === "platform") return "/platform";
-    return "/admin/home";
-  }
-  const home = homeFor(profile?.user_type);
+  const home = landingFor({ userType: profile?.user_type, hasPermission, depts });
   // Only honor `from` if it targets the user's own area
   const fromRaw = state?.from ?? null;
   const areaOk =
     fromRaw &&
     ((profile?.user_type === "customer" && fromRaw.startsWith("/customer")) ||
       (profile?.user_type === "platform" && (fromRaw.startsWith("/platform") || fromRaw.startsWith("/admin"))) ||
-      (profile?.user_type !== "customer" && profile?.user_type !== "platform" && fromRaw.startsWith("/admin")));
+      (profile?.user_type !== "customer" &&
+        profile?.user_type !== "platform" &&
+        (fromRaw.startsWith("/admin") || fromRaw.startsWith("/work"))));
   const from = areaOk ? (fromRaw as string) : home;
 
   const [email, setEmail] = useState("");
