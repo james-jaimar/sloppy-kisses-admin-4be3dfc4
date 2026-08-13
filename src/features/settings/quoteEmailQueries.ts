@@ -24,7 +24,7 @@ export function useQuoteEmailSettings(tenantId: string | null | undefined) {
       if (!data) return d;
       const row = data as any;
       const str = (v: unknown, fb: string) => (typeof v === "string" && v.trim() ? v : fb);
-      const cards = Array.isArray(row.cards) && row.cards.length ? (row.cards as QuoteEmailCard[]) : d.cards;
+      const cards = Array.isArray(row.cards) ? (row.cards as QuoteEmailCard[]) : d.cards;
       return {
         hero_label: str(row.hero_label, d.hero_label),
         hero_headline: str(row.hero_headline, d.hero_headline),

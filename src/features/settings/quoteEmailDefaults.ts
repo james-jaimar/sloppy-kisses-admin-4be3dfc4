@@ -107,7 +107,7 @@ export function resolveQuoteEmailSettings(row: any): QuoteEmailSettings {
   if (!row) return d;
   const str = (v: unknown, fb: string) =>
     typeof v === "string" && v.trim() ? v : fb;
-  const cards = Array.isArray(row.cards) && row.cards.length
+  const cards = Array.isArray(row.cards)
     ? (row.cards as QuoteEmailCard[]).filter((c) => c && c.enabled !== false)
     : d.cards;
   return {
