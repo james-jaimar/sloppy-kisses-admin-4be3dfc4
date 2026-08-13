@@ -25,15 +25,16 @@ import MePage from "@/features/work/MePage";
 import JobChecklistsPage from "@/features/settings/JobChecklistsPage";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { landingFor } from "@/lib/auth/landing";
+import { useWorkDepts } from "@/features/work/useWorkDepts";
 
 function HomeRedirect() {
   const { authUser, loading: authLoading } = useAuth();
-  const { profile, loading } = useCurrentUser();
+  const { profile, loading, hasPermission } = useCurrentUser();
+  const { depts } = useWorkDepts();
   if (authLoading || (loading && !profile)) return null;
   if (!authUser) return <Navigate to="/login" replace />;
-  if (profile?.user_type === "customer") return <Navigate to="/customer/dashboard" replace />;
-  if (profile?.user_type === "platform") return <Navigate to="/platform" replace />;
-  return <Navigate to="/admin/home" replace />;
+  return <Navigate to={landingFor({ userType: profile?.user_type, hasPermission, depts })} replace />;
 }
 import Login from "@/pages/Login";
 import CustomerSignup from "@/pages/CustomerSignup";
