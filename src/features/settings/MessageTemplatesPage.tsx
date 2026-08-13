@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Save, Plus, Trash2, Send, Eye, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -7,6 +7,27 @@ import { useMessageTemplates, useUpsertMessageTemplate, useDeleteMessageTemplate
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { supabase } from "@/lib/supabase/client";
 import { buildSampleContext, getVariablesFor, renderTemplate } from "@/features/comms/templateVariables";
+import { RichTextEditor } from "@/features/comms/RichTextEditor";
+
+/** Turn a legacy plain-text body into simple HTML paragraphs. */
+function textToHtml(text: string): string {
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const blocks = String(text ?? "").split(/\n{2,}/).filter((b) => b.trim());
+  if (!blocks.length) return "<p></p>";
+  return blocks.map((b) => `<p>${esc(b.trim()).replace(/\n/g, "<br/>")}</p>`).join("");
+}
+
+/** Flatten HTML back to readable plain text (used for the WhatsApp/SMS switch). */
+function htmlToText(html: string): string {
+  return String(html ?? "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|h[1-6]|li|blockquote)>/gi, "\n\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 const EVENT_CODES = [
   "booking_created","booking_reminder_24h","booking_rescheduled","booking_cancelled","booking_status_changed",
@@ -33,6 +54,9 @@ export default function MessageTemplatesPage() {
 
   const [draft, setDraft] = useState<Partial<MessageTemplate>>({});
   const current: Partial<MessageTemplate> = { ...(selected ?? {}), ...draft };
+  const isRich = (current as any).body_format === "html";
+  const insertRef = useRef<((text: string) => void) | null>(null);
+  const registerInsert = useCallback((fn: (text: string) => void) => { insertRef.current = fn; }, []);
   const vars = getVariablesFor(current.event_code ?? null);
   const sampleCtx = useMemo(() => {
     const ctx = buildSampleContext(current.event_code ?? null);
@@ -58,6 +82,7 @@ export default function MessageTemplatesPage() {
         send_to: current.send_to ?? "customer",
         is_active: current.is_active ?? true,
         auto_send: current.auto_send ?? true,
+        body_format: (current as any).body_format ?? "text",
       } as any);
       toast.success("Saved");
       setDraft({});
@@ -81,6 +106,7 @@ export default function MessageTemplatesPage() {
           event_code: current.event_code,
           subject: current.subject ?? "",
           body: current.body,
+          body_format: (current as any).body_format ?? "text",
           sample: sampleCtx,
         },
       });
@@ -95,7 +121,15 @@ export default function MessageTemplatesPage() {
 
   function newTemplate() {
     setSelectedId(null);
-    setDraft({ event_code: "manual_message", channel: "email", name: "New template", subject: "", body: "", send_to: "customer", is_active: true, auto_send: false });
+    setDraft({ event_code: "manual_message", channel: "email", name: "New template", subject: "", body: "<p></p>", send_to: "customer", is_active: true, auto_send: false, body_format: "html" } as any);
+  }
+
+  function toggleFormat() {
+    if (isRich) {
+      setDraft({ ...draft, body: htmlToText(current.body ?? ""), body_format: "text" } as any);
+    } else {
+      setDraft({ ...draft, body: textToHtml(current.body ?? ""), body_format: "html" } as any);
+    }
   }
 
   return (
@@ -150,9 +184,16 @@ export default function MessageTemplatesPage() {
                   <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Subject</div>
                   <div className="mt-1">{previewSubject || <span className="text-muted-foreground">(no subject — falls back to "{current.event_code} — {tenant?.name}")</span>}</div>
                 </div>
-                <div className="rounded-lg border border-border bg-white px-4 py-4 text-sm leading-relaxed whitespace-pre-wrap">
-                  {previewBody || <span className="text-muted-foreground">(empty body)</span>}
-                </div>
+                {isRich ? (
+                  <div
+                    className="sk-rte prose prose-sm max-w-none rounded-lg border border-border bg-white px-4 py-4 text-sm leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: previewBody || "<p class='text-muted-foreground'>(empty body)</p>" }}
+                  />
+                ) : (
+                  <div className="rounded-lg border border-border bg-white px-4 py-4 text-sm leading-relaxed whitespace-pre-wrap">
+                    {previewBody || <span className="text-muted-foreground">(empty body)</span>}
+                  </div>
+                )}
                 <div className="text-[11px] text-muted-foreground">Preview uses sample data. Real sends fill in the customer's actual details.</div>
               </div>
             ) : (
@@ -199,10 +240,43 @@ export default function MessageTemplatesPage() {
                   className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
               </Field>
             )}
-            <Field label="Body" hint="Use variables like {{customer.full_name}}. Full list below.">
-              <textarea disabled={!canManage} rows={12} value={current.body ?? ""} onChange={(e) => setDraft({ ...draft, body: e.target.value })}
-                className="w-full rounded-lg border border-border bg-white px-3 py-2 font-mono text-xs" />
-            </Field>
+            <div>
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Body</div>
+                {current.channel === "email" && (
+                  <button type="button" disabled={!canManage} onClick={toggleFormat}
+                    className="rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted disabled:opacity-50">
+                    {isRich ? "Switch to plain text" : "Switch to formatted editor"}
+                  </button>
+                )}
+              </div>
+              {isRich && current.channel === "email" ? (
+                <RichTextEditor
+                  value={current.body ?? ""}
+                  disabled={!canManage}
+                  registerInsert={registerInsert}
+                  onChange={(html) => setDraft({ ...draft, body: html } as any)}
+                />
+              ) : (
+                <textarea disabled={!canManage} rows={12} value={current.body ?? ""} onChange={(e) => setDraft({ ...draft, body: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-white px-3 py-2 font-mono text-xs" />
+              )}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {vars.map((v) => (
+                  <button key={v.path} type="button" disabled={!canManage}
+                    title={v.label}
+                    onClick={() => {
+                      const token = `{{${v.path}}}`;
+                      if (isRich && current.channel === "email" && insertRef.current) insertRef.current(token);
+                      else setDraft({ ...draft, body: `${current.body ?? ""}${token}` } as any);
+                    }}
+                    className="rounded-full border border-border bg-white px-2 py-1 font-mono text-[11px] text-muted-foreground hover:bg-muted disabled:opacity-50">
+                    {v.path}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">Click a chip to insert it at the cursor. Real sends fill in the customer's details.</div>
+            </div>
             <div className="rounded-lg border border-border bg-muted/40">
               <button type="button" onClick={() => setShowVars((v) => !v)}
                 className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
