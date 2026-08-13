@@ -7,6 +7,7 @@ import { useCreatePortalBooking } from "./useBookingSubmit";
 import { GroomingInstructionsForm, type GroomingInstructionsValue } from "@/features/grooming/instructions/GroomingInstructionsForm";
 import { usePetGroomingDefaults, useInstructionCatalog } from "@/features/grooming/instructions/queries";
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
+import { useGroomingWorkflowSettings } from "@/features/grooming/workflowQueries";
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
 import { useGroomingDayAvailability } from "@/features/grooming/availabilityQueries";
 import { layoutGroomingAppointments, type PetSlotRequest } from "@/features/grooming/multiPetSchedule";
@@ -41,6 +42,9 @@ export default function GroomingRequestWizard({ mode }: Props) {
   const defaultsQ = usePetGroomingDefaults(petId || null);
   const catalogQ = useInstructionCatalog(cust.data?.tenant_id ?? null);
   const addonsQ = useGroomingAddons(cust.data?.tenant_id ?? undefined, { activeOnly: true });
+  const wfQ = useGroomingWorkflowSettings(cust.data?.tenant_id ?? null);
+  // Mobile grooming always carries the travel fee — show it up front.
+  const travelFee = mode === "mobile" ? Number(wfQ.data?.default_mobile_travel_fee_zar ?? 0) : 0;
   const stayPlayAddon = (addonsQ.data ?? []).find((a: any) => a.code === "stay_play_after") ?? null;
   // Quick single treatments — bookable without a full package.
   const standaloneAddons = (addonsQ.data ?? []).filter((a) => a.bookable_standalone && a.code !== "stay_play_after");
@@ -124,9 +128,15 @@ export default function GroomingRequestWizard({ mode }: Props) {
     if (spPrice > 0) {
       extras.push({ label: dogCount > 1 ? `${stayPlayAddon!.name} × ${dogCount} dogs` : stayPlayAddon!.name, price: spPrice });
     }
-    return { base, extras, total: base + extrasTotal + treatmentTotal + spPrice, hasPackage: chosenPkgs.length > 0 };
+    if (travelFee > 0) extras.push({ label: "Mobile grooming travel fee", price: travelFee });
+    return {
+      base,
+      extras,
+      total: base + extrasTotal + treatmentTotal + spPrice + travelFee,
+      hasPackage: chosenPkgs.length > 0,
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [packages.data, petIds, petPackages, packageId, addonsQ.data, catalogQ.data, instructions.selections, stayPlay, stayPlayAddon, treatments]);
+  }, [packages.data, petIds, petPackages, packageId, addonsQ.data, catalogQ.data, instructions.selections, stayPlay, stayPlayAddon, treatments, travelFee]);
 
   // Appointment length = package time + each treatment's own time.
   const durationMinutes = useMemo(() => {
