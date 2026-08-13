@@ -112,6 +112,10 @@ export function GroomingExtrasPanel({
   const speciesPackages = filteredBySize;
   const activePkg = activePkgEarly;
   const discountPct = Number(wfQ.data?.pensioner_discount_pct ?? 0);
+  // Mobile grooming always carries the travel fee: fall back to the tenant default
+  // when the booking hasn't got an explicit amount yet (the DB enforces the same rule).
+  const defaultTravel = Number(wfQ.data?.default_mobile_travel_fee_zar ?? 0);
+  const effectiveTravel = mode === "mobile" ? (Number(travelFee ?? 0) || defaultTravel) : 0;
 
   const preview = useMemo(() => {
     const base = Number(activePkg?.price_zar ?? 0);
@@ -279,7 +283,7 @@ export function GroomingExtrasPanel({
             ))}
             {preview.matted > 0 && <Row label="Matted coat surcharge" value={fmtZar(preview.matted)} />}
             {preview.sedation > 0 && <Row label="Sedation surcharge" value={fmtZar(preview.sedation)} />}
-            {preview.travel > 0 && <Row label="Mobile travel fee" value={fmtZar(preview.travel)} />}
+            {preview.travel > 0 && <Row label="Mobile travel fee (always charged)" value={fmtZar(preview.travel)} />}
             <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm font-semibold">
               <span>Total (VAT incl.)</span>
               <span>{fmtZar(preview.total)}</span>
