@@ -230,6 +230,29 @@ export function GroomingExtrasPanel({
 
       <div className="mt-4">
         <div className="mb-2 text-xs font-medium">Extras & fees</div>
+        {mode === "mobile" && (
+          <div className="mb-2 flex flex-wrap items-center gap-3 rounded-lg border border-sk-orange bg-sk-orange-soft px-3 py-2 text-sm">
+            <div className="flex-1">
+              <div className="font-medium">Mobile grooming travel fee</div>
+              <div className="text-[11px] text-muted-foreground">
+                Charged on every mobile booking. Change the standard amount in Settings → Grooming workflow.
+              </div>
+            </div>
+            {onTravelFeeChange ? (
+              <label className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">Override</span>
+                <input
+                  type="number" min={0} step={10}
+                  value={effectiveTravel}
+                  onChange={(e) => onTravelFeeChange(Math.max(0, Number(e.target.value)))}
+                  className="h-8 w-24 rounded-md border border-border bg-white px-2 text-sm"
+                />
+              </label>
+            ) : (
+              <span className="font-medium">{fmtZar(effectiveTravel)}</span>
+            )}
+          </div>
+        )}
         <div className="mb-2 text-[11px] text-muted-foreground">
           Shampoo, teeth, ears, nails and other styling extras are picked in the Grooming instructions panel below.
         </div>
