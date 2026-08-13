@@ -79,6 +79,13 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/hotel-quote-email",
+    label: "Hotel quote email",
+    description: "Edit every part of the quote email — banner, price labels, information sections and sign-off.",
+    icon: Hotel,
+    ready: true,
+  },
+  {
     to: "/admin/settings/public-holidays",
     label: "Public holidays",
     description: "Days the gates are closed for hotel drop-offs and collections.",
