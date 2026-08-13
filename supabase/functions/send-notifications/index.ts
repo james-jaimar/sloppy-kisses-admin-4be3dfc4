@@ -6,6 +6,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { loadTransport, loadTenantBrand, renderBrandedHtml, sendMail } from "../_shared/comms-transport.ts";
+import { htmlToText, looksLikeHtml } from "../_shared/html-email.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
