@@ -147,6 +147,10 @@ Deno.serve(async (req) => {
   const result = await sendMail(transport, recipient, subject, text, html, {
     admin, tenantId, templateCode: "test.quote_email",
   });
+  if (!result.ok && (result as any).blocked) {
+    // guardSend already wrote the [BLOCKED] email_log row.
+    return j(200, { ok: false, blocked: true, error: result.error, html });
+  }
   await admin.from("email_log").insert({
     tenant_id: tenantId, to_email: recipient, subject,
     status: result.ok ? "sent" : "failed",
@@ -154,6 +158,6 @@ Deno.serve(async (req) => {
     template_code: "test.quote_email",
     sent_at: result.ok ? new Date().toISOString() : null,
   } as any);
-  if (!result.ok) return j(200, { ok: false, blocked: (result as any).blocked ?? false, error: result.error, html });
+  if (!result.ok) return j(200, { ok: false, error: result.error, html });
   return j(200, { ok: true, recipient, html });
 });
