@@ -157,7 +157,7 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
       <td style="padding:7px 0;font-size:14px;color:#18181b;font-weight:600">${esc(v)}</td>
     </tr>`).join("");
 
-  const guidelinesBlock = i.guidelines?.trim()
+  const guidelinesBlock = i.guidelines?.trim() && s.show_guidelines !== false
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ececf1;border-radius:14px;margin:0 0 14px;background:#fafafa">
          <tr><td style="padding:18px 20px">
            <div style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${brand};margin-bottom:10px">House guidelines</div>
