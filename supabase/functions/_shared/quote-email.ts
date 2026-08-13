@@ -7,6 +7,7 @@
 // rendered here so the layout always stays on brand.
 
 import { htmlToText, looksLikeHtml, sanitizeEmailHtml, styleBodyHtml, wrapHtmlLines } from "./html-email.ts";
+import { DEFAULT_QUOTE_EMAIL_SETTINGS, type QuoteEmailSettings } from "./quote-email-defaults.ts";
 
 export interface QuoteEmailInput {
   tenantName: string;
@@ -33,6 +34,11 @@ export interface QuoteEmailInput {
   intro: string;
   /** Tenant hotel guidelines markdown, appended as a plain-text section. */
   guidelines?: string | null;
+  /**
+   * Tenant-editable copy for the rest of the email (hero, labels, info cards,
+   * sign-off). Already token-rendered by the caller. Falls back to defaults.
+   */
+  settings?: QuoteEmailSettings | null;
 }
 
 export const esc = (s: unknown) =>
