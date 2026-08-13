@@ -122,20 +122,21 @@ function stripMarkdown(src: string): string {
     .replace(/^[*]\s+/gm, "- ");
 }
 
-function bulletCard(brand: string, title: string, items: string[]): string {
+/** Info card whose body is tenant-authored rich text (sanitised + styled). */
+function richCard(brand: string, title: string, bodyHtml: string): string {
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #ececf1;border-radius:14px;margin:0 0 14px;background:#ffffff">
     <tr><td style="padding:18px 20px">
-      <div style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${brand};margin-bottom:10px">${title}</div>
-      <ul style="margin:0;padding-left:18px">
-        ${items.map((i) => `<li style="font-size:14px;line-height:1.6;color:#3f3f46;margin-bottom:6px">${i}</li>`).join("")}
-      </ul>
+      <div style="font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${brand};margin-bottom:10px">${esc(title)}</div>
+      <div>${styleBodyHtml(sanitizeEmailHtml(bodyHtml), "#3f3f46", 14)}</div>
     </td></tr>
   </table>`;
 }
 
 export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: string } {
   const brand = /^#[0-9a-f]{6}$/i.test(i.brandColour ?? "") ? i.brandColour : "#FF5A5A";
+  const s: QuoteEmailSettings = i.settings ?? DEFAULT_QUOTE_EMAIL_SETTINGS;
+  const cards = (s.cards ?? []).filter((c) => c && c.enabled !== false && (c.title || c.body_html));
   const stayLine = i.startAt
     ? `${fmtDate(i.startAt)} – ${fmtDate(i.endAt)}${i.nights ? ` · ${i.nights} night${i.nights === 1 ? "" : "s"}` : ""}`
     : "—";
