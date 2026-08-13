@@ -6,6 +6,8 @@
 // card, the arrival windows, the packing list, the accommodation areas — is
 // rendered here so the layout always stays on brand.
 
+import { htmlToText, looksLikeHtml, sanitizeEmailHtml, styleBodyHtml, wrapHtmlLines } from "./html-email.ts";
+
 export interface QuoteEmailInput {
   tenantName: string;
   brandColour: string;
@@ -51,6 +53,8 @@ export const DEFAULT_QUOTE_INTRO =
   "Everything you need to know before the stay is below — if it is your first time with us, this is the short version of our accommodation form.";
 
 function paragraphs(text: string): string {
+  // The intro can come from a rich-text template — keep it as HTML in that case.
+  if (looksLikeHtml(text)) return styleBodyHtml(sanitizeEmailHtml(text));
   return String(text ?? "")
     .split(/\n{2,}/)
     .map((p) => p.trim())
@@ -73,7 +77,7 @@ function markdown(src: string, brand: string): string {
     if (list.length) {
       out.push(
         `<ul style="margin:0 0 12px;padding-left:18px">${list
-          .map((li) => `<li style="font-size:13.5px;line-height:1.6;color:#52525b;margin-bottom:5px">${li}</li>`)
+          .map((li) => `<li style="font-size:14px;line-height:1.6;color:#52525b;margin-bottom:5px">${li}</li>`)
           .join("")}</ul>`,
       );
       list = [];
@@ -95,10 +99,12 @@ function markdown(src: string, brand: string): string {
     const li = /^[-*•]\s+(.*)$/.exec(line) ?? /^\d+[.)]\s+(.*)$/.exec(line);
     if (li) { list.push(inline(li[1])); continue; }
     flush();
-    out.push(`<p style="margin:0 0 10px;font-size:13.5px;line-height:1.65;color:#52525b">${inline(line)}</p>`);
+    out.push(`<p style="margin:0 0 10px;font-size:14px;line-height:1.65;color:#52525b">${inline(line)}</p>`);
   }
   flush();
-  return out.join("");
+  // One block per line keeps the encoded message well under the 998-char
+  // SMTP line limit, so no mail server can break a tag in half.
+  return out.join("\n");
 }
 
 /** Strip markdown syntax for the plain-text part. */
