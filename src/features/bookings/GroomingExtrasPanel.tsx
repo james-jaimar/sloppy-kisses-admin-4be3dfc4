@@ -26,6 +26,7 @@ export function GroomingExtrasPanel({
   mattedSurchargeZar,
   sedationSurchargeZar,
   travelFee,
+  onTravelFeeChange,
   petSize,
 }: {
   tenantId: string;
@@ -40,6 +41,8 @@ export function GroomingExtrasPanel({
   mattedSurchargeZar: number | null;
   sedationSurchargeZar: number | null;
   travelFee: number | null;
+  /** Mobile bookings always carry the travel fee — this lets an admin override the amount. */
+  onTravelFeeChange?: (v: number) => void;
   /** Effective grooming size of the primary pet — filters packages to matching band. */
   petSize?: string | null;
 }) {
@@ -59,6 +62,9 @@ export function GroomingExtrasPanel({
     for (const o of opts) if (o.addon_code) set.add(o.addon_code);
     // hand_strip is triggered by the boolean instruction group of the same code.
     set.add("hand_strip");
+    // Travel on a mobile groom is enforced on the booking itself, never a tick box.
+    set.add("travel_mobile");
+    set.add("mobile_travel");
     return set;
   }, [catalogQ.data]);
 
@@ -106,6 +112,10 @@ export function GroomingExtrasPanel({
   const speciesPackages = filteredBySize;
   const activePkg = activePkgEarly;
   const discountPct = Number(wfQ.data?.pensioner_discount_pct ?? 0);
+  // Mobile grooming always carries the travel fee: fall back to the tenant default
+  // when the booking hasn't got an explicit amount yet (the DB enforces the same rule).
+  const defaultTravel = Number(wfQ.data?.default_mobile_travel_fee_zar ?? 0);
+  const effectiveTravel = mode === "mobile" ? (Number(travelFee ?? 0) || defaultTravel) : 0;
 
   const preview = useMemo(() => {
     const base = Number(activePkg?.price_zar ?? 0);
@@ -119,7 +129,7 @@ export function GroomingExtrasPanel({
     const addonTotal = addonRows.reduce((s, r) => s + r.total, 0);
     const matted = Number(mattedSurchargeZar ?? 0);
     const sedation = Number(sedationSurchargeZar ?? 0);
-    const travel = mode === "mobile" ? Number(travelFee ?? 0) : 0;
+    const travel = mode === "mobile" ? effectiveTravel : 0;
     const discountAmt = pensionerDiscount ? (base * discountPct) / 100 : 0;
     const total = base - discountAmt + addonTotal + matted + sedation + travel;
     const addonMinutes = addonSelection.reduce((sum, s) => {
@@ -128,7 +138,7 @@ export function GroomingExtrasPanel({
     }, 0);
     const minutes = Number(activePkg?.expected_minutes ?? 0) + addonMinutes;
     return { base, addonRows, addonTotal, matted, sedation, travel, discountAmt, total, addonMinutes, minutes };
-  }, [activePkg, addonSelection, addonsQ.data, mode, travelFee, mattedSurchargeZar, sedationSurchargeZar, pensionerDiscount, discountPct]);
+  }, [activePkg, addonSelection, addonsQ.data, mode, effectiveTravel, mattedSurchargeZar, sedationSurchargeZar, pensionerDiscount, discountPct]);
 
   function toggleAddon(id: string) {
     const exists = addonSelection.find((s) => s.addon_id === id);
@@ -220,6 +230,29 @@ export function GroomingExtrasPanel({
 
       <div className="mt-4">
         <div className="mb-2 text-xs font-medium">Extras & fees</div>
+        {mode === "mobile" && (
+          <div className="mb-2 flex flex-wrap items-center gap-3 rounded-lg border border-sk-orange bg-sk-orange-soft px-3 py-2 text-sm">
+            <div className="flex-1">
+              <div className="font-medium">Mobile grooming travel fee</div>
+              <div className="text-[11px] text-muted-foreground">
+                Charged on every mobile booking. Change the standard amount in Settings → Grooming workflow.
+              </div>
+            </div>
+            {onTravelFeeChange ? (
+              <label className="flex items-center gap-2 text-xs">
+                <span className="text-muted-foreground">Override</span>
+                <input
+                  type="number" min={0} step={10}
+                  value={effectiveTravel}
+                  onChange={(e) => onTravelFeeChange(Math.max(0, Number(e.target.value)))}
+                  className="h-8 w-24 rounded-md border border-border bg-white px-2 text-sm"
+                />
+              </label>
+            ) : (
+              <span className="font-medium">{fmtZar(effectiveTravel)}</span>
+            )}
+          </div>
+        )}
         <div className="mb-2 text-[11px] text-muted-foreground">
           Shampoo, teeth, ears, nails and other styling extras are picked in the Grooming instructions panel below.
         </div>
@@ -273,7 +306,7 @@ export function GroomingExtrasPanel({
             ))}
             {preview.matted > 0 && <Row label="Matted coat surcharge" value={fmtZar(preview.matted)} />}
             {preview.sedation > 0 && <Row label="Sedation surcharge" value={fmtZar(preview.sedation)} />}
-            {preview.travel > 0 && <Row label="Mobile travel fee" value={fmtZar(preview.travel)} />}
+            {preview.travel > 0 && <Row label="Mobile travel fee (always charged)" value={fmtZar(preview.travel)} />}
             <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm font-semibold">
               <span>Total (VAT incl.)</span>
               <span>{fmtZar(preview.total)}</span>

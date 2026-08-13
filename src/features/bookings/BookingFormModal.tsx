@@ -1165,6 +1165,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             mattedSurchargeZar={grooming.matted_surcharge_zar ?? null}
             sedationSurchargeZar={grooming.sedation_surcharge_zar ?? null}
             travelFee={grooming.travel_fee ?? null}
+            onTravelFeeChange={(v) => setGrooming((p) => ({ ...p, travel_fee: v }))}
             petSize={effectivePetSize(petsQ.data?.find((p) => petIds.includes(p.id)) as any)}
           />
         )}
