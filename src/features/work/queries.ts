@@ -9,27 +9,32 @@ export function isoDay(d: Date) {
 }
 
 export const GROOMING_SERVICES: ServiceType[] = ["grooming_inhouse", "grooming_mobile"];
+export const GROOMING_INHOUSE_SERVICES: ServiceType[] = ["grooming_inhouse"];
+export const GROOMING_MOBILE_SERVICES: ServiceType[] = ["grooming_mobile"];
 export const HOTEL_SERVICES: ServiceType[] = ["hotel_dog", "hotel_cat"];
 export const DAYCARE_SERVICES: ServiceType[] = ["daycare", "daycare_assessment"];
 export const TRANSPORT_SERVICES: ServiceType[] = ["pickup_dropoff"];
 
-export type WorkDept = "grooming" | "hotel" | "daycare" | "transport";
+export type WorkDept = "grooming" | "grooming_mobile" | "hotel" | "daycare" | "transport";
 
 export const DEPT_SERVICES: Record<WorkDept, ServiceType[]> = {
-  grooming: GROOMING_SERVICES,
+  grooming: GROOMING_INHOUSE_SERVICES,
+  grooming_mobile: GROOMING_MOBILE_SERVICES,
   hotel: HOTEL_SERVICES,
   daycare: DAYCARE_SERVICES,
   transport: TRANSPORT_SERVICES,
 };
 
 export const DEPT_LABEL: Record<WorkDept, string> = {
-  grooming: "Grooming",
+  grooming: "In-house grooming",
+  grooming_mobile: "Mobile grooming",
   hotel: "Hotel & cattery",
   daycare: "Daycare",
   transport: "Transport",
 };
 
 export function deptForService(s: ServiceType): WorkDept {
+  if (s === "grooming_mobile") return "grooming_mobile";
   if (GROOMING_SERVICES.includes(s)) return "grooming";
   if (HOTEL_SERVICES.includes(s)) return "hotel";
   if (DAYCARE_SERVICES.includes(s)) return "daycare";

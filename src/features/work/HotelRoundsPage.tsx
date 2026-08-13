@@ -41,7 +41,7 @@ export default function HotelRoundsPage() {
   return (
     <>
       <WorkTopBar title="Hotel & cattery" day={day} onDayChange={setDay} />
-      <div className="mx-auto max-w-3xl space-y-3 p-4">
+      <div className="mx-auto max-w-5xl space-y-3 p-4">
         <div className="grid grid-cols-3 gap-2">
           {([
             ["in_house", `In house (${inHouse.length})`],
@@ -71,6 +71,7 @@ export default function HotelRoundsPage() {
           </div>
         )}
 
+        <div className="grid gap-3 md:grid-cols-2">
         {list.map((job) => {
           const petId = job.pets[0]?.id ?? null;
           return (
@@ -154,6 +155,7 @@ export default function HotelRoundsPage() {
             </div>
           );
         })}
+        </div>
       </div>
     </>
   );

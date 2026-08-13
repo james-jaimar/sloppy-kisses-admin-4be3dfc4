@@ -73,7 +73,7 @@ export default function DaycareWorkPage() {
         day={day}
         onDayChange={setDay}
       />
-      <div className="mx-auto max-w-3xl space-y-3 p-4">
+      <div className="mx-auto max-w-5xl space-y-3 p-4">
         {tenantId && (
           <StayPlayLane
             tenantId={tenantId}
@@ -93,6 +93,7 @@ export default function DaycareWorkPage() {
             <p className="mt-3 text-base font-semibold">No dogs expected</p>
           </div>
         )}
+        <div className="grid gap-3 md:grid-cols-2">
         {rows.map((r) => {
           const att = byPet.get(r.pet_id);
           const isIn = att?.status === "checked_in";
@@ -136,6 +137,7 @@ export default function DaycareWorkPage() {
             </div>
           );
         })}
+        </div>
       </div>
     </>
   );

@@ -16,7 +16,7 @@ export function WorkTopBar({
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-white px-4 py-3">
-      <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="truncate text-xl font-bold">{title}</h1>
           {subtitle && <p className="truncate text-sm text-muted-foreground">{subtitle}</p>}
@@ -24,7 +24,7 @@ export function WorkTopBar({
         {right}
       </div>
       {day && onDayChange && (
-        <div className="mx-auto mt-3 flex max-w-3xl items-center gap-2">
+        <div className="mx-auto mt-3 flex max-w-5xl items-center gap-2">
           <button
             aria-label="Previous day"
             onClick={() => { const d = new Date(day); d.setDate(d.getDate() - 1); onDayChange(d); }}

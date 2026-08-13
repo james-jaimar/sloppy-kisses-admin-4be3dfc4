@@ -2,6 +2,8 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { hasAdminArea, landingFor } from "@/lib/auth/landing";
+import { useWorkDepts } from "@/features/work/useWorkDepts";
 
 function FullScreen({ children }: { children: React.ReactNode }) {
   return (
@@ -13,7 +15,8 @@ function FullScreen({ children }: { children: React.ReactNode }) {
 
 export default function RequireAdmin() {
   const { authUser, loading: authLoading } = useAuth();
-  const { profile, memberships, currentTenant, loading, error } = useCurrentUser();
+  const { profile, memberships, currentTenant, loading, error, hasPermission } = useCurrentUser();
+  const { depts } = useWorkDepts();
   const location = useLocation();
 
   if (authLoading) {
@@ -85,6 +88,12 @@ export default function RequireAdmin() {
         </div>
       </FullScreen>
     );
+  }
+
+  // Department staff with no admin screens belong in work mode.
+  if (!isPlatform && hasPermission("work.access") && !hasAdminArea(hasPermission)) {
+    const target = landingFor({ userType: profile.user_type, hasPermission, depts });
+    if (target.startsWith("/work")) return <Navigate to={target} replace />;
   }
 
   return <Outlet />;
