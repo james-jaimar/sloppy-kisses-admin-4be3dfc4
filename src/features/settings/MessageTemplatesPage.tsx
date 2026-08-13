@@ -162,6 +162,16 @@ export default function MessageTemplatesPage() {
                 Read-only. Requires "Manage comms settings".
               </div>
             )}
+            {current.event_code === "quote_sent" && (
+              <div className="rounded-lg border border-border bg-muted px-3 py-2 text-xs">
+                This template holds only the intro paragraph of the hotel quote email. The banner, price
+                labels, information sections and sign-off live in{" "}
+                <a href="/admin/settings/hotel-quote-email" className="font-semibold text-sk-coral-dark underline">
+                  Settings → Hotel quote email
+                </a>
+                .
+              </div>
+            )}
             <div className="flex items-center justify-between gap-2 border-b border-border pb-3">
               <div className="inline-flex rounded-lg border border-border p-0.5 text-xs">
                 <button onClick={() => setMode("edit")}
