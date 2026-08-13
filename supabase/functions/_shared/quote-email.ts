@@ -161,8 +161,16 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
 
   const htmlRaw = `<!doctype html>
 <html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="x-apple-disable-message-reformatting"/>
+<!--[if mso]><style>body,table,td,div,p,a,li{font-family:Arial,Helvetica,sans-serif !important}</style><![endif]-->
+<style>
+  body,table,td,div,p,a,li{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+  table{border-collapse:collapse}
+  img{border:0;outline:none;text-decoration:none}
+  .sk-body{word-break:break-word}
+</style>
 <title>${esc(i.quoteNumber)}</title></head>
-<body style="margin:0;padding:0;background:#f4f4f6">
+<body class="sk-body" style="margin:0;padding:0;background:#f4f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#3f3f46">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0">Your quote ${esc(i.quoteNumber)} for ${esc(pets)} — ${esc(stayLine)}.</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f6;padding:24px 12px">
     <tr><td align="center">
