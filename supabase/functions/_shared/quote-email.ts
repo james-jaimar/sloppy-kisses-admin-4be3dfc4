@@ -283,6 +283,7 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
     .map((l) => l.replace(/[ \t]+$/, ""))
     .filter((l, idx, arr) => !(l === "" && arr[idx - 1] === ""))
     .join("\n");
+  const wrapped = wrapHtmlLines(html);
 
   const text = [
     i.intro,
@@ -321,5 +322,5 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
     [i.contactPhone, i.contactEmail].filter(Boolean).join(" | "),
   ].filter((l) => l !== "").join("\n");
 
-  return { html, text };
+  return { html: wrapped, text };
 }
