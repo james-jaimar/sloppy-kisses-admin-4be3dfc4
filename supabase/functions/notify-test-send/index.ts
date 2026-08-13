@@ -2,6 +2,7 @@
 // Uses a sample context so admins can see the rendered output before saving.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { loadTransport, loadTenantBrand, renderBrandedHtml, sendMail } from "../_shared/comms-transport.ts";
+import { htmlToText, looksLikeHtml } from "../_shared/html-email.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -31,7 +32,7 @@ Deno.serve(async (req) => {
 
   let body: any;
   try { body = await req.json(); } catch { return j(400, { error: "Invalid JSON" }); }
-  const { subject: subjectTpl, body: bodyTpl, event_code, tenant_id, sample, to } = body ?? {};
+  const { subject: subjectTpl, body: bodyTpl, body_format, event_code, tenant_id, sample, to } = body ?? {};
   if (!bodyTpl || !tenant_id) return j(400, { error: "tenant_id and body required" });
 
   const caller = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } });
@@ -54,8 +55,10 @@ Deno.serve(async (req) => {
 
   const ctx = { tenant: { name: brand?.name ?? "Sloppy Kisses" }, ...(sample ?? {}) };
   const subject = (subjectTpl ? render(subjectTpl, ctx) : "") || `${event_code ?? "test"} — ${brand?.name ?? "Sloppy Kisses"}`;
-  const text = render(bodyTpl, ctx);
-  const html = renderBrandedHtml(brand, brand?.name ?? "Sloppy Kisses", text);
+  const rendered = render(bodyTpl, ctx);
+  const isHtml = body_format === "html" || looksLikeHtml(rendered);
+  const text = isHtml ? htmlToText(rendered) : rendered;
+  const html = renderBrandedHtml(brand, brand?.name ?? "Sloppy Kisses", isHtml ? rendered : text, { isHtml });
 
   const result = await sendMail(transport, recipient, `[TEST] ${subject}`, text, html, {
     admin,
