@@ -11,6 +11,8 @@ interface Props {
   value: string;
   onChange: (html: string) => void;
   disabled?: boolean;
+  /** Receives a function that inserts text (e.g. a {{variable}}) at the cursor. */
+  registerInsert?: (fn: (text: string) => void) => void;
 }
 
 function Btn({
@@ -34,7 +36,7 @@ function Btn({
 }
 
 /** Small WYSIWYG editor for email/message template bodies. Emits HTML. */
-export function RichTextEditor({ value, onChange, disabled }: Props) {
+export function RichTextEditor({ value, onChange, disabled, registerInsert }: Props) {
   const editor = useEditor({
     editable: !disabled,
     extensions: [
@@ -60,6 +62,11 @@ export function RichTextEditor({ value, onChange, disabled }: Props) {
   }, [value, editor]);
 
   useEffect(() => { editor?.setEditable(!disabled); }, [disabled, editor]);
+
+  useEffect(() => {
+    if (!editor || !registerInsert) return;
+    registerInsert((text: string) => editor.chain().focus().insertContent(text).run());
+  }, [editor, registerInsert]);
 
   if (!editor) return null;
 
@@ -93,9 +100,4 @@ export function RichTextEditor({ value, onChange, disabled }: Props) {
       <EditorContent editor={editor} />
     </div>
   );
-}
-
-/** Insert a {{variable}} token at the cursor of the focused editor. */
-export function insertToken(html: string, token: string): string {
-  return html.replace(/<\/p>\s*$/, ` ${token}</p>`);
 }
