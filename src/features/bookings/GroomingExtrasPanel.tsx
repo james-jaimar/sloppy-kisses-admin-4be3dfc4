@@ -26,6 +26,7 @@ export function GroomingExtrasPanel({
   mattedSurchargeZar,
   sedationSurchargeZar,
   travelFee,
+  onTravelFeeChange,
   petSize,
 }: {
   tenantId: string;
@@ -40,6 +41,8 @@ export function GroomingExtrasPanel({
   mattedSurchargeZar: number | null;
   sedationSurchargeZar: number | null;
   travelFee: number | null;
+  /** Mobile bookings always carry the travel fee — this lets an admin override the amount. */
+  onTravelFeeChange?: (v: number) => void;
   /** Effective grooming size of the primary pet — filters packages to matching band. */
   petSize?: string | null;
 }) {
@@ -59,6 +62,9 @@ export function GroomingExtrasPanel({
     for (const o of opts) if (o.addon_code) set.add(o.addon_code);
     // hand_strip is triggered by the boolean instruction group of the same code.
     set.add("hand_strip");
+    // Travel on a mobile groom is enforced on the booking itself, never a tick box.
+    set.add("travel_mobile");
+    set.add("mobile_travel");
     return set;
   }, [catalogQ.data]);
 
@@ -119,7 +125,7 @@ export function GroomingExtrasPanel({
     const addonTotal = addonRows.reduce((s, r) => s + r.total, 0);
     const matted = Number(mattedSurchargeZar ?? 0);
     const sedation = Number(sedationSurchargeZar ?? 0);
-    const travel = mode === "mobile" ? Number(travelFee ?? 0) : 0;
+    const travel = mode === "mobile" ? effectiveTravel : 0;
     const discountAmt = pensionerDiscount ? (base * discountPct) / 100 : 0;
     const total = base - discountAmt + addonTotal + matted + sedation + travel;
     const addonMinutes = addonSelection.reduce((sum, s) => {
@@ -128,7 +134,7 @@ export function GroomingExtrasPanel({
     }, 0);
     const minutes = Number(activePkg?.expected_minutes ?? 0) + addonMinutes;
     return { base, addonRows, addonTotal, matted, sedation, travel, discountAmt, total, addonMinutes, minutes };
-  }, [activePkg, addonSelection, addonsQ.data, mode, travelFee, mattedSurchargeZar, sedationSurchargeZar, pensionerDiscount, discountPct]);
+  }, [activePkg, addonSelection, addonsQ.data, mode, effectiveTravel, mattedSurchargeZar, sedationSurchargeZar, pensionerDiscount, discountPct]);
 
   function toggleAddon(id: string) {
     const exists = addonSelection.find((s) => s.addon_id === id);
