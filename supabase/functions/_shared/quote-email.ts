@@ -294,7 +294,7 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
   const wrapped = wrapHtmlLines(html);
 
   const text = [
-    i.intro,
+    looksLikeHtml(i.intro) ? htmlToText(i.intro) : i.intro,
     "",
     `Guests: ${pets}`,
     `Dates: ${stayLine}`,
