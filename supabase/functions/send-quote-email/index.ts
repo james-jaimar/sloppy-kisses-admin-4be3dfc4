@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { guardSend } from "../_shared/send-guard.ts";
 import { buildQuoteEmail, DEFAULT_QUOTE_INTRO, fmtZar, fmtDate as fmtD } from "../_shared/quote-email.ts";
+import { resolveQuoteEmailSettings } from "../_shared/quote-email-defaults.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -75,7 +76,7 @@ Deno.serve(async (req) => {
   // ── Build the branded quote email ─────────────────────────────────────────
   const extras = (q.extras ?? {}) as any;
   const petIds: string[] = Array.isArray(q.pet_ids) ? q.pet_ids : [];
-  const [{ data: pets }, { data: tpl }, { data: guidelinesRow }] = await Promise.all([
+  const [{ data: pets }, { data: tpl }, { data: guidelinesRow }, { data: emailSettingsRow }] = await Promise.all([
     petIds.length
       ? admin.from("pets").select("id, name").in("id", petIds)
       : Promise.resolve({ data: [] as any[] }),
@@ -84,6 +85,7 @@ Deno.serve(async (req) => {
       .eq("tenant_id", q.tenant_id).eq("event_code", "quote_sent").eq("channel", "email")
       .maybeSingle(),
     admin.rpc("get_hotel_guidelines", { p_tenant: q.tenant_id }),
+    admin.from("hotel_quote_email_settings").select("*").eq("tenant_id", q.tenant_id).maybeSingle(),
   ]);
 
   const petNames: string[] = (pets ?? []).map((p: any) => p.name).filter(Boolean);
@@ -128,6 +130,26 @@ Deno.serve(async (req) => {
 
   const guidelines = (Array.isArray(guidelinesRow) ? guidelinesRow[0] : guidelinesRow)?.guidelines_md ?? null;
 
+  // Tenant-editable copy for the rest of the email, with tokens resolved.
+  const baseSettings = resolveQuoteEmailSettings(emailSettingsRow);
+  const settings = {
+    ...baseSettings,
+    hero_label: render(baseSettings.hero_label, ctx),
+    hero_headline: render(baseSettings.hero_headline, ctx),
+    total_label: render(baseSettings.total_label, ctx),
+    deposit_label: render(baseSettings.deposit_label, ctx),
+    hold_line: render(baseSettings.hold_line, ctx),
+    cta_label: render(baseSettings.cta_label, ctx),
+    cta_subtext: render(baseSettings.cta_subtext, ctx),
+    section_heading: render(baseSettings.section_heading, ctx),
+    signoff_html: render(baseSettings.signoff_html, ctx),
+    cards: baseSettings.cards.map((c) => ({
+      ...c,
+      title: render(c.title ?? "", ctx),
+      body_html: render(c.body_html ?? "", ctx),
+    })),
+  };
+
   const { html, text } = buildQuoteEmail({
     tenantName: tenant?.name ?? "Sloppy Kisses",
     brandColour: (tenant as any)?.primary_colour ?? "#FF5A5A",
@@ -150,6 +172,7 @@ Deno.serve(async (req) => {
     publicToken: (q as any).public_token ?? null,
     intro,
     guidelines,
+    settings,
   });
 
   const pdfRes = await fetch(`${SUPABASE_URL}/functions/v1/generate-quote-pdf`, {
