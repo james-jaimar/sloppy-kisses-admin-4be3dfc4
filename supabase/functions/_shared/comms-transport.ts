@@ -5,6 +5,7 @@
 import { type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { guardSend } from "./send-guard.ts";
+import { sanitizeEmailHtml, styleBodyHtml, wrapHtmlLines } from "./html-email.ts";
 
 export interface Transport {
   smtp_host: string;
@@ -60,14 +61,26 @@ export async function loadTenantBrand(sb: SupabaseClient, tenantId: string): Pro
   return brand;
 }
 
-export function renderBrandedHtml(brand: TenantBrand | null, tenantName: string, bodyText: string): string {
+export function renderBrandedHtml(
+  brand: TenantBrand | null,
+  tenantName: string,
+  bodyText: string,
+  opts?: { isHtml?: boolean },
+): string {
   const primary = brand?.primary_colour ?? "#F26D6D";
   const name = brand?.name ?? tenantName;
   const logo = brand?.logo_url
     ? `<img src="${brand.logo_url}" alt="${escapeHtml(name)}" style="max-height:48px;margin-bottom:24px;" />`
     : `<div style="font-size:22px;font-weight:700;color:${primary};margin-bottom:24px;">${escapeHtml(name)}</div>`;
-  const bodyHtml = escapeHtml(bodyText).replace(/\n/g, "<br/>");
-  return `<!doctype html><html><body style="margin:0;padding:0;background:#f6f6f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2028;">
+  const bodyHtml = opts?.isHtml
+    ? styleBodyHtml(sanitizeEmailHtml(bodyText), "#1f2028", 15)
+    : escapeHtml(bodyText).replace(/\n/g, "<br/>");
+  const html = `<!doctype html><html><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="x-apple-disable-message-reformatting"/>
+<!--[if mso]><style>body,table,td,div,p,a,li{font-family:Arial,Helvetica,sans-serif !important}</style><![endif]-->
+<style>body,table,td,div,p,a,li{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}table{border-collapse:collapse}</style>
+</head><body style="margin:0;padding:0;background:#f6f6f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;line-height:1.6;color:#1f2028;word-break:break-word;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f6f7;padding:40px 12px;"><tr><td align="center">
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;padding:40px;max-width:560px;">
       <tr><td>
@@ -78,6 +91,7 @@ export function renderBrandedHtml(brand: TenantBrand | null, tenantName: string,
       </td></tr>
     </table>
   </td></tr></table></body></html>`;
+  return wrapHtmlLines(html);
 }
 
 /**
