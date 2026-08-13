@@ -70,7 +70,7 @@ export default function MyDayPage() {
         onDayChange={setDay}
       />
       <StayPlayFlagsProvider tenantId={tenantId} bookingIds={jobs.map((j) => j.id)}>
-      <div className="mx-auto max-w-3xl space-y-3 p-4">
+      <div className="mx-auto max-w-5xl space-y-3 p-4">
         {jobsQ.isLoading && (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" /> Loading your day…
@@ -83,13 +83,15 @@ export default function MyDayPage() {
             <p className="text-sm text-muted-foreground">No jobs for this day.</p>
           </div>
         )}
-        {outstanding.map((j) => <JobRowCard key={j.id} job={j} />)}
+        <div className="grid gap-3 md:grid-cols-2">
+          {outstanding.map((j) => <JobRowCard key={j.id} job={j} />)}
+        </div>
         {done.length > 0 && (
           <>
             <div className="pt-4 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Finished ({done.length})
             </div>
-            <div className="space-y-3 opacity-70">
+            <div className="grid gap-3 opacity-70 md:grid-cols-2">
               {done.map((j) => <JobRowCard key={j.id} job={j} />)}
             </div>
           </>
