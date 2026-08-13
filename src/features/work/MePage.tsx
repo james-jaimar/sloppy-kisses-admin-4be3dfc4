@@ -2,15 +2,17 @@ import { LogOut, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase/client";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { hasAdminArea } from "@/lib/auth/landing";
 import { WorkTopBar } from "./WorkTopBar";
 import { BigButton } from "./WorkSheet";
 import { DEPT_LABEL } from "./queries";
 import { useWorkDepts } from "./useWorkDepts";
 
 export default function MePage() {
-  const { profile, roles, currentTenant } = useCurrentUser();
+  const { profile, roles, currentTenant, hasPermission } = useCurrentUser();
   const { depts } = useWorkDepts();
   const navigate = useNavigate();
+  const showAdmin = hasAdminArea(hasPermission);
 
   return (
     <>
@@ -38,9 +40,11 @@ export default function MePage() {
           </dl>
         </div>
 
-        <BigButton tone="neutral" onClick={() => navigate("/admin/home")}>
-          Open full admin app
-        </BigButton>
+        {showAdmin && (
+          <BigButton tone="neutral" onClick={() => navigate("/admin/home")}>
+            Open full admin app
+          </BigButton>
+        )}
         <BigButton
           tone="danger"
           onClick={async () => {
