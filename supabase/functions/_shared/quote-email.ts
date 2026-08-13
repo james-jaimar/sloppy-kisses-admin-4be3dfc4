@@ -188,8 +188,8 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
           ${i.logoUrl
             ? `<img src="${esc(i.logoUrl)}" alt="${esc(i.tenantName)}" width="150" style="max-width:150px;height:auto;margin:0 auto 12px;display:block"/>`
             : `<div style="font-size:20px;font-weight:800;color:#ffffff;margin-bottom:10px">${esc(i.tenantName)}</div>`}
-          <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.85);font-weight:700">Hotel quote ${esc(i.quoteNumber)}</div>
-          <div style="font-size:27px;line-height:1.25;font-weight:800;color:#ffffff;margin-top:8px">A holiday for ${esc(pets)}</div>
+          <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.85);font-weight:700">${esc(s.hero_label)}</div>
+          <div style="font-size:27px;line-height:1.25;font-weight:800;color:#ffffff;margin-top:8px">${esc(s.hero_headline)}</div>
         </td></tr>
 
         <!-- Intro -->
@@ -207,24 +207,24 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ececf1">
                 <tr>
                   <td style="padding:14px 0 0;width:50%">
-                    <div style="font-size:12px;color:#71717a">Total for the stay</div>
+                    <div style="font-size:12px;color:#71717a">${esc(s.total_label)}</div>
                     <div style="font-size:22px;font-weight:800;color:#18181b">${esc(fmtZar(i.total))}</div>
                   </td>
                   <td style="padding:14px 0 0;width:50%">
-                    <div style="font-size:12px;color:#71717a">50% deposit to secure</div>
+                    <div style="font-size:12px;color:#71717a">${esc(s.deposit_label)}</div>
                     <div style="font-size:22px;font-weight:800;color:${brand}">${esc(fmtZar(i.deposit))}</div>
                   </td>
                 </tr>
               </table>
             </td></tr>
           </table>
-          ${i.validUntil
-            ? `<div style="text-align:center;font-size:13px;color:#71717a;margin:14px 0 4px">These dates are held for you until <strong style="color:#18181b">${esc(fmtDate(i.validUntil))}</strong>.</div>`
+          ${i.validUntil && s.hold_line?.trim()
+            ? `<div style="text-align:center;font-size:13px;color:#71717a;margin:14px 0 4px">${esc(s.hold_line)}</div>`
             : ""}
           ${ctaUrl
             ? `<div style="text-align:center;margin:16px 0 6px">
-                 <a href="${esc(ctaUrl)}${i.publicToken ? `/q/${esc(i.publicToken)}` : "/portal"}" style="display:inline-block;background:${brand};color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px">Accept this quote</a>
-                 <div style="font-size:12px;color:#a1a1aa;margin-top:9px">Prefer to chat? Just reply to this email.</div>
+                 <a href="${esc(ctaUrl)}${i.publicToken ? `/q/${esc(i.publicToken)}` : "/portal"}" style="display:inline-block;background:${brand};color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:13px 30px;border-radius:999px">${esc(s.cta_label)}</a>
+                 ${s.cta_subtext?.trim() ? `<div style="font-size:12px;color:#a1a1aa;margin-top:9px">${esc(s.cta_subtext)}</div>` : ""}
                </div>`
             : ""}
         </td></tr>
@@ -232,49 +232,18 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
         <!-- Divider -->
         <tr><td style="background:#ffffff;padding:18px 28px 0">
           <div style="border-top:1px solid #ececf1"></div>
-          <div style="font-size:17px;font-weight:800;color:#18181b;margin:18px 0 14px">Everything you need before the stay</div>
+          <div style="font-size:17px;font-weight:800;color:#18181b;margin:18px 0 14px">${esc(s.section_heading)}</div>
         </td></tr>
 
         <!-- Info cards -->
         <tr><td style="background:#ffffff;padding:0 28px">
-          ${bulletCard(brand, "Arrival &amp; collection", [
-            "<strong>Arrivals</strong>: Mon–Sat, 09:00–11:00. No arrivals on Sundays or public holidays.",
-            "<strong>Collection</strong>: 09:00–09:30, Mon–Sun.",
-            "<strong>Stay &amp; Play collection</strong>: 16:00–16:30, Mon–Sun (additional fee).",
-            "Closed for drop-offs and collections on 25 &amp; 26 December and 1 January.",
-            "Our gates are only open during these windows, so please keep to the times booked.",
-          ])}
-          ${bulletCard(brand, "Before you arrive", [
-            "Dogs must be sterilised, fully vaccinated and dewormed.",
-            "Kennel Cough (Bordetella) must be done at least <strong>10 days before</strong> arrival.",
-            "Bring or upload the vaccination card — we cannot check in without it.",
-            "Tick, flea and deworming treatment (e.g. NexGard Spectra / Revolution) up to date.",
-            "All guests must be social with other dogs, and wear a collar with a name tag and contact number.",
-          ])}
-          ${bulletCard(brand, "What to pack", [
-            "Food in individually labelled ziplock bags, marked with your dog's <strong>name and breed</strong>.",
-            "Written feeding instructions — only food you supply is fed.",
-            "Medication with clear written instructions.",
-            "No beds, bowls, pillows or extras needed; anything extra must be clearly labelled.",
-          ])}
-          ${bulletCard(brand, "Where they'll stay", [
-            "<strong>Cuddle Inn – Puppy Paradise</strong>: small dogs, common space with TV and private garden.",
-            "<strong>Barkside Inn – Cabanas</strong>: private room, two beds, private garden, up to 3 dogs.",
-            "<strong>Bark Avenue – Deluxe</strong>: private room, queen bed, TV, aircon and private garden.",
-          ])}
-          ${bulletCard(brand, "Good to know", [
-            "<strong>50% off grooming</strong> when booked with the stay — most dogs go home fresh after all the play.",
-            "Daily photos go up on our Facebook page; emergencies are always communicated directly.",
-            "Hotel viewings are welcome Mon–Fri, 10:00–13:00.",
-            "Your dog may be tired for a day or two after all the fun — that's completely normal.",
-          ])}
+          ${cards.map((c) => richCard(brand, c.title ?? "", c.body_html ?? "")).join("\n")}
           ${guidelinesBlock}
         </td></tr>
 
         <!-- Sign-off -->
         <tr><td style="background:#ffffff;padding:6px 28px 26px;border-radius:0 0 0 0">
-          <p style="margin:0;font-size:15px;line-height:1.65;color:#3f3f46">We can't wait to spoil ${esc(pets)}.</p>
-          <p style="margin:6px 0 0;font-size:15px;line-height:1.65;color:#3f3f46">Warmly,<br/><strong>The ${esc(i.tenantName)} team</strong></p>
+          ${styleBodyHtml(sanitizeEmailHtml(s.signoff_html ?? ""))}
         </td></tr>
 
         <!-- Footer -->
