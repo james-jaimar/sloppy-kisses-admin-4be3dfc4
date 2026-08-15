@@ -10,3 +10,6 @@ verify_jwt = false
 
 [functions.public-quote-accept]
 verify_jwt = false
+
+[functions.manage-user]
+verify_jwt = true
