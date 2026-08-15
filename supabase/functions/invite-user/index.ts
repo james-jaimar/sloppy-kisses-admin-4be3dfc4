@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     inviterName = (inviter?.full_name as string | null) ?? (inviter?.email as string | null) ?? null;
   } catch { /* ignore */ }
 
-  let payload: { tenant_id?: string; email?: string; full_name?: string; role_ids?: string[] };
+  let payload: { tenant_id?: string; email?: string; full_name?: string; role_ids?: string[]; password?: string };
   try {
     payload = await req.json();
   } catch {
@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
   const fullName = (payload.full_name ?? "").trim();
   const roleIds = payload.role_ids ?? [];
   const mode = (payload as any).mode as string | undefined;
+  const password = (payload.password ?? "").trim();
   if (!tenantId || !email) return json(400, { error: "tenant_id and email are required" });
 
   // Caller must have users.manage in the target tenant (checked via caller's JWT + RLS-safe SECURITY DEFINER fn).
@@ -107,6 +108,23 @@ Deno.serve(async (req) => {
   }
   if (existing) {
     authUserId = existing.id;
+    if (mode === "create" && password) {
+      const { error: pwErr } = await admin.auth.admin.updateUserById(existing.id, {
+        password,
+        email_confirm: true,
+      });
+      if (pwErr) return json(500, { error: `Set password failed: ${pwErr.message}` });
+    }
+  } else if (mode === "create") {
+    if (password.length < 8) return json(400, { error: "Password must be at least 8 characters." });
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName || null, invited_tenant_id: tenantId },
+    });
+    if (createErr) return json(500, { error: `Create user failed: ${createErr.message}` });
+    authUserId = created.user?.id ?? null;
   } else {
     // Create the auth user without sending Supabase's default email.
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
@@ -179,7 +197,7 @@ Deno.serve(async (req) => {
   // 5. Send the branded invite email via tenant SMTP (only for brand-new invites).
   let emailSent = true;
   let emailError: string | null = null;
-  if (!existing) {
+  if (!existing && mode !== "create") {
     try {
       const actionUrl = await generateTenantActionUrl(admin, "invite", email, appUrl, next, {
         full_name: fullName || null,
