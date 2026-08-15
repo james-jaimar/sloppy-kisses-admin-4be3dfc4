@@ -36,7 +36,7 @@ export default function EditUserDrawer({ tenantId, user, onClose, onSaved }: Pro
     });
     setSaving(false);
     if (!res.ok) {
-      toast({ title: "Couldn't save user", description: res.error, variant: "destructive" });
+      toast({ title: "Couldn't save user", description: (res as { ok: false; error: string }).error, variant: "destructive" });
       return;
     }
     toast({
