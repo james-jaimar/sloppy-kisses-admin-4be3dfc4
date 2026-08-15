@@ -342,6 +342,8 @@ export async function inviteNewUser(params: {
   email: string;
   fullName: string;
   roleIds: string[];
+  /** When set, the user is created immediately with this password (no invite email). */
+  password?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data, error } = await supabase.functions.invoke("invite-user", {
     body: {
@@ -349,6 +351,7 @@ export async function inviteNewUser(params: {
       email: params.email.trim().toLowerCase(),
       full_name: params.fullName.trim(),
       role_ids: params.roleIds,
+      ...(params.password ? { mode: "create", password: params.password } : {}),
     },
   });
   if (error) {
