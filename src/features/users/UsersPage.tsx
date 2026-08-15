@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { UserPlus, Loader2, Power, Mail, Trash2 } from "lucide-react";
+import { UserPlus, Loader2, Power, Mail, Trash2, Pencil } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { toast } from "@/hooks/use-toast";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useTenantMembers, useSetUserStatus, useRemoveTenantUser, resendInvite, type TenantUserRow } from "./queries";
 import InviteUserModal from "./InviteUserModal";
 import EditUserRolesDrawer from "./EditUserRolesDrawer";
+import EditUserDrawer from "./EditUserDrawer";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function UsersPage() {
@@ -17,6 +18,7 @@ export default function UsersPage() {
   const removeUser = useRemoveTenantUser(tenantId);
   const [inviting, setInviting] = useState(false);
   const [editing, setEditing] = useState<TenantUserRow | null>(null);
+  const [editingDetails, setEditingDetails] = useState<TenantUserRow | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   async function toggleActive(row: TenantUserRow) {
@@ -127,6 +129,14 @@ export default function UsersPage() {
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
                         <button
+                          onClick={() => setEditingDetails(row)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                          title="Edit details / set password"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit
+                        </button>
+                        <button
                           onClick={() => setEditing(row)}
                           className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
                         >
@@ -182,6 +192,14 @@ export default function UsersPage() {
           tenantId={tenantId}
           user={editing}
           onClose={() => setEditing(null)}
+        />
+      )}
+      {editingDetails && (
+        <EditUserDrawer
+          tenantId={tenantId}
+          user={editingDetails}
+          onClose={() => setEditingDetails(null)}
+          onSaved={() => q.refetch()}
         />
       )}
     </>
