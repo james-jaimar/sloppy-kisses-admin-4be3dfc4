@@ -208,6 +208,38 @@ export async function resendInvite(params: { tenantId: string; email: string; fu
 
 // -------- Roles CRUD --------
 
+/** Edit a tenant user's name / email, and optionally set their password directly. */
+export async function manageUser(params: {
+  tenantId: string;
+  tenantUserId: string;
+  fullName?: string;
+  email?: string;
+  password?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { data, error } = await supabase.functions.invoke("manage-user", {
+    body: {
+      tenant_id: params.tenantId,
+      tenant_user_id: params.tenantUserId,
+      ...(params.fullName !== undefined ? { full_name: params.fullName } : {}),
+      ...(params.email !== undefined ? { email: params.email } : {}),
+      ...(params.password ? { password: params.password } : {}),
+    },
+  });
+  if (error) {
+    let detail = error.message;
+    try {
+      const anyErr = error as unknown as { context?: Response };
+      if (anyErr.context?.text) {
+        const txt = await anyErr.context.text();
+        try { detail = JSON.parse(txt)?.error ?? txt; } catch { detail = txt; }
+      }
+    } catch { /* ignore */ }
+    return { ok: false, error: detail };
+  }
+  if (data && (data as any).error) return { ok: false, error: (data as any).error };
+  return { ok: true };
+}
+
 export function useCreateRole(tenantId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -342,6 +374,8 @@ export async function inviteNewUser(params: {
   email: string;
   fullName: string;
   roleIds: string[];
+  /** When set, the user is created immediately with this password (no invite email). */
+  password?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data, error } = await supabase.functions.invoke("invite-user", {
     body: {
@@ -349,6 +383,7 @@ export async function inviteNewUser(params: {
       email: params.email.trim().toLowerCase(),
       full_name: params.fullName.trim(),
       role_ids: params.roleIds,
+      ...(params.password ? { mode: "create", password: params.password } : {}),
     },
   });
   if (error) {
