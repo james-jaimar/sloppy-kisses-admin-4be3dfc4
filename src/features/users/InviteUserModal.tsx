@@ -1,7 +1,9 @@
 import { useState } from "react";
+import { RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { addExistingUserToTenant, inviteNewUser, useAssignableRoles } from "./queries";
+import { makePassword } from "./EditUserDrawer";
 
 interface Props {
   tenantId: string;
@@ -9,13 +11,14 @@ interface Props {
   onSaved: () => void;
 }
 
-type Mode = "invite" | "link";
+type Mode = "manual" | "invite" | "link";
 
 export default function InviteUserModal({ tenantId, onClose, onSaved }: Props) {
   const rolesQ = useAssignableRoles(tenantId);
-  const [mode, setMode] = useState<Mode>("invite");
+  const [mode, setMode] = useState<Mode>("manual");
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState(makePassword());
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
@@ -31,18 +34,31 @@ export default function InviteUserModal({ tenantId, onClose, onSaved }: Props) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
+    if (mode === "manual" && password.trim().length < 8) {
+      toast({ title: "Password too short", description: "Use at least 8 characters.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
     const roleIds = Array.from(selected);
     const res =
-      mode === "invite"
-        ? await inviteNewUser({ tenantId, email, fullName, roleIds })
-        : await addExistingUserToTenant({ tenantId, email, roleIds });
+      mode === "link"
+        ? await addExistingUserToTenant({ tenantId, email, roleIds })
+        : await inviteNewUser({
+            tenantId,
+            email,
+            fullName,
+            roleIds,
+            password: mode === "manual" ? password.trim() : undefined,
+          });
     setSaving(false);
     if (!res.ok) {
       toast({ title: "Couldn't add user", description: (res as { ok: false; error: string }).error, variant: "destructive" });
       return;
     }
-    toast({ title: mode === "invite" ? "Invite sent" : "User added" });
+    toast({
+      title: mode === "invite" ? "Invite sent" : "User added",
+      description: mode === "manual" ? `Login: ${email.trim().toLowerCase()} · Password: ${password.trim()}` : undefined,
+    });
     onSaved();
     onClose();
   }
@@ -50,11 +66,18 @@ export default function InviteUserModal({ tenantId, onClose, onSaved }: Props) {
   return (
     <ModalShell
       title="Add a user"
-      subtitle="Invite a new user by email, or link someone who already has a profile."
+      subtitle="Create a login with a password, invite by email, or link an existing profile."
       onClose={onClose}
     >
       <form onSubmit={onSubmit} className="space-y-5 p-6">
-        <div className="flex gap-2 rounded-lg bg-muted p-1 text-sm">
+        <div className="flex flex-wrap gap-2 rounded-lg bg-muted p-1 text-sm">
+          <button
+            type="button"
+            onClick={() => setMode("manual")}
+            className={`flex-1 rounded-md px-3 py-1.5 ${mode === "manual" ? "bg-white shadow-sm font-medium" : "text-muted-foreground"}`}
+          >
+            Create with password
+          </button>
           <button
             type="button"
             onClick={() => setMode("invite")}
@@ -83,7 +106,7 @@ export default function InviteUserModal({ tenantId, onClose, onSaved }: Props) {
               placeholder="name@sloppykisses.co.za"
             />
           </label>
-          {mode === "invite" && (
+          {mode !== "link" && (
             <label className="text-sm">
               <span className="mb-1 block font-medium">Full name</span>
               <input
@@ -96,6 +119,30 @@ export default function InviteUserModal({ tenantId, onClose, onSaved }: Props) {
             </label>
           )}
         </div>
+
+        {mode === "manual" && (
+          <div className="rounded-lg border border-border p-4">
+            <div className="text-sm font-medium">Password</div>
+            <p className="mb-2 mt-1 text-xs text-muted-foreground">
+              The account is created straight away and can sign in immediately — no email is sent. Dummy addresses are fine.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="text"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="min-w-[200px] flex-1 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-sk-coral"
+              />
+              <button
+                type="button"
+                onClick={() => setPassword(makePassword())}
+                className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-muted"
+              >
+                <RefreshCw className="h-3.5 w-3.5" /> Generate
+              </button>
+            </div>
+          </div>
+        )}
 
         <div>
           <div className="mb-2 text-sm font-medium">Roles</div>
