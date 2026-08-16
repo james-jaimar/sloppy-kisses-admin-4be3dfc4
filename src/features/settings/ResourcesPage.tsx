@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, Pencil, Power, Search } from "lucide-react";
+import { Plus, Pencil, Power, Search, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
@@ -11,6 +11,9 @@ import {
   type ResourceRow,
 } from "./resourceQueries";
 import { ResourceFormModal } from "./ResourceFormModal";
+import { ResourceStaffModal } from "./ResourceStaffModal";
+import { useResourceStaff } from "./resourceStaffQueries";
+import { useTenantMembers } from "@/features/users/queries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const TYPE_LABEL: Record<string, string> = Object.fromEntries(
@@ -30,6 +33,20 @@ export default function ResourcesPage() {
   const [showInactive, setShowInactive] = useState(false);
   const [editing, setEditing] = useState<ResourceRow | null>(null);
   const [creating, setCreating] = useState(false);
+  const [staffFor, setStaffFor] = useState<ResourceRow | null>(null);
+  const assignmentsQ = useResourceStaff(tenantId);
+  const membersQ = useTenantMembers(tenantId);
+
+  const staffByResource = useMemo(() => {
+    const names = new Map((membersQ.data ?? []).map((m) => [m.profile_id, m.profile.full_name ?? m.profile.email]));
+    const map = new Map<string, string[]>();
+    for (const a of assignmentsQ.data ?? []) {
+      const list = map.get(a.resource_id) ?? [];
+      list.push(names.get(a.profile_id) ?? "Unknown");
+      map.set(a.resource_id, list);
+    }
+    return map;
+  }, [assignmentsQ.data, membersQ.data]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -115,6 +132,7 @@ export default function ResourcesPage() {
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Type</th>
                 <th className="px-4 py-3">Capacity</th>
+                <th className="px-4 py-3">Staff</th>
                 <th className="px-4 py-3">Sort</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Actions</th>
@@ -122,10 +140,10 @@ export default function ResourcesPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {resourcesQ.isLoading && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">Loading…</td></tr>
               )}
               {!resourcesQ.isLoading && filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">No resources match.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">No resources match.</td></tr>
               )}
               {filtered.map((r) => (
                 <tr key={r.id} className={r.active ? "" : "opacity-60"}>
@@ -135,6 +153,15 @@ export default function ResourcesPage() {
                   </td>
                   <td className="px-4 py-3">{TYPE_LABEL[r.type] ?? r.type}</td>
                   <td className="px-4 py-3 tabular-nums">{r.capacity ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => setStaffFor(r)}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-muted"
+                    >
+                      <Users className="h-3.5 w-3.5" />
+                      {(staffByResource.get(r.id) ?? []).join(", ") || "Anyone"}
+                    </button>
+                  </td>
                   <td className="px-4 py-3 tabular-nums">{r.sort_order}</td>
                   <td className="px-4 py-3">
                     <span
@@ -186,6 +213,10 @@ export default function ResourcesPage() {
           resource={editing}
           onClose={() => { setEditing(null); setCreating(false); }}
         />
+      )}
+
+      {staffFor && tenantId && (
+        <ResourceStaffModal tenantId={tenantId} resource={staffFor} onClose={() => setStaffFor(null)} />
       )}
     </>
   );
