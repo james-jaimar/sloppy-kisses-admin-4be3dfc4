@@ -92,7 +92,7 @@ export function FixAddressDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[85vh] w-[calc(100vw-2rem)] max-w-lg overflow-y-auto sm:w-full">
         <DialogHeader>
           <DialogTitle>Set the service address</DialogTitle>
         </DialogHeader>
@@ -107,11 +107,11 @@ export function FixAddressDialog({
           onChange={setAddressId}
           label="Service address"
         />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" onClick={save} disabled={update.isPending}>
+          <Button type="button" className="w-full sm:w-auto" onClick={save} disabled={update.isPending}>
             {update.isPending ? "Saving…" : "Save address"}
           </Button>
         </div>
