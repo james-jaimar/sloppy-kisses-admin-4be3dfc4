@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Scissors, Truck, Dog, Hotel, ArrowLeftRight, TrendingUp, TrendingDown, ChevronRight, ChevronLeft, Users, PawPrint } from "lucide-react";
+import { Scissors, Truck, Dog, Hotel, ArrowLeftRight, TrendingUp, TrendingDown, ChevronRight, ChevronLeft, Users, PawPrint, MapPinOff } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import { useCustomerAndPetCounts } from "@/features/customers/queries";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { useMissingAddressCount } from "@/features/bookings/addressGate";
 import {
   useDashboardTodayStats,
   useTodaysSchedule,
@@ -53,6 +54,7 @@ export default function AdminDashboard() {
   const { data: schedule, isLoading: scheduleLoading } = useTodaysSchedule(tenantId, 8, selectedDay);
   const { data: checkin, isLoading: checkinLoading } = useDaycareCheckinSummary(tenantId, selectedDay);
   const { data: activity, isLoading: activityLoading } = useRecentActivity(tenantId);
+  const missingAddress = useMissingAddressCount(tenantId, 14);
 
   const statCards = [
     { key: "grooming", label: "Today's Grooming", href: "/admin/grooming", ...statsData?.grooming, icon: Scissors, tone: "coral" },
@@ -123,6 +125,16 @@ export default function AdminDashboard() {
         }
       />
       <div className="flex-1 space-y-6 p-6">
+        {missingAddress.count > 0 && (
+          <Link
+            to="/admin/bookings/needs-address"
+            className="flex items-center gap-3 rounded-xl border-2 border-destructive bg-destructive/10 p-4 text-sm font-semibold text-destructive hover:bg-destructive/15"
+          >
+            <MapPinOff className="h-5 w-5 shrink-0" />
+            {missingAddress.count} van {missingAddress.count === 1 ? "job" : "jobs"} in the next 14 days{" "}
+            {missingAddress.count === 1 ? "has" : "have"} no address — the driver won't know where to go
+          </Link>
+        )}
         {/* CRM totals — real data */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <Link to="/admin/customers" className="sk-card p-5 transition-colors hover:border-sk-coral">
