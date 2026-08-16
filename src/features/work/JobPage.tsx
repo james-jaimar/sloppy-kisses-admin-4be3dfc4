@@ -19,6 +19,8 @@ import {
   useSetJobStatus, useSignOffJob, useToggleChecklistItem, useWorkJob,
 } from "./queries";
 import { groomingNextAction, isGroomingService } from "./workflowActions";
+import { JobAlerts, JobAddress, JobGroomingBrief, JobService } from "./JobBrief";
+import { PET_SIZE_LABEL, type PetSize } from "@/features/pets/sizeUtils";
 
 /** Next status in the simple worker flow, per department. */
 function nextStep(status: BookingStatus, serviceType: Parameters<typeof isGroomingService>[0]): { label: string; status: BookingStatus; icon: any; tone: "primary" | "green" | "orange" } | null {
@@ -85,6 +87,18 @@ export default function JobPage() {
   const doneCount = items.filter((i) => i.done).length;
   const signedOff = Boolean(signoffQ.data);
   const petNames = job.pets.map((p) => p.name).filter(Boolean).join(", ") || "No pet linked";
+  const primaryPet = job.pets[0];
+  const petSize = (primaryPet?.size_override || primaryPet?.size) as PetSize | undefined;
+  const subLine = [
+    primaryPet?.breed ?? primaryPet?.species ?? null,
+    petSize ? PET_SIZE_LABEL[petSize] ?? petSize : null,
+    job.customer?.full_name ?? null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const isGrooming = isGroomingService(job.service_type);
+  const isMobile = job.service_type === "grooming_mobile" || job.service_type === "pickup_dropoff";
+  const dayIso = job.start_at ? job.start_at.slice(0, 10) : undefined;
 
   async function move(status: BookingStatus, label: string) {
     try {
@@ -108,9 +122,7 @@ export default function JobPage() {
           </button>
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-xl font-bold">{petNames}</h1>
-            <p className="truncate text-sm text-muted-foreground">
-              {job.pets[0]?.breed ?? job.pets[0]?.species ?? "—"} · {job.customer?.full_name ?? "—"}
-            </p>
+            <p className="truncate text-sm text-muted-foreground">{subLine || "—"}</p>
             <div className="mt-1">
               <BookingStayPlayBadge tenantId={tenantId} bookingId={job.id} size="sm" />
             </div>
@@ -119,6 +131,9 @@ export default function JobPage() {
               <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
                 {job.start_at ? format(new Date(job.start_at), "EEE d MMM · HH:mm") : "—"}
               </span>
+              {job.resource?.name && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">{job.resource.name}</span>
+              )}
             </div>
           </div>
           {job.customer?.mobile && (
@@ -134,6 +149,16 @@ export default function JobPage() {
       </header>
 
       <div className="mx-auto max-w-3xl space-y-4 p-4">
+        <JobAlerts bookingId={job.id} pets={job.pets} onDate={dayIso} />
+
+        {isMobile && <JobAddress address={job.address} fallbackText={job.service_address_text} />}
+
+        {isGrooming && (
+          <JobGroomingBrief tenantId={tenantId} bookingId={job.id} primaryPetId={primaryPet?.id ?? null} />
+        )}
+
+        {isGrooming && <JobService details={job.details} addons={job.addons} pet={primaryPet} />}
+
         {(job.notes_internal || job.notes_customer) && (
           <div className="rounded-2xl border border-sk-orange bg-sk-orange-soft p-4 text-sm text-sk-orange">
             <div className="flex items-center gap-2 font-bold">
