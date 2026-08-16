@@ -54,6 +54,42 @@ export interface WorkJob {
   signed_off: boolean;
 }
 
+export interface WorkJobAddress {
+  address_line_1: string | null;
+  address_line_2: string | null;
+  suburb: string | null;
+  city: string | null;
+  province: string | null;
+  postcode: string | null;
+  formatted_address: string | null;
+  access_notes: string | null;
+  lat: number | null;
+  lng: number | null;
+}
+
+export interface WorkJobAddon {
+  id: string;
+  addon_name: string | null;
+  qty: number | null;
+  price_zar_snapshot: number | null;
+  note: string | null;
+}
+
+export interface WorkJobGroomingDetails {
+  actual_start_at: string | null;
+  actual_end_at: string | null;
+  service_package: string | null;
+  groomer_name: string | null;
+  duration_minutes: number | null;
+  travel_fee: number | null;
+  grooming_notes: string | null;
+  stay_and_play_after: boolean | null;
+  pensioner_discount_applied: boolean | null;
+  matted_surcharge_zar: number | null;
+  sedation_surcharge_zar: number | null;
+  hotel_checkout_discount_pct: number | null;
+}
+
 const JOB_SELECT = `
   id, booking_number, status, service_type, start_at, end_at,
   customer:customers(id, full_name, mobile),
