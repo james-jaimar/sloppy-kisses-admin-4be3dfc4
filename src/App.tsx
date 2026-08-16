@@ -70,6 +70,7 @@ import PetsPage from "@/features/pets/PetsPage";
 import PetDetailPage from "@/features/pets/PetDetailPage";
 import BookingsPage from "@/features/bookings/BookingsPage";
 import BookingDetailPage from "@/features/bookings/BookingDetailPage";
+import MissingAddressPage from "@/features/bookings/MissingAddressPage";
 import DaycareBoardPage from "@/features/daycare/DaycareBoardPage";
 import EnrolmentsPage from "@/features/daycare/EnrolmentsPage";
 import AttendancePage from "@/features/daycare/AttendancePage";
@@ -192,6 +193,7 @@ const App = () => (
                 <Route path="/admin/pets" element={<PetsPage />} />
                 <Route path="/admin/pets/:id" element={<PetDetailPage />} />
                 <Route path="/admin/bookings" element={<BookingsPage />} />
+                <Route path="/admin/bookings/needs-address" element={<MissingAddressPage />} />
                 <Route path="/admin/bookings/:id" element={<BookingDetailPage />} />
                 <Route path="/admin/daycare" element={<DaycareBoardPage />} />
                 <Route path="/admin/daycare/enrolments" element={<EnrolmentsPage />} />
