@@ -18,15 +18,20 @@ import {
   deptForService, useAddJobNote, useJobChecklist, useJobEvents, useJobSignoff,
   useSetJobStatus, useSignOffJob, useToggleChecklistItem, useWorkJob,
 } from "./queries";
+import { groomingNextAction, isGroomingService } from "./workflowActions";
 
 /** Next status in the simple worker flow, per department. */
-function nextStep(status: BookingStatus, dept: string): { label: string; status: BookingStatus; icon: any; tone: "primary" | "green" | "orange" } | null {
+function nextStep(status: BookingStatus, serviceType: Parameters<typeof isGroomingService>[0]): { label: string; status: BookingStatus; icon: any; tone: "primary" | "green" | "orange" } | null {
+  if (isGroomingService(serviceType)) {
+    const action = groomingNextAction(status);
+    if (!action) return null;
+    const icon = action.status === "checked_in" ? LogIn : action.status === "grooming" ? Play : BellRing;
+    return { label: action.label, status: action.status, icon, tone: action.tone };
+  }
   const beforeStart: BookingStatus[] = ["draft", "requested", "approved", "confirmed", "needs_info"];
   if (beforeStart.includes(status)) return { label: "Check in", status: "checked_in", icon: LogIn, tone: "green" };
   if (status === "checked_in") {
-    return dept === "grooming"
-      ? { label: "Start grooming", status: "grooming", icon: Play, tone: "primary" }
-      : { label: "Start", status: "in_progress", icon: Play, tone: "primary" };
+    return { label: "Start", status: "in_progress", icon: Play, tone: "primary" };
   }
   if (status === "grooming" || status === "in_progress")
     return { label: "Ready for collection", status: "ready", icon: BellRing, tone: "orange" };
@@ -76,7 +81,7 @@ export default function JobPage() {
   }
 
   const meta = BOOKING_STATUS_META[job.status];
-  const step = nextStep(job.status, dept);
+  const step = nextStep(job.status, job.service_type);
   const items = checklistQ.data ?? [];
   const doneCount = items.filter((i) => i.done).length;
   const signedOff = Boolean(signoffQ.data);

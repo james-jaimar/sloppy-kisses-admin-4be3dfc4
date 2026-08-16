@@ -2,10 +2,23 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { ChevronRight, Loader2, LogIn, LogOut, Phone } from "lucide-react";
+import { CheckCircle2, ChevronRight, Loader2, LogIn, LogOut, Phone, Play, BellRing } from "lucide-react";
 import { WorkTopBar } from "./WorkTopBar";
 import { useWorkDepts } from "./useWorkDepts";
 import { useSetJobStatus, useWorkJobs } from "./queries";
+import { groomingNextAction, mobileGroomingStateLabel } from "./workflowActions";
+
+const ACTION_TONES = {
+  primary: "bg-sk-coral text-white",
+  green: "bg-sk-green text-white",
+  orange: "bg-sk-orange text-white",
+};
+
+const ACTION_ICONS = {
+  checked_in: LogIn,
+  grooming: Play,
+  ready: BellRing,
+};
 
 export default function VansWorkPage() {
   const { tenantId, depts, myResourceIds } = useWorkDepts();
@@ -34,7 +47,11 @@ export default function VansWorkPage() {
             No stops for this day.
           </div>
         )}
-        {jobs.map((job, i) => (
+        {jobs.map((job, i) => {
+          const isMobileGrooming = job.service_type === "grooming_mobile";
+          const groomingAction = isMobileGrooming ? groomingNextAction(job.status) : null;
+          const GroomingActionIcon = groomingAction ? ACTION_ICONS[groomingAction.status as keyof typeof ACTION_ICONS] : null;
+          return (
           <div key={job.id} className="rounded-2xl border border-border bg-white p-4">
             <div className="flex items-start gap-3">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sk-turquoise-soft text-base font-bold text-sk-turquoise-dark">
@@ -45,8 +62,14 @@ export default function VansWorkPage() {
                   {job.pets.map((p) => p.name).filter(Boolean).join(", ") || "No pet linked"}
                 </div>
                 <div className="truncate text-sm text-muted-foreground">{job.customer?.full_name ?? "—"}</div>
-                <div className="text-xs text-muted-foreground">
-                  {job.start_at ? format(new Date(job.start_at), "HH:mm") : "—"}
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span>{job.start_at ? format(new Date(job.start_at), "HH:mm") : "—"}</span>
+                  <span className={isMobileGrooming
+                    ? "rounded-full bg-sk-turquoise-soft px-2 py-0.5 font-semibold text-sk-turquoise-dark"
+                    : "rounded-full bg-muted px-2 py-0.5 font-semibold text-muted-foreground"
+                  }>
+                    {isMobileGrooming ? "Mobile grooming" : "Pick up / drop-off"}
+                  </span>
                 </div>
               </div>
               {job.customer?.mobile && (
@@ -66,6 +89,28 @@ export default function VansWorkPage() {
                 <ChevronRight className="h-6 w-6" />
               </Link>
             </div>
+            {isMobileGrooming ? (
+              <div className="mt-3 space-y-2">
+                {groomingAction && GroomingActionIcon ? (
+                  <button
+                    onClick={async () => {
+                      try {
+                        await setStatus.mutateAsync({ bookingId: job.id, status: groomingAction.status, fromStatus: job.status });
+                        toast.success(groomingAction.successLabel);
+                      } catch (e: any) { toast.error(e?.message ?? "Failed"); }
+                    }}
+                    disabled={setStatus.isPending}
+                    className={`flex min-h-[56px] w-full items-center justify-center gap-2 rounded-2xl text-base font-bold disabled:opacity-50 ${ACTION_TONES[groomingAction.tone]}`}
+                  >
+                    <GroomingActionIcon className="h-5 w-5" /> {groomingAction.label}
+                  </button>
+                ) : (
+                  <div className="flex min-h-[56px] items-center justify-center gap-2 rounded-2xl bg-sk-green-soft px-4 text-base font-bold text-sk-green">
+                    <CheckCircle2 className="h-5 w-5" /> {mobileGroomingStateLabel(job.status)}
+                  </div>
+                )}
+              </div>
+            ) : (
             <div className="mt-3 grid grid-cols-2 gap-2">
               <button
                 onClick={async () => {
@@ -96,8 +141,10 @@ export default function VansWorkPage() {
                 <LogOut className="h-5 w-5" /> Dropped
               </button>
             </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );
