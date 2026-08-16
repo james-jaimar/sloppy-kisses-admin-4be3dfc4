@@ -3,7 +3,7 @@ import { WORK_JOB_ADDRESS_COLUMNS } from "./queries";
 import { landingFor } from "@/lib/auth/landing";
 
 describe("mobile grooming work-mode routing", () => {
-  it("keeps Route as the initial landing page without owning /work navigation", () => {
+  it("keeps Route as the initial login landing page", () => {
     const hasPermission = (code: string) => ["work.access", "work.grooming_mobile"].includes(code);
     expect(landingFor({ userType: "staff", hasPermission, depts: ["grooming_mobile"] })).toBe("/work/vans");
   });

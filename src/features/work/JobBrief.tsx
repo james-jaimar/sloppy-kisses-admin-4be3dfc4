@@ -107,7 +107,13 @@ export function JobAddress({
 }) {
   const lines = address ? addressLines(address) : null;
   const street = lines?.street || fallbackText || "";
-  if (!street && !lines?.unit) return null;
+  if (!street && !lines?.unit) {
+    return (
+      <Card tone="warn" title="Where" icon={MapPin}>
+        <p className="text-sm font-semibold">No service address was captured for this mobile appointment. Call the office before setting off.</p>
+      </Card>
+    );
+  }
   const query = encodeURIComponent([lines?.unit, street].filter(Boolean).join(", "));
   return (
     <Card title="Where" icon={MapPin}>
@@ -273,6 +279,12 @@ export function JobService({
     <Card title="Service" icon={Sparkles}>
       <div className="text-base font-bold">{details?.service_package ?? "Groom"}</div>
       {bits.length > 0 && <div className="mt-1 text-sm text-muted-foreground">{bits.join(" · ")}</div>}
+      {details?.grooming_notes?.trim() && (
+        <div className="mt-3 rounded-xl bg-muted/60 p-3 text-sm">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Grooming notes</div>
+          <p className="mt-1 whitespace-pre-wrap font-medium">{details.grooming_notes}</p>
+        </div>
+      )}
       {addons.length > 0 && (
         <ul className="mt-3 space-y-1 text-sm">
           {addons.map((a) => (
