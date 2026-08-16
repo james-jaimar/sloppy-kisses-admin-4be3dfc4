@@ -15,7 +15,7 @@ import { IncidentSheet } from "./IncidentSheet";
 import { JobPhotos } from "./JobPhotos";
 import { useWorkDepts } from "./useWorkDepts";
 import {
-  deptForService, useAddJobNote, useJobChecklist, useJobEvents, useJobSignoff,
+  useAddJobNote, useJobChecklist, useJobEvents, useJobSignoff,
   useSetJobStatus, useSignOffJob, useToggleChecklistItem, useWorkJob,
 } from "./queries";
 import { groomingNextAction, isGroomingService } from "./workflowActions";
@@ -46,7 +46,6 @@ export default function JobPage() {
 
   const jobQ = useWorkJob(bookingId, tenantId);
   const job = jobQ.data;
-  const dept = job ? deptForService(job.service_type) : "grooming";
 
   const setStatus = useSetJobStatus(tenantId ?? "");
   const signOff = useSignOffJob(tenantId ?? "");
