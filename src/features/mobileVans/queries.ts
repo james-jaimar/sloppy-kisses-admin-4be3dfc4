@@ -23,6 +23,8 @@ export interface VanStop {
   resource_id: string | null;
   resource: { id: string; name: string } | null;
   customer: { id: string; full_name: string | null; mobile: string | null; suburb: string | null } | null;
+  service_address_id: string | null;
+  service_place_id: string | null;
   pets: { id: string; name: string | null; species: string | null; breed: string | null }[];
   package: { id: string; name: string; expected_minutes: number | null } | null;
 }
@@ -62,6 +64,7 @@ export function useMobileBookingsForDay(params: { tenantId: string | null | unde
         .from("bookings")
         .select(`
           id, booking_number, status, service_type, start_at, end_at, resource_id,
+          service_address_id, service_place_id,
           resource:resources(id, name),
           customer:customers(id, full_name, mobile, suburb),
           booking_pets(pet:pets(id, name, species, breed)),
@@ -85,6 +88,8 @@ export function useMobileBookingsForDay(params: { tenantId: string | null | unde
           resource_id: b.resource_id,
           resource: b.resource ?? null,
           customer: b.customer ?? null,
+          service_address_id: b.service_address_id ?? null,
+          service_place_id: b.service_place_id ?? null,
           pets: (b.booking_pets ?? []).map((bp: any) => bp.pet).filter(Boolean),
           package: det?.package ?? null,
         };
