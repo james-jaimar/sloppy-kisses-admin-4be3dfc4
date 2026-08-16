@@ -83,8 +83,8 @@ export function AddressSelector({
                   : "border-border hover:bg-muted/50"
               }`}
             >
-              <button type="button" onClick={() => onChange(addr.id)} className="flex w-full items-start gap-3 text-left">
-                <div className="mt-0.5">
+              <button type="button" onClick={() => onChange(addr.id)} className="flex w-full min-w-0 items-start gap-3 text-left">
+                <div className="mt-0.5 shrink-0">
                   {selected?.id === addr.id ? (
                     <Check className="h-4 w-4 text-primary" />
                   ) : (
@@ -93,15 +93,15 @@ export function AddressSelector({
                 </div>
                 <StaticMapThumb latitude={addr.latitude} longitude={addr.longitude} size={48} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{addr.label || "Address"}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="min-w-0 break-words font-medium text-sm">{addr.label || "Address"}</span>
                     {addr.is_primary && (
                       <span className="text-[10px] uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
                         Primary
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground truncate">
+                  <p className="break-words text-sm text-muted-foreground">
                     {[
                       addr.address_line_2,
                       addr.formatted_address || [addr.address_line_1, addr.suburb].filter(Boolean).join(", "),
