@@ -66,7 +66,15 @@ export function JobAlerts({ bookingId, pets, onDate }: { bookingId: string; pets
   }
   const medical = pets
     .filter((p) => p.medical_notes?.trim())
-    .map((p) => `${p.name ?? "Pet"}: ${p.medical_notes!.trim()}`);
+    .map((p) => `${p.name ?? "Pet"}: ${p.medical_notes?.trim() ?? ""}`);
+
+  if (vaxQ.isError || healthQ.isError) {
+    return (
+      <Card tone="warn" title="Safety checks unavailable" icon={ShieldAlert}>
+        <p className="text-sm font-semibold">Vaccination or health warnings could not be loaded. Check with the office before starting.</p>
+      </Card>
+    );
+  }
 
   const nothing =
     vaxRows.length === 0 && holds.length === 0 && treatments.length === 0 && behaviour.length === 0 && medical.length === 0;
@@ -99,7 +107,13 @@ export function JobAddress({
 }) {
   const lines = address ? addressLines(address) : null;
   const street = lines?.street || fallbackText || "";
-  if (!street && !lines?.unit) return null;
+  if (!street && !lines?.unit) {
+    return (
+      <Card tone="warn" title="Where" icon={MapPin}>
+        <p className="text-sm font-semibold">No service address was captured for this mobile appointment. Call the office before setting off.</p>
+      </Card>
+    );
+  }
   const query = encodeURIComponent([lines?.unit, street].filter(Boolean).join(", "));
   return (
     <Card title="Where" icon={MapPin}>
@@ -181,6 +195,14 @@ export function JobGroomingBrief({
     );
   }
 
+  if (bookingQ.isError || catalogQ.isError || petQ.isError) {
+    return (
+      <Card tone="warn" title="Grooming brief unavailable" icon={AlertTriangle}>
+        <p className="text-sm font-semibold">The styling preferences could not be loaded. Call the office before you start.</p>
+      </Card>
+    );
+  }
+
   if (!anything) {
     return (
       <Card tone="warn" title="Grooming brief" icon={AlertTriangle}>
@@ -257,6 +279,12 @@ export function JobService({
     <Card title="Service" icon={Sparkles}>
       <div className="text-base font-bold">{details?.service_package ?? "Groom"}</div>
       {bits.length > 0 && <div className="mt-1 text-sm text-muted-foreground">{bits.join(" · ")}</div>}
+      {details?.grooming_notes?.trim() && (
+        <div className="mt-3 rounded-xl bg-muted/60 p-3 text-sm">
+          <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Grooming notes</div>
+          <p className="mt-1 whitespace-pre-wrap font-medium">{details.grooming_notes}</p>
+        </div>
+      )}
       {addons.length > 0 && (
         <ul className="mt-3 space-y-1 text-sm">
           {addons.map((a) => (
@@ -275,7 +303,7 @@ export function JobService({
           <span className="rounded-full bg-sk-turquoise-soft px-2.5 py-1 text-sk-turquoise-dark">Stay &amp; Play after</span>
         )}
         {Number(details?.travel_fee ?? 0) > 0 && (
-          <span className="rounded-full bg-muted px-2.5 py-1">Travel fee R{Number(details!.travel_fee).toFixed(0)}</span>
+          <span className="rounded-full bg-muted px-2.5 py-1">Travel fee R{Number(details?.travel_fee).toFixed(0)}</span>
         )}
         {Number(details?.matted_surcharge_zar ?? 0) > 0 && (
           <span className="rounded-full bg-sk-orange-soft px-2.5 py-1 text-sk-orange">Matted surcharge</span>
@@ -285,7 +313,7 @@ export function JobService({
         )}
         {Number(details?.hotel_checkout_discount_pct ?? 0) > 0 && (
           <span className="rounded-full bg-muted px-2.5 py-1">
-            Hotel checkout −{Number(details!.hotel_checkout_discount_pct)}%
+            Hotel checkout −{Number(details?.hotel_checkout_discount_pct)}%
           </span>
         )}
       </div>
