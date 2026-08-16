@@ -77,7 +77,7 @@ export function FixAddressDialog({
   currentAddressId: string | null;
 }) {
   const [addressId, setAddressId] = useState<string | null>(currentAddressId);
-  const update = useUpdateBooking(tenantId);
+  const update = useUpdateBooking(tenantId ?? "");
 
   async function save() {
     if (!addressId) return toast.error("Pick or add the address first");
