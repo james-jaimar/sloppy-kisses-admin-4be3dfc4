@@ -1,10 +1,14 @@
 import { useMemo } from "react";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { useMyResourceIds } from "@/features/settings/resourceStaffQueries";
 import type { WorkDept } from "./queries";
 
 /** Which work departments the signed-in user may use. */
 export function useWorkDepts() {
   const { hasPermission, profile, currentTenant, loading } = useCurrentUser();
+  const myResourcesQ = useMyResourceIds(currentTenant?.id ?? null, profile?.id ?? null);
+  const myResourceIds = myResourcesQ.data ?? [];
+  const resourceKey = myResourceIds.slice().sort().join(",");
   return useMemo(() => {
     const depts: WorkDept[] = [];
     if (hasPermission("work.grooming")) depts.push("grooming");
@@ -14,6 +18,8 @@ export function useWorkDepts() {
     if (hasPermission("work.transport")) depts.push("transport");
     return {
       depts,
+      /** Resources this user is assigned to. Empty means "no restriction". */
+      myResourceIds: resourceKey ? resourceKey.split(",") : [],
       canAccess: hasPermission("work.access"),
       canSignoff: hasPermission("work.signoff"),
       canRaiseIncident: hasPermission("incidents.raise"),
@@ -22,5 +28,5 @@ export function useWorkDepts() {
       tenantId: currentTenant?.id ?? null,
       loading,
     };
-  }, [hasPermission, profile, currentTenant, loading]);
+  }, [hasPermission, profile, currentTenant, loading, resourceKey]);
 }
