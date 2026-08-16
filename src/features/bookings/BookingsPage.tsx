@@ -9,6 +9,9 @@ import { BookingStatusChip } from "./statusMeta";
 import { useBookingsList, type BookingStatus, type ServiceType } from "./queries";
 import { StayPlayBadge } from "@/features/daycare/StayPlayBadge";
 import { useStayPlayFlags } from "@/features/daycare/stayPlayQueries";
+import { Link } from "react-router-dom";
+import { MapPinOff } from "lucide-react";
+import { useMissingAddressCount } from "./addressGate";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
