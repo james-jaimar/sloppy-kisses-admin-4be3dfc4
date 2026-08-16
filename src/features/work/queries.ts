@@ -127,13 +127,24 @@ export function useWorkJob(bookingId: string | undefined, tenantId: string | nul
       const { data, error } = await sb
         .from("bookings")
         .select(`${JOB_SELECT}, customer_id, notes_internal, notes_customer,
-          gdetails:grooming_booking_details(actual_start_at, actual_end_at)`)
+          service_address_text,
+          address:customer_addresses!bookings_service_address_id_fkey(
+            address_line_1, address_line_2, suburb, city, province, postcode,
+            formatted_address, access_notes, lat, lng
+          ),
+          addons:grooming_booking_addons(id, addon_name, qty, price_zar_snapshot, note),
+          gdetails:grooming_booking_details(
+            actual_start_at, actual_end_at, service_package, groomer_name, duration_minutes,
+            travel_fee, grooming_notes, stay_and_play_after, pensioner_discount_applied,
+            matted_surcharge_zar, sedation_surcharge_zar, hotel_checkout_discount_pct
+          )`)
         .eq("id", bookingId as string)
         .eq("tenant_id", tenantId as string)
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
       const g = Array.isArray((data as any).gdetails) ? (data as any).gdetails[0] : (data as any).gdetails;
+      const addr = Array.isArray((data as any).address) ? (data as any).address[0] : (data as any).address;
       return {
         ...mapJob(data),
         customer_id: (data as any).customer_id as string,
@@ -141,6 +152,10 @@ export function useWorkJob(bookingId: string | undefined, tenantId: string | nul
         notes_customer: (data as any).notes_customer as string | null,
         actual_start_at: (g?.actual_start_at ?? null) as string | null,
         actual_end_at: (g?.actual_end_at ?? null) as string | null,
+        service_address_text: ((data as any).service_address_text ?? null) as string | null,
+        address: (addr ?? null) as WorkJobAddress | null,
+        addons: ((data as any).addons ?? []) as WorkJobAddon[],
+        details: (g ?? null) as WorkJobGroomingDetails | null,
       };
     },
   });
