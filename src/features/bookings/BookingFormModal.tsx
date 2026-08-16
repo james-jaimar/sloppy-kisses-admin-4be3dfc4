@@ -1126,7 +1126,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             />
             <ServiceRadiusNotice check={radiusQ.data} />
             {(!serviceAddressId || !vanAddressVerified || radiusBlocked) && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+              <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-3 text-xs font-semibold text-destructive">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <div>
@@ -1351,7 +1351,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 </div>
               )}
             {(!serviceAddressId || !vanAddressVerified || radiusBlocked) && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800">
+              <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-3 text-xs font-semibold text-destructive">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <div>
