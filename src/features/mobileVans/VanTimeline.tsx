@@ -4,6 +4,7 @@ import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { PaymentChip } from "@/features/shared/payments/paymentFlags";
 import { StayPlayChip } from "@/features/daycare/StayPlayBadge";
 import type { VanStop } from "./queries";
+import { AddressGateChip } from "@/features/bookings/AddressGate";
 
 function fmtTime(iso: string | null): string {
   if (!iso) return "—";
@@ -100,6 +101,7 @@ function StopCard({ stop }: { stop: VanStop }) {
             <span className="truncate">{stop.customer?.full_name ?? "—"}</span>
           </div>
           <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <AddressGateChip booking={{ ...stop, service_type: "grooming_mobile" }} compact />
             {suburb && (
               <span className="inline-flex items-center gap-1 rounded bg-sk-turquoise-soft px-1.5 py-0.5 text-sk-turquoise-dark">
                 <MapPin className="h-3 w-3" /> {suburb}

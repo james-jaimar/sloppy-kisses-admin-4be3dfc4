@@ -21,6 +21,7 @@ import { HotelGroomRequestsPanel } from "@/features/hotelGrooming/HotelGroomRequ
 import { HotelMoneyStrip } from "@/features/hotelCattery/HotelMoneyStrip";
 import { GroomerPicker } from "@/features/grooming/GroomerPicker";
 import { BookingGroomingPrefsBanner } from "@/features/grooming/instructions/BookingGroomingPrefsBanner";
+import { AddressGateBanner } from "./AddressGate";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -127,6 +128,7 @@ export default function BookingDetailPage() {
           <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-6">
               <PinnedNotesBanner customerId={b.customer_id} tenantId={tenantId} />
+              <AddressGateBanner booking={b as any} tenantId={tenantId} />
               <BookingVaccinationGate
                 bookingId={b.id}
                 overriddenBy={(b as any).vax_override_by}

@@ -101,6 +101,13 @@ export default function AddressVerificationPage() {
       />
       <div className="flex-1 p-6">
         <div className="max-w-3xl space-y-6">
+          <Link
+            to="/admin/bookings/needs-address"
+            className="flex items-center gap-2 rounded-xl border border-border bg-white p-4 text-sm font-medium hover:bg-muted"
+          >
+            <MapPin className="h-4 w-4 text-destructive" />
+            See upcoming van bookings that still have no usable address
+          </Link>
           {totals && (
             <div className="sk-card p-5">
               <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">

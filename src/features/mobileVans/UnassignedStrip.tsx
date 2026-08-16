@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { AlertTriangle, PawPrint, Wand2 } from "lucide-react";
 import { useAssignBookingToVan, type MobileVanResource, type VanStop } from "./queries";
+import { AddressGateChip } from "@/features/bookings/AddressGate";
 
 function fmtTime(iso: string | null): string {
   if (!iso) return "—";
@@ -65,6 +66,9 @@ export function UnassignedStrip({
                 {fmtTime(s.start_at)} · {s.customer?.suburb ?? "no suburb"}
               </div>
             </Link>
+            <div className="mt-1">
+              <AddressGateChip booking={{ ...s, service_type: "grooming_mobile" }} compact />
+            </div>
             <select
               defaultValue=""
               disabled={assign.isPending}

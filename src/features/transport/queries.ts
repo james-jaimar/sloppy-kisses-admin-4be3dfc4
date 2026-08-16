@@ -23,6 +23,8 @@ export interface TransportLeg {
   end_at: string | null;
   resource_id: string | null;
   resource: { id: string; name: string } | null;
+  service_address_id: string | null;
+  service_place_id: string | null;
   customer: { id: string; full_name: string | null; mobile: string | null; suburb: string | null; home_address: string | null } | null;
   pets: { id: string; name: string | null; species: string | null; breed: string | null }[];
   details: {
@@ -69,6 +71,7 @@ export function useTransportLegsForDay(params: { tenantId: string | null | undef
         .from("bookings")
         .select(`
           id, booking_number, status, start_at, end_at, resource_id,
+          service_address_id, service_place_id,
           resource:resources(id, name),
           customer:customers(id, full_name, mobile, suburb, home_address),
           booking_pets(pet:pets(id, name, species, breed)),
@@ -90,6 +93,8 @@ export function useTransportLegsForDay(params: { tenantId: string | null | undef
           end_at: b.end_at,
           resource_id: b.resource_id,
           resource: b.resource ?? null,
+          service_address_id: b.service_address_id ?? null,
+          service_place_id: b.service_place_id ?? null,
           customer: b.customer ?? null,
           pets: (b.booking_pets ?? []).map((bp: any) => bp.pet).filter(Boolean),
           details: det ?? null,

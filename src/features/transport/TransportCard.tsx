@@ -4,6 +4,7 @@ import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { PaymentChip } from "@/features/shared/payments/paymentFlags";
 import { StayPlayChip } from "@/features/daycare/StayPlayBadge";
 import type { TransportLeg } from "./queries";
+import { AddressGateChip } from "@/features/bookings/AddressGate";
 
 function fmtTime(iso: string | null): string {
   if (!iso) return "—";
@@ -53,6 +54,7 @@ export function TransportCard({ leg }: { leg: TransportLeg }) {
       )}
 
       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+        <AddressGateChip booking={{ ...leg, service_type: "pickup_dropoff" }} compact />
         <span className="rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
           {fmtTime(leg.start_at)}
         </span>

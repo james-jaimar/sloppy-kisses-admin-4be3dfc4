@@ -109,8 +109,11 @@ export function JobAddress({
   const street = lines?.street || fallbackText || "";
   if (!street && !lines?.unit) {
     return (
-      <Card tone="warn" title="Where" icon={MapPin}>
-        <p className="text-sm font-semibold">No service address was captured for this mobile appointment. Call the office before setting off.</p>
+      <Card tone="danger" title="No address for this job" icon={MapPin}>
+        <p className="text-sm font-bold">
+          No service address was captured for this appointment, so it cannot be navigated to. Call the office
+          before setting off.
+        </p>
       </Card>
     );
   }
