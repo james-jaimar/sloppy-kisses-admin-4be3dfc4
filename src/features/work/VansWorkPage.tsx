@@ -8,13 +8,14 @@ import { useWorkDepts } from "./useWorkDepts";
 import { useSetJobStatus, useWorkJobs } from "./queries";
 
 export default function VansWorkPage() {
-  const { tenantId, depts } = useWorkDepts();
+  const { tenantId, depts, myResourceIds } = useWorkDepts();
   const [day, setDay] = useState(() => new Date());
   const routeDepts = depts.filter((d) => d === "transport" || d === "grooming_mobile");
   const jobsQ = useWorkJobs({
     tenantId,
     depts: routeDepts.length ? routeDepts : ["transport"],
     day,
+    resourceIds: myResourceIds,
   });
   const setStatus = useSetJobStatus(tenantId ?? "");
   const jobs = jobsQ.data ?? [];

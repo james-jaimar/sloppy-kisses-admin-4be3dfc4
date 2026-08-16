@@ -13,12 +13,12 @@ import {
 type Tab = "in_house" | "arrivals" | "departures";
 
 export default function HotelRoundsPage() {
-  const { tenantId } = useWorkDepts();
+  const { tenantId, myResourceIds } = useWorkDepts();
   const [day, setDay] = useState(() => new Date());
   const [tab, setTab] = useState<Tab>("in_house");
   const dayIso = isoDay(day);
 
-  const jobsQ = useWorkJobs({ tenantId, depts: ["hotel"], day });
+  const jobsQ = useWorkJobs({ tenantId, depts: ["hotel"], day, resourceIds: myResourceIds });
   const roundsQ = useCareRounds(tenantId, day);
   const toggleRound = useToggleCareRound(tenantId ?? "");
   const setStatus = useSetJobStatus(tenantId ?? "");

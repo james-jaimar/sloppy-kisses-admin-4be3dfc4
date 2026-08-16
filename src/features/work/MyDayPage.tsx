@@ -54,9 +54,9 @@ export function JobRowCard({ job }: { job: WorkJob }) {
 }
 
 export default function MyDayPage() {
-  const { depts, tenantId, profile } = useWorkDepts();
+  const { depts, tenantId, profile, myResourceIds } = useWorkDepts();
   const [day, setDay] = useState(() => new Date());
-  const jobsQ = useWorkJobs({ tenantId, depts, day });
+  const jobsQ = useWorkJobs({ tenantId, depts, day, resourceIds: myResourceIds });
   const jobs = jobsQ.data ?? [];
   const outstanding = jobs.filter((j) => !["completed", "checked_out"].includes(j.status));
   const done = jobs.filter((j) => ["completed", "checked_out"].includes(j.status));

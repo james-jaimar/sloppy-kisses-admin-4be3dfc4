@@ -82,28 +82,35 @@ export function useWorkJobs(params: {
   tenantId: string | null | undefined;
   depts: WorkDept[];
   day: Date;
+  /** When set (non-empty), only jobs on these resources — plus unassigned jobs — are returned. */
+  resourceIds?: string[] | null;
 }) {
-  const { tenantId, depts, day } = params;
+  const { tenantId, depts, day, resourceIds } = params;
   const dayIso = isoDay(day);
   const start = new Date(day);
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
   end.setDate(end.getDate() + 1);
   const services = Array.from(new Set(depts.flatMap((d) => DEPT_SERVICES[d])));
+  const scoped = (resourceIds ?? []).slice().sort();
 
   return useQuery({
-    queryKey: ["work_jobs", tenantId, dayIso, services.join(",")],
+    queryKey: ["work_jobs", tenantId, dayIso, services.join(","), scoped.join(",")],
     enabled: Boolean(tenantId) && services.length > 0,
     refetchInterval: 60_000,
     queryFn: async (): Promise<WorkJob[]> => {
-      const { data, error } = await sb
+      let q = sb
         .from("bookings")
         .select(JOB_SELECT)
         .eq("tenant_id", tenantId as string)
         .in("service_type", services)
         .not("status", "in", "(cancelled,no_show)")
         .lt("start_at", end.toISOString())
-        .gte("end_at", start.toISOString())
+        .gte("end_at", start.toISOString());
+      if (scoped.length) {
+        q = q.or(`resource_id.in.(${scoped.join(",")}),resource_id.is.null`);
+      }
+      const { data, error } = await q
         .order("start_at", { ascending: true })
         .limit(300);
       if (error) throw error;
