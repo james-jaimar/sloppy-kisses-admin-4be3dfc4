@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "@/hooks/use-toast";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { manageUser, type TenantUserRow } from "./queries";
+import { useAllResources, RESOURCE_TYPES } from "@/features/settings/resourceQueries";
+import { useResourceStaff, useSetStaffResources } from "@/features/settings/resourceStaffQueries";
 import { RefreshCw, Copy } from "lucide-react";
 
 interface Props {
@@ -24,6 +26,20 @@ export default function EditUserDrawer({ tenantId, user, onClose, onSaved }: Pro
   const [password, setPassword] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const resourcesQ = useAllResources(tenantId);
+  const assignmentsQ = useResourceStaff(tenantId);
+  const saveResources = useSetStaffResources(tenantId);
+  const [resourceIds, setResourceIds] = useState<string[]>([]);
+
+  const currentResources = useMemo(
+    () => (assignmentsQ.data ?? []).filter((a) => a.profile_id === user.profile_id).map((a) => a.resource_id),
+    [assignmentsQ.data, user.profile_id],
+  );
+  useEffect(() => { setResourceIds(currentResources); }, [currentResources.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const activeResources = (resourcesQ.data ?? []).filter((r) => r.active);
+  const typeLabel = Object.fromEntries(RESOURCE_TYPES.map((t) => [t.value, t.label])) as Record<string, string>;
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -34,11 +50,19 @@ export default function EditUserDrawer({ tenantId, user, onClose, onSaved }: Pro
       email,
       password: password || undefined,
     });
-    setSaving(false);
     if (!res.ok) {
+      setSaving(false);
       toast({ title: "Couldn't save user", description: (res as { ok: false; error: string }).error, variant: "destructive" });
       return;
     }
+    try {
+      await saveResources.mutateAsync({ profileId: user.profile_id, resourceIds });
+    } catch (err: any) {
+      setSaving(false);
+      toast({ title: "Couldn't save resources", description: err?.message ?? "Unknown error", variant: "destructive" });
+      return;
+    }
+    setSaving(false);
     toast({
       title: "User updated",
       description: password ? `New password: ${password}` : undefined,
@@ -102,6 +126,35 @@ export default function EditUserDrawer({ tenantId, user, onClose, onSaved }: Pro
                 <Copy className="h-3.5 w-3.5" /> Copy
               </button>
             )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border p-4">
+          <div className="text-sm font-medium">Vans, stations &amp; areas</div>
+          <p className="mb-3 mt-1 text-xs text-muted-foreground">
+            Tick the resources this person works on. In work mode they'll only see jobs on these (plus anything not yet
+            assigned). Leave all unticked to show every job in their departments.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {activeResources.map((r) => (
+              <label
+                key={r.id}
+                className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 text-sm hover:bg-muted"
+              >
+                <input
+                  type="checkbox"
+                  checked={resourceIds.includes(r.id)}
+                  onChange={() =>
+                    setResourceIds((s) => (s.includes(r.id) ? s.filter((x) => x !== r.id) : [...s, r.id]))
+                  }
+                  className="mt-0.5 h-4 w-4"
+                />
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{r.name}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{typeLabel[r.type] ?? r.type}</span>
+                </span>
+              </label>
+            ))}
           </div>
         </div>
 
