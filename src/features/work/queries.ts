@@ -81,9 +81,14 @@ export interface WorkJobAddress {
   postcode: string | null;
   formatted_address: string | null;
   access_notes: string | null;
-  lat: number | null;
-  lng: number | null;
+  latitude: number | null;
+  longitude: number | null;
 }
+
+export const WORK_JOB_ADDRESS_COLUMNS = `
+  address_line_1, address_line_2, suburb, city, province, postcode,
+  formatted_address, access_notes, latitude, longitude
+`;
 
 export interface WorkJobAddon {
   id: string;
@@ -179,7 +184,7 @@ export function useWorkJobs(params: {
 
 export function useWorkJob(bookingId: string | undefined, tenantId: string | null | undefined) {
   return useQuery({
-    queryKey: ["work_job", bookingId],
+    queryKey: ["work_job", tenantId, bookingId],
     enabled: Boolean(bookingId && tenantId),
     queryFn: async () => {
       const { data, error } = await sb
@@ -187,8 +192,7 @@ export function useWorkJob(bookingId: string | undefined, tenantId: string | nul
         .select(`${JOB_SELECT}, customer_id, notes_internal, notes_customer,
           service_address_text,
           address:customer_addresses!bookings_service_address_id_fkey(
-            address_line_1, address_line_2, suburb, city, province, postcode,
-            formatted_address, access_notes, lat, lng
+            ${WORK_JOB_ADDRESS_COLUMNS}
           ),
           addons:grooming_booking_addons(id, addon_name, qty, price_zar_snapshot, note),
           gdetails:grooming_booking_details(

@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import {
   AlertTriangle, ArrowLeft, Check, CheckCheck, Loader2, LogIn, NotebookPen,
-  Pause, Phone, Play, BellRing, ShieldCheck,
+  Pause, Phone, Play, BellRing, RefreshCw, ShieldCheck,
 } from "lucide-react";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { BOOKING_STATUS_META } from "@/features/bookings/statusMeta";
@@ -21,6 +21,7 @@ import {
 import { groomingNextAction, isGroomingService } from "./workflowActions";
 import { JobAlerts, JobAddress, JobGroomingBrief, JobService } from "./JobBrief";
 import { PET_SIZE_LABEL, type PetSize } from "@/features/pets/sizeUtils";
+import { Button } from "@/components/ui/button";
 
 /** Next status in the simple worker flow, per department. */
 function nextStep(status: BookingStatus, serviceType: Parameters<typeof isGroomingService>[0]): { label: string; status: BookingStatus; icon: any; tone: "primary" | "green" | "orange" } | null {
@@ -77,7 +78,27 @@ export default function JobPage() {
       </div>
     );
   }
-  if (!job || !tenantId) {
+  if (jobQ.isError) {
+    return (
+      <div className="grid min-h-[60vh] place-items-center px-6 text-center">
+        <div className="max-w-sm">
+          <AlertTriangle className="mx-auto h-9 w-9 text-sk-orange" />
+          <h1 className="mt-3 text-lg font-bold">Couldn’t load this job</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            The appointment still exists, but its details could not be loaded. Please try again.
+          </p>
+          <Button className="mt-4 min-h-12" onClick={() => jobQ.refetch()} disabled={jobQ.isFetching}>
+            {jobQ.isFetching ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+            Try again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  if (!tenantId) {
+    return <div className="p-6 text-center text-muted-foreground">Work mode is not available for this account.</div>;
+  }
+  if (!job) {
     return <div className="p-6 text-center text-muted-foreground">Job not found.</div>;
   }
 
@@ -102,7 +123,7 @@ export default function JobPage() {
 
   async function move(status: BookingStatus, label: string) {
     try {
-      await setStatus.mutateAsync({ bookingId: job!.id, status, fromStatus: job!.status });
+      await setStatus.mutateAsync({ bookingId: job.id, status, fromStatus: job.status });
       toast.success(label);
     } catch (err: any) {
       toast.error(err?.message ?? "Couldn't update the job");

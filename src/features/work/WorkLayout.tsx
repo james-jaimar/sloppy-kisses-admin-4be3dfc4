@@ -3,11 +3,10 @@ import { ClipboardList, Hotel, Dog, Truck, User, Loader2, AlertTriangle } from "
 import { useAuth } from "@/lib/auth/AuthContext";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useWorkDepts } from "./useWorkDepts";
-import { landingFor } from "@/lib/auth/landing";
 
 export default function WorkLayout() {
   const { authUser, loading: authLoading } = useAuth();
-  const { profile, loading, hasPermission } = useCurrentUser();
+  const { profile, loading } = useCurrentUser();
   const { depts, canAccess } = useWorkDepts();
   const location = useLocation();
 
@@ -46,12 +45,6 @@ export default function WorkLayout() {
     },
     { to: "/work/me", label: "Me", icon: User, show: true },
   ].filter((t) => t.show);
-
-  // Single-department staff land straight on their own board.
-  if (location.pathname === "/work" && depts.length === 1) {
-    const target = landingFor({ userType: profile?.user_type, hasPermission, depts });
-    if (target.startsWith("/work/")) return <Navigate to={target} replace />;
-  }
 
   return (
     <div className="flex min-h-screen flex-col bg-sk-bg text-foreground">
