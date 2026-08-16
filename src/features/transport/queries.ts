@@ -69,6 +69,7 @@ export function useTransportLegsForDay(params: { tenantId: string | null | undef
         .from("bookings")
         .select(`
           id, booking_number, status, start_at, end_at, resource_id,
+          service_address_id, service_place_id,
           resource:resources(id, name),
           customer:customers(id, full_name, mobile, suburb, home_address),
           booking_pets(pet:pets(id, name, species, breed)),
