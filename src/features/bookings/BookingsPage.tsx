@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
 import { Plus, Search, Loader2 } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -9,7 +9,6 @@ import { BookingStatusChip } from "./statusMeta";
 import { useBookingsList, type BookingStatus, type ServiceType } from "./queries";
 import { StayPlayBadge } from "@/features/daycare/StayPlayBadge";
 import { useStayPlayFlags } from "@/features/daycare/stayPlayQueries";
-import { Link } from "react-router-dom";
 import { MapPinOff } from "lucide-react";
 import { useMissingAddressCount } from "./addressGate";
 
@@ -66,6 +65,7 @@ export default function BookingsPage() {
   });
   const rows = listQ.data ?? [];
   const stayPlay = useStayPlayFlags(tenantId, rows.map((r) => r.id));
+  const missingAddress = useMissingAddressCount(tenantId);
 
   return (
     <>
@@ -83,6 +83,16 @@ export default function BookingsPage() {
         }
       />
       <div className="flex-1 space-y-4 p-6">
+        {missingAddress.count > 0 && (
+          <Link
+            to="/admin/bookings/needs-address"
+            className="flex items-center gap-3 rounded-xl border-2 border-destructive bg-destructive/10 p-4 text-sm font-semibold text-destructive hover:bg-destructive/15"
+          >
+            <MapPinOff className="h-5 w-5 shrink-0" />
+            {missingAddress.count} upcoming van {missingAddress.count === 1 ? "job has" : "jobs have"} no
+            address a driver can navigate to — fix them now
+          </Link>
+        )}
         <div className="sk-card p-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative min-w-[240px] flex-1">
