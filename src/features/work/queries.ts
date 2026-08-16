@@ -49,9 +49,27 @@ export interface WorkJob {
   start_at: string | null;
   end_at: string | null;
   customer: { id: string; full_name: string | null; mobile: string | null } | null;
-  pets: { id: string; name: string | null; breed: string | null; species: string | null }[];
+  pets: WorkJobPet[];
   resource: { id: string; name: string } | null;
   signed_off: boolean;
+}
+
+export interface WorkJobPet {
+  id: string;
+  name: string | null;
+  breed: string | null;
+  species: string | null;
+  sex?: string | null;
+  size?: string | null;
+  size_override?: string | null;
+  date_of_birth?: string | null;
+  medical_notes?: string | null;
+  behaviour_notes?: string | null;
+  behaviour_aggressive_history?: boolean | null;
+  behaviour_nervous?: boolean | null;
+  behaviour_barker?: boolean | null;
+  behaviour_jumps?: boolean | null;
+  behaviour_social?: boolean | null;
 }
 
 export interface WorkJobAddress {
@@ -94,7 +112,11 @@ const JOB_SELECT = `
   id, booking_number, status, service_type, start_at, end_at,
   customer:customers(id, full_name, mobile),
   resource:resources(id, name),
-  booking_pets(pet:pets(id, name, breed, species)),
+  booking_pets(pet:pets(
+    id, name, breed, species, sex, size, size_override, date_of_birth,
+    medical_notes, behaviour_notes, behaviour_aggressive_history,
+    behaviour_nervous, behaviour_barker, behaviour_jumps, behaviour_social
+  )),
   signoff:booking_signoffs(id)
 `;
 
