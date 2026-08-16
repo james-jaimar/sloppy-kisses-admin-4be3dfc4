@@ -49,16 +49,74 @@ export interface WorkJob {
   start_at: string | null;
   end_at: string | null;
   customer: { id: string; full_name: string | null; mobile: string | null } | null;
-  pets: { id: string; name: string | null; breed: string | null; species: string | null }[];
+  pets: WorkJobPet[];
   resource: { id: string; name: string } | null;
   signed_off: boolean;
+}
+
+export interface WorkJobPet {
+  id: string;
+  name: string | null;
+  breed: string | null;
+  species: string | null;
+  sex?: string | null;
+  size?: string | null;
+  size_override?: string | null;
+  date_of_birth?: string | null;
+  medical_notes?: string | null;
+  behaviour_notes?: string | null;
+  behaviour_aggressive_history?: boolean | null;
+  behaviour_nervous?: boolean | null;
+  behaviour_barker?: boolean | null;
+  behaviour_jumps?: boolean | null;
+  behaviour_social?: boolean | null;
+}
+
+export interface WorkJobAddress {
+  address_line_1: string | null;
+  address_line_2: string | null;
+  suburb: string | null;
+  city: string | null;
+  province: string | null;
+  postcode: string | null;
+  formatted_address: string | null;
+  access_notes: string | null;
+  lat: number | null;
+  lng: number | null;
+}
+
+export interface WorkJobAddon {
+  id: string;
+  addon_name: string | null;
+  qty: number | null;
+  price_zar_snapshot: number | null;
+  note: string | null;
+}
+
+export interface WorkJobGroomingDetails {
+  actual_start_at: string | null;
+  actual_end_at: string | null;
+  service_package: string | null;
+  groomer_name: string | null;
+  duration_minutes: number | null;
+  travel_fee: number | null;
+  grooming_notes: string | null;
+  stay_and_play_after: boolean | null;
+  pensioner_discount_applied: boolean | null;
+  matted_surcharge_zar: number | null;
+  sedation_surcharge_zar: number | null;
+  hotel_checkout_discount_pct: number | null;
 }
 
 const JOB_SELECT = `
   id, booking_number, status, service_type, start_at, end_at,
   customer:customers(id, full_name, mobile),
   resource:resources(id, name),
-  booking_pets(pet:pets(id, name, breed, species)),
+  booking_pets(pet:pets(
+    id, name, breed, species, sex, size, size_override, date_of_birth,
+    medical_notes, behaviour_notes, behaviour_aggressive_history,
+    behaviour_nervous, behaviour_barker, behaviour_jumps, behaviour_social
+  )),
   signoff:booking_signoffs(id)
 `;
 
@@ -127,13 +185,24 @@ export function useWorkJob(bookingId: string | undefined, tenantId: string | nul
       const { data, error } = await sb
         .from("bookings")
         .select(`${JOB_SELECT}, customer_id, notes_internal, notes_customer,
-          gdetails:grooming_booking_details(actual_start_at, actual_end_at)`)
+          service_address_text,
+          address:customer_addresses!bookings_service_address_id_fkey(
+            address_line_1, address_line_2, suburb, city, province, postcode,
+            formatted_address, access_notes, lat, lng
+          ),
+          addons:grooming_booking_addons(id, addon_name, qty, price_zar_snapshot, note),
+          gdetails:grooming_booking_details(
+            actual_start_at, actual_end_at, service_package, groomer_name, duration_minutes,
+            travel_fee, grooming_notes, stay_and_play_after, pensioner_discount_applied,
+            matted_surcharge_zar, sedation_surcharge_zar, hotel_checkout_discount_pct
+          )`)
         .eq("id", bookingId as string)
         .eq("tenant_id", tenantId as string)
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
       const g = Array.isArray((data as any).gdetails) ? (data as any).gdetails[0] : (data as any).gdetails;
+      const addr = Array.isArray((data as any).address) ? (data as any).address[0] : (data as any).address;
       return {
         ...mapJob(data),
         customer_id: (data as any).customer_id as string,
@@ -141,6 +210,10 @@ export function useWorkJob(bookingId: string | undefined, tenantId: string | nul
         notes_customer: (data as any).notes_customer as string | null,
         actual_start_at: (g?.actual_start_at ?? null) as string | null,
         actual_end_at: (g?.actual_end_at ?? null) as string | null,
+        service_address_text: ((data as any).service_address_text ?? null) as string | null,
+        address: (addr ?? null) as WorkJobAddress | null,
+        addons: ((data as any).addons ?? []) as WorkJobAddon[],
+        details: (g ?? null) as WorkJobGroomingDetails | null,
       };
     },
   });
