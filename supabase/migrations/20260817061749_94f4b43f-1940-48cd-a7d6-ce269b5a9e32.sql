@@ -1,0 +1,1 @@
+UPDATE public.documents SET status = 'expired' WHERE id = '3354c5b9-8898-4513-b853-613689f839f0' AND status = 'pending';
