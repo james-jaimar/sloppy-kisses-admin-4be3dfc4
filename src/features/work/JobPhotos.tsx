@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Camera, Loader2 } from "lucide-react";
+import { AlertTriangle, Camera, Loader2, RotateCw } from "lucide-react";
 import { uploadDocumentToS3, getDocumentDownloadUrl } from "@/features/documents/uploadDocument";
-import { SnapUploadButton } from "@/features/uploads/SnapUploadButton";
 import { useJobPhotos, useLinkJobPhoto, type PhotoKind } from "./queries";
 
 function PhotoThumb({ documentId }: { documentId: string | null }) {
@@ -42,17 +41,20 @@ export function JobPhotos({
   const photosQ = useJobPhotos(bookingId);
   const link = useLinkJobPhoto(tenantId);
   const [busy, setBusy] = useState<PhotoKind | null>(null);
+  const [failed, setFailed] = useState<{ kind: PhotoKind; file: File; message: string } | null>(null);
   const beforeRef = useRef<HTMLInputElement>(null);
   const afterRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(kind: PhotoKind, file: File | undefined) {
     if (!file) return;
     setBusy(kind);
+    setFailed(null);
     try {
       const { document_id } = await uploadDocumentToS3({
         tenantId,
         petId,
         customerId,
+        bookingId,
         type: "booking_photo",
         file,
         uploadedVia: "admin",
@@ -60,7 +62,11 @@ export function JobPhotos({
       await link.mutateAsync({ bookingId, petId, documentId: document_id, kind });
       toast.success(`${kind === "before" ? "Before" : "After"} photo saved`);
     } catch (err: any) {
-      toast.error(err?.message ?? "Photo upload failed");
+      const message = err?.message === "Failed to fetch" || err?.message === "Load failed"
+        ? "We couldn't reach the server — check your signal and try again."
+        : err?.message ?? "Photo upload failed";
+      setFailed({ kind, file, message });
+      toast.error(message);
     } finally {
       setBusy(null);
     }
@@ -88,26 +94,25 @@ export function JobPhotos({
       <input ref={afterRef} type="file" accept="image/*" capture="environment" className="hidden"
         onChange={(e) => { handleFile("after", e.target.files?.[0]); e.target.value = ""; }} />
 
-      <div className="grid grid-cols-2 gap-3">
-        {(["before", "after"] as PhotoKind[]).map((kind) => (
-          <SnapUploadButton
-            key={kind}
-            label={`Use my phone (${kind})`}
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold hover:bg-muted"
-            target={{ tenantId, petId, customerId, bookingId, docType: "booking_photo", label: `${kind} photo` }}
-            onUploaded={async (docs) => {
-              try {
-                for (const d of docs ?? []) {
-                  await link.mutateAsync({ bookingId, petId, documentId: d.id, kind });
-                }
-                toast.success(`${kind === "before" ? "Before" : "After"} photo saved`);
-              } catch (err: any) {
-                toast.error(err?.message ?? "Could not attach photo");
-              }
-            }}
-          />
-        ))}
-      </div>
+      {failed && (
+        <div className="space-y-2 rounded-2xl border border-sk-coral bg-sk-coral-soft p-3 text-sm text-sk-coral-dark">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span className="min-w-0">
+              {failed.kind === "before" ? "Before" : "After"} photo didn't send — {failed.message}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleFile(failed.kind, failed.file)}
+            disabled={busy !== null}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-sk-coral px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}
+            Try again
+          </button>
+        </div>
+      )}
 
       {photos.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
