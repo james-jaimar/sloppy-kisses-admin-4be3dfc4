@@ -3,7 +3,12 @@ import { MapPinOff, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AddressSelector } from "@/features/customers/AddressSelector";
+import InlineAddressPicker, {
+  emptyDraft,
+  draftToPayload,
+  type AddressDraft,
+} from "@/features/customers/InlineAddressPicker";
+import { useCreateCustomerAddress, useUpdateCustomerAddress } from "@/features/customers/addressQueries";
 import { useUpdateBooking } from "./queries";
 import { ADDRESS_GATE_COPY, bookingAddressState, type AddressGateInput } from "./addressGate";
 
@@ -77,13 +82,40 @@ export function FixAddressDialog({
   currentAddressId: string | null;
 }) {
   const [addressId, setAddressId] = useState<string | null>(currentAddressId);
+  const [draft, setDraft] = useState<AddressDraft>({ ...emptyDraft });
+  const [editingId, setEditingId] = useState<string | null>(null);
   const update = useUpdateBooking(tenantId ?? "");
+  const createAddress = useCreateCustomerAddress(tenantId, customerId);
+  const updateAddress = useUpdateCustomerAddress(tenantId, customerId);
+
+  const hasDraft = Boolean(draft.google_place_id || draft.address_line_1 || draft.formatted_address);
+  const saving = update.isPending || createAddress.isPending || updateAddress.isPending;
 
   async function save() {
-    if (!addressId) return toast.error("Pick or add the address first");
     try {
-      await update.mutateAsync({ id: bookingId, patch: { service_address_id: addressId } as any });
+      let targetId = addressId;
+      if (!targetId && hasDraft) {
+        const payload = draftToPayload(draft);
+        if (editingId) {
+          await updateAddress.mutateAsync({ id: editingId, patch: payload as any });
+          targetId = editingId;
+        } else {
+          const created = await createAddress.mutateAsync({
+            label: "Service address",
+            address_type: "service",
+            ...payload,
+          } as any);
+          targetId = created.id;
+        }
+      }
+      if (!targetId) {
+        toast.error("Search for the address or pick a saved one first");
+        return;
+      }
+      await update.mutateAsync({ id: bookingId, patch: { service_address_id: targetId } as any });
       toast.success("Address saved onto the booking");
+      setDraft({ ...emptyDraft });
+      setEditingId(null);
       onOpenChange(false);
     } catch (e: any) {
       toast.error(e?.message ?? "Could not save the address");
@@ -92,27 +124,37 @@ export function FixAddressDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] w-[calc(100vw-2rem)] max-w-lg overflow-y-auto sm:w-full">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85dvh] w-[calc(100vw-2rem)] max-w-lg flex-col gap-0 overflow-hidden p-0 sm:w-full">
+        <DialogHeader className="shrink-0 border-b border-border p-4 sm:p-5">
           <DialogTitle>Set the service address</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Search for the address on Google so the van can navigate to it. It is saved on the customer's
-          profile too, so you only ever do this once.
-        </p>
-        <AddressSelector
-          customerId={customerId}
-          tenantId={tenantId}
-          value={addressId}
-          onChange={setAddressId}
-          label="Service address"
-        />
-        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+        <div className="min-w-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+          <p className="text-sm text-muted-foreground">
+            Search for the address on Google so the van can navigate to it. It is saved on the customer's
+            profile too, so you only ever do this once.
+          </p>
+          <InlineAddressPicker
+            customerId={customerId}
+            tenantId={tenantId}
+            value={addressId}
+            onChange={setAddressId}
+            draft={draft}
+            onDraftChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
+            editingId={editingId}
+            onEditingIdChange={setEditingId}
+          />
+        </div>
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-border p-4 sm:flex-row sm:justify-end sm:p-5">
           <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button type="button" className="w-full sm:w-auto" onClick={save} disabled={update.isPending}>
-            {update.isPending ? "Saving…" : "Save address"}
+          <Button
+            type="button"
+            className="w-full sm:w-auto"
+            onClick={save}
+            disabled={saving || (!addressId && !hasDraft)}
+          >
+            {saving ? "Saving…" : "Save address"}
           </Button>
         </div>
       </DialogContent>
