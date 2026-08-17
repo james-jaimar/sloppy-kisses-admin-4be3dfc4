@@ -4,14 +4,41 @@ export type DocumentUploadInput = {
   tenantId: string;
   petId?: string | null;
   customerId?: string | null;
+  bookingId?: string | null;
   type: string; // e.g. "vaccination", "other"
   file: File;
   uploadedVia?: "portal" | "admin";
 };
 
-// Full three-step S3 upload: sign → PUT → confirm.
-// Throws on any failure — caller shows the toast.
-export async function uploadDocumentToS3(input: DocumentUploadInput) {
+/**
+ * Preferred path: post the bytes to our own edge function, which forwards them
+ * to storage server-side. A cross-origin PUT straight to S3 from a mobile
+ * browser fails with a bare "Load failed", so we never ask the device to do it.
+ */
+async function uploadViaProxy(input: DocumentUploadInput) {
+  const form = new FormData();
+  form.append("tenant_id", input.tenantId);
+  form.append("type", input.type);
+  if (input.petId) form.append("pet_id", input.petId);
+  if (input.customerId) form.append("customer_id", input.customerId);
+  if (input.bookingId) form.append("booking_id", input.bookingId);
+  form.append("uploaded_via", input.uploadedVia ?? "portal");
+  form.append("file", input.file, input.file.name || `upload-${Date.now()}`);
+
+  const res = await supabase.functions.invoke("documents-upload", { body: form });
+  if (res.error) {
+    const details = (res.error as any)?.context
+      ? await (res.error as any).context.text?.().catch(() => null)
+      : null;
+    let message = details || res.error.message;
+    try { message = JSON.parse(details as string)?.error ?? message; } catch { /* plain text */ }
+    throw new Error(message);
+  }
+  return res.data as { document_id: string };
+}
+
+// Fallback three-step S3 upload: sign → PUT → confirm.
+async function uploadDirectToS3(input: DocumentUploadInput) {
   const signRes = await supabase.functions.invoke("documents-sign-upload", {
     body: {
       tenant_id: input.tenantId,
@@ -56,6 +83,23 @@ export async function uploadDocumentToS3(input: DocumentUploadInput) {
   }
 
   return { document_id };
+}
+
+/**
+ * Upload a document. Goes through the server-side proxy; only falls back to the
+ * direct signed-PUT chain if the proxy itself is unreachable.
+ */
+export async function uploadDocumentToS3(input: DocumentUploadInput) {
+  try {
+    return await uploadViaProxy(input);
+  } catch (err: any) {
+    const msg = String(err?.message ?? "");
+    const unreachable =
+      msg.includes("Failed to fetch") || msg.includes("Load failed") ||
+      msg.includes("NetworkError") || msg.includes("404");
+    if (!unreachable) throw err;
+    return await uploadDirectToS3(input);
+  }
 }
 
 export async function getDocumentDownloadUrl(documentId: string) {
