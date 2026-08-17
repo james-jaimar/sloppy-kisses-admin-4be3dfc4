@@ -57,7 +57,7 @@ export function AddressSelector({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <Label className="text-sm font-medium">{label}</Label>
         <Button type="button" variant="ghost" size="sm" onClick={() => { setEditing(null); setDrawerOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" />
@@ -91,7 +91,9 @@ export function AddressSelector({
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                   )}
                 </div>
-                <StaticMapThumb latitude={addr.latitude} longitude={addr.longitude} size={48} />
+                <span className="hidden shrink-0 sm:block">
+                  <StaticMapThumb latitude={addr.latitude} longitude={addr.longitude} size={48} />
+                </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="min-w-0 break-words font-medium text-sm">{addr.label || "Address"}</span>
