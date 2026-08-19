@@ -14,6 +14,7 @@ export function useNavBadges(): Record<string, number> {
   const isPlatform = profile?.user_type === "platform";
 
   const canSeeComms = isPlatform || hasPermission("comms.view");
+  const canSeeDaycare = isPlatform || hasPermission("daycare.view");
 
   const commsFailures = useQuery({
     queryKey: ["nav-badges", "comms_failed", tenantId],
@@ -33,7 +34,34 @@ export function useNavBadges(): Record<string, number> {
     },
   });
 
+  const daycareAttention = useQuery({
+    queryKey: ["nav-badges", "daycare_attention", tenantId],
+    enabled: Boolean(tenantId) && canSeeDaycare,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+    queryFn: async () => {
+      const sb = supabase as any;
+      const [notes, incidents] = await Promise.all([
+        sb
+          .from("daycare_day_notes")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId as string)
+          .eq("office_flag", true)
+          .is("handled_at", null),
+        sb
+          .from("incidents")
+          .select("id", { count: "exact", head: true })
+          .eq("tenant_id", tenantId as string)
+          .in("state", ["open", "acknowledged"]),
+      ]);
+      if (notes.error) throw notes.error;
+      if (incidents.error) throw incidents.error;
+      return (notes.count ?? 0) + (incidents.count ?? 0);
+    },
+  });
+
   return {
     "comms.view": commsFailures.data ?? 0,
+    "daycare.view": daycareAttention.data ?? 0,
   };
 }

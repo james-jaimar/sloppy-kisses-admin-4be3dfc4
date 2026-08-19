@@ -9,6 +9,7 @@ import { useDashboardTodayStats } from "@/features/dashboard/queries";
 import { useHomeAttention } from "./queries";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { HomeQuickActions } from "./HomeQuickActions";
+import { NeedsAttentionPanel } from "@/features/daycare/NeedsAttentionPanel";
 import { SoftDashboardTile, type SoftTileTone } from "@/components/ui/SoftDashboardTile";
 
 interface Tile {
@@ -66,6 +67,10 @@ export default function HomePage() {
       </header>
 
       <HomeQuickActions />
+
+      {(isPlatform || hasPermission("daycare.view")) && (
+        <NeedsAttentionPanel tenantId={tenantId} />
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 xl:grid-cols-4">
         {tiles.map((tile) => {

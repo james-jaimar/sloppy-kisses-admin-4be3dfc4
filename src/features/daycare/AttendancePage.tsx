@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
@@ -21,6 +23,36 @@ export default function AttendancePage() {
   const petsQ = useTenantPetsWithOwners(tenantId);
   const attQ = useAttendanceForRange(tenantId, from, to, petId || null);
   const rows = useMemo(() => attQ.data ?? [], [attQ.data]);
+
+  // Day notes written by daycare staff, merged into the Notes column.
+  const notesQ = useQuery({
+    queryKey: ["daycare_day_notes", "range", tenantId, from, to, petId],
+    enabled: Boolean(tenantId),
+    queryFn: async () => {
+      let q = (supabase as any)
+        .from("daycare_day_notes")
+        .select("id, pet_id, note_date, body, office_flag, handled_at")
+        .eq("tenant_id", tenantId as string)
+        .gte("note_date", from)
+        .lte("note_date", to)
+        .order("created_at", { ascending: true });
+      if (petId) q = q.eq("pet_id", petId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as { id: string; pet_id: string; note_date: string; body: string; office_flag: boolean; handled_at: string | null }[];
+    },
+  });
+
+  const notesByKey = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const n of notesQ.data ?? []) {
+      const key = `${n.pet_id}|${n.note_date}`;
+      const list = m.get(key) ?? [];
+      list.push(n.office_flag && !n.handled_at ? `⚑ ${n.body}` : n.body);
+      m.set(key, list);
+    }
+    return m;
+  }, [notesQ.data]);
 
   return (
     <>
@@ -83,7 +115,11 @@ export default function AttendancePage() {
                     <td className="px-5 py-3 capitalize">{a.status.replace("_"," ")}</td>
                     <td className="px-5 py-3 tabular-nums">{a.checked_in_at ? new Date(a.checked_in_at).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"}) : "-"}</td>
                     <td className="px-5 py-3 tabular-nums">{a.checked_out_at ? new Date(a.checked_out_at).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"}) : "-"}</td>
-                    <td className="px-5 py-3 text-xs text-muted-foreground truncate max-w-[220px]">{a.notes ?? "-"}</td>
+                   <td className="px-5 py-3 text-xs text-muted-foreground max-w-[260px] whitespace-pre-wrap">
+                     {[a.notes, ...(notesByKey.get(`${a.pet_id}|${a.attendance_date}`) ?? [])]
+                       .filter(Boolean)
+                       .join("\n") || "-"}
+                   </td>
                   </tr>
                 ))}
               </tbody>

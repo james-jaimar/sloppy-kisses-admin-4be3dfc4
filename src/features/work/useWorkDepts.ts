@@ -22,6 +22,7 @@ export function useWorkDepts() {
       myResourceIds: resourceKey ? resourceKey.split(",") : [],
       canAccess: hasPermission("work.access"),
       canSignoff: hasPermission("work.signoff"),
+      canAddDaycareNotes: hasPermission("daycare.notes"),
       canRaiseIncident: hasPermission("incidents.raise"),
       canAcknowledgeIncident: hasPermission("incidents.acknowledge"),
       profile,
