@@ -8,6 +8,8 @@ interface Props {
   graceMinutes?: number;
   /** Show the expected collection time next to the label. */
   showTime?: boolean;
+  /** Show where the session came from ("Grooming" / "Hotel"). */
+  showOrigin?: boolean;
   size?: "xs" | "sm";
   className?: string;
 }
@@ -16,7 +18,7 @@ interface Props {
  * The one and only Stay & Play indicator. Used on every board, list, detail
  * panel and portal screen so the flag always looks the same.
  */
-export function StayPlayBadge({ sessions, graceMinutes = 15, showTime = true, size = "xs", className }: Props) {
+export function StayPlayBadge({ sessions, graceMinutes = 15, showTime = true, showOrigin = false, size = "xs", className }: Props) {
   const rows = sessions ?? [];
   if (rows.length === 0) return null;
 
@@ -35,6 +37,8 @@ export function StayPlayBadge({ sessions, graceMinutes = 15, showTime = true, si
       : "bg-sk-turquoise-soft text-sk-turquoise-dark";
 
   const pad = size === "sm" ? "px-2 py-0.5 text-xs" : "px-1.5 py-0.5 text-[11px]";
+  const origins = Array.from(new Set(rows.map((s) => s.origin))).filter(Boolean);
+  const originText = origins.map((o) => (o === "grooming" ? "Grooming" : "Hotel")).join(" + ");
 
   return (
     <span
@@ -47,6 +51,7 @@ export function StayPlayBadge({ sessions, graceMinutes = 15, showTime = true, si
     >
       {late != null ? <AlarmClock className="h-3 w-3 shrink-0" /> : <Sparkles className="h-3 w-3 shrink-0" />}
       Stay &amp; Play
+      {showOrigin && originText && <span className="font-medium">· {originText}</span>}
       {late != null
         ? <span>· overdue {late}m</span>
         : showTime && next?.expected_collect_at && !allCollected

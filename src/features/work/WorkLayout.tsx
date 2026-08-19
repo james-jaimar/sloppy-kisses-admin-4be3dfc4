@@ -33,8 +33,11 @@ export default function WorkLayout() {
     );
   }
 
+  const daycareOnly = depts.length === 1 && depts[0] === "daycare";
+  if (daycareOnly && location.pathname === "/work") return <Navigate to="/work/daycare" replace />;
+
   const tabs = [
-    { to: "/work", label: "My day", icon: ClipboardList, end: true, show: true },
+    { to: "/work", label: "My day", icon: ClipboardList, end: true, show: !daycareOnly },
     { to: "/work/hotel", label: "Hotel", icon: Hotel, show: depts.includes("hotel") },
     { to: "/work/daycare", label: "Daycare", icon: Dog, show: depts.includes("daycare") },
     {
