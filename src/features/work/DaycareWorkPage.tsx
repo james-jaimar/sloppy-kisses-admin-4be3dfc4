@@ -25,10 +25,10 @@ export default function DaycareWorkPage() {
   const notesQ = useDaycareDayNotes(tenantId, dateIso);
 
   const notesByPet = useMemo(() => {
-    const m = new Map<string, typeof notesQ.data extends (infer T)[] | undefined ? T[] : never>();
+    const m = new Map<string, DaycareDayNote[]>();
     for (const n of notesQ.data ?? []) {
-      const list = m.get(n.pet_id) ?? ([] as any);
-      list.push(n as any);
+      const list = m.get(n.pet_id) ?? [];
+      list.push(n);
       m.set(n.pet_id, list);
     }
     return m;
