@@ -13,6 +13,7 @@ import { PetHealthPanel } from "./PetHealthPanel";
 import { HealthGateBanner } from "./HealthGateBanner";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import { PinnedNotesBanner } from "@/features/customers/PinnedNotesBanner";
+import { PetDayNotesCard } from "@/features/daycare/PetDayNotesCard";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PetGroomingDefaultsPanel } from "@/features/grooming/instructions/PetGroomingDefaultsPanel";
 import { SizeOverrideControl, SizeOverrideBadge } from "./SizeOverrideControl";
@@ -194,6 +195,8 @@ export default function PetDetailPage() {
                 <div className="text-sm text-muted-foreground">No linked customer.</div>
               )}
             </div>
+
+            <PetDayNotesCard tenantId={tenant?.id ?? null} petId={pet.id} />
 
             {tenant && (
               <div className="px-1">
