@@ -115,7 +115,11 @@ export default function AttendancePage() {
                     <td className="px-5 py-3 capitalize">{a.status.replace("_"," ")}</td>
                     <td className="px-5 py-3 tabular-nums">{a.checked_in_at ? new Date(a.checked_in_at).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"}) : "-"}</td>
                     <td className="px-5 py-3 tabular-nums">{a.checked_out_at ? new Date(a.checked_out_at).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"}) : "-"}</td>
-                    <td className="px-5 py-3 text-xs text-muted-foreground truncate max-w-[220px]">{a.notes ?? "-"}</td>
+                   <td className="px-5 py-3 text-xs text-muted-foreground max-w-[260px] whitespace-pre-wrap">
+                     {[a.notes, ...(notesByKey.get(`${a.pet_id}|${a.attendance_date}`) ?? [])]
+                       .filter(Boolean)
+                       .join("\n") || "-"}
+                   </td>
                   </tr>
                 ))}
               </tbody>
