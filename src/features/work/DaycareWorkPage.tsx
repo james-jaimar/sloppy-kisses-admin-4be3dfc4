@@ -4,7 +4,7 @@ import { Bell, Check, Loader2, LogIn, LogOut, PawPrint, StickyNote } from "lucid
 import { WorkTopBar } from "./WorkTopBar";
 import { useWorkDepts } from "./useWorkDepts";
 import { DayNoteSheet } from "./DayNoteSheet";
-import { useDaycareDayNotes } from "@/features/daycare/dayNotesQueries";
+import { useDaycareDayNotes, type DaycareDayNote } from "@/features/daycare/dayNotesQueries";
 import {
   isoDate, useAttendanceForDay, useExpectedForDay, useUpsertAttendance,
   useDaycareWorkflowSettings,
