@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, Loader2, LogIn, LogOut, PawPrint } from "lucide-react";
+import { Bell, Check, Loader2, LogIn, LogOut, PawPrint, StickyNote } from "lucide-react";
 import { WorkTopBar } from "./WorkTopBar";
 import { useWorkDepts } from "./useWorkDepts";
+import { DayNoteSheet } from "./DayNoteSheet";
+import { useDaycareDayNotes } from "@/features/daycare/dayNotesQueries";
 import {
   isoDate, useAttendanceForDay, useExpectedForDay, useUpsertAttendance,
   useDaycareWorkflowSettings,
@@ -11,14 +13,26 @@ import {
 import { StayPlayLane } from "@/features/daycare/StayPlayLane";
 
 export default function DaycareWorkPage() {
-  const { tenantId } = useWorkDepts();
+  const { tenantId, canAddDaycareNotes } = useWorkDepts();
   const [day, setDay] = useState(() => new Date());
   const dateIso = isoDate(day);
+  const [noteFor, setNoteFor] = useState<{ petId: string; petName: string; customerId: string | null } | null>(null);
 
   const expected = useExpectedForDay(tenantId, day);
   const attendanceQ = useAttendanceForDay(tenantId, day);
   const upsert = useUpsertAttendance(tenantId ?? "");
   const settingsQ = useDaycareWorkflowSettings(tenantId);
+  const notesQ = useDaycareDayNotes(tenantId, dateIso);
+
+  const notesByPet = useMemo(() => {
+    const m = new Map<string, typeof notesQ.data extends (infer T)[] | undefined ? T[] : never>();
+    for (const n of notesQ.data ?? []) {
+      const list = m.get(n.pet_id) ?? ([] as any);
+      list.push(n as any);
+      m.set(n.pet_id, list);
+    }
+    return m;
+  }, [notesQ.data]);
 
   const byPet = useMemo(() => {
     const m = new Map<string, AttendanceRow>();
@@ -98,6 +112,7 @@ export default function DaycareWorkPage() {
           const att = byPet.get(r.pet_id);
           const isIn = att?.status === "checked_in";
           const isOut = att?.status === "checked_out";
+          const notes = notesByPet.get(r.pet_id) ?? [];
           return (
             <div key={r.key} className="rounded-2xl border border-border bg-white p-4">
               <div className="flex items-center gap-3">
@@ -134,11 +149,52 @@ export default function DaycareWorkPage() {
                   <LogOut className="h-5 w-5" /> Out
                 </button>
               </div>
+              {canAddDaycareNotes && (
+                <button
+                  onClick={() => setNoteFor({ petId: r.pet_id, petName: r.pet_name, customerId: r.customer_id })}
+                  className="mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl border border-border text-base font-semibold active:bg-muted"
+                >
+                  <StickyNote className="h-5 w-5" /> Add note
+                </button>
+              )}
+              {notes.length > 0 && (
+                <ul className="mt-2 space-y-1.5">
+                  {notes.map((n: any) => (
+                    <li
+                      key={n.id}
+                      className={`rounded-xl border p-2.5 text-sm ${
+                        n.office_flag && !n.handled_at
+                          ? "border-sk-orange bg-sk-orange-soft"
+                          : "border-border bg-muted/40"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        {n.office_flag && <Bell className="h-3 w-3" />}
+                        <span>{n.author?.full_name ?? n.author?.email ?? "Staff"}</span>
+                        <span>·</span>
+                        <span>{new Date(n.created_at).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" })}</span>
+                        {n.handled_at && <span>· handled</span>}
+                      </div>
+                      <div className="whitespace-pre-wrap">{n.body}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           );
         })}
         </div>
       </div>
+      {noteFor && tenantId && (
+        <DayNoteSheet
+          tenantId={tenantId}
+          petId={noteFor.petId}
+          petName={noteFor.petName}
+          customerId={noteFor.customerId}
+          dateIso={dateIso}
+          onClose={() => setNoteFor(null)}
+        />
+      )}
     </>
   );
 }
