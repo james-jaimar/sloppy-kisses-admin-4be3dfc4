@@ -708,6 +708,8 @@ export type Database = {
           estimate_id: string | null
           id: string
           invoice_id: string | null
+          invoice_review_needed: boolean
+          invoice_review_reason: string | null
           notes_customer: string | null
           notes_internal: string | null
           recurring_rule_id: string | null
@@ -753,6 +755,8 @@ export type Database = {
           estimate_id?: string | null
           id?: string
           invoice_id?: string | null
+          invoice_review_needed?: boolean
+          invoice_review_reason?: string | null
           notes_customer?: string | null
           notes_internal?: string | null
           recurring_rule_id?: string | null
@@ -798,6 +802,8 @@ export type Database = {
           estimate_id?: string | null
           id?: string
           invoice_id?: string | null
+          invoice_review_needed?: boolean
+          invoice_review_reason?: string | null
           notes_customer?: string | null
           notes_internal?: string | null
           recurring_rule_id?: string | null
