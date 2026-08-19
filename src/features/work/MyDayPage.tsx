@@ -71,6 +71,11 @@ export default function MyDayPage() {
       />
       <StayPlayFlagsProvider tenantId={tenantId} bookingIds={jobs.map((j) => j.id)}>
       <div className="mx-auto max-w-5xl space-y-3 p-4">
+        {depts.includes("daycare") && (
+          <p className="rounded-xl border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+            Booked jobs only — enrolled daycare dogs are on the Daycare tab.
+          </p>
+        )}
         {jobsQ.isLoading && (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" /> Loading your day…
