@@ -1975,6 +1975,87 @@ export type Database = {
           },
         ]
       }
+      daycare_day_notes: {
+        Row: {
+          author_profile_id: string | null
+          body: string
+          created_at: string
+          customer_id: string | null
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          note_date: string
+          office_flag: boolean
+          pet_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_profile_id?: string | null
+          body: string
+          created_at?: string
+          customer_id?: string | null
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          note_date?: string
+          office_flag?: boolean
+          pet_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_profile_id?: string | null
+          body?: string
+          created_at?: string
+          customer_id?: string | null
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          note_date?: string
+          office_flag?: boolean
+          pet_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daycare_day_notes_author_profile_id_fkey"
+            columns: ["author_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_day_notes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_day_notes_handled_by_fkey"
+            columns: ["handled_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_day_notes_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daycare_day_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daycare_day_swaps: {
         Row: {
           created_at: string
