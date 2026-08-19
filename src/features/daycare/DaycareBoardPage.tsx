@@ -11,6 +11,7 @@ import {
 import { DaycarePetCard } from "./DaycarePetCard";
 import { DaycareListView } from "./DaycareListView";
 import { StayPlayLane } from "./StayPlayLane";
+import { NeedsAttentionPanel } from "./NeedsAttentionPanel";
 import { useDaycareWorkflowSettings } from "./queries";
 import { useStayPlayForDay, overdueMinutes } from "./stayPlayQueries";
 import { WalkInDialog } from "./WalkInDialog";
@@ -149,6 +150,7 @@ export default function DaycareBoardPage() {
         </div>
 
         {tenantId && <StayPlayLane tenantId={tenantId} day={day} graceMinutes={grace} />}
+        <NeedsAttentionPanel tenantId={tenantId} />
 
         {expected.items.length === 0 && attendance.length === 0 && (
           <div className="sk-card grid place-items-center gap-2 p-12 text-center text-sm text-muted-foreground">
