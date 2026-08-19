@@ -73,11 +73,12 @@ export function AppHeader({ title, subtitle, tabs, actions }: Props) {
     <header className="sticky top-0 z-30 border-b border-border bg-sk-surface/85 backdrop-blur">
 
       {isPortal ? (
-        <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
-          <div className="min-w-0">
+        <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6">
+          <div className="min-w-0 flex-1">
             {title && <h1 className="text-lg sm:text-xl font-semibold tracking-tight truncate">{title}</h1>}
             {subtitle && <p className="text-xs sm:text-sm text-muted-foreground truncate">{subtitle}</p>}
           </div>
+          {actions && <div className="order-last w-full sm:order-none sm:w-auto">{actions}</div>}
           <div className="relative flex items-center gap-2 shrink-0" ref={menuRef}>
             <button
               onClick={() => setMenuOpen((v) => !v)}
