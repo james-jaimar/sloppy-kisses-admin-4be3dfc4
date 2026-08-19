@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
@@ -21,6 +23,36 @@ export default function AttendancePage() {
   const petsQ = useTenantPetsWithOwners(tenantId);
   const attQ = useAttendanceForRange(tenantId, from, to, petId || null);
   const rows = useMemo(() => attQ.data ?? [], [attQ.data]);
+
+  // Day notes written by daycare staff, merged into the Notes column.
+  const notesQ = useQuery({
+    queryKey: ["daycare_day_notes", "range", tenantId, from, to, petId],
+    enabled: Boolean(tenantId),
+    queryFn: async () => {
+      let q = (supabase as any)
+        .from("daycare_day_notes")
+        .select("id, pet_id, note_date, body, office_flag, handled_at")
+        .eq("tenant_id", tenantId as string)
+        .gte("note_date", from)
+        .lte("note_date", to)
+        .order("created_at", { ascending: true });
+      if (petId) q = q.eq("pet_id", petId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as { id: string; pet_id: string; note_date: string; body: string; office_flag: boolean; handled_at: string | null }[];
+    },
+  });
+
+  const notesByKey = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const n of notesQ.data ?? []) {
+      const key = `${n.pet_id}|${n.note_date}`;
+      const list = m.get(key) ?? [];
+      list.push(n.office_flag && !n.handled_at ? `⚑ ${n.body}` : n.body);
+      m.set(key, list);
+    }
+    return m;
+  }, [notesQ.data]);
 
   return (
     <>
