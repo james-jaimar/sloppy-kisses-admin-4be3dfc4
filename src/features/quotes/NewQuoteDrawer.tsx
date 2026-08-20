@@ -149,6 +149,28 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
 
   const stayPlay = isStayPlayWindow(checkOutWindow);
 
+  // Stay & Play is charged by the collection-window button, not by the extras list.
+  const stayPlaySurcharge: any = useMemo(
+    () => (surchargesQ.data ?? []).find((s: any) => s.code === "late_checkout") ?? null,
+    [surchargesQ.data],
+  );
+  const stayPlayUnit = Number(stayPlaySurcharge?.amount_zar ?? stayPlaySurcharge?.price_zar ?? 0);
+  const stayPlayQty = Math.max(1, petIds.length);
+
+  useEffect(() => {
+    if (!stayPlaySurcharge) return;
+    const id = stayPlaySurcharge.id;
+    setSurcharges((prev) => {
+      const want = stayPlay ? stayPlayQty : 0;
+      const cur = prev[id] ?? 0;
+      if (cur === want) return prev;
+      const next = { ...prev };
+      if (want > 0) next[id] = want;
+      else delete next[id];
+      return next;
+    });
+  }, [stayPlay, stayPlayQty, stayPlaySurcharge]);
+
   async function save() {
     if (!customerId) { toast.error("Pick a customer"); return; }
     if (petIds.length === 0) { toast.error("Pick at least one pet"); return; }
