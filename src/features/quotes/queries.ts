@@ -32,7 +32,13 @@ export interface QuoteExtras {
   check_out_window?: string | null;
   notes?: string | null;
   surcharges?: { surcharge_id: string; quantity: number }[];
-  pets?: { pet_id: string; name?: string | null; grooming_required?: boolean; grooming_notes?: string | null }[];
+  pets?: {
+    pet_id: string;
+    name?: string | null;
+    accommodation_type?: string | null;
+    grooming_required?: boolean;
+    grooming_notes?: string | null;
+  }[];
 }
 
 export interface QuoteItemRow {
