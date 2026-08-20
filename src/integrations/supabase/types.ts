@@ -738,7 +738,10 @@ export type Database = {
           invoice_review_reason: string | null
           notes_customer: string | null
           notes_internal: string | null
+          payment_hold_expires_at: string | null
           recurring_rule_id: string | null
+          release_reason: string | null
+          released_at: string | null
           requires_grooming: boolean
           requires_transport: boolean
           resource_id: string | null
@@ -785,7 +788,10 @@ export type Database = {
           invoice_review_reason?: string | null
           notes_customer?: string | null
           notes_internal?: string | null
+          payment_hold_expires_at?: string | null
           recurring_rule_id?: string | null
+          release_reason?: string | null
+          released_at?: string | null
           requires_grooming?: boolean
           requires_transport?: boolean
           resource_id?: string | null
@@ -832,7 +838,10 @@ export type Database = {
           invoice_review_reason?: string | null
           notes_customer?: string | null
           notes_internal?: string | null
+          payment_hold_expires_at?: string | null
           recurring_rule_id?: string | null
+          release_reason?: string | null
+          released_at?: string | null
           requires_grooming?: boolean
           requires_transport?: boolean
           resource_id?: string | null
@@ -3864,6 +3873,7 @@ export type Database = {
           matted_rate_per_15min_zar: number
           min_lead_hours: number
           overtime_threshold_minutes: number
+          payment_hold_hours: number
           pensioner_discount_days: number[]
           pensioner_discount_pct: number
           photo_gate_mode: string
@@ -3872,6 +3882,7 @@ export type Database = {
           rebook_nudge_enabled: boolean
           rebook_weeks_max: number
           rebook_weeks_min: number
+          require_payment_to_confirm: boolean
           require_prepayment_short_notice: boolean
           sedation_default_fee_zar: number
           sedation_enabled: boolean
@@ -3894,6 +3905,7 @@ export type Database = {
           matted_rate_per_15min_zar?: number
           min_lead_hours?: number
           overtime_threshold_minutes?: number
+          payment_hold_hours?: number
           pensioner_discount_days?: number[]
           pensioner_discount_pct?: number
           photo_gate_mode?: string
@@ -3902,6 +3914,7 @@ export type Database = {
           rebook_nudge_enabled?: boolean
           rebook_weeks_max?: number
           rebook_weeks_min?: number
+          require_payment_to_confirm?: boolean
           require_prepayment_short_notice?: boolean
           sedation_default_fee_zar?: number
           sedation_enabled?: boolean
@@ -3924,6 +3937,7 @@ export type Database = {
           matted_rate_per_15min_zar?: number
           min_lead_hours?: number
           overtime_threshold_minutes?: number
+          payment_hold_hours?: number
           pensioner_discount_days?: number[]
           pensioner_discount_pct?: number
           photo_gate_mode?: string
@@ -3932,6 +3946,7 @@ export type Database = {
           rebook_nudge_enabled?: boolean
           rebook_weeks_max?: number
           rebook_weeks_min?: number
+          require_payment_to_confirm?: boolean
           require_prepayment_short_notice?: boolean
           sedation_default_fee_zar?: number
           sedation_enabled?: boolean
@@ -4470,6 +4485,7 @@ export type Database = {
           min_lead_hours: number
           no_refund_early_checkout: boolean
           overbooking_mode: string
+          payment_hold_hours: number
           peak_end_month_day: string | null
           peak_start_month_day: string | null
           photo_gate_mode: string
@@ -4477,6 +4493,7 @@ export type Database = {
           portal_activate_on_quote_accept: boolean
           quote_validity_days: number
           require_labelling_checklist: boolean
+          require_payment_to_confirm: boolean
           require_prepayment_short_notice: boolean
           tenant_id: string
           updated_at: string
@@ -4498,6 +4515,7 @@ export type Database = {
           min_lead_hours?: number
           no_refund_early_checkout?: boolean
           overbooking_mode?: string
+          payment_hold_hours?: number
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
           photo_gate_mode?: string
@@ -4505,6 +4523,7 @@ export type Database = {
           portal_activate_on_quote_accept?: boolean
           quote_validity_days?: number
           require_labelling_checklist?: boolean
+          require_payment_to_confirm?: boolean
           require_prepayment_short_notice?: boolean
           tenant_id: string
           updated_at?: string
@@ -4526,6 +4545,7 @@ export type Database = {
           min_lead_hours?: number
           no_refund_early_checkout?: boolean
           overbooking_mode?: string
+          payment_hold_hours?: number
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
           photo_gate_mode?: string
@@ -4533,6 +4553,7 @@ export type Database = {
           portal_activate_on_quote_accept?: boolean
           quote_validity_days?: number
           require_labelling_checklist?: boolean
+          require_payment_to_confirm?: boolean
           require_prepayment_short_notice?: boolean
           tenant_id?: string
           updated_at?: string
@@ -7658,9 +7679,11 @@ export type Database = {
           max_leg_gap_minutes: number
           min_lead_hours: number
           min_leg_gap_minutes: number
+          payment_hold_hours: number
           photo_gate_mode: string
           radius_gate_mode: string
           require_gate_code: boolean
+          require_payment_to_confirm: boolean
           require_prepayment_short_notice: boolean
           round_trip_multiplier: number
           suburb_fees: Json
@@ -7684,9 +7707,11 @@ export type Database = {
           max_leg_gap_minutes?: number
           min_lead_hours?: number
           min_leg_gap_minutes?: number
+          payment_hold_hours?: number
           photo_gate_mode?: string
           radius_gate_mode?: string
           require_gate_code?: boolean
+          require_payment_to_confirm?: boolean
           require_prepayment_short_notice?: boolean
           round_trip_multiplier?: number
           suburb_fees?: Json
@@ -7710,9 +7735,11 @@ export type Database = {
           max_leg_gap_minutes?: number
           min_lead_hours?: number
           min_leg_gap_minutes?: number
+          payment_hold_hours?: number
           photo_gate_mode?: string
           radius_gate_mode?: string
           require_gate_code?: boolean
+          require_payment_to_confirm?: boolean
           require_prepayment_short_notice?: boolean
           round_trip_multiplier?: number
           suburb_fees?: Json
@@ -8629,6 +8656,17 @@ export type Database = {
         Args: { p_at?: string; p_booking_id: string }
         Returns: Json
       }
+      booking_payment_gate: {
+        Args: { p_service: string; p_tenant: string }
+        Returns: {
+          gated: boolean
+          hold_hours: number
+        }[]
+      }
+      booking_payment_satisfied: {
+        Args: { p_booking_id: string }
+        Returns: boolean
+      }
       booking_photo_gate: {
         Args: { p_booking_id: string }
         Returns: {
@@ -9037,6 +9075,7 @@ export type Database = {
         }
         Returns: string
       }
+      release_expired_payment_holds: { Args: never; Returns: number }
       schedule_hotel_groom: {
         Args: {
           p_end_at: string
@@ -9171,6 +9210,7 @@ export type Database = {
         | "cancelled"
         | "no_show"
         | "grooming"
+        | "pending_payment"
       care_round_kind:
         | "fed_am"
         | "fed_pm"
@@ -9439,6 +9479,7 @@ export const Constants = {
         "cancelled",
         "no_show",
         "grooming",
+        "pending_payment",
       ],
       care_round_kind: [
         "fed_am",
