@@ -44,8 +44,7 @@ export function BookingChangeModal({
           p_reason: reason.trim() || undefined,
         });
         if (error) throw error;
-        return;
-      }
+      } else {
       const s = new Date(newStart);
       if (isNaN(s.getTime())) throw new Error("Pick a valid new date and time");
       const e = newEnd ? new Date(newEnd) : null;
@@ -55,12 +54,35 @@ export function BookingChangeModal({
         p_end_at: e && !isNaN(e.getTime()) ? e.toISOString() : undefined,
       });
       if (error) throw error;
+      }
+
+      // Pull the repriced invoice so we can tell the customer what changed.
+      const { data: bk } = await supabase
+        .from("bookings")
+        .select("invoice:invoices!bookings_invoice_id_fkey(total)")
+        .eq("id", bookingId)
+        .maybeSingle();
+      const total = (bk as any)?.invoice?.total ?? null;
+      return { total: total == null ? null : Number(total) };
     },
-    onSuccess: () => {
-      toast.success(kind === "cancel" ? "Booking cancelled" : "Booking moved");
-      qc.invalidateQueries({ queryKey: ["portal_booking", bookingId] });
+    onSuccess: async (res) => {
+      // Money for this booking lives in separate caches — refresh them all.
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["portal_booking", bookingId] }),
+        qc.invalidateQueries({ queryKey: ["hotel_money", bookingId] }),
+      ]);
       qc.invalidateQueries({ queryKey: ["portal_bookings"] });
       qc.invalidateQueries({ queryKey: ["portal_dash_upcoming"] });
+      qc.invalidateQueries({ queryKey: ["portal_invoices"] });
+      qc.invalidateQueries({ queryKey: ["portal_invoice"] });
+      qc.invalidateQueries({ queryKey: ["portal_credit_notes"] });
+      qc.invalidateQueries({ queryKey: ["portal_payment_options"] });
+
+      const money =
+        res?.total != null
+          ? ` — invoice updated to ${new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(res.total)}`
+          : "";
+      toast.success((kind === "cancel" ? "Booking cancelled" : "Booking moved") + money);
       onClose();
     },
     onError: (e: any) => {
@@ -121,7 +143,11 @@ export function BookingChangeModal({
           <button onClick={() => run.mutate()} disabled={run.isPending}
             className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
             {run.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {kind === "cancel" ? "Cancel booking" : "Move booking"}
+            {run.isPending
+              ? "Updating your invoice…"
+              : kind === "cancel"
+                ? "Cancel booking"
+                : "Move booking"}
           </button>
         </div>
       </div>
