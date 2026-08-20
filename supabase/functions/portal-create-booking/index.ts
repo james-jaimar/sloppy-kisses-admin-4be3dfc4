@@ -606,7 +606,16 @@ Deno.serve(async (req) => {
   };
 
   const { error: bpErr } = await admin.from("booking_pets").insert(
-    body.pet_ids.map((pid) => ({ tenant_id: tenantId, booking_id: bookingId, pet_id: pid })),
+    body.pet_ids.map((pid, idx) => ({
+      tenant_id: tenantId,
+      booking_id: bookingId,
+      pet_id: pid,
+      sort_order: idx,
+      accommodation_type:
+        group === "hotel"
+          ? (body.hotel?.pet_accommodations?.[pid] ?? body.hotel?.accommodation_type ?? null)
+          : null,
+    })),
   );
   if (bpErr) return cleanup(bpErr.message);
 
