@@ -107,6 +107,17 @@ Deno.serve(async (req) => {
   } | null = null;
   if (tenant?.logo_url) {
     try {
+      if (!sendTest) {
+        if (/^https?:\/\//i.test(tenant.logo_url)) {
+          logoUrl = tenant.logo_url;
+        } else {
+          const { data: signed, error: signError } = await admin.storage
+            .from("tenant-branding")
+            .createSignedUrl(tenant.logo_url, 60 * 60);
+          if (signError || !signed?.signedUrl) throw new Error(signError?.message ?? "logo signing returned no URL");
+          logoUrl = signed.signedUrl;
+        }
+      } else {
       let bytes: Uint8Array;
       let contentType = "image/png";
       if (/^https?:\/\//i.test(tenant.logo_url)) {
@@ -131,6 +142,7 @@ Deno.serve(async (req) => {
           encoding: "binary",
           contentID: "tenant-logo",
         };
+      }
       }
     } catch (e) {
       console.error("logo embed failed:", (e as Error).message);
