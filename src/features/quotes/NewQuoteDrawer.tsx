@@ -364,11 +364,11 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
           </div>
         </div>
 
-        {(surchargesQ.data ?? []).length > 0 && (
+        {(surchargesQ.data ?? []).filter((s: any) => s.code !== "late_checkout").length > 0 && (
           <div className="rounded-xl border border-border p-4">
             <div className={label}>Extras &amp; surcharges</div>
             <div className="grid gap-2 sm:grid-cols-2">
-              {(surchargesQ.data ?? []).map((s: any) => {
+              {(surchargesQ.data ?? []).filter((s: any) => s.code !== "late_checkout").map((s: any) => {
                 const qty = surcharges[s.id] ?? 0;
                 return (
                   <div key={s.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm">
