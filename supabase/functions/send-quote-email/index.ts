@@ -118,14 +118,23 @@ Deno.serve(async (req) => {
     ? render(String(tpl!.subject), ctx)
     : `Your stay quote ${q.estimate_number} from ${tenant?.name ?? "us"}`;
 
-  // Logo for the email header (best effort, long-lived signed URL).
+  // Logo for the email header. Signed the same way as the invoice emails whose
+  // logos do render (30-day URL, absolute URLs passed straight through).
   let logoUrl: string | null = null;
   if (tenant?.logo_url) {
-    try {
-      const { data: signed } = await admin.storage.from("tenant-branding")
-        .createSignedUrl(tenant.logo_url, 60 * 60 * 24 * 60);
-      logoUrl = signed?.signedUrl ?? null;
-    } catch { logoUrl = null; }
+    if (/^https?:\/\//i.test(tenant.logo_url)) {
+      logoUrl = tenant.logo_url;
+    } else {
+      try {
+        const { data: signed, error: signErr } = await admin.storage.from("tenant-branding")
+          .createSignedUrl(tenant.logo_url, 60 * 60 * 24 * 30);
+        if (signErr) console.error("logo sign failed:", signErr.message);
+        logoUrl = signed?.signedUrl ?? null;
+      } catch (e) {
+        console.error("logo sign threw:", (e as Error).message);
+        logoUrl = null;
+      }
+    }
   }
 
   const guidelines = (Array.isArray(guidelinesRow) ? guidelinesRow[0] : guidelinesRow)?.guidelines_md ?? null;
