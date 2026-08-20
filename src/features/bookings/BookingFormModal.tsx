@@ -168,6 +168,15 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [serviceType, setServiceType] = useState<ServiceType>(
     booking?.service_type ?? prefill?.service_type ?? "daycare",
   );
+  /** petId -> accommodation type for hotel stays with pets in different areas. */
+  const [petAcc, setPetAcc] = useState<Record<string, string>>(() => {
+    const seed: Record<string, string> = {};
+    for (const bp of booking?.booking_pets ?? []) {
+      const acc = (bp as any).accommodation_type as string | null | undefined;
+      if (bp.pet?.id && acc) seed[bp.pet.id] = acc;
+    }
+    return seed;
+  });
   const [status, setStatus] = useState<BookingStatus>(booking?.status ?? "confirmed");
   const isDaycare = serviceType === "daycare" || serviceType === "daycare_assessment";
   const [startAt, setStartAt] = useState<string>(
