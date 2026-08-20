@@ -352,7 +352,9 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
               </div>
               {stayPlay && (
                 <p className="mt-1 text-xs text-sk-coral-dark">
-                  Late collection — Stay &amp; Play for the day. Add the Stay &amp; Play charge below.
+                  {stayPlaySurcharge
+                    ? `Stay & Play added — R${(stayPlayUnit * stayPlayQty).toFixed(2)}${stayPlayQty > 1 ? ` (${stayPlayQty} pets)` : ""}.`
+                    : "No Stay & Play charge is set up in Settings → Hotel surcharges."}
                 </p>
               )}
               {checkOutBlock && (
