@@ -98,19 +98,54 @@ Deno.serve(async (req) => {
   };
 
   let logoUrl: string | null = null;
+  let logoAttachment: {
+    filename: string;
+    content: Uint8Array;
+    contentType: string;
+    encoding: "binary";
+    contentID: string;
+  } | null = null;
   if (tenant?.logo_url) {
-    if (/^https?:\/\//i.test(tenant.logo_url)) {
-      logoUrl = tenant.logo_url;
-    } else {
-      try {
-        const { data: signed, error: signErr } = await admin.storage.from("tenant-branding")
-          .createSignedUrl(tenant.logo_url, 60 * 60 * 24);
-        if (signErr) console.error("logo sign failed:", signErr.message);
-        logoUrl = signed?.signedUrl ?? null;
-      } catch (e) {
-        console.error("logo sign threw:", (e as Error).message);
-        logoUrl = null;
+    try {
+      if (!sendTest) {
+        if (/^https?:\/\//i.test(tenant.logo_url)) {
+          logoUrl = tenant.logo_url;
+        } else {
+          const { data: signed, error: signError } = await admin.storage
+            .from("tenant-branding")
+            .createSignedUrl(tenant.logo_url, 60 * 60);
+          if (signError || !signed?.signedUrl) throw new Error(signError?.message ?? "logo signing returned no URL");
+          logoUrl = signed.signedUrl;
+        }
+      } else {
+      let bytes: Uint8Array;
+      let contentType = "image/png";
+      if (/^https?:\/\//i.test(tenant.logo_url)) {
+        const logoRes = await fetch(tenant.logo_url);
+        if (!logoRes.ok) throw new Error(`logo fetch failed [${logoRes.status}]`);
+        bytes = new Uint8Array(await logoRes.arrayBuffer());
+        contentType = logoRes.headers.get("content-type")?.split(";")[0] || contentType;
+      } else {
+        const { data: logoBlob, error: downloadError } = await admin.storage
+          .from("tenant-branding")
+          .download(tenant.logo_url);
+        if (downloadError || !logoBlob) throw new Error(downloadError?.message ?? "logo download returned no data");
+        bytes = new Uint8Array(await logoBlob.arrayBuffer());
+        contentType = logoBlob.type || contentType;
       }
+      if (bytes.byteLength > 0) {
+        logoUrl = "cid:tenant-logo";
+        logoAttachment = {
+          filename: `tenant-logo.${contentType.includes("jpeg") ? "jpg" : contentType.includes("svg") ? "svg" : "png"}`,
+          content: bytes,
+          contentType,
+          encoding: "binary",
+          contentID: "tenant-logo",
+        };
+      }
+      }
+    } catch (e) {
+      console.error("logo embed failed:", (e as Error).message);
     }
   }
 
@@ -154,7 +189,7 @@ Deno.serve(async (req) => {
   const subject = `[TEST] Your stay quote QU-00001 from ${tenant?.name ?? "us"}`;
   const result = await sendMail(transport, recipient, subject, text, html, {
     admin, tenantId, templateCode: "test.quote_email",
-  });
+  }, logoAttachment ? [logoAttachment] : undefined);
   if (!result.ok && (result as any).blocked) {
     // guardSend already wrote the [BLOCKED] email_log row.
     return j(200, { ok: false, blocked: true, error: result.error, html });

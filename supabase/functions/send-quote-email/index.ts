@@ -118,22 +118,46 @@ Deno.serve(async (req) => {
     ? render(String(tpl!.subject), ctx)
     : `Your stay quote ${q.estimate_number} from ${tenant?.name ?? "us"}`;
 
-  // Logo for the email header. Signed the same way as the invoice emails whose
-  // logos do render (30-day URL, absolute URLs passed straight through).
+  // Embed the logo in the MIME message. Outlook commonly blocks or fails to
+  // retrieve signed remote URLs even while they are valid; CID images have no
+  // external dependency and remain visible for the lifetime of the email.
   let logoUrl: string | null = null;
+  let logoAttachment: {
+    filename: string;
+    content: Uint8Array;
+    contentType: string;
+    encoding: "binary";
+    contentID: string;
+  } | null = null;
   if (tenant?.logo_url) {
-    if (/^https?:\/\//i.test(tenant.logo_url)) {
-      logoUrl = tenant.logo_url;
-    } else {
-      try {
-        const { data: signed, error: signErr } = await admin.storage.from("tenant-branding")
-          .createSignedUrl(tenant.logo_url, 60 * 60 * 24 * 30);
-        if (signErr) console.error("logo sign failed:", signErr.message);
-        logoUrl = signed?.signedUrl ?? null;
-      } catch (e) {
-        console.error("logo sign threw:", (e as Error).message);
-        logoUrl = null;
+    try {
+      let bytes: Uint8Array;
+      let contentType = "image/png";
+      if (/^https?:\/\//i.test(tenant.logo_url)) {
+        const logoRes = await fetch(tenant.logo_url);
+        if (!logoRes.ok) throw new Error(`logo fetch failed [${logoRes.status}]`);
+        bytes = new Uint8Array(await logoRes.arrayBuffer());
+        contentType = logoRes.headers.get("content-type")?.split(";")[0] || contentType;
+      } else {
+        const { data: logoBlob, error: downloadError } = await admin.storage
+          .from("tenant-branding")
+          .download(tenant.logo_url);
+        if (downloadError || !logoBlob) throw new Error(downloadError?.message ?? "logo download returned no data");
+        bytes = new Uint8Array(await logoBlob.arrayBuffer());
+        contentType = logoBlob.type || contentType;
       }
+      if (bytes.byteLength > 0) {
+        logoUrl = "cid:tenant-logo";
+        logoAttachment = {
+          filename: `tenant-logo.${contentType.includes("jpeg") ? "jpg" : contentType.includes("svg") ? "svg" : "png"}`,
+          content: bytes,
+          contentType,
+          encoding: "binary",
+          contentID: "tenant-logo",
+        };
+      }
+    } catch (e) {
+      console.error("logo embed failed:", (e as Error).message);
     }
   }
 
@@ -245,7 +269,7 @@ Deno.serve(async (req) => {
         content: pdfBytes,
         contentType: "application/pdf",
         encoding: "binary",
-      }],
+      }, ...(logoAttachment ? [logoAttachment] : [])],
     });
     await client.close();
     ok = true;
