@@ -143,7 +143,11 @@ export function BookingChangeModal({
           <button onClick={() => run.mutate()} disabled={run.isPending}
             className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
             {run.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-            {kind === "cancel" ? "Cancel booking" : "Move booking"}
+            {run.isPending
+              ? "Updating your invoice…"
+              : kind === "cancel"
+                ? "Cancel booking"
+                : "Move booking"}
           </button>
         </div>
       </div>
