@@ -82,6 +82,7 @@ const BOOKING_SELECT = `
   service_suburb, service_city, service_postcode,
   created_at, updated_at, recurring_rule_id,
   vax_override_by, vax_override_at, vax_override_reason,
+  invoice_review_needed, invoice_review_reason,
   customer:customers(id, customer_number, full_name, email, mobile),
   resource:resources(id, name, type),
   booking_pets(pet:pets(id, pet_number, name, species, breed))
