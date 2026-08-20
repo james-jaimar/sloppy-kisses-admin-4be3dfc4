@@ -194,6 +194,9 @@ export function HotelExtrasPanel({
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <div className="mb-1 text-xs font-medium">Accommodation (rate card)</div>
+          {pets.length > 1 && (
+            <div className="mb-1 text-[11px] text-muted-foreground">Default for all pets — set each pet below.</div>
+          )}
           <select
             className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
             value={accommodationType}
@@ -239,6 +242,38 @@ export function HotelExtrasPanel({
           )}
         </div>
       </div>
+
+      {pets.length > 1 && onPetAccommodationChange && (
+        <div className="mt-4">
+          <div className="mb-2 text-xs font-medium">Accommodation per pet</div>
+          <div className="space-y-2">
+            {pets.map((p) => (
+              <div key={p.id} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:items-center">
+                <div className="text-sm">
+                  {p.name}
+                  <span className="ml-1.5 text-xs text-muted-foreground">{p.size ?? "no size"}</span>
+                </div>
+                <select
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                  value={petAccommodations?.[p.id] || accommodationType}
+                  onChange={(e) => onPetAccommodationChange(p.id, e.target.value)}
+                >
+                  <option value="">— Select accommodation —</option>
+                  {species_rates.map((r) => (
+                    <option key={r.id} value={r.accommodation_type}>
+                      {r.display_name} · {fmtZar(Number(r.nightly_rate_zar))}/night
+                      {rateAllowsPet(r, p.size) ? "" : " — size mismatch"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Two pets in the same area use that area&apos;s extra-pet rate; pets in different areas are each priced at their own nightly rate.
+          </p>
+        </div>
+      )}
 
       <div className="mt-4">
         <div className="mb-2 text-xs font-medium">Surcharges</div>
