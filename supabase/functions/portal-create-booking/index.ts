@@ -81,6 +81,8 @@ const BodySchema = z.object({
   hotel: z
     .object({
       accommodation_type: z.string().max(80).nullable().optional(),
+      /** petId -> accommodation type, so dogs of different sizes get their own area/rate. */
+      pet_accommodations: z.record(z.string().uuid(), z.string().max(80)).optional(),
       feeding_instructions: z.string().max(2000).nullable().optional(),
       medication_instructions: z.string().max(2000).nullable().optional(),
       belongings_notes: z.string().max(2000).nullable().optional(),
@@ -604,7 +606,16 @@ Deno.serve(async (req) => {
   };
 
   const { error: bpErr } = await admin.from("booking_pets").insert(
-    body.pet_ids.map((pid) => ({ tenant_id: tenantId, booking_id: bookingId, pet_id: pid })),
+    body.pet_ids.map((pid, idx) => ({
+      tenant_id: tenantId,
+      booking_id: bookingId,
+      pet_id: pid,
+      sort_order: idx,
+      accommodation_type:
+        group === "hotel"
+          ? (body.hotel?.pet_accommodations?.[pid] ?? body.hotel?.accommodation_type ?? null)
+          : null,
+    })),
   );
   if (bpErr) return cleanup(bpErr.message);
 

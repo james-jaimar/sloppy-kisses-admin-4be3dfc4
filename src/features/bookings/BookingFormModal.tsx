@@ -168,6 +168,15 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [serviceType, setServiceType] = useState<ServiceType>(
     booking?.service_type ?? prefill?.service_type ?? "daycare",
   );
+  /** petId -> accommodation type for hotel stays with pets in different areas. */
+  const [petAcc, setPetAcc] = useState<Record<string, string>>(() => {
+    const seed: Record<string, string> = {};
+    for (const bp of booking?.booking_pets ?? []) {
+      const acc = (bp as any).accommodation_type as string | null | undefined;
+      if (bp.pet?.id && acc) seed[bp.pet.id] = acc;
+    }
+    return seed;
+  });
   const [status, setStatus] = useState<BookingStatus>(booking?.status ?? "confirmed");
   const isDaycare = serviceType === "daycare" || serviceType === "daycare_assessment";
   const [startAt, setStartAt] = useState<string>(
@@ -355,6 +364,29 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   }, [kind, accom.check_out_window, durationMins]);
 
   async function persistAccommodation(bookingId: string) {
+    return persistAccommodationForm(bookingId);
+  }
+
+  /** Per-pet accommodation choice → booking_pets, so each dog is priced in its own area. */
+  async function persistPetAccommodations(bookingId: string) {
+    if (kind !== "hotel") return;
+    const fallback = hotel.accommodation_type ?? null;
+    for (const petId of petIds) {
+      const acc = petAcc[petId] || fallback;
+      if (!acc) continue;
+      const { error } = await supabase
+        .from("booking_pets")
+        .update({ accommodation_type: acc } as never)
+        .eq("booking_id", bookingId)
+        .eq("pet_id", petId);
+      if (error) {
+        toast.error("Booking saved, but per-pet accommodation did not save: " + error.message);
+        return;
+      }
+    }
+  }
+
+  async function persistAccommodationForm(bookingId: string) {
     if (kind !== "hotel") return;
     if (!accomTouched && !accom.pets.length) return;
     try {
@@ -645,6 +677,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           },
           pet_ids: petIds,
         });
+        if (kind === "hotel") await persistPetAccommodations(booking.id);
         await saveDetails(booking.id);
         if (kind === "hotel") await persistSurcharges(booking.id);
         if (kind === "hotel") await persistAccommodation(booking.id);
@@ -671,6 +704,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           });
           // Persist service-typed details for every occurrence.
           for (const b of res.bookings) {
+            if (kind === "hotel") await persistPetAccommodations(b.id);
             await saveDetails(b.id);
             if (kind === "hotel") await persistSurcharges(b.id);
             if (kind === "hotel") await persistAccommodation(b.id);
@@ -740,6 +774,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           service_address_id: serviceAddressId,
           closure_override: closureOverride,
         });
+        if (kind === "hotel") await persistPetAccommodations(res.id);
         await saveDetails(res.id);
         if (kind === "hotel") await persistSurcharges(res.id);
         if (kind === "hotel") await persistAccommodation(res.id);
@@ -1292,6 +1327,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             species={serviceType === "hotel_cat" ? "cat" : "dog"}
             accommodationType={hotel.accommodation_type ?? ""}
             onAccommodationChange={(v) => setHotel((p) => ({ ...p, accommodation_type: v || null }))}
+            petAccommodations={petAcc}
+            onPetAccommodationChange={(petId, acc) => setPetAcc((prev) => ({ ...prev, [petId]: acc }))}
             startAt={startAt ? new Date(startAt).toISOString() : null}
             endAt={endAtLocal ? new Date(endAtLocal).toISOString() : null}
             petCount={petIds.length || 1}

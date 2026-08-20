@@ -50,6 +50,8 @@ export function HotelExtrasPanel({
   petIds,
   selection,
   onSelectionChange,
+  petAccommodations,
+  onPetAccommodationChange,
 }: {
   tenantId: string;
   bookingId: string | null;
@@ -62,6 +64,9 @@ export function HotelExtrasPanel({
   petIds?: string[];
   selection: SurchargeSelection[];
   onSelectionChange: (rows: SurchargeSelection[]) => void;
+  /** petId -> accommodation type, so dogs of different sizes get their own area & rate. */
+  petAccommodations?: Record<string, string>;
+  onPetAccommodationChange?: (petId: string, accommodation: string) => void;
 }) {
   const ratesQ = useHotelRateCards(tenantId, { activeOnly: true });
   const surchargesQ = useHotelSurcharges(tenantId, { activeOnly: true });
@@ -118,14 +123,41 @@ export function HotelExtrasPanel({
 
   const preview = useMemo(() => {
     if (!activeRate || nights === 0) return null;
-    const nightlyBase = Number(activeRate.nightly_rate_zar);
-    const uplift = peak ? Number(activeRate.peak_uplift_pct) / 100 : 0;
-    const nightly = Math.round(nightlyBase * (1 + uplift) * 100) / 100;
-    const stayTotal = Math.round(nightly * nights * 100) / 100;
-    const extras = Math.max(0, petCount - 1);
-    const extraTotal = extras > 0 && Number(activeRate.extra_pet_rate_zar) > 0
-      ? Math.round(Number(activeRate.extra_pet_rate_zar) * extras * nights * 100) / 100
-      : 0;
+
+    // One stay line per area the pets are actually in.
+    const groups = new Map<string, string[]>();
+    if (pets.length > 0) {
+      for (const p of pets) {
+        const acc = petAccommodations?.[p.id] || accommodationType;
+        groups.set(acc, [...(groups.get(acc) ?? []), p.name]);
+      }
+    } else {
+      groups.set(accommodationType, Array.from({ length: Math.max(1, petCount) }, () => "Pet"));
+    }
+
+    const stayRows: { label: string; total: number }[] = [];
+    let stayTotal = 0;
+    for (const [acc, names] of groups) {
+      const rate = species_rates.find((r) => r.accommodation_type === acc);
+      if (!rate) continue;
+      const uplift = peak && Number(rate.peak_uplift_pct) > 0 ? Number(rate.peak_uplift_pct) / 100 : 0;
+      const nightly = Math.round(Number(rate.nightly_rate_zar) * (1 + uplift) * 100) / 100;
+      const total = Math.round(nightly * nights * 100) / 100;
+      stayRows.push({
+        label: `${rate.display_name} (${names[0]}) · ${nights} night${nights === 1 ? "" : "s"} @ ${fmtZar(nightly)}${uplift ? ` (peak +${uplift * 100}%)` : ""}`,
+        total,
+      });
+      stayTotal += total;
+      const extras = names.length - 1;
+      if (extras > 0 && Number(rate.extra_pet_rate_zar) > 0) {
+        const extraTotal = Math.round(Number(rate.extra_pet_rate_zar) * extras * nights * 100) / 100;
+        stayRows.push({
+          label: `Extra pet${extras > 1 ? "s" : ""} in ${rate.display_name} · ${extras} × ${nights} night${nights === 1 ? "" : "s"}`,
+          total: extraTotal,
+        });
+        stayTotal += extraTotal;
+      }
+    }
 
     const surchargeRows = selection
       .map((s) => {
@@ -138,9 +170,10 @@ export function HotelExtrasPanel({
       .filter(Boolean) as { name: string; qty: number; unit: number; total: number; per_night: boolean }[];
 
     const surchargeTotal = surchargeRows.reduce((sum, r) => sum + r.total, 0);
-    const grand = stayTotal + extraTotal + surchargeTotal;
-    return { nightly, nights, stayTotal, extras, extraTotal, surchargeRows, surchargeTotal, grand, peak, uplift: uplift * 100 };
-  }, [activeRate, nights, peak, petCount, selection, surchargesQ.data]);
+    const grand = stayTotal + surchargeTotal;
+    return { nights, stayRows, stayTotal, surchargeRows, surchargeTotal, grand, peak };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRate, nights, peak, petCount, pets, petAccommodations, accommodationType, selection, surchargesQ.data]);
 
   function toggleSurcharge(id: string) {
     const exists = selection.find((s) => s.surcharge_id === id);
@@ -161,6 +194,9 @@ export function HotelExtrasPanel({
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <div className="mb-1 text-xs font-medium">Accommodation (rate card)</div>
+          {pets.length > 1 && (
+            <div className="mb-1 text-[11px] text-muted-foreground">Default for all pets — set each pet below.</div>
+          )}
           <select
             className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
             value={accommodationType}
@@ -207,6 +243,38 @@ export function HotelExtrasPanel({
         </div>
       </div>
 
+      {pets.length > 1 && onPetAccommodationChange && (
+        <div className="mt-4">
+          <div className="mb-2 text-xs font-medium">Accommodation per pet</div>
+          <div className="space-y-2">
+            {pets.map((p) => (
+              <div key={p.id} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:items-center">
+                <div className="text-sm">
+                  {p.name}
+                  <span className="ml-1.5 text-xs text-muted-foreground">{p.size ?? "no size"}</span>
+                </div>
+                <select
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                  value={petAccommodations?.[p.id] || accommodationType}
+                  onChange={(e) => onPetAccommodationChange(p.id, e.target.value)}
+                >
+                  <option value="">— Select accommodation —</option>
+                  {species_rates.map((r) => (
+                    <option key={r.id} value={r.accommodation_type}>
+                      {r.display_name} · {fmtZar(Number(r.nightly_rate_zar))}/night
+                      {rateAllowsPet(r, p.size) ? "" : " — size mismatch"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Two pets in the same area use that area&apos;s extra-pet rate; pets in different areas are each priced at their own nightly rate.
+          </p>
+        </div>
+      )}
+
       <div className="mt-4">
         <div className="mb-2 text-xs font-medium">Surcharges</div>
         {(surchargesQ.data ?? []).length === 0 ? (
@@ -246,10 +314,9 @@ export function HotelExtrasPanel({
         <div className="mt-4 rounded-lg border border-border bg-sk-surface-muted p-3 text-sm">
           <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Price preview</div>
           <div className="space-y-1">
-            <Row label={`Stay · ${preview.nights} night${preview.nights === 1 ? "" : "s"} @ ${fmtZar(preview.nightly)}${preview.peak ? ` (peak +${preview.uplift}%)` : ""}`} value={fmtZar(preview.stayTotal)} />
-            {preview.extraTotal > 0 && (
-              <Row label={`Extra pet${preview.extras > 1 ? "s" : ""} · ${preview.extras} × ${preview.nights} night`} value={fmtZar(preview.extraTotal)} />
-            )}
+            {preview.stayRows.map((r, i) => (
+              <Row key={`stay${i}`} label={r.label} value={fmtZar(r.total)} />
+            ))}
             {preview.surchargeRows.map((r, i) => (
               <Row key={i} label={`${r.name}${r.per_night ? ` · ${preview.nights} night` : ""}`} value={fmtZar(r.total)} />
             ))}

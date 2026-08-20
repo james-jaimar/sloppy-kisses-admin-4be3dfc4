@@ -88,6 +88,8 @@ export default function HotelRequestWizard() {
   const [nights, setNights] = useState(1);
   const [roomPref, setRoomPref] = useState("");
   const [accommodationType, setAccommodationType] = useState("");
+  /** Per-dog accommodation — dogs of different sizes can be in different areas. */
+  const [petAcc, setPetAcc] = useState<Record<string, string>>({});
   const [form, setForm] = useState<AccommodationFormPayload>(emptyAccommodationForm());
   const [seeded, setSeeded] = useState(false);
 
@@ -142,6 +144,7 @@ export default function HotelRequestWizard() {
       .join(", ")}`;
   };
   const activeRate = speciesRates.find((r) => r.accommodation_type === accommodationType) ?? null;
+  const accFor = (petId: string) => petAcc[petId] || accommodationType;
 
   // Clear a choice that no longer fits the selected pets / species.
   useEffect(() => {
@@ -151,19 +154,39 @@ export default function HotelRequestWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speciesRates, petIds.join(",")]);
 
+  /** One line per dog, using that dog's own area; a second dog in the same area uses its extra-pet rate. */
   const estimate = useMemo(() => {
-    if (!activeRate) return null;
-    const nightly = Number(activeRate.nightly_rate_zar);
-    const stayTotal = Math.round(nightly * nights * 100) / 100;
-    const extras = Math.max(0, petIds.length - 1);
-    const extraTotal =
-      extras > 0 && Number(activeRate.extra_pet_rate_zar) > 0
-        ? Math.round(Number(activeRate.extra_pet_rate_zar) * extras * nights * 100) / 100
-        : 0;
-    return { nightly, stayTotal, extras, extraTotal, grand: stayTotal + extraTotal };
-  }, [activeRate, nights, petIds.length]);
+    if (selectedPets.length === 0) return null;
+    const groups = new Map<string, string[]>();
+    for (const p of selectedPets as any[]) {
+      const acc = petAcc[p.id] || accommodationType;
+      if (!acc) return null;
+      groups.set(acc, [...(groups.get(acc) ?? []), p.name as string]);
+    }
+    const lines: { label: string; amount: number }[] = [];
+    for (const [acc, names] of groups) {
+      const rate: any = speciesRates.find((r) => r.accommodation_type === acc);
+      if (!rate) return null;
+      const nightly = Number(rate.nightly_rate_zar);
+      lines.push({
+        label: `${rate.display_name} (${names[0]}) · ${fmtZar(nightly)} × ${nights} night${nights === 1 ? "" : "s"}`,
+        amount: Math.round(nightly * nights * 100) / 100,
+      });
+      const extras = names.length - 1;
+      if (extras > 0 && Number(rate.extra_pet_rate_zar) > 0) {
+        lines.push({
+          label: `Extra pet${extras === 1 ? "" : "s"} in ${rate.display_name} (${names.slice(1).join(", ")}) × ${nights} night${nights === 1 ? "" : "s"}`,
+          amount: Math.round(Number(rate.extra_pet_rate_zar) * extras * nights * 100) / 100,
+        });
+      }
+    }
+    return { lines, grand: lines.reduce((s, l) => s + l.amount, 0) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPets, petAcc, accommodationType, speciesRates, nights]);
 
-  const stayReady = petIds.length > 0 && !!checkInDate && nights >= 1 && !!accommodationType;
+  const stayReady =
+    petIds.length > 0 && !!checkInDate && nights >= 1 &&
+    selectedPets.every((p: any) => Boolean(accFor(p.id)));
 
   // Pet photo requirement (Settings → Hotel & Cattery workflow).
   const photoMode = usePhotoGateMode(cust.data?.tenant_id, serviceType);
@@ -217,6 +240,7 @@ export default function HotelRequestWizard() {
       notes: notes || null,
       hotel: {
         accommodation_type: accommodationType || null,
+        pet_accommodations: Object.fromEntries(selectedPets.map((p: any) => [p.id, accFor(p.id)])),
         feeding_instructions: petCare || null,
         check_in_window: payload.check_in_window || null,
         check_out_window: payload.check_out_window || null,
@@ -342,7 +366,10 @@ export default function HotelRequestWizard() {
             </Field>
           </div>
 
-          <Field label="Accommodation" hint="This sets the nightly rate. Final room allocation is confirmed by our team.">
+          <Field
+            label={selectedPets.length > 1 ? "Accommodation (default for all pets)" : "Accommodation"}
+            hint="This sets the nightly rate. Final room allocation is confirmed by our team."
+          >
             <select
               value={accommodationType}
               onChange={(e) => setAccommodationType(e.target.value)}
@@ -366,26 +393,54 @@ export default function HotelRequestWizard() {
             )}
           </Field>
 
+          {selectedPets.length > 1 && (
+            <Field
+              label="Accommodation per pet"
+              hint="Pets of different sizes can stay in different areas — each is priced at its own nightly rate."
+            >
+              <div className="space-y-2">
+                {selectedPets.map((p: any) => (
+                  <div key={p.id} className="space-y-1">
+                    <div className="text-xs font-semibold text-muted-foreground">
+                      {p.name}
+                      <span className="ml-1.5 font-normal">{p.size_override ?? p.size ?? "no size set"}</span>
+                    </div>
+                    <select
+                      value={accFor(p.id)}
+                      onChange={(e) => setPetAcc({ ...petAcc, [p.id]: e.target.value })}
+                      className={selectCls}
+                    >
+                      <option value="">— Select accommodation —</option>
+                      {speciesRates.map((r) => {
+                        const fits = rateAllowsSize(
+                          r,
+                          ((p.size_override ?? p.size) ?? null) as PetSizeBand | null,
+                        );
+                        return (
+                          <option key={r.id} value={r.accommodation_type} disabled={!fits}>
+                            {r.display_name} · {fmtZar(Number(r.nightly_rate_zar))}/night
+                            {fits ? "" : " — not available for this size"}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </Field>
+          )}
+
           {estimate && (
             <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Estimated cost
               </div>
-              <div className="flex justify-between">
-                <span>
-                  {fmtZar(estimate.nightly)} × {nights} night{nights === 1 ? "" : "s"}
-                </span>
-                <span>{fmtZar(estimate.stayTotal)}</span>
-              </div>
-              {estimate.extraTotal > 0 && (
-                <div className="flex justify-between">
-                  <span>
-                    Extra pet{estimate.extras === 1 ? "" : "s"} ({estimate.extras}) × {nights} night
-                    {nights === 1 ? "" : "s"}
-                  </span>
-                  <span>{fmtZar(estimate.extraTotal)}</span>
+              {estimate.lines.map((l) => (
+                <div key={l.label} className="flex justify-between gap-3">
+                  <span>{l.label}</span>
+                  <span>{fmtZar(l.amount)}</span>
                 </div>
-              )}
+              ))}
               <div className="mt-2 flex justify-between border-t border-border pt-2 font-semibold">
                 <span>Estimated total</span>
                 <span>{fmtZar(estimate.grand)}</span>

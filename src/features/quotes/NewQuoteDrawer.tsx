@@ -16,7 +16,7 @@ import {
   usePublicHolidays, movementBlockReason, MOVEMENT_RULES_NOTE,
 } from "@/features/hotelForm/dayRules";
 import {
-  useCreateQuote, useHotelStayLines, useQuoteValidityDays, usePencilledDays,
+  useCreateQuote, useHotelStayLinesPerPet, useQuoteValidityDays, usePencilledDays,
   type QuoteExtras,
 } from "./queries";
 
@@ -54,6 +54,8 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
   const [checkOutWindow, setCheckOutWindow] = useState("");
   const [surcharges, setSurcharges] = useState<Record<string, number>>({});
   const [grooming, setGrooming] = useState<Record<string, { on: boolean; notes: string }>>({});
+  /** Accommodation per dog — two dogs of different sizes can be in different areas. */
+  const [petAcc, setPetAcc] = useState<Record<string, string>>({});
 
   const petsQ = useCustomerPets(customerId || null, tenantId);
   const ratesQ = useHotelRateCards(tenantId, { activeOnly: true });
@@ -66,13 +68,21 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
   const rates = (ratesQ.data ?? []).filter((r) => r.species === species);
   const selectedPets = (petsQ.data ?? []).filter((p: any) => petIds.includes(p.id));
 
-  const pricedQ = useHotelStayLines({
+  const accFor = (petId: string) => petAcc[petId] || accommodation;
+
+  const stayPets = useMemo(
+    () =>
+      selectedPets.map((p: any) => ({ name: p.name as string, accommodation_type: accFor(p.id) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedPets, petAcc, accommodation],
+  );
+
+  const pricedQ = useHotelStayLinesPerPet({
     tenantId,
     species,
-    accommodationType: accommodation || null,
     start: startDate || null,
     end: endDate || null,
-    petCount: Math.max(1, petIds.length),
+    pets: stayPets,
   });
   const pencilledQ = usePencilledDays({ tenantId, start: startDate || null, end: endDate || null });
 
@@ -82,7 +92,23 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
     }
   }, [validityQ.data, expiry]);
 
-  useEffect(() => { setPetIds([]); setGrooming({}); }, [customerId]);
+  useEffect(() => { setPetIds([]); setGrooming({}); setPetAcc({}); }, [customerId]);
+
+  // Default each dog to an area that fits its size (falling back to the stay default).
+  useEffect(() => {
+    if (selectedPets.length === 0 || rates.length === 0) return;
+    setPetAcc((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const p of selectedPets as any[]) {
+        if (next[p.id]) continue;
+        const fit = rates.find((r: any) => rateAllowsSize(r, p.size ?? null));
+        const val = accommodation || fit?.accommodation_type;
+        if (val) { next[p.id] = val; changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [selectedPets, rates, accommodation]);
 
   const checkOutOptions = useMemo(() => checkOutWindowsFor(endDate || null), [endDate]);
   useEffect(() => {
@@ -127,12 +153,17 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
   const total = allLines.reduce((s, l) => s + l.quantity * l.unit_price, 0);
 
   const sizeWarnings = useMemo(() => {
-    const rate: any = rates.find((r) => r.accommodation_type === accommodation);
-    if (!rate) return [] as string[];
-    return selectedPets
-      .filter((p: any) => !rateAllowsSize(rate, p.size ?? null))
-      .map((p: any) => `${p.name}${p.size ? ` (${p.size})` : " (no size on file)"} does not fit ${rate.display_name}`);
-  }, [rates, accommodation, selectedPets]);
+    const out: string[] = [];
+    for (const p of selectedPets as any[]) {
+      const rate: any = rates.find((r: any) => r.accommodation_type === accFor(p.id));
+      if (!rate) continue;
+      if (!rateAllowsSize(rate, p.size ?? null)) {
+        out.push(`${p.name}${p.size ? ` (${p.size})` : " (no size on file)"} does not fit ${rate.display_name}`);
+      }
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rates, accommodation, petAcc, selectedPets]);
 
   // Default to the accommodation that suits the selected pets.
   useEffect(() => {
@@ -189,6 +220,7 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
       pets: selectedPets.map((p: any) => ({
         pet_id: p.id,
         name: p.name,
+        accommodation_type: accFor(p.id),
         grooming_required: Boolean(grooming[p.id]?.on),
         grooming_notes: grooming[p.id]?.notes || null,
       })),
@@ -286,7 +318,7 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
             </select>
           </label>
           <label className="block">
-            <div className={label}>Accommodation</div>
+            <div className={label}>{selectedPets.length > 1 ? "Accommodation (default for all dogs)" : "Accommodation"}</div>
             <select value={accommodation} onChange={(e) => setAccommodation(e.target.value)} className={input}>
               <option value="">Select…</option>
               {rates.map((r: any) => {
@@ -308,6 +340,39 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
             <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={input} />
           </label>
         </div>
+
+        {selectedPets.length > 1 && (
+          <div className="rounded-xl border border-border p-4">
+            <div className={label}>Accommodation per pet</div>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Dogs of different sizes can be in different areas — each is priced at its own nightly rate. Two dogs in the
+              same area still use that area&apos;s extra-pet rate.
+            </p>
+            <div className="space-y-2">
+              {selectedPets.map((p: any) => (
+                <div key={p.id} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:items-center">
+                  <div className="text-sm font-medium">
+                    {p.name}
+                    <span className="ml-1.5 text-xs text-muted-foreground">{p.size ?? "no size"}</span>
+                  </div>
+                  <select
+                    value={accFor(p.id)}
+                    onChange={(e) => setPetAcc({ ...petAcc, [p.id]: e.target.value })}
+                    className={input}
+                  >
+                    <option value="">Select…</option>
+                    {rates.map((r: any) => (
+                      <option key={r.id} value={r.accommodation_type}>
+                        {r.display_name} — R{Number(r.nightly_rate_zar).toFixed(2)}/night
+                        {rateAllowsSize(r, p.size ?? null) ? "" : " (size mismatch)"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {sizeWarnings.length > 0 && (
           <div className="rounded-lg border border-sk-orange/40 bg-sk-orange-soft p-3 text-sm text-sk-orange">
