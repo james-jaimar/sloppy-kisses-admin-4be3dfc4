@@ -355,6 +355,29 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   }, [kind, accom.check_out_window, durationMins]);
 
   async function persistAccommodation(bookingId: string) {
+    return persistAccommodationForm(bookingId);
+  }
+
+  /** Per-pet accommodation choice → booking_pets, so each dog is priced in its own area. */
+  async function persistPetAccommodations(bookingId: string) {
+    if (kind !== "hotel") return;
+    const fallback = hotel.accommodation_type ?? null;
+    for (const petId of petIds) {
+      const acc = petAcc[petId] || fallback;
+      if (!acc) continue;
+      const { error } = await supabase
+        .from("booking_pets")
+        .update({ accommodation_type: acc } as never)
+        .eq("booking_id", bookingId)
+        .eq("pet_id", petId);
+      if (error) {
+        toast.error("Booking saved, but per-pet accommodation did not save: " + error.message);
+        return;
+      }
+    }
+  }
+
+  async function persistAccommodationForm(bookingId: string) {
     if (kind !== "hotel") return;
     if (!accomTouched && !accom.pets.length) return;
     try {
