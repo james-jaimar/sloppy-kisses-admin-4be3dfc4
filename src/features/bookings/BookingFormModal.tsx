@@ -1292,6 +1292,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             species={serviceType === "hotel_cat" ? "cat" : "dog"}
             accommodationType={hotel.accommodation_type ?? ""}
             onAccommodationChange={(v) => setHotel((p) => ({ ...p, accommodation_type: v || null }))}
+            petAccommodations={petAcc}
+            onPetAccommodationChange={(petId, acc) => setPetAcc((prev) => ({ ...prev, [petId]: acc }))}
             startAt={startAt ? new Date(startAt).toISOString() : null}
             endAt={endAtLocal ? new Date(endAtLocal).toISOString() : null}
             petCount={petIds.length || 1}
