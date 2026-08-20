@@ -107,6 +107,14 @@ export interface SendContext {
   bookingId?: string | null;
 }
 
+export interface MailAttachment {
+  filename: string;
+  content: Uint8Array;
+  contentType: string;
+  encoding: "binary";
+  contentID?: string;
+}
+
 export async function sendMail(
   t: Transport,
   to: string,
@@ -114,6 +122,7 @@ export async function sendMail(
   text: string,
   html: string,
   ctx: SendContext,
+  attachments?: MailAttachment[],
 ): Promise<{ ok: true } | { ok: false; error: string; blocked?: boolean }> {
   // GLOBAL SEND LOCK — nothing reaches SMTP without passing this.
   const gate = await guardSend(ctx.admin, {
@@ -145,6 +154,7 @@ export async function sendMail(
       subject,
       content: text,
       html,
+      attachments,
     });
     return { ok: true };
   } catch (e) {
