@@ -366,7 +366,10 @@ export default function HotelRequestWizard() {
             </Field>
           </div>
 
-          <Field label="Accommodation" hint="This sets the nightly rate. Final room allocation is confirmed by our team.">
+          <Field
+            label={selectedPets.length > 1 ? "Accommodation (default for all pets)" : "Accommodation"}
+            hint="This sets the nightly rate. Final room allocation is confirmed by our team."
+          >
             <select
               value={accommodationType}
               onChange={(e) => setAccommodationType(e.target.value)}
@@ -390,26 +393,54 @@ export default function HotelRequestWizard() {
             )}
           </Field>
 
+          {selectedPets.length > 1 && (
+            <Field
+              label="Accommodation per pet"
+              hint="Pets of different sizes can stay in different areas — each is priced at its own nightly rate."
+            >
+              <div className="space-y-2">
+                {selectedPets.map((p: any) => (
+                  <div key={p.id} className="space-y-1">
+                    <div className="text-xs font-semibold text-muted-foreground">
+                      {p.name}
+                      <span className="ml-1.5 font-normal">{p.size_override ?? p.size ?? "no size set"}</span>
+                    </div>
+                    <select
+                      value={accFor(p.id)}
+                      onChange={(e) => setPetAcc({ ...petAcc, [p.id]: e.target.value })}
+                      className={selectCls}
+                    >
+                      <option value="">— Select accommodation —</option>
+                      {speciesRates.map((r) => {
+                        const fits = rateAllowsSize(
+                          r,
+                          ((p.size_override ?? p.size) ?? null) as PetSizeBand | null,
+                        );
+                        return (
+                          <option key={r.id} value={r.accommodation_type} disabled={!fits}>
+                            {r.display_name} · {fmtZar(Number(r.nightly_rate_zar))}/night
+                            {fits ? "" : " — not available for this size"}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </Field>
+          )}
+
           {estimate && (
             <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Estimated cost
               </div>
-              <div className="flex justify-between">
-                <span>
-                  {fmtZar(estimate.nightly)} × {nights} night{nights === 1 ? "" : "s"}
-                </span>
-                <span>{fmtZar(estimate.stayTotal)}</span>
-              </div>
-              {estimate.extraTotal > 0 && (
-                <div className="flex justify-between">
-                  <span>
-                    Extra pet{estimate.extras === 1 ? "" : "s"} ({estimate.extras}) × {nights} night
-                    {nights === 1 ? "" : "s"}
-                  </span>
-                  <span>{fmtZar(estimate.extraTotal)}</span>
+              {estimate.lines.map((l) => (
+                <div key={l.label} className="flex justify-between gap-3">
+                  <span>{l.label}</span>
+                  <span>{fmtZar(l.amount)}</span>
                 </div>
-              )}
+              ))}
               <div className="mt-2 flex justify-between border-t border-border pt-2 font-semibold">
                 <span>Estimated total</span>
                 <span>{fmtZar(estimate.grand)}</span>
