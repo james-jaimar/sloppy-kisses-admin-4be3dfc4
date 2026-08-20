@@ -99,11 +99,19 @@ Deno.serve(async (req) => {
 
   let logoUrl: string | null = null;
   if (tenant?.logo_url) {
-    try {
-      const { data: signed } = await admin.storage.from("tenant-branding")
-        .createSignedUrl(tenant.logo_url, 60 * 60 * 24);
-      logoUrl = signed?.signedUrl ?? null;
-    } catch { logoUrl = null; }
+    if (/^https?:\/\//i.test(tenant.logo_url)) {
+      logoUrl = tenant.logo_url;
+    } else {
+      try {
+        const { data: signed, error: signErr } = await admin.storage.from("tenant-branding")
+          .createSignedUrl(tenant.logo_url, 60 * 60 * 24);
+        if (signErr) console.error("logo sign failed:", signErr.message);
+        logoUrl = signed?.signedUrl ?? null;
+      } catch (e) {
+        console.error("logo sign threw:", (e as Error).message);
+        logoUrl = null;
+      }
+    }
   }
 
   const introTpl = tpl && tpl.is_active !== false && String(tpl.body ?? "").trim()
