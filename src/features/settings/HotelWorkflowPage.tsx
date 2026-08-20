@@ -7,6 +7,7 @@ import {
   useHotelWorkflowSettings, useUpdateHotelWorkflowSettings,
   type VaxGateMode, type OverbookingMode,
 } from "@/features/hotelCattery/queries";
+import { PaymentHoldFields } from "./PaymentHoldFields";
 
 const PERMISSION = "settings.hotel.manage";
 
@@ -45,6 +46,8 @@ export default function HotelWorkflowPage() {
     no_refund_early_checkout: true,
     require_labelling_checklist: true,
     photo_policy_note: "",
+    require_payment_to_confirm: true,
+    payment_hold_hours: 48,
   });
 
   useEffect(() => {
@@ -69,6 +72,8 @@ export default function HotelWorkflowPage() {
         no_refund_early_checkout: (settingsQ.data as any).no_refund_early_checkout ?? true,
         require_labelling_checklist: (settingsQ.data as any).require_labelling_checklist ?? true,
         photo_policy_note: (settingsQ.data as any).photo_policy_note ?? "",
+        require_payment_to_confirm: (settingsQ.data as any).require_payment_to_confirm ?? true,
+        payment_hold_hours: Number((settingsQ.data as any).payment_hold_hours ?? 48),
       });
     }
   }, [settingsQ.data]);
@@ -94,6 +99,8 @@ export default function HotelWorkflowPage() {
         no_refund_early_checkout: form.no_refund_early_checkout,
         require_labelling_checklist: form.require_labelling_checklist,
         photo_policy_note: form.photo_policy_note.trim() || null,
+        require_payment_to_confirm: form.require_payment_to_confirm,
+        payment_hold_hours: form.payment_hold_hours,
         guidelines_md: form.guidelines_md.trim() || null,
         ...(form.guidelines_md.trim() !== (((settingsQ.data as any)?.guidelines_md ?? "").trim())
           ? { guidelines_version: Number((settingsQ.data as any)?.guidelines_version ?? 0) + 1 }
@@ -240,6 +247,13 @@ export default function HotelWorkflowPage() {
               />
             </Field>
           </div>
+
+          <PaymentHoldFields
+            disabled={!canManage}
+            requirePayment={form.require_payment_to_confirm}
+            holdHours={form.payment_hold_hours}
+            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+          />
 
           <div className="flex justify-end">
             </div>

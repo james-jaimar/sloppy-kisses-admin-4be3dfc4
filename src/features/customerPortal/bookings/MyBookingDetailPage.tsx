@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Loader2, X, Edit3, FileText, CheckCircle2, CalendarPlus } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { supabase } from "@/lib/supabase/client";
-import { SERVICE_LABEL, fmtDateTime, statusTone } from "../portalCommon";
+import { SERVICE_LABEL, fmtDateTime, statusTone, statusLabel } from "../portalCommon";
 import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPlayBadge";
 import { useCurrentCustomer } from "../hooks";
 import { BookingChangeModal } from "./BookingChangeModal";
@@ -24,7 +24,7 @@ export default function MyBookingDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, tenant_id, booking_number, service_type, status, start_at, end_at, notes_customer, booking_pets(pet:pets(id, name)), invoice:invoices!bookings_invoice_id_fkey(id, invoice_number, total, balance_due, status)")
+        .select("id, tenant_id, booking_number, service_type, status, start_at, end_at, payment_hold_expires_at, notes_customer, booking_pets(pet:pets(id, name)), invoice:invoices!bookings_invoice_id_fkey(id, invoice_number, total, balance_due, status)")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
@@ -64,11 +64,18 @@ export default function MyBookingDetailPage() {
 
         {group === "hotel" && <AccommodationFormBanner bookingId={b.id} />}
         {group === "hotel" && <PortalGroomRequestStatus bookingId={b.id} />}
+        {b.status === "pending_payment" && (
+          <div className="rounded-xl border border-sk-orange/30 bg-sk-orange-soft px-4 py-3 text-sm text-sk-orange">
+            We're holding this booking for you until payment is received
+            {b.payment_hold_expires_at ? ` (until ${fmtDateTime(b.payment_hold_expires_at)})` : ""}.
+            {inv ? " Pay the invoice below to confirm it." : ""}
+          </div>
+        )}
 
         <div className="sk-card space-y-4 p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={"rounded-full px-2 py-0.5 text-xs font-medium " + statusTone(b.status)}>{b.status}</span>
+              <span className={"rounded-full px-2 py-0.5 text-xs font-medium " + statusTone(b.status)}>{statusLabel(b.status)}</span>
               <BookingStayPlayBadge tenantId={b.tenant_id} bookingId={b.id} size="sm" />
             </div>
             {cancellable && cust.data && (

@@ -3,6 +3,7 @@ import { Save } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
+import { PaymentHoldFields } from "./PaymentHoldFields";
 import {
   useGroomingWorkflowSettings,
   useUpdateGroomingWorkflowSettings,
@@ -43,6 +44,8 @@ export default function GroomingWorkflowPage() {
     rebook_nudge_enabled: true,
     rebook_weeks_min: 4,
     rebook_weeks_max: 6,
+    require_payment_to_confirm: true,
+    payment_hold_hours: 48,
   });
 
   useEffect(() => {
@@ -71,6 +74,8 @@ export default function GroomingWorkflowPage() {
         rebook_nudge_enabled: Boolean((d as any).rebook_nudge_enabled ?? true),
         rebook_weeks_min: Number((d as any).rebook_weeks_min ?? 4),
         rebook_weeks_max: Number((d as any).rebook_weeks_max ?? 6),
+        require_payment_to_confirm: Boolean((d as any).require_payment_to_confirm ?? true),
+        payment_hold_hours: Number((d as any).payment_hold_hours ?? 48),
       });
     }
   }, [settingsQ.data]);
@@ -124,6 +129,13 @@ export default function GroomingWorkflowPage() {
               <option value="hard">Required — block the booking until a photo is on file</option>
             </select>
           </Field>
+
+          <PaymentHoldFields
+            disabled={!canManage}
+            requirePayment={form.require_payment_to_confirm}
+            holdHours={form.payment_hold_hours}
+            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Pensioner discount %" hint="Applied to the grooming package line on the invoice.">

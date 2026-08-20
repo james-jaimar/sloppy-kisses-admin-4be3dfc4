@@ -20,6 +20,7 @@ const STATUS_MAP: Record<string, { tone: Tone; label: string }> = {
   declined:         { tone: "red",       label: "Declined" },
   converted:        { tone: "green",     label: "Converted" },
   confirmed:        { tone: "turquoise", label: "Confirmed" },
+  pending_payment:  { tone: "orange",    label: "Awaiting payment" },
   checked_in:       { tone: "green",     label: "Checked in" },
   in_progress:      { tone: "coral",     label: "In progress" },
   ready:            { tone: "turquoise", label: "Ready" },
