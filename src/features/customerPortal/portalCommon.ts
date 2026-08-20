@@ -25,9 +25,22 @@ export function fmtDate(iso: string | null | undefined): string {
 
 export function statusTone(status: string): string {
   const s = status.toLowerCase();
+  if (s === "pending_payment") return "bg-sk-orange-soft text-sk-orange";
   if (["confirmed", "completed", "checked_out", "paid"].includes(s)) return "bg-sk-green-soft text-sk-green";
   if (["requested", "pending", "draft"].includes(s)) return "bg-muted text-muted-foreground";
   if (["cancelled", "no_show", "overdue"].includes(s)) return "bg-sk-coral-soft text-sk-coral-dark";
   if (["checked_in", "in_progress", "in_van", "issued", "sent"].includes(s)) return "bg-sk-turquoise-soft text-sk-turquoise-dark";
   return "bg-sk-orange-soft text-sk-orange";
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  pending_payment: "Awaiting payment",
+  checked_in: "Checked in",
+  checked_out: "Checked out",
+  in_progress: "In progress",
+  no_show: "No show",
+};
+
+export function statusLabel(status: string): string {
+  return STATUS_LABEL[status] ?? status.replace(/_/g, " ");
 }
