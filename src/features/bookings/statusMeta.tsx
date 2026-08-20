@@ -1,6 +1,6 @@
 import {
   FilePen, Inbox, HelpCircle, CheckCircle2, CalendarCheck, LogIn, Scissors,
-  Loader2, BellRing, LogOut, CheckCheck, XCircle, AlertOctagon,
+  Loader2, BellRing, LogOut, CheckCheck, XCircle, AlertOctagon, CircleDollarSign,
 } from "lucide-react";
 import type { BookingStatus } from "./queries";
 
