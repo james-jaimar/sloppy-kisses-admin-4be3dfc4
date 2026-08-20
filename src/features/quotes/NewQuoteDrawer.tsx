@@ -318,7 +318,7 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
             </select>
           </label>
           <label className="block">
-            <div className={label}>Accommodation</div>
+            <div className={label}>{selectedPets.length > 1 ? "Accommodation (default for all dogs)" : "Accommodation"}</div>
             <select value={accommodation} onChange={(e) => setAccommodation(e.target.value)} className={input}>
               <option value="">Select…</option>
               {rates.map((r: any) => {
@@ -340,6 +340,39 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
             <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={input} />
           </label>
         </div>
+
+        {selectedPets.length > 1 && (
+          <div className="rounded-xl border border-border p-4">
+            <div className={label}>Accommodation per pet</div>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Dogs of different sizes can be in different areas — each is priced at its own nightly rate. Two dogs in the
+              same area still use that area&apos;s extra-pet rate.
+            </p>
+            <div className="space-y-2">
+              {selectedPets.map((p: any) => (
+                <div key={p.id} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:items-center">
+                  <div className="text-sm font-medium">
+                    {p.name}
+                    <span className="ml-1.5 text-xs text-muted-foreground">{p.size ?? "no size"}</span>
+                  </div>
+                  <select
+                    value={accFor(p.id)}
+                    onChange={(e) => setPetAcc({ ...petAcc, [p.id]: e.target.value })}
+                    className={input}
+                  >
+                    <option value="">Select…</option>
+                    {rates.map((r: any) => (
+                      <option key={r.id} value={r.accommodation_type}>
+                        {r.display_name} — R{Number(r.nightly_rate_zar).toFixed(2)}/night
+                        {rateAllowsSize(r, p.size ?? null) ? "" : " (size mismatch)"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {sizeWarnings.length > 0 && (
           <div className="rounded-lg border border-sk-orange/40 bg-sk-orange-soft p-3 text-sm text-sk-orange">
