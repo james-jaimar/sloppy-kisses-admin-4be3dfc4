@@ -149,6 +149,28 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
 
   const stayPlay = isStayPlayWindow(checkOutWindow);
 
+  // Stay & Play is charged by the collection-window button, not by the extras list.
+  const stayPlaySurcharge: any = useMemo(
+    () => (surchargesQ.data ?? []).find((s: any) => s.code === "late_checkout") ?? null,
+    [surchargesQ.data],
+  );
+  const stayPlayUnit = Number(stayPlaySurcharge?.amount_zar ?? stayPlaySurcharge?.price_zar ?? 0);
+  const stayPlayQty = Math.max(1, petIds.length);
+
+  useEffect(() => {
+    if (!stayPlaySurcharge) return;
+    const id = stayPlaySurcharge.id;
+    setSurcharges((prev) => {
+      const want = stayPlay ? stayPlayQty : 0;
+      const cur = prev[id] ?? 0;
+      if (cur === want) return prev;
+      const next = { ...prev };
+      if (want > 0) next[id] = want;
+      else delete next[id];
+      return next;
+    });
+  }, [stayPlay, stayPlayQty, stayPlaySurcharge]);
+
   async function save() {
     if (!customerId) { toast.error("Pick a customer"); return; }
     if (petIds.length === 0) { toast.error("Pick at least one pet"); return; }
@@ -330,7 +352,9 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
               </div>
               {stayPlay && (
                 <p className="mt-1 text-xs text-sk-coral-dark">
-                  Late collection — Stay &amp; Play for the day. Add the Stay &amp; Play charge below.
+                  {stayPlaySurcharge
+                    ? `Stay & Play added — R${(stayPlayUnit * stayPlayQty).toFixed(2)}${stayPlayQty > 1 ? ` (${stayPlayQty} pets)` : ""}.`
+                    : "No Stay & Play charge is set up in Settings → Hotel surcharges."}
                 </p>
               )}
               {checkOutBlock && (
@@ -340,11 +364,11 @@ export function NewQuoteDrawer({ tenantId, onClose }: { tenantId: string; onClos
           </div>
         </div>
 
-        {(surchargesQ.data ?? []).length > 0 && (
+        {(surchargesQ.data ?? []).filter((s: any) => s.code !== "late_checkout").length > 0 && (
           <div className="rounded-xl border border-border p-4">
             <div className={label}>Extras &amp; surcharges</div>
             <div className="grid gap-2 sm:grid-cols-2">
-              {(surchargesQ.data ?? []).map((s: any) => {
+              {(surchargesQ.data ?? []).filter((s: any) => s.code !== "late_checkout").map((s: any) => {
                 const qty = surcharges[s.id] ?? 0;
                 return (
                   <div key={s.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm">
