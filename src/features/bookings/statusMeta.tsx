@@ -28,10 +28,24 @@ export const BOOKING_STATUS_META: Record<BookingStatus, BookingStatusMeta> = {
   completed:     { label: "Completed",   icon: CheckCheck,    chip: "bg-sk-green-dark text-white border-sk-green-dark",       dot: "bg-sk-green-dark text-white" },
   cancelled:     { label: "Cancelled",   icon: XCircle,       chip: "bg-muted text-muted-foreground border-border",           dot: "bg-muted text-muted-foreground" },
   no_show:       { label: "No show",     icon: AlertOctagon,  chip: "bg-destructive/10 text-destructive border-destructive/40", dot: "bg-destructive/10 text-destructive" },
+  pending_payment: { label: "Awaiting payment", icon: CircleDollarSign, chip: "bg-sk-orange-soft text-sk-orange border-sk-orange", dot: "bg-sk-orange-soft text-sk-orange" },
 };
 
+const FALLBACK_META: BookingStatusMeta = {
+  label: "Unknown", icon: HelpCircle,
+  chip: "bg-muted text-muted-foreground border-border",
+  dot: "bg-muted text-muted-foreground",
+};
+
+function metaFor(status: BookingStatus): BookingStatusMeta {
+  return BOOKING_STATUS_META[status] ?? {
+    ...FALLBACK_META,
+    label: String(status ?? "").replace(/_/g, " ") || "Unknown",
+  };
+}
+
 export function BookingStatusChip({ status, className = "" }: { status: BookingStatus; className?: string }) {
-  const m = BOOKING_STATUS_META[status];
+  const m = metaFor(status);
   const Icon = m.icon;
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${m.chip} ${className}`}>
@@ -42,7 +56,7 @@ export function BookingStatusChip({ status, className = "" }: { status: BookingS
 }
 
 export function BookingStatusDot({ status, className = "" }: { status: BookingStatus; className?: string }) {
-  const m = BOOKING_STATUS_META[status];
+  const m = metaFor(status);
   const Icon = m.icon;
   return (
     <span
