@@ -323,24 +323,36 @@ export type Database = {
       }
       booking_pets: {
         Row: {
+          accommodation_type: string | null
           booking_id: string
           created_at: string
           id: string
           pet_id: string
+          rate_card_id: string | null
+          resource_id: string | null
+          sort_order: number
           tenant_id: string
         }
         Insert: {
+          accommodation_type?: string | null
           booking_id: string
           created_at?: string
           id?: string
           pet_id: string
+          rate_card_id?: string | null
+          resource_id?: string | null
+          sort_order?: number
           tenant_id: string
         }
         Update: {
+          accommodation_type?: string | null
           booking_id?: string
           created_at?: string
           id?: string
           pet_id?: string
+          rate_card_id?: string | null
+          resource_id?: string | null
+          sort_order?: number
           tenant_id?: string
         }
         Relationships: [
@@ -356,6 +368,20 @@ export type Database = {
             columns: ["pet_id"]
             isOneToOne: false
             referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_pets_rate_card_id_fkey"
+            columns: ["rate_card_id"]
+            isOneToOne: false
+            referencedRelation: "hotel_rate_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_pets_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
             referencedColumns: ["id"]
           },
           {
@@ -8861,6 +8887,21 @@ export type Database = {
           p_accommodation_type: string
           p_end: string
           p_pet_count: number
+          p_species: string
+          p_start: string
+          p_tenant_id: string
+        }
+        Returns: {
+          description: string
+          line_total: number
+          quantity: number
+          unit_price: number
+        }[]
+      }
+      hotel_stay_lines_pets: {
+        Args: {
+          p_end: string
+          p_pets: Json
           p_species: string
           p_start: string
           p_tenant_id: string
