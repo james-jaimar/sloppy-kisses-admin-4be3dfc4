@@ -130,6 +130,13 @@ export default function GroomingWorkflowPage() {
             </select>
           </Field>
 
+          <PaymentHoldFields
+            disabled={!canManage}
+            requirePayment={form.require_payment_to_confirm}
+            holdHours={form.payment_hold_hours}
+            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+          />
+
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Pensioner discount %" hint="Applied to the grooming package line on the invoice.">
               <input
