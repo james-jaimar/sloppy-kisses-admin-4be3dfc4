@@ -19,7 +19,8 @@ export type BookingStatus =
   | "checked_out"
   | "completed"
   | "cancelled"
-  | "no_show";
+  | "no_show"
+  | "pending_payment";
 
 export type ServiceType =
   | "daycare"
