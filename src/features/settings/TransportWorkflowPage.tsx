@@ -177,6 +177,13 @@ export default function TransportWorkflowPage() {
             </select>
           </Field>
 
+          <PaymentHoldFields
+            disabled={!canManage}
+            requirePayment={form.require_payment_to_confirm}
+            holdHours={form.payment_hold_hours}
+            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+          />
+
           <div className="border-t border-border pt-6 space-y-4">
             <div>
               <h3 className="text-sm font-semibold">Service area &amp; access</h3>
