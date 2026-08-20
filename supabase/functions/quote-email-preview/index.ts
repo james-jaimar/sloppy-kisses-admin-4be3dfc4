@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { buildQuoteEmail, DEFAULT_QUOTE_INTRO, fmtDate } from "../_shared/quote-email.ts";
 import { resolveQuoteEmailSettings } from "../_shared/quote-email-defaults.ts";
 import { loadTransport, sendMail } from "../_shared/comms-transport.ts";
+import { publicBrandLogoUrl } from "../_shared/public-brand-logo.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -97,57 +98,7 @@ Deno.serve(async (req) => {
     })),
   };
 
-  let logoUrl: string | null = null;
-  let logoAttachment: {
-    filename: string;
-    content: Uint8Array;
-    contentType: string;
-    encoding: "binary";
-    contentID: string;
-  } | null = null;
-  if (tenant?.logo_url) {
-    try {
-      if (!sendTest) {
-        if (/^https?:\/\//i.test(tenant.logo_url)) {
-          logoUrl = tenant.logo_url;
-        } else {
-          const { data: signed, error: signError } = await admin.storage
-            .from("tenant-branding")
-            .createSignedUrl(tenant.logo_url, 60 * 60);
-          if (signError || !signed?.signedUrl) throw new Error(signError?.message ?? "logo signing returned no URL");
-          logoUrl = signed.signedUrl;
-        }
-      } else {
-      let bytes: Uint8Array;
-      let contentType = "image/png";
-      if (/^https?:\/\//i.test(tenant.logo_url)) {
-        const logoRes = await fetch(tenant.logo_url);
-        if (!logoRes.ok) throw new Error(`logo fetch failed [${logoRes.status}]`);
-        bytes = new Uint8Array(await logoRes.arrayBuffer());
-        contentType = logoRes.headers.get("content-type")?.split(";")[0] || contentType;
-      } else {
-        const { data: logoBlob, error: downloadError } = await admin.storage
-          .from("tenant-branding")
-          .download(tenant.logo_url);
-        if (downloadError || !logoBlob) throw new Error(downloadError?.message ?? "logo download returned no data");
-        bytes = new Uint8Array(await logoBlob.arrayBuffer());
-        contentType = logoBlob.type || contentType;
-      }
-      if (bytes.byteLength > 0) {
-        logoUrl = "cid:tenant-logo";
-        logoAttachment = {
-          filename: `tenant-logo.${contentType.includes("jpeg") ? "jpg" : contentType.includes("svg") ? "svg" : "png"}`,
-          content: bytes,
-          contentType,
-          encoding: "binary",
-          contentID: "tenant-logo",
-        };
-      }
-      }
-    } catch (e) {
-      console.error("logo embed failed:", (e as Error).message);
-    }
-  }
+  const logoUrl = publicBrandLogoUrl(SUPABASE_URL, tenantId, tenant?.logo_url);
 
   const introTpl = tpl && tpl.is_active !== false && String(tpl.body ?? "").trim()
     ? String(tpl.body) : DEFAULT_QUOTE_INTRO;
@@ -189,7 +140,7 @@ Deno.serve(async (req) => {
   const subject = `[TEST] Your stay quote QU-00001 from ${tenant?.name ?? "us"}`;
   const result = await sendMail(transport, recipient, subject, text, html, {
     admin, tenantId, templateCode: "test.quote_email",
-  }, logoAttachment ? [logoAttachment] : undefined);
+  });
   if (!result.ok && (result as any).blocked) {
     // guardSend already wrote the [BLOCKED] email_log row.
     return j(200, { ok: false, blocked: true, error: result.error, html });

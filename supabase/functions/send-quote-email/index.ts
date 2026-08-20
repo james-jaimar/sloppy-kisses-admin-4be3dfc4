@@ -4,6 +4,7 @@ import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { guardSend } from "../_shared/send-guard.ts";
 import { buildQuoteEmail, DEFAULT_QUOTE_INTRO, fmtZar, fmtDate as fmtD } from "../_shared/quote-email.ts";
 import { resolveQuoteEmailSettings } from "../_shared/quote-email-defaults.ts";
+import { publicBrandLogoUrl } from "../_shared/public-brand-logo.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -118,48 +119,10 @@ Deno.serve(async (req) => {
     ? render(String(tpl!.subject), ctx)
     : `Your stay quote ${q.estimate_number} from ${tenant?.name ?? "us"}`;
 
-  // Embed the logo in the MIME message. Outlook commonly blocks or fails to
-  // retrieve signed remote URLs even while they are valid; CID images have no
-  // external dependency and remain visible for the lifetime of the email.
-  let logoUrl: string | null = null;
-  let logoAttachment: {
-    filename: string;
-    content: Uint8Array;
-    contentType: string;
-    encoding: "binary";
-    contentID: string;
-  } | null = null;
-  if (tenant?.logo_url) {
-    try {
-      let bytes: Uint8Array;
-      let contentType = "image/png";
-      if (/^https?:\/\//i.test(tenant.logo_url)) {
-        const logoRes = await fetch(tenant.logo_url);
-        if (!logoRes.ok) throw new Error(`logo fetch failed [${logoRes.status}]`);
-        bytes = new Uint8Array(await logoRes.arrayBuffer());
-        contentType = logoRes.headers.get("content-type")?.split(";")[0] || contentType;
-      } else {
-        const { data: logoBlob, error: downloadError } = await admin.storage
-          .from("tenant-branding")
-          .download(tenant.logo_url);
-        if (downloadError || !logoBlob) throw new Error(downloadError?.message ?? "logo download returned no data");
-        bytes = new Uint8Array(await logoBlob.arrayBuffer());
-        contentType = logoBlob.type || contentType;
-      }
-      if (bytes.byteLength > 0) {
-        logoUrl = "cid:tenant-logo";
-        logoAttachment = {
-          filename: `tenant-logo.${contentType.includes("jpeg") ? "jpg" : contentType.includes("svg") ? "svg" : "png"}`,
-          content: bytes,
-          contentType,
-          encoding: "binary",
-          contentID: "tenant-logo",
-        };
-      }
-    } catch (e) {
-      console.error("logo embed failed:", (e as Error).message);
-    }
-  }
+  // Use one stable public URL in previews and delivered mail. The SMTP library
+  // exposes CID images as normal attachments and Outlook may then fail to show
+  // them inline. The public endpoint safely proxies only the tenant logo.
+  const logoUrl = publicBrandLogoUrl(SUPABASE_URL, q.tenant_id, tenant?.logo_url);
 
   const guidelines = (Array.isArray(guidelinesRow) ? guidelinesRow[0] : guidelinesRow)?.guidelines_md ?? null;
 
@@ -269,7 +232,7 @@ Deno.serve(async (req) => {
         content: pdfBytes,
         contentType: "application/pdf",
         encoding: "binary",
-      }, ...(logoAttachment ? [logoAttachment] : [])],
+      }],
     });
     await client.close();
     ok = true;
