@@ -677,6 +677,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           },
           pet_ids: petIds,
         });
+        if (kind === "hotel") await persistPetAccommodations(booking.id);
         await saveDetails(booking.id);
         if (kind === "hotel") await persistSurcharges(booking.id);
         if (kind === "hotel") await persistAccommodation(booking.id);
@@ -703,6 +704,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           });
           // Persist service-typed details for every occurrence.
           for (const b of res.bookings) {
+            if (kind === "hotel") await persistPetAccommodations(b.id);
             await saveDetails(b.id);
             if (kind === "hotel") await persistSurcharges(b.id);
             if (kind === "hotel") await persistAccommodation(b.id);
@@ -772,6 +774,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           service_address_id: serviceAddressId,
           closure_override: closureOverride,
         });
+        if (kind === "hotel") await persistPetAccommodations(res.id);
         await saveDetails(res.id);
         if (kind === "hotel") await persistSurcharges(res.id);
         if (kind === "hotel") await persistAccommodation(res.id);
