@@ -151,6 +151,44 @@ export function useHotelStayLines(params: {
 }
 
 /** Quote validity window configured in Hotel workflow settings (defaults to 14 days). */
+export interface StayPetInput { name: string; accommodation_type: string }
+
+/**
+ * Per-dog stay pricing: one line per dog using that dog's own accommodation.
+ * Two dogs in the same area still fall back to that rate card's extra-pet rate.
+ */
+export function useHotelStayLinesPerPet(params: {
+  tenantId: string | null | undefined;
+  species: "dog" | "cat";
+  start: string | null;
+  end: string | null;
+  pets: StayPetInput[];
+}) {
+  const { tenantId, species, start, end, pets } = params;
+  const ready = Boolean(tenantId && start && end && end > start) && pets.length > 0 && pets.every((p) => p.accommodation_type);
+  return useQuery({
+    queryKey: ["hotel_stay_lines_pets", tenantId, species, start, end, JSON.stringify(pets)],
+    enabled: ready,
+    queryFn: async (): Promise<HotelStayLine[]> => {
+      const { data, error } = await supabase.rpc("hotel_stay_lines_pets" as any, {
+        p_tenant_id: tenantId,
+        p_species: species,
+        p_start: start,
+        p_end: end,
+        p_pets: pets,
+      });
+      if (error) throw error;
+      return (data ?? []).map((r: any) => ({
+        description: r.description,
+        quantity: Number(r.quantity),
+        unit_price: Number(r.unit_price),
+        line_total: Number(r.line_total),
+      }));
+    },
+    retry: false,
+  });
+}
+
 export function useQuoteValidityDays(tenantId: string | null | undefined) {
   return useQuery({
     queryKey: ["quote_validity_days", tenantId],
