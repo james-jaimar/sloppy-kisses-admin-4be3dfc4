@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import AddressAutocomplete from "@/components/address/AddressAutocomplete";
+import { PaymentHoldFields } from "./PaymentHoldFields";
 import {
   useTransportWorkflowSettings, useUpdateTransportWorkflowSettings,
 } from "@/features/transport/queries";
@@ -57,6 +58,8 @@ export default function TransportWorkflowPage() {
     radius_gate_mode: "warn" as "warn" | "block",
     require_gate_code: true,
     gate_code_required_by_time: "07:00",
+    require_payment_to_confirm: true,
+    payment_hold_hours: 48,
   });
   const [suburbFees, setSuburbFees] = useState<SuburbFee[]>([]);
 
@@ -80,6 +83,8 @@ export default function TransportWorkflowPage() {
         radius_gate_mode: ((settingsQ.data as any).radius_gate_mode ?? "warn") as "warn" | "block",
         require_gate_code: (settingsQ.data as any).require_gate_code ?? true,
         gate_code_required_by_time: trimTime((settingsQ.data as any).gate_code_required_by_time) || "07:00",
+        require_payment_to_confirm: (settingsQ.data as any).require_payment_to_confirm ?? true,
+        payment_hold_hours: Number((settingsQ.data as any).payment_hold_hours ?? 48),
       });
       setSuburbFees(fromMap(settingsQ.data.suburb_fees));
     }
