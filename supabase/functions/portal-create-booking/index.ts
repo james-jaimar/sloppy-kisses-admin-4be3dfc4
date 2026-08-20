@@ -81,6 +81,8 @@ const BodySchema = z.object({
   hotel: z
     .object({
       accommodation_type: z.string().max(80).nullable().optional(),
+      /** petId -> accommodation type, so dogs of different sizes get their own area/rate. */
+      pet_accommodations: z.record(z.string().uuid(), z.string().max(80)).optional(),
       feeding_instructions: z.string().max(2000).nullable().optional(),
       medication_instructions: z.string().max(2000).nullable().optional(),
       belongings_notes: z.string().max(2000).nullable().optional(),
