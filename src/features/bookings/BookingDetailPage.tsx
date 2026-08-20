@@ -280,7 +280,13 @@ export default function BookingDetailPage() {
               <StayPlaySection tenantId={tenantId} bookingId={b.id} />
 
               {tenantId && (
-                <BookingInvoicePanel tenantId={tenantId} bookingId={b.id} customerId={b.customer_id} />
+                <BookingInvoicePanel
+                  tenantId={tenantId}
+                  bookingId={b.id}
+                  customerId={b.customer_id}
+                  reviewNeeded={(b as any).invoice_review_needed}
+                  reviewReason={(b as any).invoice_review_reason}
+                />
               )}
               {tenantId && (
                 <BookingCommsPanel tenantId={tenantId} bookingId={b.id} />

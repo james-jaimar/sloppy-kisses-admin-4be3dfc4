@@ -1,14 +1,20 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Receipt, Plus, ExternalLink } from "lucide-react";
+import { Receipt, Plus, ExternalLink, AlertTriangle } from "lucide-react";
 import { useBookingInvoice } from "@/features/invoices/queries";
 import { InvoiceStatusChip, fmtZar } from "@/features/invoices/status";
 import { NewInvoiceDrawer } from "@/features/invoices/NewInvoiceDrawer";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 
-interface Props { tenantId: string; bookingId: string; customerId: string }
+interface Props {
+  tenantId: string;
+  bookingId: string;
+  customerId: string;
+  reviewNeeded?: boolean | null;
+  reviewReason?: string | null;
+}
 
-export function BookingInvoicePanel({ tenantId, bookingId, customerId }: Props) {
+export function BookingInvoicePanel({ tenantId, bookingId, customerId, reviewNeeded, reviewReason }: Props) {
   const { hasPermission, profile } = useCurrentUser();
   const can = (code: string) => profile?.user_type === "platform" || hasPermission(code);
   const q = useBookingInvoice(tenantId, bookingId);
@@ -20,6 +26,17 @@ export function BookingInvoicePanel({ tenantId, bookingId, customerId }: Props) 
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         <Receipt className="h-4 w-4" /> Invoice
       </div>
+      {reviewNeeded && (
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>
+            <div className="font-semibold">Invoice needs review</div>
+            <div className="mt-0.5 leading-relaxed">
+              {reviewReason || "This booking changed after the invoice was finalised."}
+            </div>
+          </div>
+        </div>
+      )}
       {q.isLoading ? (
         <div className="mt-2 text-xs text-muted-foreground">Loading…</div>
       ) : inv ? (
