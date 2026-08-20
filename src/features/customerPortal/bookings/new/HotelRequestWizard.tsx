@@ -88,6 +88,8 @@ export default function HotelRequestWizard() {
   const [nights, setNights] = useState(1);
   const [roomPref, setRoomPref] = useState("");
   const [accommodationType, setAccommodationType] = useState("");
+  /** Per-dog accommodation — dogs of different sizes can be in different areas. */
+  const [petAcc, setPetAcc] = useState<Record<string, string>>({});
   const [form, setForm] = useState<AccommodationFormPayload>(emptyAccommodationForm());
   const [seeded, setSeeded] = useState(false);
 
@@ -142,6 +144,7 @@ export default function HotelRequestWizard() {
       .join(", ")}`;
   };
   const activeRate = speciesRates.find((r) => r.accommodation_type === accommodationType) ?? null;
+  const accFor = (petId: string) => petAcc[petId] || accommodationType;
 
   // Clear a choice that no longer fits the selected pets / species.
   useEffect(() => {
@@ -151,19 +154,39 @@ export default function HotelRequestWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speciesRates, petIds.join(",")]);
 
+  /** One line per dog, using that dog's own area; a second dog in the same area uses its extra-pet rate. */
   const estimate = useMemo(() => {
-    if (!activeRate) return null;
-    const nightly = Number(activeRate.nightly_rate_zar);
-    const stayTotal = Math.round(nightly * nights * 100) / 100;
-    const extras = Math.max(0, petIds.length - 1);
-    const extraTotal =
-      extras > 0 && Number(activeRate.extra_pet_rate_zar) > 0
-        ? Math.round(Number(activeRate.extra_pet_rate_zar) * extras * nights * 100) / 100
-        : 0;
-    return { nightly, stayTotal, extras, extraTotal, grand: stayTotal + extraTotal };
-  }, [activeRate, nights, petIds.length]);
+    if (selectedPets.length === 0) return null;
+    const groups = new Map<string, string[]>();
+    for (const p of selectedPets as any[]) {
+      const acc = petAcc[p.id] || accommodationType;
+      if (!acc) return null;
+      groups.set(acc, [...(groups.get(acc) ?? []), p.name as string]);
+    }
+    const lines: { label: string; amount: number }[] = [];
+    for (const [acc, names] of groups) {
+      const rate: any = speciesRates.find((r) => r.accommodation_type === acc);
+      if (!rate) return null;
+      const nightly = Number(rate.nightly_rate_zar);
+      lines.push({
+        label: `${rate.display_name} (${names[0]}) · ${fmtZar(nightly)} × ${nights} night${nights === 1 ? "" : "s"}`,
+        amount: Math.round(nightly * nights * 100) / 100,
+      });
+      const extras = names.length - 1;
+      if (extras > 0 && Number(rate.extra_pet_rate_zar) > 0) {
+        lines.push({
+          label: `Extra pet${extras === 1 ? "" : "s"} in ${rate.display_name} (${names.slice(1).join(", ")}) × ${nights} night${nights === 1 ? "" : "s"}`,
+          amount: Math.round(Number(rate.extra_pet_rate_zar) * extras * nights * 100) / 100,
+        });
+      }
+    }
+    return { lines, grand: lines.reduce((s, l) => s + l.amount, 0) };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPets, petAcc, accommodationType, speciesRates, nights]);
 
-  const stayReady = petIds.length > 0 && !!checkInDate && nights >= 1 && !!accommodationType;
+  const stayReady =
+    petIds.length > 0 && !!checkInDate && nights >= 1 &&
+    selectedPets.every((p: any) => Boolean(accFor(p.id)));
 
   // Pet photo requirement (Settings → Hotel & Cattery workflow).
   const photoMode = usePhotoGateMode(cust.data?.tenant_id, serviceType);
@@ -217,6 +240,7 @@ export default function HotelRequestWizard() {
       notes: notes || null,
       hotel: {
         accommodation_type: accommodationType || null,
+        pet_accommodations: Object.fromEntries(selectedPets.map((p: any) => [p.id, accFor(p.id)])),
         feeding_instructions: petCare || null,
         check_in_window: payload.check_in_window || null,
         check_out_window: payload.check_out_window || null,
