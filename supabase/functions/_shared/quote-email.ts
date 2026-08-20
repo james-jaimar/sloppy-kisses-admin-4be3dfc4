@@ -186,7 +186,7 @@ export function buildQuoteEmail(i: QuoteEmailInput): { html: string; text: strin
         <!-- Hero -->
         <tr><td style="background:${brand};border-radius:18px 18px 0 0;padding:28px 28px 26px;text-align:center">
           ${i.logoUrl
-            ? `<img src="${esc(i.logoUrl)}" alt="${esc(i.tenantName)}" width="150" style="max-width:150px;height:auto;margin:0 auto 12px;display:block"/>`
+            ? `<img src="${esc(i.logoUrl)}" alt="${esc(i.tenantName)} logo" width="150" style="max-width:150px;height:auto;margin:0 auto 8px;display:block"/><div style="font-size:14px;font-weight:700;color:#ffffff;margin-bottom:10px">${esc(i.tenantName)}</div>`
             : `<div style="font-size:20px;font-weight:800;color:#ffffff;margin-bottom:10px">${esc(i.tenantName)}</div>`}
           <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.85);font-weight:700">${esc(s.hero_label)}</div>
           <div style="font-size:27px;line-height:1.25;font-weight:800;color:#ffffff;margin-top:8px">${esc(s.hero_headline)}</div>
