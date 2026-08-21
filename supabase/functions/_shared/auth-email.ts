@@ -246,13 +246,16 @@ function stripHtml(s: string) { return s.replace(/<[^>]+>/g, ""); }
 function wrapHtml(heading: string, body: string, cta: string, ctx: RenderCtx) {
   const button = `<a href="${ctx.actionUrl}" style="display:inline-block;background:${ctx.primaryColour};color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:600;font-size:15px;">${cta}</a>`;
   const logo = ctx.logoUrl
-    ? `<img src="${ctx.logoUrl}" alt="${ctx.tenantName}" style="max-height:48px;margin-bottom:24px;" />`
-    : `<div style="font-size:22px;font-weight:700;color:${ctx.primaryColour};margin-bottom:24px;">${ctx.tenantName}</div>`;
-  return `<!doctype html><html><body style="margin:0;padding:0;background:#f6f6f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2028;">
+    ? `<img src="${ctx.logoUrl}" alt="${ctx.tenantName}" width="150" style="max-width:150px;height:auto;display:block;margin:0 auto 8px;border:0;" />`
+    : "";
+  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head><body style="margin:0;padding:0;background:#f6f6f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2028;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f6f7;padding:40px 12px;"><tr><td align="center">
-    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;padding:40px;max-width:560px;">
-      <tr><td>
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;max-width:560px;">
+      <tr><td align="center" style="background:${ctx.primaryColour};padding:28px 32px;">
         ${logo}
+        <div style="font-size:18px;font-weight:700;color:#ffffff;">${ctx.tenantName}</div>
+      </td></tr>
+      <tr><td style="padding:36px 40px 40px;">
         <h1 style="font-size:22px;margin:0 0 16px;color:#1f2028;">${heading}</h1>
         <p style="font-size:15px;line-height:1.55;margin:0 0 24px;color:#4a4d57;">${body}</p>
         ${button}
