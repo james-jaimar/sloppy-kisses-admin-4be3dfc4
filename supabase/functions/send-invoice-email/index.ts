@@ -99,7 +99,9 @@ Deno.serve(async (req) => {
     return j(400, { error: "SMTP is not configured. Set it up in Settings → Email server." });
   }
 
-  const publicUrl = APP_BASE_URL ? `${APP_BASE_URL.replace(/\/$/, "")}/i/${inv.public_view_token}` : `/i/${inv.public_view_token}`;
+  const baseUrl = (APP_BASE_URL || (tenant as any)?.app_url || "").replace(/\/+$/, "");
+  const publicUrl = baseUrl ? `${baseUrl}/i/${inv.public_view_token}` : `/i/${inv.public_view_token}`;
+
   const ctx = {
     tenant, customer,
     invoice: {
