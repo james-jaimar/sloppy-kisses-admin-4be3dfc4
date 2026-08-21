@@ -33,7 +33,9 @@ Deno.serve(async (req) => {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${SERVICE_KEY}`,
-      apikey: ANON_KEY,
+      // Must match Authorization — mismatched keys are rejected with
+      // "Conflicting API keys" by the functions gateway.
+      apikey: SERVICE_KEY,
     },
     body: JSON.stringify({ invoice_id: inv.id }),
   });
