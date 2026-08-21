@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
   const [{ data: customer }, { data: smtp }, { data: tenant }] = await Promise.all([
     admin.from("customers").select("id, full_name, email, notify_email").eq("id", inv.customer_id).maybeSingle(),
     admin.from("email_transport_settings").select("*").eq("tenant_id", inv.tenant_id).maybeSingle(),
-    admin.from("tenants").select("id, name").eq("id", inv.tenant_id).maybeSingle(),
+    admin.from("tenants").select("id, name, app_url").eq("id", inv.tenant_id).maybeSingle(),
   ]);
 
   const recipient = overrideTo || customer?.email;
