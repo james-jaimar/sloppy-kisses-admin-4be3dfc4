@@ -97,6 +97,7 @@ import ShopIndexPage from "@/features/shop/ShopIndexPage";
 import ProductsPage from "@/features/shop/ProductsPage";
 import StockPage from "@/features/shop/StockPage";
 import QuickSalePage from "@/features/shop/QuickSalePage";
+import PosPage from "@/features/pos/PosPage";
 import ProductCategoriesPage from "@/features/settings/ProductCategoriesPage";
 import StockLocationsPage from "@/features/settings/StockLocationsPage";
 import RetailSettingsPage from "@/features/settings/RetailSettingsPage";
@@ -219,6 +220,9 @@ const App = () => (
                 <Route path="/admin/shop-stock/products" element={<ProductsPage />} />
                 <Route path="/admin/shop-stock/stock" element={<StockPage />} />
                 <Route path="/admin/shop-stock/sale" element={<QuickSalePage />} />
+                <Route element={<RequirePermission code="pos.operate" />}>
+                  <Route path="/admin/pos" element={<PosPage />} />
+                </Route>
                 <Route element={<RequirePermission code="reports.view" />}>
                   <Route path="/admin/reports" element={<ReportsIndexPage />} />
                   <Route path="/admin/reports/aging" element={<AgingReportPage />} />

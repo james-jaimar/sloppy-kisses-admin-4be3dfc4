@@ -17,7 +17,9 @@ export interface Product {
   sort_order: number;
   active: boolean;
   description: string | null;
+  image_url: string | null;
 }
+
 
 export interface ProductCategory {
   id: string;
@@ -56,6 +58,10 @@ export interface RetailSettings {
   default_vat_rate: number;
   allow_negative_stock: boolean;
   low_stock_notify_emails: string | null;
+  till_name: string | null;
+  receipt_footer: string | null;
+  pos_location_id: string | null;
+  walkin_customer_id: string | null;
 }
 
 // -------- Products --------
@@ -110,6 +116,7 @@ export function useUpsertProduct(tenantId: string) {
         sort_order: input.sort_order ?? 0,
         active: input.active ?? true,
         description: input.description ?? null,
+        image_url: input.image_url ?? null,
       };
       if (input.id) {
         const { error } = await supabase.from("products").update(payload).eq("id", input.id).eq("tenant_id", tenantId);
