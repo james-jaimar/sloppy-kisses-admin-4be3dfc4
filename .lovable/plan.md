@@ -4,28 +4,25 @@ Turn the current "Quick sale" screen into a proper tablet POS: scan, tap, tender
 
 ## The till screen
 
-New route `/admin/pos` (also reachable from Shop & Stock and the Home launcher), rendered full-screen without the admin sidebar so the whole tablet is the till.
+New route `/admin/pos`, rendered full-screen without the admin sidebar so the whole tablet is the till. Layout follows the reference mockup:
 
-```text
-+---------------------------------------------------------------+
-|  SLOPPY KISSES POS      Till: Front Desk      Sarah    [Exit]  |
-+------------------------------+--------------------------------+
-|  [ scan or search... ]  ⌁    |  CART                          |
-|  [All][Food][Toys][Meds]     |  Royal Canin 2kg   x1   R 289  |
-|  +--------+ +--------+       |  Chew rope         x2   R  98  |
-|  | tile   | | tile   |       |  ...                           |
-|  | R289   | | R98    |       |--------------------------------|
-|  +--------+ +--------+       |  Subtotal            R 387.00  |
-|  ...product grid...          |  VAT (incl)          R  50.48  |
-|                              |  TOTAL               R 387.00  |
-|                              |  [ Customer: Walk-in ▾ ]       |
-|                              |  [   PAY  R 387.00   ]         |
-+------------------------------+--------------------------------+
-```
+- **Top bar** — Sloppy Kisses logo, a wide product search, the till/operator chip ("Front Desk"), a coral **New Sale** button, and an overflow menu.
+- **Category chips** — All Products, Food, Treats, Toys, Accessories, Health, Grooming, Cleaning, More. Driven by the real `product_categories` table.
+- **Product grid (left, ~70%)** — cards with a product photo, stock pill in the corner ("12 in stock", amber when low, red at zero), name, variant/size line, price, and a round coral **+** button. Tap anywhere on the card to add.
+- **Sale panel (right, ~30%, sticky)** — sale/invoice number, a Walk-in / customer chip, a dedicated **scan barcode or search product** field (always focused), line rows with thumbnail, price, quantity steppers and remove, an **Add discount** row, then Subtotal / Discount / **Total**, a full-width **Charge R…** button and **Cash** / **Card** quick-tender buttons.
+- **Bottom status strip** — scanner connected indicator, printer, cash drawer, **Park sale**, **Recent sales**, and Quick Add actions (Discount, Note, Gift card, More).
+- Everything sized for fingers: min 48px targets, no hover-only affordances, works in portrait and landscape on a tablet.
 
-- Left: search box that is always focused for the scanner, category filter chips, and a large product tile grid (name, price, on-hand badge, colour-coded low stock). Tap a tile to add.
-- Right: sticky cart with big +/- steppers, swipe-free delete, line discounts, and a huge PAY button. Cart survives a page refresh (saved locally) so a dropped tablet doesn't lose the sale.
-- Everything sized for fingers: min 48px targets, no hover-only affordances, works in portrait and landscape.
+### What I'd add beyond the mockup
+
+1. **Product photos** — the grid only sings with images, so products get an `image_url` (uploaded via the existing document/S3 pipeline) with a tidy initials/paw placeholder when absent.
+2. **Park sale (hold)** — a customer forgets their wallet or a dog needs collecting mid-sale: park the cart, serve the next person, resume from a "Parked (2)" tray. Real-world tills live on this.
+3. **Live scan feedback** — a slim banner under the scan box confirming the last scan ("+1 Beefy Sticks R59.00") with beep/green flash, and a loud red state for an unknown code with a one-tap "Add this product".
+4. **Recent sales / reprint & refund** — the last 20 sales in a drawer, so staff can reprint a receipt or start a return without leaving the till.
+5. **Returns** — negative-quantity lines that put stock back and raise a credit note against the original invoice, using the existing credit-note machinery.
+
+The Loyalty and Gift Card buttons from the mockup are shown as "coming soon" rather than half-built, unless you want them in scope now.
+
 
 ## Scanning
 
