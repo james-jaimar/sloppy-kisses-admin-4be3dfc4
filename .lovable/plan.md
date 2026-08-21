@@ -65,15 +65,17 @@ After payment, a completion screen with:
 
 ## Technical notes
 
-- Frontend: new `src/features/pos/` module — `PosPage.tsx`, `PosProductGrid.tsx`, `PosCart.tsx`, `TenderDialog.tsx`, `ReceiptView.tsx`, `useBarcodeScanner.ts`, plus queries. The existing `QuickSalePage` stays as a lightweight fallback or is retired once POS is signed off.
+- Frontend: new `src/features/pos/` module — `PosPage.tsx`, `PosProductGrid.tsx`, `PosSalePanel.tsx`, `TenderDialog.tsx`, `ReceiptView.tsx`, `ParkedSalesTray.tsx`, `useBarcodeScanner.ts`, plus queries. The existing `QuickSalePage` is retired once POS is signed off.
 - Reuse `src/features/shop/queries.ts` (`useProducts`, `useStockOnHand`, `useQuickSale`); extend the sale mutation to accept an array of tenders instead of one payment, and to skip the payment when charging to account.
-- Database: no new tables needed. Small migration for a `pos_settings`-style extension to `retail_settings` (till name, receipt footer, default location, walk-in customer id), the `pos.operate` permission row, and an index on `products.barcode` for instant scan lookups. All with the required GRANTs.
-- Receipt printing is pure CSS `@media print` on a dedicated receipt component — no native driver needed; any printer the tablet can reach works.
+- Database: small migration adding `products.image_url`, a `pos_parked_sales` table (tenant, operator, cart JSON, customer) with the required GRANTs and RLS, `retail_settings` columns (till name, receipt footer, default location, walk-in customer id), the `pos.operate` permission row, and an index on `products.barcode` for instant scan lookups.
+- Parked carts and the in-progress cart also persist locally, so a dropped or refreshed tablet never loses a sale.
+- Receipt printing is pure CSS `@media print` on a dedicated 80mm receipt component — no native driver needed; any printer the tablet can reach works.
 - Money and VAT follow the existing invoice logic (ZAR, VAT-inclusive rates), so Xero sync and the accounting screens keep working unchanged.
 
 ## Build order
 
-1. POS shell + product grid + cart + scanner (usable till, cash only).
-2. Tender screen: cash, card/EFT, split, charge to account.
-3. Receipt print + email + new-sale reset.
-4. Settings, permission, walk-in customer, scan-in-stock mode, today's takings.
+1. POS shell in the mockup's layout: top bar, category chips, product grid, sale panel, scanner (usable till, cash only).
+2. Tender screen: cash with change, card/EFT, split, charge to account.
+3. Receipt print + email + new-sale reset; parked sales and recent sales tray.
+4. Settings, permission, walk-in customer, product images, scan-in-stock mode, returns, today's takings.
+
