@@ -3,6 +3,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { guardSend } from "../_shared/send-guard.ts";
+import { loadTenantBrand, renderBrandedHtml } from "../_shared/comms-transport.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -64,6 +65,14 @@ Deno.serve(async (req) => {
     return j(200, { ok: false, blocked: true, error: gate.reason });
   }
 
+  const brand = await loadTenantBrand(admin, tenantId);
+  const testText =
+    "Your SMTP settings are working. This is a test message sent from the admin console.";
+  const testHtml = renderBrandedHtml(brand, brand?.name ?? "Sloppy Kisses", testText, {
+    heading: "SMTP test successful",
+    preheader: "Your email server settings are working.",
+  });
+
   try {
     const client = new SMTPClient({
       connection: {
@@ -80,8 +89,8 @@ Deno.serve(async (req) => {
       to: recipient,
       replyTo: s.reply_to ?? undefined,
       subject: "Sloppy Kisses — SMTP test",
-      content: "Your SMTP settings are working. This is a test message sent from the Sloppy Kisses admin.",
-      html: "<p>Your SMTP settings are working.</p><p>This is a test message sent from the <strong>Sloppy Kisses</strong> admin.</p>",
+      content: testText,
+      html: testHtml,
     });
     await client.close();
     ok = true;
