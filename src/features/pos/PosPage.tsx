@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  ArrowLeft, Barcode, ChevronDown, Clock, Inbox, Layers, Search, X,
+  ArrowLeft, Barcode, Clock, Inbox, Layers, Search, X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
-import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
-import { supabase } from "@/lib/supabase/client";
+import { CustomerCombobox, type CustomerOption } from "@/components/customers/CustomerCombobox";
 import {
   useDefaultLocation, useProductCategories, useProducts, useRetailSettings,
   useStockLocations, useStockOnHand, type Product,
@@ -158,17 +157,11 @@ export default function PosPage() {
     }
   }
 
-  async function pickCustomer(id: string) {
-    setCustomerId(id);
+  function pickCustomer(id: string | null, customer: CustomerOption | null) {
+    setCustomerId(id ?? "");
     setShowCustomer(false);
-    if (!id) {
-      setCustomerName("Walk-in customer");
-      setCustomerEmail(null);
-      return;
-    }
-    const { data } = await supabase.from("customers").select("full_name, email").eq("id", id).maybeSingle();
-    setCustomerName((data as any)?.full_name ?? "Customer");
-    setCustomerEmail((data as any)?.email ?? null);
+    setCustomerName(customer?.full_name || "Walk-in customer");
+    setCustomerEmail(customer?.email ?? null);
   }
 
   const total = Math.max(0, cartTotal(lines) - discount);
@@ -275,7 +268,7 @@ export default function PosPage() {
       {showCustomer && (
         <Overlay title="Attach a customer" onClose={() => setShowCustomer(false)}>
           <CustomerCombobox tenantId={tenantId} value={customerId} onChange={pickCustomer} />
-          <button onClick={() => pickCustomer("")} className="mt-3 h-12 w-full rounded-xl border border-border text-sm font-semibold">
+          <button onClick={() => pickCustomer(null, null)} className="mt-3 h-12 w-full rounded-xl border border-border text-sm font-semibold">
             Use walk-in customer
           </button>
         </Overlay>
