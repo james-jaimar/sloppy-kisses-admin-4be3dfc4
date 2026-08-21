@@ -3,15 +3,16 @@ import { Save } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
-import { useRetailSettings, useUpdateRetailSettings } from "@/features/shop/queries";
+import { useRetailSettings, useStockLocations, useUpdateRetailSettings } from "@/features/shop/queries";
 
 export default function RetailSettingsPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const settingsQ = useRetailSettings(tenantId);
   const update = useUpdateRetailSettings(tenantId ?? "");
+  const locsQ = useStockLocations(tenantId);
 
-  const [form, setForm] = useState({ default_vat_rate: 15, allow_negative_stock: false, low_stock_notify_emails: "" });
+  const [form, setForm] = useState({ default_vat_rate: 15, allow_negative_stock: false, low_stock_notify_emails: "", till_name: "", receipt_footer: "", pos_location_id: "" });
 
   useEffect(() => {
     const d = settingsQ.data;
@@ -19,6 +20,9 @@ export default function RetailSettingsPage() {
       default_vat_rate: Number(d.default_vat_rate ?? 15),
       allow_negative_stock: !!d.allow_negative_stock,
       low_stock_notify_emails: d.low_stock_notify_emails ?? "",
+      till_name: d.till_name ?? "",
+      receipt_footer: d.receipt_footer ?? "",
+      pos_location_id: d.pos_location_id ?? "",
     });
   }, [settingsQ.data]);
 
@@ -28,6 +32,9 @@ export default function RetailSettingsPage() {
         default_vat_rate: form.default_vat_rate,
         allow_negative_stock: form.allow_negative_stock,
         low_stock_notify_emails: form.low_stock_notify_emails || null,
+        till_name: form.till_name || null,
+        receipt_footer: form.receipt_footer || null,
+        pos_location_id: form.pos_location_id || null,
       });
       toast.success("Retail settings saved");
     } catch (err: any) { toast.error(err?.message ?? "Failed"); }
@@ -57,6 +64,35 @@ export default function RetailSettingsPage() {
               className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
             <div className="mt-1 text-[11px] text-muted-foreground">Comma-separated. Used by the low-stock digest.</div>
           </label>
+          <div className="border-t border-border pt-5 space-y-5">
+            <div className="text-sm font-semibold">Point of sale</div>
+            <label className="block">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Till name</div>
+              <input value={form.till_name}
+                onChange={(e) => setForm({ ...form, till_name: e.target.value })}
+                placeholder="Front desk till"
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+              <div className="mt-1 text-[11px] text-muted-foreground">Shown on the till screen and printed on receipts.</div>
+            </label>
+            <label className="block">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Till stock location</div>
+              <select value={form.pos_location_id}
+                onChange={(e) => setForm({ ...form, pos_location_id: e.target.value })}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm">
+                <option value="">Use the default location</option>
+                {(locsQ.data ?? []).map((l) => (<option key={l.id} value={l.id}>{l.name}</option>))}
+              </select>
+              <div className="mt-1 text-[11px] text-muted-foreground">Stock sold at the till comes off this location.</div>
+            </label>
+            <label className="block">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Receipt footer</div>
+              <textarea value={form.receipt_footer} rows={3}
+                onChange={(e) => setForm({ ...form, receipt_footer: e.target.value })}
+                placeholder="Thank you for shopping with us!"
+                className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm" />
+            </label>
+          </div>
+
           <div className="flex justify-end">
             <button onClick={save} disabled={update.isPending}
               className="inline-flex h-10 items-center gap-2 rounded-lg bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
