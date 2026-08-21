@@ -6,6 +6,8 @@ import { type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { guardSend } from "./send-guard.ts";
 import { sanitizeEmailHtml, styleBodyHtml, wrapHtmlLines } from "./html-email.ts";
+import { publicBrandLogoUrl } from "./public-brand-logo.ts";
+
 
 export interface Transport {
   smtp_host: string;
