@@ -6683,6 +6683,57 @@ export type Database = {
           },
         ]
       }
+      pos_parked_sales: {
+        Row: {
+          cart: Json
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          id: string
+          label: string | null
+          tenant_id: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          cart?: Json
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          id?: string
+          label?: string | null
+          tenant_id: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          cart?: Json
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          id?: string
+          label?: string | null
+          tenant_id?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_parked_sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_parked_sales_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_categories: {
         Row: {
           active: boolean
@@ -6732,6 +6783,7 @@ export type Database = {
           description: string | null
           external_code: string | null
           id: string
+          image_url: string | null
           name: string
           reorder_level: number | null
           sell_price: number | null
@@ -6754,6 +6806,7 @@ export type Database = {
           description?: string | null
           external_code?: string | null
           id?: string
+          image_url?: string | null
           name: string
           reorder_level?: number | null
           sell_price?: number | null
@@ -6776,6 +6829,7 @@ export type Database = {
           description?: string | null
           external_code?: string | null
           id?: string
+          image_url?: string | null
           name?: string
           reorder_level?: number | null
           sell_price?: number | null
@@ -7064,31 +7118,57 @@ export type Database = {
           created_at: string
           default_vat_rate: number
           low_stock_notify_emails: string | null
+          pos_location_id: string | null
+          receipt_footer: string | null
           tenant_id: string
+          till_name: string
           updated_at: string
+          walkin_customer_id: string | null
         }
         Insert: {
           allow_negative_stock?: boolean
           created_at?: string
           default_vat_rate?: number
           low_stock_notify_emails?: string | null
+          pos_location_id?: string | null
+          receipt_footer?: string | null
           tenant_id: string
+          till_name?: string
           updated_at?: string
+          walkin_customer_id?: string | null
         }
         Update: {
           allow_negative_stock?: boolean
           created_at?: string
           default_vat_rate?: number
           low_stock_notify_emails?: string | null
+          pos_location_id?: string | null
+          receipt_footer?: string | null
           tenant_id?: string
+          till_name?: string
           updated_at?: string
+          walkin_customer_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "retail_settings_pos_location_id_fkey"
+            columns: ["pos_location_id"]
+            isOneToOne: false
+            referencedRelation: "stock_locations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "retail_settings_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: true
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_settings_walkin_customer_id_fkey"
+            columns: ["walkin_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
