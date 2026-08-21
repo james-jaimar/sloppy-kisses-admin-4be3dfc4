@@ -111,9 +111,14 @@ Deno.serve(async (req) => {
   const bodyTpl = kind === "reminder" ? DEFAULT_BODY_REMINDER : DEFAULT_BODY_SEND;
   const subject = render(subjTpl, ctx);
   const text = render(bodyTpl, ctx);
-  const html = `<div style="font-family:system-ui,sans-serif;line-height:1.5;color:#1a1a2e">${
-    text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br/>")
-  }</div>`;
+  const brand = await loadTenantBrand(admin, inv.tenant_id);
+  const html = renderBrandedHtml(brand, tenant?.name ?? "Sloppy Kisses", text, {
+    heading: kind === "reminder"
+      ? `Reminder: invoice ${inv.invoice_number}`
+      : `Invoice ${inv.invoice_number}`,
+    preheader: `Balance due R${Number(inv.balance_due).toFixed(2)}`,
+  });
+
 
   // Get PDF bytes by invoking generate-invoice-pdf.
   const pdfRes = await fetch(`${SUPABASE_URL}/functions/v1/generate-invoice-pdf`, {
