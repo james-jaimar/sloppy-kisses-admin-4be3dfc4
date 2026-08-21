@@ -4,6 +4,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { guardSend } from "../_shared/send-guard.ts";
+import { loadTenantBrand, renderBrandedHtml } from "../_shared/comms-transport.ts";
+
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -85,7 +87,7 @@ Deno.serve(async (req) => {
   const [{ data: customer }, { data: smtp }, { data: tenant }] = await Promise.all([
     admin.from("customers").select("id, full_name, email, notify_email").eq("id", inv.customer_id).maybeSingle(),
     admin.from("email_transport_settings").select("*").eq("tenant_id", inv.tenant_id).maybeSingle(),
-    admin.from("tenants").select("id, name").eq("id", inv.tenant_id).maybeSingle(),
+    admin.from("tenants").select("id, name, app_url").eq("id", inv.tenant_id).maybeSingle(),
   ]);
 
   const recipient = overrideTo || customer?.email;
@@ -97,7 +99,9 @@ Deno.serve(async (req) => {
     return j(400, { error: "SMTP is not configured. Set it up in Settings → Email server." });
   }
 
-  const publicUrl = APP_BASE_URL ? `${APP_BASE_URL.replace(/\/$/, "")}/i/${inv.public_view_token}` : `/i/${inv.public_view_token}`;
+  const baseUrl = (APP_BASE_URL || (tenant as any)?.app_url || "").replace(/\/+$/, "");
+  const publicUrl = baseUrl ? `${baseUrl}/i/${inv.public_view_token}` : `/i/${inv.public_view_token}`;
+
   const ctx = {
     tenant, customer,
     invoice: {
@@ -111,9 +115,14 @@ Deno.serve(async (req) => {
   const bodyTpl = kind === "reminder" ? DEFAULT_BODY_REMINDER : DEFAULT_BODY_SEND;
   const subject = render(subjTpl, ctx);
   const text = render(bodyTpl, ctx);
-  const html = `<div style="font-family:system-ui,sans-serif;line-height:1.5;color:#1a1a2e">${
-    text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\n/g, "<br/>")
-  }</div>`;
+  const brand = await loadTenantBrand(admin, inv.tenant_id);
+  const html = renderBrandedHtml(brand, tenant?.name ?? "Sloppy Kisses", text, {
+    heading: kind === "reminder"
+      ? `Reminder: invoice ${inv.invoice_number}`
+      : `Invoice ${inv.invoice_number}`,
+    preheader: `Balance due R${Number(inv.balance_due).toFixed(2)}`,
+  });
+
 
   // Get PDF bytes by invoking generate-invoice-pdf.
   const pdfRes = await fetch(`${SUPABASE_URL}/functions/v1/generate-invoice-pdf`, {

@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
     })),
   };
 
-  const logoUrl = publicBrandLogoUrl(SUPABASE_URL, tenantId, tenant?.logo_url);
+  const logoUrl = publicBrandLogoUrl(SUPABASE_URL, tenantId, tenant?.logo_url, (tenant as any)?.app_url);
 
   const introTpl = tpl && tpl.is_active !== false && String(tpl.body ?? "").trim()
     ? String(tpl.body) : DEFAULT_QUOTE_INTRO;

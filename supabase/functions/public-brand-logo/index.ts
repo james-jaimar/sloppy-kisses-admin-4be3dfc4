@@ -14,10 +14,15 @@ Deno.serve(async (req) => {
     return new Response("Branding unavailable", { status: 503, headers: corsHeaders });
   }
 
-  const tenantId = new URL(req.url).searchParams.get("tenant");
+  const url = new URL(req.url);
+  // Supports both /public-brand-logo?tenant=<id> and
+  // /public-brand-logo/<id>/logo.png (extension-terminated, Outlook friendly).
+  const fromPath = url.pathname.split("/").find((p) => UUID.test(p));
+  const tenantId = fromPath ?? url.searchParams.get("tenant");
   if (!tenantId || !UUID.test(tenantId)) {
     return new Response("Invalid tenant", { status: 400, headers: corsHeaders });
   }
+
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
   const { data: tenant, error: tenantError } = await admin
