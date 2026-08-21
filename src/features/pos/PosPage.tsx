@@ -167,7 +167,7 @@ export default function PosPage() {
   const total = Math.max(0, cartTotal(lines) - discount);
 
   return (
-    <div className="flex h-[100dvh] flex-col bg-sk-surface-muted/40">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-sk-surface-muted/40">
       {/* Top bar */}
       <header className="flex items-center gap-3 border-b border-border bg-white px-4 py-3">
         <Link to="/admin/shop-stock" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border" aria-label="Back">
