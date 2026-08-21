@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
   // Use one stable public URL in previews and delivered mail. The SMTP library
   // exposes CID images as normal attachments and Outlook may then fail to show
   // them inline. The public endpoint safely proxies only the tenant logo.
-  const logoUrl = publicBrandLogoUrl(SUPABASE_URL, q.tenant_id, tenant?.logo_url);
+  const logoUrl = publicBrandLogoUrl(SUPABASE_URL, q.tenant_id, tenant?.logo_url, (tenant as any)?.app_url);
 
   const guidelines = (Array.isArray(guidelinesRow) ? guidelinesRow[0] : guidelinesRow)?.guidelines_md ?? null;
 
