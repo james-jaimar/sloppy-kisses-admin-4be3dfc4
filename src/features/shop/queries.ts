@@ -58,6 +58,10 @@ export interface RetailSettings {
   default_vat_rate: number;
   allow_negative_stock: boolean;
   low_stock_notify_emails: string | null;
+  till_name: string | null;
+  receipt_footer: string | null;
+  pos_location_id: string | null;
+  walkin_customer_id: string | null;
 }
 
 // -------- Products --------
