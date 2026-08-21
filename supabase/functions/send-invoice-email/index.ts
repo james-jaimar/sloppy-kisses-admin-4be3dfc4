@@ -4,6 +4,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { guardSend } from "../_shared/send-guard.ts";
+import { loadTenantBrand, renderBrandedHtml } from "../_shared/comms-transport.ts";
+
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
