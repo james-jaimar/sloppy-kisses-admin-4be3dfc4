@@ -37,7 +37,13 @@ Deno.serve(async (req) => {
     },
     body: JSON.stringify({ invoice_id: inv.id }),
   });
-  if (!pdfRes.ok) return j(502, { error: await pdfRes.text() });
+  if (!pdfRes.ok) {
+    const detail = await pdfRes.text();
+    console.error("generate-invoice-pdf failed", pdfRes.status, detail);
+    let message = detail;
+    try { message = JSON.parse(detail)?.error ?? detail; } catch { /* keep raw */ }
+    return j(502, { error: `PDF generation failed (${pdfRes.status}): ${message}` });
+  }
   const bytes = new Uint8Array(await pdfRes.arrayBuffer());
   return new Response(bytes, {
     status: 200,
