@@ -125,14 +125,16 @@ Deno.serve(async (req) => {
 
 
   // Get PDF bytes by invoking generate-invoice-pdf.
+  const pdfAuth = callerAuth ?? `Bearer ${SERVICE_KEY}`;
   const pdfRes = await fetch(`${SUPABASE_URL}/functions/v1/generate-invoice-pdf`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       // The PDF function checks RLS via the caller's auth. For system/reminder
-      // calls we use the service role directly.
-      Authorization: callerAuth ?? `Bearer ${SERVICE_KEY}`,
-      apikey: ANON_KEY,
+      // calls we use the service role directly. `apikey` must match the bearer,
+      // otherwise the gateway rejects it with "Conflicting API keys".
+      Authorization: pdfAuth,
+      apikey: callerAuth ? ANON_KEY : SERVICE_KEY,
     },
     body: JSON.stringify({ invoice_id: inv.id }),
   });

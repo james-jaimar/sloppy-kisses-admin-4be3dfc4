@@ -62,8 +62,14 @@ Deno.serve(async (req) => {
   const caller = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: auth } } });
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-  const { data: u } = await caller.auth.getUser();
-  if (!u?.user) return jerr(401, "Not authenticated");
+  // System calls (public share-link wrapper, invoice email, reminder cron) arrive
+  // with the service-role key as the bearer. That is not a user token, so
+  // getUser() would fail — those callers have already authorised the request.
+  const isServiceCall = !!SERVICE_KEY && auth.includes(SERVICE_KEY);
+  if (!isServiceCall) {
+    const { data: u } = await caller.auth.getUser();
+    if (!u?.user) return jerr(401, "Not authenticated");
+  }
 
   let body: any;
   try { body = await req.json(); } catch { return jerr(400, "Invalid JSON"); }
@@ -71,13 +77,15 @@ Deno.serve(async (req) => {
   if (!invoiceId) return jerr(400, "invoice_id required");
 
   // Fetch via caller so RLS enforces access; if it comes back, they may read it.
-  const { data: inv, error: invErr } = await caller
+  // Service calls read with the admin client (already authorised upstream).
+  const { data: inv, error: invErr } = await (isServiceCall ? admin : caller)
     .from("invoices")
     .select("*")
     .eq("id", invoiceId)
     .maybeSingle();
   if (invErr) return jerr(500, invErr.message);
   if (!inv) return jerr(404, "Invoice not found or access denied");
+
 
   const [{ data: items }, { data: customer }, { data: settings }, { data: tenant }] = await Promise.all([
     admin.from("invoice_items").select("*").eq("invoice_id", invoiceId).order("sort_order"),

@@ -33,11 +33,19 @@ Deno.serve(async (req) => {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${SERVICE_KEY}`,
-      apikey: ANON_KEY,
+      // Must match Authorization — mismatched keys are rejected with
+      // "Conflicting API keys" by the functions gateway.
+      apikey: SERVICE_KEY,
     },
     body: JSON.stringify({ invoice_id: inv.id }),
   });
-  if (!pdfRes.ok) return j(502, { error: await pdfRes.text() });
+  if (!pdfRes.ok) {
+    const detail = await pdfRes.text();
+    console.error("generate-invoice-pdf failed", pdfRes.status, detail);
+    let message = detail;
+    try { message = JSON.parse(detail)?.error ?? detail; } catch { /* keep raw */ }
+    return j(502, { error: `PDF generation failed (${pdfRes.status}): ${message}` });
+  }
   const bytes = new Uint8Array(await pdfRes.arrayBuffer());
   return new Response(bytes, {
     status: 200,
