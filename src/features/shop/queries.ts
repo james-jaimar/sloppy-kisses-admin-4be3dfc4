@@ -17,7 +17,9 @@ export interface Product {
   sort_order: number;
   active: boolean;
   description: string | null;
+  image_url: string | null;
 }
+
 
 export interface ProductCategory {
   id: string;
