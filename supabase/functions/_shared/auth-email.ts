@@ -5,6 +5,7 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { guardSend } from "./send-guard.ts";
+import { publicBrandLogoUrl } from "./public-brand-logo.ts";
 
 export type AuthEmailAction = "invite" | "recovery" | "magiclink";
 
@@ -24,6 +25,7 @@ interface TenantBrand {
   name: string;
   primary_colour: string | null;
   logo_url: string | null;
+  app_url: string | null;
 }
 
 export interface SendAuthEmailArgs {
@@ -44,7 +46,7 @@ export async function sendAuthEmail(args: SendAuthEmailArgs): Promise<{ ok: true
     if (!transport) {
       throw new Error(`SMTP is not configured for ${tenant.name}. Set it up in Settings → Email Server.`);
     }
-    const logoUrl = await resolveLogoPublicUrl(admin, tenant.logo_url);
+    const logoUrl = publicBrandLogoUrl(Deno.env.get("SUPABASE_URL") ?? "", tenant.id, tenant.logo_url, tenant.app_url);
     const { subject, html, text } = renderTemplate(action, {
       tenantName: tenant.name,
       primaryColour: tenant.primary_colour ?? "#F26D6D",
@@ -138,24 +140,10 @@ export async function resolveTenantAppUrl(
   throw new Error("No app URL configured. Set your public app URL in Settings → Branding.");
 }
 
-async function resolveLogoPublicUrl(admin: SupabaseClient, raw: string | null): Promise<string | null> {
-  if (!raw) return null;
-  if (/^https?:\/\//i.test(raw)) return raw;
-  try {
-    // Long-lived signed URL — 30 days is enough for the recipient to open the email.
-    const { data, error } = await admin.storage.from("tenant-branding").createSignedUrl(raw, 60 * 60 * 24 * 30);
-    if (error) throw error;
-    return data?.signedUrl ?? null;
-  } catch (e) {
-    console.warn("resolveLogoPublicUrl failed:", (e as Error).message);
-    return null;
-  }
-}
-
 async function fetchTenant(admin: SupabaseClient, id: string): Promise<TenantBrand | null> {
   const { data } = await admin
     .from("tenants")
-    .select("id,name,primary_colour,logo_url")
+    .select("id,name,primary_colour,logo_url,app_url")
     .eq("id", id)
     .maybeSingle();
   return (data as TenantBrand | null) ?? null;
