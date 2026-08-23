@@ -286,7 +286,7 @@ export default function AccommodationFormPage() {
             <Text label="ID number" value={form.owner.id_number} onChange={(v) => setForm({ ...form, owner: { ...form.owner, id_number: v } })} />
             <Text label="Email" type="email" value={form.owner.email} onChange={(v) => setForm({ ...form, owner: { ...form.owner, email: v } })} />
             <Text label="Mobile" value={form.owner.mobile} onChange={(v) => setForm({ ...form, owner: { ...form.owner, mobile: v } })} />
-            <Area label="Home address" rows={2} value={form.owner.home_address} onChange={(v) => setForm({ ...form, owner: { ...form.owner, home_address: v } })} />
+            
           </div>
         </Section>
 

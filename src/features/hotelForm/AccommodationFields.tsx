@@ -218,7 +218,7 @@ export function syncFormPets(form: AccommodationFormPayload, pets: any[]): Accom
 }
 
 export function isOwnerComplete(f: AccommodationFormPayload) {
-  return Boolean(f.owner.full_name && f.owner.mobile && f.owner.home_address);
+  return Boolean(f.owner.full_name && f.owner.mobile);
 }
 export function isEmergencyComplete(f: AccommodationFormPayload) {
   return Boolean(f.emergency_contact.full_name && f.emergency_contact.mobile);
@@ -243,7 +243,7 @@ export function OwnerSection({ form, setForm, collapsible }: FormProps) {
         <Text label="ID number" value={form.owner.id_number} onChange={(v) => set({ id_number: v })} />
         <Text label="Email" type="email" value={form.owner.email} onChange={(v) => set({ email: v })} />
         <Text label="Mobile" value={form.owner.mobile} onChange={(v) => set({ mobile: v })} />
-        <Area label="Home address" rows={2} value={form.owner.home_address} onChange={(v) => set({ home_address: v })} />
+        
       </div>
     </Section>
   );
