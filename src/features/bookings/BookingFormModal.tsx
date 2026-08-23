@@ -607,7 +607,12 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       return toast.error("Select at least one pet for this booking");
     }
 
+    if (kind === "hotel" && (accom.pickup_required || accom.dropoff_required) && !serviceAddressId) {
+      return toast.error("Pick the collection / drop-off address — the van needs somewhere to go.");
+    }
+
     if (needsVanAddress && !addressOverride) {
+
       if (!serviceAddressId) {
         return toast.error(
           isTransport
@@ -1351,6 +1356,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               setForm={patchAccom}
               collapsible
               checkOutDate={endAtLocal ? endAtLocal.slice(0, 10) : null}
+              customerId={customerId || null}
+              tenantId={tenantId}
+              addressId={serviceAddressId}
+              onAddressChange={setServiceAddressId}
             />
             <PetSections form={accom} setForm={patchAccom} collapsible tenantId={tenantId} uploadedVia="admin" />
             <CareSection form={accom} setForm={patchAccom} collapsible />

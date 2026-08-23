@@ -11,6 +11,8 @@ import { GuidelinesBody } from "@/features/hotelForm/GuidelinesSection";
 import { useHotelGuidelines } from "@/features/hotelForm/guidelinesQueries";
 import { PetAttachments } from "@/features/uploads/PetAttachments";
 import { usePetAttachmentStatus } from "@/features/uploads/snapQueries";
+import { AddressSelector } from "@/features/customers/AddressSelector";
+import { useCustomerAddresses } from "@/features/customers/addressQueries";
 import {
   BEHAVIOUR_OPTIONS,
   CHECK_IN_WINDOWS,
@@ -147,7 +149,7 @@ export default function AccommodationFormPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, tenant_id, booking_number, service_type, start_at, end_at, booking_pets(pet:pets(id, name, breed, sex, size, size_override, marks_colour))")
+        .select("id, tenant_id, customer_id, service_address_id, booking_number, service_type, start_at, end_at, booking_pets(pet:pets(id, name, breed, sex, size, size_override, marks_colour))")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
@@ -176,6 +178,7 @@ export default function AccommodationFormPage() {
     acknowledgement: { accepted: false, signed_name: "", signed_at: "", signed_place: "" },
   });
   const [seeded, setSeeded] = useState(false);
+  const [serviceAddressId, setServiceAddressId] = useState<string | null>(null);
 
   const bookingPets = useMemo(
     () => ((bookingQ.data as any)?.booking_pets ?? []).map((bp: any) => bp.pet).filter(Boolean),
@@ -207,8 +210,14 @@ export default function AccommodationFormPage() {
               colour_marks: p.marks_colour ?? "",
             })),
     }));
+    setServiceAddressId((bookingQ.data as any)?.service_address_id ?? null);
     setSeeded(true);
   }, [seeded, bookingQ.data, cust.data, existing.data, bookingPets]);
+
+  const addressesQ = useCustomerAddresses(
+    (bookingQ.data as any)?.customer_id ?? cust.data?.id ?? null,
+    (bookingQ.data as any)?.tenant_id ?? cust.data?.tenant_id ?? null,
+  );
 
   function patchPet(i: number, patch: Partial<FormPet>) {
     setForm((f) => ({ ...f, pets: f.pets.map((p, idx) => (idx === i ? { ...p, ...patch } : p)) }));
@@ -219,9 +228,29 @@ export default function AccommodationFormPage() {
       toast.error("Please accept the terms and sign with your full name.");
       return;
     }
+    if ((form.pickup_required || form.dropoff_required) && !serviceAddressId) {
+      toast.error("Please choose the collection / drop-off address.");
+      return;
+    }
     try {
+      const address = serviceAddressId
+        ? addressesQ.data?.find((a) => a.id === serviceAddressId) ?? null
+        : null;
+      const collectionText = address
+        ? [address.address_line_2, address.formatted_address || [address.address_line_1, address.suburb, address.city].filter(Boolean).join(", ")]
+            .filter(Boolean)
+            .join(", ")
+        : form.collection_address;
+      if (serviceAddressId && serviceAddressId !== (bookingQ.data as any)?.service_address_id) {
+        const { error: addrErr } = await supabase
+          .from("bookings")
+          .update({ service_address_id: serviceAddressId })
+          .eq("id", id!);
+        if (addrErr) console.error("Could not set the booking service address", addrErr);
+      }
       await submit.mutateAsync({
         ...form,
+        collection_address: collectionText,
         acknowledgement: { ...form.acknowledgement, signed_at: new Date().toISOString() },
       });
       toast.success("Accommodation form submitted — thank you!");
@@ -290,7 +319,21 @@ export default function AccommodationFormPage() {
               <Check label="Drop-off required" checked={form.dropoff_required} onChange={(v) => setForm({ ...form, dropoff_required: v })} />
             </div>
             {(form.pickup_required || form.dropoff_required) && (
-              <Area label="Physical address for collection / drop-off" rows={2} value={form.collection_address} onChange={(v) => setForm({ ...form, collection_address: v })} />
+              <div className="md:col-span-2">
+                <AddressSelector
+                  customerId={(bookingQ.data as any)?.customer_id ?? cust.data?.id ?? null}
+                  tenantId={(bookingQ.data as any)?.tenant_id ?? cust.data?.tenant_id ?? null}
+                  value={serviceAddressId}
+                  onChange={setServiceAddressId}
+                  label="Collection / drop-off address"
+                  allowManual={false}
+                />
+                {!serviceAddressId && (
+                  <p className="mt-2 rounded-lg border border-sk-coral bg-sk-coral-soft px-3 py-2 text-xs text-sk-coral-dark">
+                    Choose the address our van should drive to, or add a new one.
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </Section>
