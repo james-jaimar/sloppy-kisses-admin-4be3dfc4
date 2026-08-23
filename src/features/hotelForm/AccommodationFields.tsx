@@ -218,7 +218,7 @@ export function syncFormPets(form: AccommodationFormPayload, pets: any[]): Accom
 }
 
 export function isOwnerComplete(f: AccommodationFormPayload) {
-  return Boolean(f.owner.full_name && f.owner.mobile && f.owner.home_address);
+  return Boolean(f.owner.full_name && f.owner.mobile);
 }
 export function isEmergencyComplete(f: AccommodationFormPayload) {
   return Boolean(f.emergency_contact.full_name && f.emergency_contact.mobile);
