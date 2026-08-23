@@ -48,6 +48,9 @@ export default function HotelWorkflowPage() {
     photo_policy_note: "",
     require_payment_to_confirm: true,
     payment_hold_hours: 48,
+    portal_quotes_enabled: true,
+    portal_quote_hold_hours: 48,
+    portal_quote_max_active: 3,
   });
 
   useEffect(() => {
@@ -74,6 +77,9 @@ export default function HotelWorkflowPage() {
         photo_policy_note: (settingsQ.data as any).photo_policy_note ?? "",
         require_payment_to_confirm: (settingsQ.data as any).require_payment_to_confirm ?? true,
         payment_hold_hours: Number((settingsQ.data as any).payment_hold_hours ?? 48),
+        portal_quotes_enabled: (settingsQ.data as any).portal_quotes_enabled ?? true,
+        portal_quote_hold_hours: Number((settingsQ.data as any).portal_quote_hold_hours ?? 48),
+        portal_quote_max_active: Number((settingsQ.data as any).portal_quote_max_active ?? 3),
       });
     }
   }, [settingsQ.data]);
@@ -101,6 +107,9 @@ export default function HotelWorkflowPage() {
         photo_policy_note: form.photo_policy_note.trim() || null,
         require_payment_to_confirm: form.require_payment_to_confirm,
         payment_hold_hours: form.payment_hold_hours,
+        portal_quotes_enabled: form.portal_quotes_enabled,
+        portal_quote_hold_hours: form.portal_quote_hold_hours,
+        portal_quote_max_active: form.portal_quote_max_active,
         guidelines_md: form.guidelines_md.trim() || null,
         ...(form.guidelines_md.trim() !== (((settingsQ.data as any)?.guidelines_md ?? "").trim())
           ? { guidelines_version: Number((settingsQ.data as any)?.guidelines_version ?? 0) + 1 }
@@ -246,6 +255,43 @@ export default function HotelWorkflowPage() {
                 className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
               />
             </Field>
+          </div>
+
+          <div className="space-y-4 rounded-xl border border-border p-4">
+            <div className="text-sm font-semibold">Customer self-service quotes</div>
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                disabled={!canManage}
+                checked={form.portal_quotes_enabled}
+                onChange={(e) => setForm((f) => ({ ...f, portal_quotes_enabled: e.target.checked }))}
+                className="mt-1 h-4 w-4 rounded border-border"
+              />
+              <span className="text-sm">
+                Let customers price a stay and save it as a quote
+                <span className="block text-[11px] text-muted-foreground">
+                  The quote holds the dates for the period below, then expires automatically and releases them.
+                </span>
+              </span>
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Hold customer quotes for (hours)" hint="Booking.com-style short hold. 48 hours is typical.">
+                <input
+                  type="number" min={1} max={336} step={1} disabled={!canManage}
+                  value={form.portal_quote_hold_hours}
+                  onChange={(e) => setForm((f) => ({ ...f, portal_quote_hold_hours: Number(e.target.value) }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                />
+              </Field>
+              <Field label="Max live quotes per customer" hint="Stops one customer blocking the calendar with quotes they never book.">
+                <input
+                  type="number" min={1} max={20} step={1} disabled={!canManage}
+                  value={form.portal_quote_max_active}
+                  onChange={(e) => setForm((f) => ({ ...f, portal_quote_max_active: Number(e.target.value) }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                />
+              </Field>
+            </div>
           </div>
 
           <PaymentHoldFields
