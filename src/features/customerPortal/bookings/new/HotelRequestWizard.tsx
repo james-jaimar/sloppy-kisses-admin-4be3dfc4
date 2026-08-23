@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
@@ -80,6 +82,21 @@ export default function HotelRequestWizard() {
   const pets = usePortalPets(cust.data?.id);
   const rooms = useResources(cust.data?.tenant_id, ["hotel_area", "cattery_area"]);
   const submit = useCreatePortalBooking();
+  const nav = useNavigate();
+  const [savingQuote, setSavingQuote] = useState(false);
+
+  // Whether the tenant lets customers save their own quotes, and for how long.
+  const quoteSettings = useQuery({
+    queryKey: ["portal_hotel_quote_settings", cust.data?.tenant_id],
+    enabled: Boolean(cust.data?.tenant_id),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("portal_hotel_quote_settings" as any, {
+        p_tenant_id: cust.data!.tenant_id,
+      });
+      if (error) throw error;
+      return (data ?? { enabled: true, hold_hours: 48 }) as { enabled: boolean; hold_hours: number };
+    },
+  });
   const writeBack = useAccommodationWriteBack();
 
   const [step, setStep] = useState(0);
@@ -212,6 +229,34 @@ export default function HotelRequestWizard() {
     stayReady && transportAddressReady && !photoBlocked && !vax.blocked && form.acknowledgement.accepted &&
     form.acknowledgement.signed_name.trim().length > 1 && !submit.isPending;
 
+  /** Saves the priced stay as a quote that holds the dates for a short while. */
+  async function onSaveQuote() {
+    if (!cust.data || !checkInDate) return;
+    setSavingQuote(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("portal-create-quote", {
+        body: {
+          service_type: serviceType,
+          pet_ids: petIds,
+          start_at: dateToIso(checkInDate, CHECK_IN_TIME),
+          end_at: dateToIso(checkOutDate, checkOutTimeFor(form.check_out_window)),
+          pet_accommodations: Object.fromEntries(selectedPets.map((p: any) => [p.id, accFor(p.id)])),
+          notes: roomPref ? `Room preference: ${roomPref}` : null,
+          check_in_window: form.check_in_window || null,
+          check_out_window: form.check_out_window || null,
+        },
+      });
+      if (error) throw new Error(error.message);
+      if ((data as any)?.ok === false) throw new Error((data as any).error ?? "Could not save the quote");
+      toast.success("Quote saved — we're holding these dates for you.");
+      nav(`/customer/quotes/${(data as any).quote_id}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not save the quote");
+    } finally {
+      setSavingQuote(false);
+    }
+  }
+
   function togglePet(id: string) {
     setPetIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
@@ -291,6 +336,15 @@ export default function HotelRequestWizard() {
           {step > 0 && (
             <button onClick={() => setStep((s) => s - 1)} className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted">
               Back
+            </button>
+          )}
+          {step === 0 && quoteSettings.data?.enabled !== false && (
+            <button
+              onClick={onSaveQuote}
+              disabled={!stayReady || !estimate || savingQuote}
+              className="rounded-lg border border-sk-coral px-4 py-2 text-sm font-semibold text-sk-coral hover:bg-sk-coral-soft disabled:opacity-50"
+            >
+              {savingQuote ? "Saving…" : "Save as quote"}
             </button>
           )}
           {!isLast ? (
