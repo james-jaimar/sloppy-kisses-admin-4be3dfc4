@@ -191,9 +191,16 @@ const SECTIONS = [
     ready: true,
   },
   {
+    to: "/admin/settings/product-brands",
+    label: "Product brands",
+    description: "Brands used to filter the catalogue and the till.",
+    icon: Package,
+    ready: true,
+  },
+  {
     to: "/admin/settings/product-categories",
     label: "Product categories",
-    description: "Group retail products for filtering and reports.",
+    description: "Categories and subcategories for the catalogue and till.",
     icon: Package,
     ready: true,
   },
