@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { CustomerCombobox, type CustomerOption } from "@/components/customers/CustomerCombobox";
 import {
-  useDefaultLocation, useProductCategories, useProducts, useRetailSettings,
+  useCategoryTree, useDefaultLocation, useProductBrands, useProducts, useRetailSettings,
   useStockLocations, useStockOnHand, type Product,
 } from "@/features/shop/queries";
 import {
@@ -28,6 +28,8 @@ export default function PosPage() {
 
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<string>("all");
+  const [subCategoryId, setSubCategoryId] = useState<string>("all");
+  const [brandId, setBrandId] = useState<string>("all");
   const [lines, setLines] = useState<PosLine[]>([]);
   const [discount, setDiscount] = useState(0);
   const [customerId, setCustomerId] = useState<string>("");
@@ -43,7 +45,8 @@ export default function PosPage() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const productsQ = useProducts(tenantId, { activeOnly: true });
-  const catsQ = useProductCategories(tenantId);
+  const tree = useCategoryTree(tenantId);
+  const brandsQ = useProductBrands(tenantId);
   const locsQ = useStockLocations(tenantId);
   const { defaultLocation } = useDefaultLocation(tenantId);
   const settingsQ = useRetailSettings(tenantId);
@@ -67,15 +70,23 @@ export default function PosPage() {
     return m;
   }, [stockQ.data]);
 
+  const subCategories = categoryId === "all" ? [] : tree.childrenOf(categoryId);
+
   const products = useMemo(() => {
     const all = (productsQ.data ?? []) as Product[];
     const term = search.trim().toLowerCase();
+    const catIds =
+      subCategoryId !== "all" ? [subCategoryId] : categoryId !== "all" ? tree.familyIds(categoryId) : null;
     return all.filter((p) => {
-      if (categoryId !== "all" && p.category_id !== categoryId) return false;
+      if (p.sell_in_pos === false) return false;
+      if (catIds && !(p.category_id && catIds.includes(p.category_id))) return false;
+      if (brandId !== "all" && p.brand_id !== brandId) return false;
       if (!term) return true;
-      return [p.name, p.sku, p.barcode, p.category].some((v) => v?.toLowerCase().includes(term));
+      return [p.name, p.sku, p.barcode, p.external_code, p.variant_label, p.size_pack]
+        .some((v) => v?.toLowerCase().includes(term));
     });
-  }, [productsQ.data, search, categoryId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productsQ.data, search, categoryId, subCategoryId, brandId, tree.all.length]);
 
   useEffect(() => {
     if (!scan) return;
@@ -216,10 +227,27 @@ export default function PosPage() {
         {/* Products */}
         <main className="min-h-0 flex-1 overflow-y-auto p-4">
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-            <CatChip active={categoryId === "all"} onClick={() => setCategoryId("all")} label="All" />
-            {(catsQ.data ?? []).map((c) => (
-              <CatChip key={c.id} active={categoryId === c.id} onClick={() => setCategoryId(c.id)} label={c.name} />
+            <CatChip active={categoryId === "all"} onClick={() => { setCategoryId("all"); setSubCategoryId("all"); }} label="All" />
+            {tree.parents.filter((c) => c.active).map((c) => (
+              <CatChip key={c.id} active={categoryId === c.id}
+                onClick={() => { setCategoryId(c.id); setSubCategoryId("all"); }} label={c.name} />
             ))}
+          </div>
+          {subCategories.length > 0 && (
+            <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+              <SubChip active={subCategoryId === "all"} onClick={() => setSubCategoryId("all")} label="All" />
+              {subCategories.filter((c) => c.active).map((c) => (
+                <SubChip key={c.id} active={subCategoryId === c.id} onClick={() => setSubCategoryId(c.id)} label={c.name} />
+              ))}
+            </div>
+          )}
+          <div className="mb-3 flex items-center gap-2">
+            <select value={brandId} onChange={(e) => setBrandId(e.target.value)}
+              className="h-10 rounded-xl border border-border bg-white px-3 text-sm">
+              <option value="all">All brands</option>
+              {(brandsQ.data ?? []).filter((b) => b.active).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+            <div className="text-xs text-muted-foreground">{products.length} items</div>
           </div>
           <PosProductGrid products={products} stockByProduct={stockByProduct} onAdd={(p) => addToCart(p)} loading={productsQ.isLoading} />
         </main>
@@ -366,6 +394,20 @@ function CatChip({ label, active, onClick }: { label: string; active: boolean; o
       className={
         "h-10 shrink-0 rounded-full border px-4 text-sm font-semibold " +
         (active ? "border-sk-coral bg-sk-coral text-white" : "border-border bg-white")
+      }
+    >
+      {label}
+    </button>
+  );
+}
+
+function SubChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={
+        "h-9 shrink-0 rounded-full border px-3 text-xs font-semibold " +
+        (active ? "border-sk-coral bg-sk-coral-soft text-sk-coral-dark" : "border-border bg-white text-muted-foreground")
       }
     >
       {label}
