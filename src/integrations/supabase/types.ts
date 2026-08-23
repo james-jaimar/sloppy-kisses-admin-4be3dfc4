@@ -6734,7 +6734,7 @@ export type Database = {
           },
         ]
       }
-      product_categories: {
+      product_brands: {
         Row: {
           active: boolean
           created_at: string
@@ -6763,6 +6763,54 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "product_brands_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_categories: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "product_categories_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -6776,6 +6824,7 @@ export type Database = {
         Row: {
           active: boolean
           barcode: string | null
+          brand_id: string | null
           category: string | null
           category_id: string | null
           cost_price: number | null
@@ -6785,13 +6834,20 @@ export type Database = {
           id: string
           image_url: string | null
           name: string
+          notes: string | null
+          parent_product_id: string | null
           reorder_level: number | null
+          sell_in_pos: boolean
           sell_price: number | null
+          size_pack: string | null
           sku: string | null
           sort_order: number
+          source_ref: string | null
+          species: string | null
           tenant_id: string
           unit: string | null
           updated_at: string
+          variant_label: string | null
           vat_rate: number
           xero_account_code: string | null
           xero_item_id: string | null
@@ -6799,6 +6855,7 @@ export type Database = {
         Insert: {
           active?: boolean
           barcode?: string | null
+          brand_id?: string | null
           category?: string | null
           category_id?: string | null
           cost_price?: number | null
@@ -6808,13 +6865,20 @@ export type Database = {
           id?: string
           image_url?: string | null
           name: string
+          notes?: string | null
+          parent_product_id?: string | null
           reorder_level?: number | null
+          sell_in_pos?: boolean
           sell_price?: number | null
+          size_pack?: string | null
           sku?: string | null
           sort_order?: number
+          source_ref?: string | null
+          species?: string | null
           tenant_id: string
           unit?: string | null
           updated_at?: string
+          variant_label?: string | null
           vat_rate?: number
           xero_account_code?: string | null
           xero_item_id?: string | null
@@ -6822,6 +6886,7 @@ export type Database = {
         Update: {
           active?: boolean
           barcode?: string | null
+          brand_id?: string | null
           category?: string | null
           category_id?: string | null
           cost_price?: number | null
@@ -6831,23 +6896,44 @@ export type Database = {
           id?: string
           image_url?: string | null
           name?: string
+          notes?: string | null
+          parent_product_id?: string | null
           reorder_level?: number | null
+          sell_in_pos?: boolean
           sell_price?: number | null
+          size_pack?: string | null
           sku?: string | null
           sort_order?: number
+          source_ref?: string | null
+          species?: string | null
           tenant_id?: string
           unit?: string | null
           updated_at?: string
+          variant_label?: string | null
           vat_rate?: number
           xero_account_code?: string | null
           xero_item_id?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "product_brands"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "products_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "product_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_parent_product_id_fkey"
+            columns: ["parent_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {
@@ -7119,6 +7205,7 @@ export type Database = {
           default_vat_rate: number
           low_stock_notify_emails: string | null
           pos_location_id: string | null
+          prices_include_vat: boolean
           receipt_footer: string | null
           tenant_id: string
           till_name: string
@@ -7131,6 +7218,7 @@ export type Database = {
           default_vat_rate?: number
           low_stock_notify_emails?: string | null
           pos_location_id?: string | null
+          prices_include_vat?: boolean
           receipt_footer?: string | null
           tenant_id: string
           till_name?: string
@@ -7143,6 +7231,7 @@ export type Database = {
           default_vat_rate?: number
           low_stock_notify_emails?: string | null
           pos_location_id?: string | null
+          prices_include_vat?: boolean
           receipt_footer?: string | null
           tenant_id?: string
           till_name?: string
