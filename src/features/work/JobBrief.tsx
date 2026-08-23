@@ -4,7 +4,8 @@ import { PET_SIZE_LABEL, type PetSize } from "@/features/pets/sizeUtils";
 import { useBookingVaccinationGate, isVaxOutstanding, VAX_STATUS_LABEL } from "@/features/pets/vaccinationGate";
 import { usePetHealthGate, holdReasonLabel } from "@/features/pets/healthQueries";
 import { useBookingInstructions, usePetGroomingDefaults, useInstructionCatalog } from "@/features/grooming/instructions/queries";
-import type { Selections } from "@/features/grooming/instructions/queries";
+import { BriefChecklist } from "./BriefChecklist";
+import { briefRows, medicalFlagLabels } from "./briefRows";
 import type { WorkJobAddon, WorkJobAddress, WorkJobGroomingDetails, WorkJobPet } from "./queries";
 
 function Card({
@@ -137,53 +138,32 @@ export function JobAddress({
   );
 }
 
-function selectionLines(
-  selections: Selections | null | undefined,
-  catalog: ReturnType<typeof useInstructionCatalog>["data"],
-): { label: string; value: string }[] {
-  if (!catalog || !selections) return [];
-  const out: { label: string; value: string }[] = [];
-  for (const g of catalog.groups) {
-    const raw = (selections as any)[g.code];
-    if (raw === null || raw === undefined || raw === "" || raw === false) continue;
-    const opts = catalog.byGroup[g.id] ?? [];
-    const labelFor = (code: string) => opts.find((o) => o.code === code)?.label ?? code;
-    let value = "";
-    if (Array.isArray(raw)) {
-      if (raw.length === 0) continue;
-      value = raw.map((c) => labelFor(String(c))).join(", ");
-    } else if (typeof raw === "boolean") {
-      value = "Yes";
-    } else {
-      value = opts.length ? labelFor(String(raw)) : String(raw);
-    }
-    out.push({ label: g.label, value });
-  }
-  return out;
-}
-
 /** The styling brief: booking instructions, falling back to the pet's saved defaults. */
 export function JobGroomingBrief({
   tenantId,
   bookingId,
   primaryPetId,
+  readOnly,
+  onProgress,
 }: {
   tenantId: string;
   bookingId: string;
   primaryPetId: string | null;
+  readOnly?: boolean;
+  onProgress?: (p: { done: number; total: number }) => void;
 }) {
   const catalogQ = useInstructionCatalog(tenantId);
   const bookingQ = useBookingInstructions(bookingId);
   const petQ = usePetGroomingDefaults(primaryPetId);
 
-  const bookingRows = selectionLines(bookingQ.data?.selections, catalogQ.data);
+  const bookingRows = briefRows(bookingQ.data?.selections, catalogQ.data);
   const bookingHas =
     bookingRows.length > 0 ||
     (bookingQ.data?.medical_flags?.length ?? 0) > 0 ||
     Boolean(bookingQ.data?.notes?.trim());
 
   const source = bookingHas ? bookingQ.data : petQ.data;
-  const rows = bookingHas ? bookingRows : selectionLines(petQ.data?.selections, catalogQ.data);
+  const rows = bookingHas ? bookingRows : briefRows(petQ.data?.selections, catalogQ.data);
   const flags = source?.medical_flags ?? [];
   const notes = source?.notes ?? "";
   const toldOffice = bookingHas ? (bookingQ.data as any)?.told_office_to_call ?? "" : "";
@@ -216,31 +196,31 @@ export function JobGroomingBrief({
     );
   }
 
-  const medicalLabel = (code: string) => {
-    for (const g of catalogQ.data?.groups ?? []) {
-      const hit = (catalogQ.data?.byGroup[g.id] ?? []).find((o) => o.code === code);
-      if (hit) return hit.label;
-    }
-    return code;
-  };
-
   return (
     <Card title="Grooming brief" icon={Scissors}>
       {!bookingHas && (
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">From pet profile</p>
       )}
-      <dl className="space-y-2 text-sm">
-        {rows.map((r) => (
-          <div key={r.label} className="flex flex-wrap gap-x-2">
-            <dt className="font-semibold text-muted-foreground">{r.label}:</dt>
-            <dd className="font-semibold">{r.value}</dd>
-          </div>
-        ))}
-      </dl>
+      {rows.length > 0 && (
+        <BriefChecklist
+          tenantId={tenantId}
+          bookingId={bookingId}
+          petId={primaryPetId}
+          rows={rows}
+          readOnly={readOnly}
+          onProgress={onProgress}
+        />
+      )}
       {flags.length > 0 && (
         <div className="mt-3 rounded-xl border border-sk-orange bg-sk-orange-soft p-3 text-sm text-sk-orange">
-          <div className="font-bold">Medical flags</div>
-          <div className="mt-1">{flags.map(medicalLabel).join(", ")}</div>
+          <div className="flex items-center gap-2 font-bold">
+            <ShieldAlert className="h-4 w-4" /> Medical flags
+          </div>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {medicalFlagLabels(flags, catalogQ.data).map((l) => (
+              <span key={l} className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold">{l}</span>
+            ))}
+          </div>
         </div>
       )}
       {notes?.trim() && (

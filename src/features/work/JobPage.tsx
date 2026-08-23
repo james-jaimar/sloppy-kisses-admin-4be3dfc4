@@ -7,6 +7,7 @@ import {
   Pause, Phone, Play, BellRing, RefreshCw, ShieldCheck,
 } from "lucide-react";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { BOOKING_STATUS_META } from "@/features/bookings/statusMeta";
 import { BookingStayPlayBadge } from "@/features/daycare/StayPlayBadge";
 import type { BookingStatus } from "@/features/bookings/queries";
@@ -62,7 +63,9 @@ export default function JobPage() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [incidentOpen, setIncidentOpen] = useState(false);
+  const confirm = useConfirm();
   const [signOpen, setSignOpen] = useState(false);
+  const [briefProgress, setBriefProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 });
   const [signName, setSignName] = useState("");
   const [signSummary, setSignSummary] = useState("");
 
@@ -175,7 +178,13 @@ export default function JobPage() {
         {isMobile && <JobAddress address={job.address} fallbackText={job.service_address_text} />}
 
         {isGrooming && (
-          <JobGroomingBrief tenantId={tenantId} bookingId={job.id} primaryPetId={primaryPet?.id ?? null} />
+          <JobGroomingBrief
+            tenantId={tenantId}
+            bookingId={job.id}
+            primaryPetId={primaryPet?.id ?? null}
+            readOnly={signedOff}
+            onProgress={setBriefProgress}
+          />
         )}
 
         {isGrooming && <JobService details={job.details} addons={job.addons} pet={primaryPet} />}
@@ -205,7 +214,19 @@ export default function JobPage() {
           {!signedOff && canSignoff && (job.status === "ready" || job.status === "grooming" || job.status === "in_progress" || job.status === "checked_in") && (
             <BigButton
               tone="green"
-              onClick={() => { setSignName(profile?.full_name ?? ""); setSignOpen(true); }}
+              onClick={async () => {
+                const outstanding = briefProgress.total - briefProgress.done;
+                if (isGrooming && outstanding > 0) {
+                  const ok = await confirm({
+                    title: `${outstanding} brief item${outstanding === 1 ? "" : "s"} not ticked`,
+                    description: "Finish anyway? The office will see which styling instructions were not confirmed.",
+                    confirmLabel: "Finish anyway",
+                  });
+                  if (!ok) return;
+                }
+                setSignName(profile?.full_name ?? "");
+                setSignOpen(true);
+              }}
             >
               <CheckCheck className="h-6 w-6" /> Complete &amp; sign off
             </BigButton>

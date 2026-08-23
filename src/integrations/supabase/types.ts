@@ -247,6 +247,67 @@ export type Database = {
           },
         ]
       }
+      booking_brief_checks: {
+        Row: {
+          booking_id: string
+          created_at: string
+          done: boolean
+          done_at: string | null
+          done_by: string | null
+          group_code: string
+          id: string
+          pet_id: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          done_by?: string | null
+          group_code: string
+          id?: string
+          pet_id?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          done_by?: string | null
+          group_code?: string
+          id?: string
+          pet_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_brief_checks_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_brief_checks_pet_id_fkey"
+            columns: ["pet_id"]
+            isOneToOne: false
+            referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_brief_checks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_checklist_items: {
         Row: {
           booking_id: string
@@ -3565,7 +3626,9 @@ export type Database = {
         Row: {
           active: boolean
           code: string
+          colour: string | null
           created_at: string
+          icon: string | null
           id: string
           is_medical: boolean
           kind: string
@@ -3577,7 +3640,9 @@ export type Database = {
         Insert: {
           active?: boolean
           code: string
+          colour?: string | null
           created_at?: string
+          icon?: string | null
           id?: string
           is_medical?: boolean
           kind?: string
@@ -3589,7 +3654,9 @@ export type Database = {
         Update: {
           active?: boolean
           code?: string
+          colour?: string | null
           created_at?: string
+          icon?: string | null
           id?: string
           is_medical?: boolean
           kind?: string

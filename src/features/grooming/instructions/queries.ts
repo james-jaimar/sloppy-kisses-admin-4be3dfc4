@@ -12,6 +12,8 @@ export interface InstructionGroup {
   sort_order: number;
   active: boolean;
   is_medical: boolean;
+  icon: string | null;
+  colour: string | null;
 }
 
 export interface InstructionOption {
@@ -195,5 +197,63 @@ export function useSaveBookingInstructions(tenantId: string) {
       if (error) throw error;
     },
     onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ["grooming_booking_instructions", vars.booking_id] }),
+  });
+}
+// ---- Brief tick-offs (Work mode accountability) ----
+export interface BriefCheck {
+  id: string;
+  booking_id: string;
+  pet_id: string | null;
+  group_code: string;
+  done: boolean;
+  done_at: string | null;
+}
+
+export function useBriefChecks(bookingId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["booking_brief_checks", bookingId],
+    enabled: Boolean(bookingId),
+    queryFn: async (): Promise<BriefCheck[]> => {
+      const { data, error } = await supabase
+        .from("booking_brief_checks" as any)
+        .select("id, booking_id, pet_id, group_code, done, done_at")
+        .eq("booking_id", bookingId as string);
+      if (error) throw error;
+      return (data ?? []) as unknown as BriefCheck[];
+    },
+  });
+}
+
+export function useToggleBriefCheck(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      bookingId: string;
+      petId: string | null;
+      groupCode: string;
+      done: boolean;
+      existingId?: string | null;
+    }) => {
+      const stamp = vars.done ? new Date().toISOString() : null;
+      if (vars.existingId) {
+        const { error } = await supabase
+          .from("booking_brief_checks" as any)
+          .update({ done: vars.done, done_at: stamp } as any)
+          .eq("id", vars.existingId);
+        if (error) throw error;
+        return;
+      }
+      const { error } = await supabase.from("booking_brief_checks" as any).insert({
+        tenant_id: tenantId,
+        booking_id: vars.bookingId,
+        pet_id: vars.petId,
+        group_code: vars.groupCode,
+        done: vars.done,
+        done_at: stamp,
+      } as any);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) =>
+      qc.invalidateQueries({ queryKey: ["booking_brief_checks", vars.bookingId] }),
   });
 }

@@ -15,6 +15,9 @@ import {
   type GroupKind,
   type InstructionGroup,
 } from "@/features/grooming/instructions/queries";
+import {
+  BRIEF_COLOURS, BRIEF_COLOUR_NAMES, BRIEF_ICON_NAMES, briefColour, briefIcon,
+} from "@/features/grooming/instructions/briefIcons";
 
 const PERMISSION = "settings.grooming.manage";
 
@@ -70,7 +73,7 @@ export default function GroomingInstructionsPage() {
   return (
     <>
       <AppHeader title="Grooming instructions"
-        subtitle="Groups and options shown to staff and customers when booking a groom. Customers can save these as a pet default."
+        subtitle="Groups and options shown when booking a groom, and the icons groomers tick off in Work mode."
       />
       <div className="flex-1 p-6">
         <div className="mx-auto max-w-4xl space-y-4">
@@ -91,6 +94,14 @@ export default function GroomingInstructionsPage() {
             return (
               <div key={g.id} className="sk-card p-4">
                 <div className="flex flex-wrap items-center gap-2">
+                  {(() => {
+                    const Icon = briefIcon(g.icon);
+                    return (
+                      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${briefColour(g.colour).chip}`}>
+                        <Icon className="h-5 w-5" />
+                      </span>
+                    );
+                  })()}
                   <button className="text-left font-semibold" onClick={() => setOpenId(open ? null : g.id)}>
                     {g.label} <span className="text-xs text-muted-foreground">({g.code} · {g.kind}{g.is_medical ? " · medical" : ""})</span>
                   </button>
@@ -121,6 +132,37 @@ export default function GroomingInstructionsPage() {
                 </div>
                 {open && (
                   <div className="mt-3 space-y-2 border-t border-border pt-3">
+                    <div className="rounded-xl border border-border p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Work mode icon &amp; colour
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {BRIEF_ICON_NAMES.map((name) => {
+                          const Icon = briefIcon(name);
+                          const on = (g.icon ?? "scissors") === name;
+                          return (
+                            <button key={name} type="button" disabled={!canManage} title={name}
+                              onClick={() => upsertGroup.mutate({ ...g, icon: name })}
+                              className={`grid h-9 w-9 place-items-center rounded-lg border ${on ? "border-sk-coral bg-sk-coral-soft text-sk-coral-dark" : "border-border hover:bg-muted"}`}>
+                              <Icon className="h-4 w-4" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {BRIEF_COLOUR_NAMES.map((name) => {
+                          const on = (g.colour ?? "muted") === name;
+                          return (
+                            <button key={name} type="button" disabled={!canManage}
+                              onClick={() => upsertGroup.mutate({ ...g, colour: name })}
+                              className={`inline-flex items-center gap-2 rounded-lg border px-2 py-1 text-xs font-semibold ${on ? "border-sk-coral" : "border-border hover:bg-muted"}`}>
+                              <span className={`h-3.5 w-3.5 rounded-full ${BRIEF_COLOURS[name].swatch}`} />
+                              {BRIEF_COLOURS[name].label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                     {gOpts.map((o) => (
                       <div key={o.id} className="flex flex-wrap items-center gap-2 text-sm">
                         <input disabled={!canManage} value={o.label}
