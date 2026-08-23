@@ -9302,6 +9302,10 @@ export type Database = {
         Args: { p_booking_id: string; p_reason?: string }
         Returns: undefined
       }
+      portal_hotel_quote_settings: {
+        Args: { p_tenant_id: string }
+        Returns: Json
+      }
       portal_payment_options: {
         Args: { p_invoice_id: string }
         Returns: {
