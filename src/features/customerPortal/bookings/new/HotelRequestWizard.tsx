@@ -91,7 +91,9 @@ export default function HotelRequestWizard() {
   /** Per-dog accommodation — dogs of different sizes can be in different areas. */
   const [petAcc, setPetAcc] = useState<Record<string, string>>({});
   const [form, setForm] = useState<AccommodationFormPayload>(emptyAccommodationForm());
+  const [serviceAddressId, setServiceAddressId] = useState<string | null>(null);
   const [seeded, setSeeded] = useState(false);
+
 
   const checkOutDate = useMemo(() => (checkInDate ? addDays(checkInDate, nights) : ""), [checkInDate, nights]);
   const guidelines = useHotelGuidelines(cust.data?.tenant_id);
