@@ -125,7 +125,12 @@ Deno.serve(async (req) => {
   const items: { description: string; quantity: number; unit_price: number }[] = [];
   for (const [acc, names] of groups) {
     const rate: any = rateFor(acc);
-    if (!rate) return j(200, { ok: false, error: "That accommodation isn't available for these pets." });
+    if (!rate) {
+      return j(200, {
+        ok: false,
+        error: `No active ${species} rate is set up for "${acc}" — please contact us or pick another accommodation.`,
+      });
+    }
     items.push({
       description: `${rate.display_name} — ${names[0]}`,
       quantity: n,
