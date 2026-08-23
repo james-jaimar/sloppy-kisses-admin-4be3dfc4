@@ -187,6 +187,10 @@ export default function GroomingInstructionsPage() {
                           <input type="checkbox" disabled={!canManage} checked={o.is_alert}
                             onChange={(e) => upsertOpt.mutate({ ...o, is_alert: e.target.checked })} /> alert
                         </label>
+                        <label className="flex items-center gap-1 text-xs" title="Means 'do nothing' — greyed out and struck through in Work mode, no tick required">
+                          <input type="checkbox" disabled={!canManage} checked={Boolean(o.no_action)}
+                            onChange={(e) => upsertOpt.mutate({ ...o, no_action: e.target.checked })} /> leave it
+                        </label>
                         <label className="flex items-center gap-1 text-xs">
                           <input type="checkbox" disabled={!canManage} checked={o.active}
                             onChange={(e) => upsertOpt.mutate({ ...o, active: e.target.checked })} /> active

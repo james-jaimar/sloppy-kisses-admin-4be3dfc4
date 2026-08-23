@@ -7,6 +7,8 @@ export interface BriefRow {
   icon: string | null;
   colour: string | null;
   isMedical: boolean;
+  /** Selection means "do nothing" — shown as a quiet, struck-through footnote. */
+  noAction: boolean;
 }
 
 export interface Catalog {
@@ -25,23 +27,32 @@ export function briefRows(
     const raw = (selections as any)[g.code];
     if (raw === null || raw === undefined || raw === "" || raw === false) continue;
     const opts = catalog.byGroup[g.id] ?? [];
-    const labelFor = (code: string) => opts.find((o) => o.code === code)?.label ?? code;
+    const optFor = (code: string) => opts.find((o) => o.code === code);
+    const labelFor = (code: string) => optFor(code)?.label ?? code;
     let value = "";
+    let noAction = false;
     if (Array.isArray(raw)) {
       if (raw.length === 0) continue;
       value = raw.map((c) => labelFor(String(c))).join(", ");
+      // Only a non-event when every chosen option is a non-event.
+      noAction = raw.every((c) => Boolean(optFor(String(c))?.no_action));
     } else if (typeof raw === "boolean") {
       value = "Yes";
     } else {
-      value = opts.length ? labelFor(String(raw)) : String(raw);
+      const opt = optFor(String(raw));
+      value = opts.length ? (opt?.label ?? String(raw)) : String(raw);
+      noAction = Boolean(opt?.no_action);
     }
+    const isMedical = Boolean(g.is_medical);
     out.push({
       code: g.code,
       label: g.label,
       value,
       icon: g.icon ?? null,
       colour: g.colour ?? null,
-      isMedical: Boolean(g.is_medical),
+      isMedical,
+      // Safety items always stay loud.
+      noAction: isMedical ? false : noAction,
     });
   }
   // Safety-critical groups first.

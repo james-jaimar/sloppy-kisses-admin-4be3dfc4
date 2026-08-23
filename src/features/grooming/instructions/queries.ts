@@ -26,6 +26,8 @@ export interface InstructionOption {
   active: boolean;
   is_alert: boolean;
   addon_code: string | null;
+  /** This option means "do nothing" (None / Leave), so Work mode greys it out. */
+  no_action?: boolean;
 }
 
 export type Selections = Record<string, string | string[] | number | boolean | null>;
