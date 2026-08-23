@@ -7,6 +7,7 @@ import {
   Pause, Phone, Play, BellRing, RefreshCw, ShieldCheck,
 } from "lucide-react";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { BOOKING_STATUS_META } from "@/features/bookings/statusMeta";
 import { BookingStayPlayBadge } from "@/features/daycare/StayPlayBadge";
 import type { BookingStatus } from "@/features/bookings/queries";
@@ -62,6 +63,7 @@ export default function JobPage() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteText, setNoteText] = useState("");
   const [incidentOpen, setIncidentOpen] = useState(false);
+  const confirm = useConfirm();
   const [signOpen, setSignOpen] = useState(false);
   const [briefProgress, setBriefProgress] = useState<{ done: number; total: number }>({ done: 0, total: 0 });
   const [signName, setSignName] = useState("");
