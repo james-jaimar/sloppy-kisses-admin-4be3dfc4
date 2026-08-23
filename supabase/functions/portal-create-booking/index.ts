@@ -425,7 +425,7 @@ Deno.serve(async (req) => {
       const { error: dErr } = await admin.from("grooming_booking_details").insert({
         tenant_id: tenantId,
         booking_id: b.id,
-        grooming_mode: body.service_type === "grooming_inhouse" ? "in_house" : "mobile",
+        grooming_mode: body.service_type === "grooming_inhouse" ? "inhouse" : "mobile",
         package_id: slot.package_id ?? null,
         duration_minutes: slot.duration_minutes ?? 60,
         grooming_notes: g.access_notes ?? null,
@@ -627,7 +627,7 @@ Deno.serve(async (req) => {
     const { error } = await admin.from("grooming_booking_details").insert({
       tenant_id: tenantId,
       booking_id: bookingId,
-      grooming_mode: body.service_type === "grooming_inhouse" ? "in_house" : "mobile",
+      grooming_mode: body.service_type === "grooming_inhouse" ? "inhouse" : "mobile",
       package_id: g.package_id ?? null,
       duration_minutes: g.duration_minutes ?? 60,
       grooming_notes: g.access_notes ?? null,
