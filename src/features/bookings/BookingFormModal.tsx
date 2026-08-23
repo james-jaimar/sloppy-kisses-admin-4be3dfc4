@@ -1351,6 +1351,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               setForm={patchAccom}
               collapsible
               checkOutDate={endAtLocal ? endAtLocal.slice(0, 10) : null}
+              customerId={customerId || null}
+              tenantId={tenantId}
+              addressId={serviceAddressId}
+              onAddressChange={setServiceAddressId}
             />
             <PetSections form={accom} setForm={patchAccom} collapsible tenantId={tenantId} uploadedVia="admin" />
             <CareSection form={accom} setForm={patchAccom} collapsible />
