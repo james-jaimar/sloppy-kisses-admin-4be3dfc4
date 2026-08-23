@@ -48,9 +48,14 @@ export default function JobChecklistsPage() {
     <>
       <AppHeader
         title="Job checklists"
-        subtitle="Steps staff tick off in Work mode, per service"
+        subtitle="Steps staff tick off in Work mode, per service — mobile groomers, in-house groomers, hotel, daycare and drivers all get their own list"
       />
       <div className="flex-1 space-y-5 p-4 sm:p-6">
+        <p className="text-sm text-muted-foreground">
+          These steps appear as the tick-off Checklist at the bottom of every job in Work mode. Changes apply to jobs
+          opened from now on; jobs already started keep the list they were given.
+        </p>
+
         <div className="flex flex-wrap gap-2">
           {SERVICES.map((s) => (
             <button

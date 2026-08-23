@@ -363,7 +363,7 @@ const GROUPS: { id: string; label: string; members: string[] }[] = [
   {
     id: "grooming",
     label: "Grooming",
-    members: ["Grooming rate card", "Grooming add-ons", "Grooming workflow", "Grooming instructions", "Dog breeds"],
+    members: ["Grooming rate card", "Grooming add-ons", "Grooming workflow", "Grooming instructions", "Job checklists", "Dog breeds"],
   },
   {
     id: "pricing",
