@@ -48,6 +48,9 @@ export default function HotelWorkflowPage() {
     photo_policy_note: "",
     require_payment_to_confirm: true,
     payment_hold_hours: 48,
+    portal_quotes_enabled: true,
+    portal_quote_hold_hours: 48,
+    portal_quote_max_active: 3,
   });
 
   useEffect(() => {
@@ -74,6 +77,9 @@ export default function HotelWorkflowPage() {
         photo_policy_note: (settingsQ.data as any).photo_policy_note ?? "",
         require_payment_to_confirm: (settingsQ.data as any).require_payment_to_confirm ?? true,
         payment_hold_hours: Number((settingsQ.data as any).payment_hold_hours ?? 48),
+        portal_quotes_enabled: (settingsQ.data as any).portal_quotes_enabled ?? true,
+        portal_quote_hold_hours: Number((settingsQ.data as any).portal_quote_hold_hours ?? 48),
+        portal_quote_max_active: Number((settingsQ.data as any).portal_quote_max_active ?? 3),
       });
     }
   }, [settingsQ.data]);
@@ -101,6 +107,9 @@ export default function HotelWorkflowPage() {
         photo_policy_note: form.photo_policy_note.trim() || null,
         require_payment_to_confirm: form.require_payment_to_confirm,
         payment_hold_hours: form.payment_hold_hours,
+        portal_quotes_enabled: form.portal_quotes_enabled,
+        portal_quote_hold_hours: form.portal_quote_hold_hours,
+        portal_quote_max_active: form.portal_quote_max_active,
         guidelines_md: form.guidelines_md.trim() || null,
         ...(form.guidelines_md.trim() !== (((settingsQ.data as any)?.guidelines_md ?? "").trim())
           ? { guidelines_version: Number((settingsQ.data as any)?.guidelines_version ?? 0) + 1 }
