@@ -7,8 +7,17 @@ export interface Product {
   name: string;
   sku: string | null;
   barcode: string | null;
+  external_code: string | null;
   category_id: string | null;
   category: string | null;
+  brand_id: string | null;
+  species: string | null;
+  size_pack: string | null;
+  variant_label: string | null;
+  parent_product_id: string | null;
+  sell_in_pos: boolean;
+  notes: string | null;
+  source_ref: string | null;
   unit: string | null;
   cost_price: number | null;
   sell_price: number | null;
@@ -25,9 +34,19 @@ export interface ProductCategory {
   id: string;
   tenant_id: string;
   name: string;
+  parent_id: string | null;
   sort_order: number;
   active: boolean;
 }
+
+export interface ProductBrand {
+  id: string;
+  tenant_id: string;
+  name: string;
+  sort_order: number;
+  active: boolean;
+}
+
 
 export interface StockLocation {
   id: string;
