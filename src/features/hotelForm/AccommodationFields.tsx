@@ -282,9 +282,44 @@ export function StayWindowSection({
   setForm,
   collapsible,
   checkOutDate,
-}: FormProps & { checkOutDate?: string | null }) {
+  customerId,
+  tenantId,
+  addressId,
+  onAddressChange,
+  allowManual = true,
+}: FormProps & {
+  checkOutDate?: string | null;
+  customerId?: string | null;
+  tenantId?: string | null;
+  addressId?: string | null;
+  onAddressChange?: (id: string | null) => void;
+  allowManual?: boolean;
+}) {
   const options = checkOutWindowsFor(checkOutDate);
   const sundayOnly = options.length === 1;
+  const transportNeeded = form.pickup_required || form.dropoff_required;
+  const usePicker = Boolean(onAddressChange && customerId && tenantId);
+  const addressesQ = useCustomerAddresses(usePicker ? customerId : null, usePicker ? tenantId : null);
+  const selectedAddress = (addressesQ.data ?? []).find((a) => a.id === addressId) ?? null;
+
+  // Keep the printed form's text in step with the picked address.
+  useEffect(() => {
+    if (!usePicker || !transportNeeded) return;
+    const text = selectedAddress
+      ? [
+          selectedAddress.address_line_2,
+          selectedAddress.formatted_address ||
+            [selectedAddress.address_line_1, selectedAddress.suburb, selectedAddress.city]
+              .filter(Boolean)
+              .join(", "),
+        ]
+          .filter(Boolean)
+          .join(", ")
+      : "";
+    if (text !== form.collection_address) setForm({ ...form, collection_address: text });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [usePicker, transportNeeded, selectedAddress?.id, selectedAddress?.formatted_address]);
+
   return (
     <Section title="Arrival & collection" collapsible={collapsible} complete={Boolean(form.check_in_window)}>
       <div className="grid gap-4 md:grid-cols-2">
@@ -328,13 +363,39 @@ export function StayWindowSection({
           <Check label="Collection required" checked={form.pickup_required} onChange={(v) => setForm({ ...form, pickup_required: v })} />
           <Check label="Drop-off required" checked={form.dropoff_required} onChange={(v) => setForm({ ...form, dropoff_required: v })} />
         </div>
-        {(form.pickup_required || form.dropoff_required) && (
-          <Area label="Physical address for collection / drop-off" rows={2} value={form.collection_address} onChange={(v) => setForm({ ...form, collection_address: v })} />
+        {transportNeeded && (
+          <div className="md:col-span-2">
+            {usePicker ? (
+              <>
+                <AddressSelector
+                  customerId={customerId}
+                  tenantId={tenantId}
+                  value={addressId ?? null}
+                  onChange={(id) => onAddressChange?.(id)}
+                  label="Collection / drop-off address"
+                  allowManual={allowManual}
+                />
+                {!addressId && (
+                  <p className="mt-2 rounded-lg border border-sk-coral bg-sk-coral-soft px-3 py-2 text-xs text-sk-coral-dark">
+                    Choose the address our van should drive to, or add a new one — we can't schedule a collection without it.
+                  </p>
+                )}
+                {addressId && selectedAddress && !selectedAddress.google_place_id && (
+                  <p className="mt-2 rounded-lg border border-sk-orange bg-sk-orange-soft px-3 py-2 text-xs text-sk-orange">
+                    This address hasn't been pinned on Google Maps yet — please confirm it above so the van can be routed.
+                  </p>
+                )}
+              </>
+            ) : (
+              <Area label="Physical address for collection / drop-off" rows={2} value={form.collection_address} onChange={(v) => setForm({ ...form, collection_address: v })} />
+            )}
+          </div>
         )}
       </div>
     </Section>
   );
 }
+
 
 export function PetSections({
   form, setForm, collapsible, tenantId, uploadedVia = "portal",
