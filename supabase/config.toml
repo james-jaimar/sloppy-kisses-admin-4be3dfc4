@@ -16,6 +16,3 @@ verify_jwt = false
 
 [functions.manage-user]
 verify_jwt = true
-
-[functions.import-stock-batch]
-verify_jwt = false
