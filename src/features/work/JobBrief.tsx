@@ -143,23 +143,27 @@ export function JobGroomingBrief({
   tenantId,
   bookingId,
   primaryPetId,
+  readOnly,
+  onProgress,
 }: {
   tenantId: string;
   bookingId: string;
   primaryPetId: string | null;
+  readOnly?: boolean;
+  onProgress?: (p: { done: number; total: number }) => void;
 }) {
   const catalogQ = useInstructionCatalog(tenantId);
   const bookingQ = useBookingInstructions(bookingId);
   const petQ = usePetGroomingDefaults(primaryPetId);
 
-  const bookingRows = selectionLines(bookingQ.data?.selections, catalogQ.data);
+  const bookingRows = briefRows(bookingQ.data?.selections, catalogQ.data);
   const bookingHas =
     bookingRows.length > 0 ||
     (bookingQ.data?.medical_flags?.length ?? 0) > 0 ||
     Boolean(bookingQ.data?.notes?.trim());
 
   const source = bookingHas ? bookingQ.data : petQ.data;
-  const rows = bookingHas ? bookingRows : selectionLines(petQ.data?.selections, catalogQ.data);
+  const rows = bookingHas ? bookingRows : briefRows(petQ.data?.selections, catalogQ.data);
   const flags = source?.medical_flags ?? [];
   const notes = source?.notes ?? "";
   const toldOffice = bookingHas ? (bookingQ.data as any)?.told_office_to_call ?? "" : "";
@@ -192,31 +196,31 @@ export function JobGroomingBrief({
     );
   }
 
-  const medicalLabel = (code: string) => {
-    for (const g of catalogQ.data?.groups ?? []) {
-      const hit = (catalogQ.data?.byGroup[g.id] ?? []).find((o) => o.code === code);
-      if (hit) return hit.label;
-    }
-    return code;
-  };
-
   return (
     <Card title="Grooming brief" icon={Scissors}>
       {!bookingHas && (
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">From pet profile</p>
       )}
-      <dl className="space-y-2 text-sm">
-        {rows.map((r) => (
-          <div key={r.label} className="flex flex-wrap gap-x-2">
-            <dt className="font-semibold text-muted-foreground">{r.label}:</dt>
-            <dd className="font-semibold">{r.value}</dd>
-          </div>
-        ))}
-      </dl>
+      {rows.length > 0 && (
+        <BriefChecklist
+          tenantId={tenantId}
+          bookingId={bookingId}
+          petId={primaryPetId}
+          rows={rows}
+          readOnly={readOnly}
+          onProgress={onProgress}
+        />
+      )}
       {flags.length > 0 && (
         <div className="mt-3 rounded-xl border border-sk-orange bg-sk-orange-soft p-3 text-sm text-sk-orange">
-          <div className="font-bold">Medical flags</div>
-          <div className="mt-1">{flags.map(medicalLabel).join(", ")}</div>
+          <div className="flex items-center gap-2 font-bold">
+            <ShieldAlert className="h-4 w-4" /> Medical flags
+          </div>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {medicalFlagLabels(flags, catalogQ.data).map((l) => (
+              <span key={l} className="rounded-full bg-white/70 px-2 py-0.5 text-xs font-bold">{l}</span>
+            ))}
+          </div>
         </div>
       )}
       {notes?.trim() && (
