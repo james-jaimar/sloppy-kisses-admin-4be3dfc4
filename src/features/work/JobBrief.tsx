@@ -4,7 +4,8 @@ import { PET_SIZE_LABEL, type PetSize } from "@/features/pets/sizeUtils";
 import { useBookingVaccinationGate, isVaxOutstanding, VAX_STATUS_LABEL } from "@/features/pets/vaccinationGate";
 import { usePetHealthGate, holdReasonLabel } from "@/features/pets/healthQueries";
 import { useBookingInstructions, usePetGroomingDefaults, useInstructionCatalog } from "@/features/grooming/instructions/queries";
-import type { Selections } from "@/features/grooming/instructions/queries";
+import { BriefChecklist } from "./BriefChecklist";
+import { briefRows, medicalFlagLabels } from "./briefRows";
 import type { WorkJobAddon, WorkJobAddress, WorkJobGroomingDetails, WorkJobPet } from "./queries";
 
 function Card({
@@ -135,31 +136,6 @@ export function JobAddress({
       </a>
     </Card>
   );
-}
-
-function selectionLines(
-  selections: Selections | null | undefined,
-  catalog: ReturnType<typeof useInstructionCatalog>["data"],
-): { label: string; value: string }[] {
-  if (!catalog || !selections) return [];
-  const out: { label: string; value: string }[] = [];
-  for (const g of catalog.groups) {
-    const raw = (selections as any)[g.code];
-    if (raw === null || raw === undefined || raw === "" || raw === false) continue;
-    const opts = catalog.byGroup[g.id] ?? [];
-    const labelFor = (code: string) => opts.find((o) => o.code === code)?.label ?? code;
-    let value = "";
-    if (Array.isArray(raw)) {
-      if (raw.length === 0) continue;
-      value = raw.map((c) => labelFor(String(c))).join(", ");
-    } else if (typeof raw === "boolean") {
-      value = "Yes";
-    } else {
-      value = opts.length ? labelFor(String(raw)) : String(raw);
-    }
-    out.push({ label: g.label, value });
-  }
-  return out;
 }
 
 /** The styling brief: booking instructions, falling back to the pet's saved defaults. */

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Check } from "lucide-react";
 import { toast } from "sonner";
 import { briefColour, briefIcon } from "@/features/grooming/instructions/briefIcons";
@@ -30,9 +31,11 @@ export function BriefChecklist({
   const doneCount = rows.filter((r) => byCode.get(r.code)?.done).length;
 
   // Report progress up so the job page can nudge before sign-off.
-  const key = `${doneCount}/${rows.length}`;
-  if (onProgress) queueMicrotask(() => onProgress({ done: doneCount, total: rows.length }));
-  void key;
+  const total = rows.length;
+  useEffect(() => {
+    onProgress?.({ done: doneCount, total });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doneCount, total]);
 
   return (
     <div>
