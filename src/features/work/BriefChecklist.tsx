@@ -27,11 +27,15 @@ export function BriefChecklist({
   const checksQ = useBriefChecks(bookingId);
   const toggle = useToggleBriefCheck(tenantId);
 
+  // "None" / "Leave" instructions are non-events: they drop out of the tick list.
+  const activeRows = rows.filter((r) => !r.noAction);
+  const leaveRows = rows.filter((r) => r.noAction);
+
   const byCode = new Map((checksQ.data ?? []).filter((c) => (c.pet_id ?? null) === petId).map((c) => [c.group_code, c]));
-  const doneCount = rows.filter((r) => byCode.get(r.code)?.done).length;
+  const doneCount = activeRows.filter((r) => byCode.get(r.code)?.done).length;
 
   // Report progress up so the job page can nudge before sign-off.
-  const total = rows.length;
+  const total = activeRows.length;
   useEffect(() => {
     onProgress?.({ done: doneCount, total });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -44,11 +48,11 @@ export function BriefChecklist({
           Tick each one off as you go
         </span>
         <span className="text-sm font-bold">
-          {doneCount}/{rows.length} done
+          {doneCount}/{total} done
         </span>
       </div>
       <ul className="space-y-2">
-        {rows.map((row) => {
+        {activeRows.map((row) => {
           const check = byCode.get(row.code);
           const done = Boolean(check?.done);
           const c = briefColour(row.colour);
@@ -95,6 +99,12 @@ export function BriefChecklist({
           );
         })}
       </ul>
+      {leaveRows.length > 0 && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          <span className="font-semibold uppercase tracking-wide">Leave alone: </span>
+          <span className="line-through">{leaveRows.map((r) => r.label).join(", ")}</span>
+        </p>
+      )}
     </div>
   );
 }
