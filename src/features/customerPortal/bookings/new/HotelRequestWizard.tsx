@@ -186,9 +186,14 @@ export default function HotelRequestWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPets, petAcc, accommodationType, speciesRates, nights]);
 
+  const transportNeeded = form.pickup_required || form.dropoff_required;
+  const transportAddressReady = !transportNeeded || Boolean(serviceAddressId);
+
   const stayReady =
     petIds.length > 0 && !!checkInDate && nights >= 1 &&
+    transportAddressReady &&
     selectedPets.every((p: any) => Boolean(accFor(p.id)));
+
 
   // Pet photo requirement (Settings → Hotel & Cattery workflow).
   const photoMode = usePhotoGateMode(cust.data?.tenant_id, serviceType);
