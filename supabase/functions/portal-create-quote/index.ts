@@ -104,11 +104,12 @@ Deno.serve(async (req) => {
   const petName = new Map(pets.map((p: any) => [p.id, p.name as string]));
 
   // --- Price from the rate cards ---------------------------------------
-  const { data: rates } = await admin
+  const { data: rates, error: ratesErr } = await admin
     .from("hotel_rate_cards")
-    .select("accommodation_type, display_name, nightly_rate_zar, extra_pet_rate_zar, species, is_active")
+    .select("accommodation_type, display_name, nightly_rate_zar, extra_pet_rate_zar, species, active")
     .eq("tenant_id", tenantId)
-    .eq("is_active", true);
+    .eq("active", true);
+  if (ratesErr) return j(200, { ok: false, error: `Could not load rates: ${ratesErr.message}` });
   const species = body.service_type === "hotel_cat" ? "cat" : "dog";
   const rateFor = (code: string) =>
     (rates ?? []).find((r: any) => r.accommodation_type === code && r.species === species);
