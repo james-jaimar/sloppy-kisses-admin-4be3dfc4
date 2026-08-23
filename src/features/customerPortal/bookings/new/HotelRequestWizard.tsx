@@ -209,7 +209,7 @@ export default function HotelRequestWizard() {
   const vax = usePetsVaxBlocked(petIds, serviceType, checkInDate || null);
 
   const canSubmit =
-    stayReady && !photoBlocked && !vax.blocked && form.acknowledgement.accepted &&
+    stayReady && transportAddressReady && !photoBlocked && !vax.blocked && form.acknowledgement.accepted &&
     form.acknowledgement.signed_name.trim().length > 1 && !submit.isPending;
 
   function togglePet(id: string) {
@@ -245,6 +245,7 @@ export default function HotelRequestWizard() {
       startAt,
       endAt: dateToIso(checkOutDate, checkOutTimeFor(payload.check_out_window)),
       notes: notes || null,
+      service_address_id: transportNeeded ? serviceAddressId : null,
       hotel: {
         accommodation_type: accommodationType || null,
         pet_accommodations: Object.fromEntries(selectedPets.map((p: any) => [p.id, accFor(p.id)])),
@@ -467,7 +468,16 @@ export default function HotelRequestWizard() {
             </select>
           </Field>
 
-          <StayWindowSection form={form} setForm={setForm} checkOutDate={checkOutDate} />
+          <StayWindowSection
+            form={form}
+            setForm={setForm}
+            checkOutDate={checkOutDate}
+            customerId={cust.data?.id ?? null}
+            tenantId={cust.data?.tenant_id ?? null}
+            addressId={serviceAddressId}
+            onAddressChange={setServiceAddressId}
+            allowManual={false}
+          />
         </>
       )}
 
