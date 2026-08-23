@@ -85,17 +85,21 @@ export interface RetailSettings {
 
 // -------- Products --------
 
-export function useProducts(tenantId: string | null | undefined, opts?: { activeOnly?: boolean; search?: string }) {
+export function useProducts(
+  tenantId: string | null | undefined,
+  opts?: { activeOnly?: boolean; search?: string; posOnly?: boolean },
+) {
   return useQuery({
-    queryKey: ["products", tenantId, opts?.activeOnly ?? false, opts?.search ?? ""],
+    queryKey: ["products", tenantId, opts?.activeOnly ?? false, opts?.search ?? "", opts?.posOnly ?? false],
     enabled: Boolean(tenantId),
     queryFn: async (): Promise<Product[]> => {
       let q = supabase.from("products").select("*").eq("tenant_id", tenantId as string)
-        .order("sort_order", { ascending: true }).order("name", { ascending: true });
+        .order("sort_order", { ascending: true }).order("name", { ascending: true }).limit(5000);
       if (opts?.activeOnly) q = q.eq("active", true);
+      if (opts?.posOnly) q = q.eq("sell_in_pos", true);
       if (opts?.search && opts.search.trim()) {
         const s = `%${opts.search.trim()}%`;
-        q = q.or(`name.ilike.${s},sku.ilike.${s},barcode.ilike.${s}`);
+        q = q.or(`name.ilike.${s},sku.ilike.${s},barcode.ilike.${s},external_code.ilike.${s}`);
       }
       const { data, error } = await q;
       if (error) throw error;
@@ -126,7 +130,15 @@ export function useUpsertProduct(tenantId: string) {
         name: input.name,
         sku: input.sku ?? null,
         barcode: input.barcode ?? null,
+        external_code: input.external_code ?? null,
         category_id: input.category_id ?? null,
+        brand_id: input.brand_id ?? null,
+        species: input.species ?? null,
+        size_pack: input.size_pack ?? null,
+        variant_label: input.variant_label ?? null,
+        parent_product_id: input.parent_product_id ?? null,
+        sell_in_pos: input.sell_in_pos ?? true,
+        notes: input.notes ?? null,
         unit: input.unit ?? null,
         cost_price: input.cost_price ?? null,
         sell_price: input.sell_price ?? null,
@@ -154,6 +166,22 @@ export function useUpsertProduct(tenantId: string) {
   });
 }
 
+/** Set just the image path on a product (used by the photo studio). */
+export function useSetProductImage(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; image_url: string | null }) => {
+      const { error } = await supabase.from("products").update({ image_url: input.image_url } as any)
+        .eq("id", input.id).eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["products"] });
+      qc.invalidateQueries({ queryKey: ["product"] });
+    },
+  });
+}
+
 // -------- Categories --------
 
 export function useProductCategories(tenantId: string | null | undefined) {
@@ -162,18 +190,40 @@ export function useProductCategories(tenantId: string | null | undefined) {
     enabled: Boolean(tenantId),
     queryFn: async (): Promise<ProductCategory[]> => {
       const { data, error } = await supabase.from("product_categories" as any).select("*")
-        .eq("tenant_id", tenantId as string).order("sort_order").order("name");
+        .eq("tenant_id", tenantId as string).order("sort_order").order("name").limit(1000);
       if (error) throw error;
       return (data ?? []) as any;
     },
   });
 }
 
+/** Categories split into parents and their children, ready for chips and pickers. */
+export function useCategoryTree(tenantId: string | null | undefined) {
+  const q = useProductCategories(tenantId);
+  const all = q.data ?? [];
+  const parents = all.filter((c) => !c.parent_id);
+  const childrenOf = (id: string) => all.filter((c) => c.parent_id === id);
+  const byId = new Map(all.map((c) => [c.id, c]));
+  const labelFor = (id: string | null | undefined) => {
+    if (!id) return "";
+    const c = byId.get(id);
+    if (!c) return "";
+    const p = c.parent_id ? byId.get(c.parent_id) : null;
+    return p ? `${p.name} › ${c.name}` : c.name;
+  };
+  /** ids of a parent plus all its children */
+  const familyIds = (id: string) => [id, ...childrenOf(id).map((c) => c.id)];
+  return { ...q, all, parents, childrenOf, byId, labelFor, familyIds };
+}
+
 export function useUpsertProductCategory(tenantId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<ProductCategory> & { name: string }) => {
-      const payload: any = { tenant_id: tenantId, name: input.name, sort_order: input.sort_order ?? 0, active: input.active ?? true };
+      const payload: any = {
+        tenant_id: tenantId, name: input.name, parent_id: input.parent_id ?? null,
+        sort_order: input.sort_order ?? 0, active: input.active ?? true,
+      };
       if (input.id) {
         const { error } = await supabase.from("product_categories" as any).update(payload).eq("id", input.id).eq("tenant_id", tenantId);
         if (error) throw error;
@@ -196,6 +246,51 @@ export function useDeleteProductCategory(tenantId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["product_categories"] }),
   });
 }
+
+// -------- Brands --------
+
+export function useProductBrands(tenantId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["product_brands", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: async (): Promise<ProductBrand[]> => {
+      const { data, error } = await supabase.from("product_brands" as any).select("*")
+        .eq("tenant_id", tenantId as string).order("sort_order").order("name").limit(1000);
+      if (error) throw error;
+      return (data ?? []) as any;
+    },
+  });
+}
+
+export function useUpsertProductBrand(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: Partial<ProductBrand> & { name: string }) => {
+      const payload: any = { tenant_id: tenantId, name: input.name, sort_order: input.sort_order ?? 0, active: input.active ?? true };
+      if (input.id) {
+        const { error } = await supabase.from("product_brands" as any).update(payload).eq("id", input.id).eq("tenant_id", tenantId);
+        if (error) throw error;
+        return input.id;
+      }
+      const { data, error } = await supabase.from("product_brands" as any).insert(payload).select("id").single();
+      if (error) throw error;
+      return (data as any).id as string;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["product_brands"] }),
+  });
+}
+
+export function useDeleteProductBrand(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("product_brands" as any).delete().eq("id", id).eq("tenant_id", tenantId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["product_brands"] }),
+  });
+}
+
 
 // -------- Locations --------
 
