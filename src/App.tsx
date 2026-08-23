@@ -95,10 +95,12 @@ import BrandingSettingsPage from "@/features/settings/BrandingSettingsPage";
 import VaccinationRulesPage from "@/features/settings/VaccinationRulesPage";
 import ShopIndexPage from "@/features/shop/ShopIndexPage";
 import ProductsPage from "@/features/shop/ProductsPage";
+import ProductPhotosPage from "@/features/shop/ProductPhotosPage";
 import StockPage from "@/features/shop/StockPage";
 import QuickSalePage from "@/features/shop/QuickSalePage";
 import PosPage from "@/features/pos/PosPage";
 import ProductCategoriesPage from "@/features/settings/ProductCategoriesPage";
+import ProductBrandsPage from "@/features/settings/ProductBrandsPage";
 import StockLocationsPage from "@/features/settings/StockLocationsPage";
 import RetailSettingsPage from "@/features/settings/RetailSettingsPage";
 import RolesPermissionsPage from "@/features/settings/RolesPermissionsPage";
@@ -219,6 +221,7 @@ const App = () => (
                 <Route path="/admin/shop-stock" element={<ShopIndexPage />} />
                 <Route path="/admin/shop-stock/products" element={<ProductsPage />} />
                 <Route path="/admin/shop-stock/stock" element={<StockPage />} />
+                <Route path="/admin/shop-stock/photos" element={<ProductPhotosPage />} />
                 <Route path="/admin/shop-stock/sale" element={<QuickSalePage />} />
                 <Route element={<RequirePermission code="pos.operate" />}>
                   <Route path="/admin/pos" element={<PosPage />} />
@@ -260,6 +263,7 @@ const App = () => (
                 <Route path="/admin/settings/branding" element={<BrandingSettingsPage />} />
                 <Route path="/admin/settings/vaccination-rules" element={<VaccinationRulesPage />} />
                 <Route path="/admin/settings/product-categories" element={<ProductCategoriesPage />} />
+                <Route path="/admin/settings/product-brands" element={<ProductBrandsPage />} />
                 <Route path="/admin/settings/stock-locations" element={<StockLocationsPage />} />
                 <Route path="/admin/settings/retail" element={<RetailSettingsPage />} />
                 <Route path="/admin/settings/documents" element={<DocumentRetentionPage />} />

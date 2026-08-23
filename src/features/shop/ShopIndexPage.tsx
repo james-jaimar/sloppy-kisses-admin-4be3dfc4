@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Package, PackageSearch, ShoppingCart, ChevronRight, Barcode } from "lucide-react";
+import { Package, PackageSearch, ShoppingCart, ChevronRight, Barcode, Camera } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SECTIONS = [
@@ -7,6 +7,7 @@ const SECTIONS = [
   { to: "/admin/shop-stock/sale", label: "Quick sale", description: "Ring up an over-the-counter retail sale.", icon: ShoppingCart },
   { to: "/admin/shop-stock/products", label: "Products", description: "Manage your retail catalogue.", icon: Package },
   { to: "/admin/shop-stock/stock", label: "Stock levels", description: "Current on-hand and stock adjustments.", icon: PackageSearch },
+  { to: "/admin/shop-stock/photos", label: "Photo studio", description: "Snap product photos on the tablet, straight onto the till.", icon: Camera },
 ];
 
 export default function ShopIndexPage() {
