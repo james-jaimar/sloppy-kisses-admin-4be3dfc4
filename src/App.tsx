@@ -143,6 +143,8 @@ import MyPaymentsPage from "@/features/customerPortal/payments/MyPaymentsPage";
 import MyDocumentsPage from "@/features/customerPortal/documents/MyDocumentsPage";
 import MyProfilePage from "@/features/customerPortal/profile/MyProfilePage";
 import MyAddressesPage from "@/features/customerPortal/addresses/MyAddressesPage";
+import MyQuotesPage from "@/features/customerPortal/quotes/MyQuotesPage";
+import MyQuoteDetailPage from "@/features/customerPortal/quotes/MyQuoteDetailPage";
 import ServicePickerPage from "@/features/customerPortal/bookings/new/ServicePickerPage";
 import HotelRequestWizard from "@/features/customerPortal/bookings/new/HotelRequestWizard";
 import DaycareRequestWizard from "@/features/customerPortal/bookings/new/DaycareRequestWizard";
@@ -324,6 +326,8 @@ const App = () => (
                 <Route path="/customer/bookings/new/transport" element={<TransportRequestWizard />} />
                 <Route path="/customer/bookings/:id" element={<MyBookingDetailPage />} />
                 <Route path="/customer/bookings/:id/form" element={<AccommodationFormPage />} />
+                <Route path="/customer/quotes" element={<MyQuotesPage />} />
+                <Route path="/customer/quotes/:id" element={<MyQuoteDetailPage />} />
                 <Route path="/customer/documents" element={<MyDocumentsPage />} />
                 <Route path="/customer/invoices" element={<MyInvoicesPage />} />
                 <Route path="/customer/invoices/:id" element={<MyInvoiceDetailPage />} />

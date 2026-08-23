@@ -3134,12 +3134,14 @@ export type Database = {
           converted_invoice_id: string | null
           created_at: string
           created_by: string | null
+          created_via: string | null
           customer_id: string
           declined_at: string | null
           end_at: string | null
           estimate_number: string
           expiry_date: string | null
           extras: Json
+          hold_expires_at: string | null
           hold_until: string | null
           id: string
           issue_date: string | null
@@ -3164,12 +3166,14 @@ export type Database = {
           converted_invoice_id?: string | null
           created_at?: string
           created_by?: string | null
+          created_via?: string | null
           customer_id: string
           declined_at?: string | null
           end_at?: string | null
           estimate_number: string
           expiry_date?: string | null
           extras?: Json
+          hold_expires_at?: string | null
           hold_until?: string | null
           id?: string
           issue_date?: string | null
@@ -3194,12 +3198,14 @@ export type Database = {
           converted_invoice_id?: string | null
           created_at?: string
           created_by?: string | null
+          created_via?: string | null
           customer_id?: string
           declined_at?: string | null
           end_at?: string | null
           estimate_number?: string
           expiry_date?: string | null
           extras?: Json
+          hold_expires_at?: string | null
           hold_until?: string | null
           id?: string
           issue_date?: string | null
@@ -4561,6 +4567,9 @@ export type Database = {
           photo_gate_mode: string
           photo_policy_note: string | null
           portal_activate_on_quote_accept: boolean
+          portal_quote_hold_hours: number
+          portal_quote_max_active: number
+          portal_quotes_enabled: boolean
           quote_validity_days: number
           require_labelling_checklist: boolean
           require_payment_to_confirm: boolean
@@ -4591,6 +4600,9 @@ export type Database = {
           photo_gate_mode?: string
           photo_policy_note?: string | null
           portal_activate_on_quote_accept?: boolean
+          portal_quote_hold_hours?: number
+          portal_quote_max_active?: number
+          portal_quotes_enabled?: boolean
           quote_validity_days?: number
           require_labelling_checklist?: boolean
           require_payment_to_confirm?: boolean
@@ -4621,6 +4633,9 @@ export type Database = {
           photo_gate_mode?: string
           photo_policy_note?: string | null
           portal_activate_on_quote_accept?: boolean
+          portal_quote_hold_hours?: number
+          portal_quote_max_active?: number
+          portal_quotes_enabled?: boolean
           quote_validity_days?: number
           require_labelling_checklist?: boolean
           require_payment_to_confirm?: boolean

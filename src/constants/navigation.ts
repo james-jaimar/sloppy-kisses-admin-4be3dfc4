@@ -32,6 +32,7 @@ export const customerNav = [
   { to: "/customer/bookings/new", label: "Book a service", icon: CalendarPlus, primary: true },
   { to: "/customer/pets", label: "My Pets", icon: PawPrint },
   { to: "/customer/bookings", label: "Bookings", icon: CalendarCheck },
+  { to: "/customer/quotes", label: "Quotes", icon: FileText },
   { to: "/customer/documents", label: "Documents", icon: FileText },
   { to: "/customer/invoices", label: "Invoices", icon: ReceiptText },
   { to: "/customer/payments", label: "Payments", icon: CreditCard },
