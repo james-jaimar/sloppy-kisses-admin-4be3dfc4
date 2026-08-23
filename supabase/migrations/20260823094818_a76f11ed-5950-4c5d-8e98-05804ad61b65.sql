@@ -1,0 +1,1 @@
+ALTER TABLE public.product_categories DROP CONSTRAINT IF EXISTS product_categories_tenant_id_name_key;
