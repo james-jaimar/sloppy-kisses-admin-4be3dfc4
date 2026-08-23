@@ -1,5 +1,6 @@
 import { ImageOff, Plus } from "lucide-react";
 import type { Product } from "@/features/shop/queries";
+import { useProductImageUrls } from "@/features/shop/productImages";
 
 interface Props {
   products: Product[];
@@ -17,6 +18,8 @@ function initials(name: string) {
 }
 
 export default function PosProductGrid({ products, stockByProduct, onAdd, loading }: Props) {
+  const resolve = useProductImageUrls(products.slice(0, 200).map((p) => p.image_url));
+
   if (loading) {
     return (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
@@ -43,6 +46,7 @@ export default function PosProductGrid({ products, stockByProduct, onAdd, loadin
         const qty = stockByProduct.get(p.id) ?? 0;
         const low = p.reorder_level != null && qty <= Number(p.reorder_level);
         const out = qty <= 0;
+        const img = resolve(p.image_url);
         return (
           <button
             key={p.id}
@@ -50,8 +54,8 @@ export default function PosProductGrid({ products, stockByProduct, onAdd, loadin
             className="group relative flex select-none flex-col overflow-hidden rounded-2xl border border-border bg-white text-left transition-transform active:scale-[0.98]"
           >
             <div className="relative aspect-[4/3] w-full bg-sk-surface-muted">
-              {p.image_url ? (
-                <img src={p.image_url} alt={p.name} loading="lazy" className="h-full w-full object-cover" />
+              {img ? (
+                <img src={img} alt={p.name} loading="lazy" className="h-full w-full object-cover" />
               ) : (
                 <div className="grid h-full w-full place-items-center text-2xl font-bold text-muted-foreground/60">
                   {initials(p.name)}
@@ -73,7 +77,7 @@ export default function PosProductGrid({ products, stockByProduct, onAdd, loadin
             <div className="flex flex-1 items-end gap-2 p-3">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold leading-tight">{p.name}</div>
-                <div className="truncate text-[11px] text-muted-foreground">{p.unit ?? p.sku ?? "each"}</div>
+                <div className="truncate text-[11px] text-muted-foreground">{[p.variant_label, p.size_pack].filter(Boolean).join(" · ") || p.unit || p.sku || "each"}</div>
                 <div className="mt-1 text-base font-bold tabular-nums">
                   R {Number(p.sell_price ?? 0).toFixed(2)}
                 </div>
