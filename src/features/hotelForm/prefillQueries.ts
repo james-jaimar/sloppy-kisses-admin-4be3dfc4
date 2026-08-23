@@ -41,7 +41,6 @@ export function useAccommodationWriteBack() {
       const custPatch: Record<string, unknown> = {};
       if (form.owner.id_number) custPatch.id_number = form.owner.id_number;
       if (form.owner.mobile) custPatch.mobile = form.owner.mobile;
-      if (form.owner.home_address) custPatch.home_address = form.owner.home_address;
       if (form.emergency_contact.full_name) custPatch.emergency_contact_name = form.emergency_contact.full_name;
       if (form.emergency_contact.relationship) custPatch.emergency_contact_relationship = form.emergency_contact.relationship;
       if (form.emergency_contact.mobile) custPatch.emergency_contact_mobile = form.emergency_contact.mobile;
