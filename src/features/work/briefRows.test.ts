@@ -8,7 +8,10 @@ const catalog = {
     { id: "g3", code: "hand_strip", label: "Hand stripping", kind: "bool", sort_order: 90, active: true, is_medical: false, icon: null, colour: null, tenant_id: "t" },
   ] as any,
   byGroup: {
-    g1: [{ id: "o1", group_id: "g1", code: "neaten", label: "Neaten up" }] as any,
+    g1: [
+      { id: "o1", group_id: "g1", code: "neaten", label: "Neaten up" },
+      { id: "o1b", group_id: "g1", code: "leave", label: "Leave", no_action: true },
+    ] as any,
     g2: [{ id: "o2", group_id: "g2", code: "ticks", label: "Ticks" }] as any,
     g3: [] as any,
   },
@@ -18,8 +21,13 @@ describe("briefRows", () => {
   it("resolves option codes to labels and keeps medical first", () => {
     const rows = briefRows({ head_face: "neaten", medical: ["ticks"], hand_strip: true }, catalog as any);
     expect(rows.map((r) => r.code)).toEqual(["medical", "head_face", "hand_strip"]);
-    expect(rows[1]).toMatchObject({ value: "Neaten up", icon: "smile", colour: "coral" });
+    expect(rows[1]).toMatchObject({ value: "Neaten up", icon: "smile", colour: "coral", noAction: false });
     expect(rows[2].value).toBe("Yes");
+  });
+
+  it("flags no-action selections", () => {
+    const rows = briefRows({ head_face: "leave" }, catalog as any);
+    expect(rows[0]).toMatchObject({ value: "Leave", noAction: true });
   });
 
   it("skips empty selections", () => {
