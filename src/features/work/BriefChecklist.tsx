@@ -99,6 +99,12 @@ export function BriefChecklist({
           );
         })}
       </ul>
+      {leaveRows.length > 0 && (
+        <p className="mt-3 text-xs text-muted-foreground">
+          <span className="font-semibold uppercase tracking-wide">Leave alone: </span>
+          <span className="line-through">{leaveRows.map((r) => r.label).join(", ")}</span>
+        </p>
+      )}
     </div>
   );
 }
