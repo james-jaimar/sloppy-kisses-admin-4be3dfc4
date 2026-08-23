@@ -3685,6 +3685,7 @@ export type Database = {
           id: string
           is_alert: boolean
           label: string
+          no_action: boolean
           sort_order: number
           tenant_id: string
           updated_at: string
@@ -3698,6 +3699,7 @@ export type Database = {
           id?: string
           is_alert?: boolean
           label: string
+          no_action?: boolean
           sort_order?: number
           tenant_id: string
           updated_at?: string
@@ -3711,6 +3713,7 @@ export type Database = {
           id?: string
           is_alert?: boolean
           label?: string
+          no_action?: boolean
           sort_order?: number
           tenant_id?: string
           updated_at?: string
