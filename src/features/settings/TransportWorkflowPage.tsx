@@ -60,6 +60,8 @@ export default function TransportWorkflowPage() {
     gate_code_required_by_time: "07:00",
     require_payment_to_confirm: true,
     payment_hold_hours: 48,
+    overbooking_mode: "warn" as "warn" | "block",
+    max_stops_per_van_per_day: 12,
   });
   const [suburbFees, setSuburbFees] = useState<SuburbFee[]>([]);
 
@@ -85,6 +87,8 @@ export default function TransportWorkflowPage() {
         gate_code_required_by_time: trimTime((settingsQ.data as any).gate_code_required_by_time) || "07:00",
         require_payment_to_confirm: (settingsQ.data as any).require_payment_to_confirm ?? true,
         payment_hold_hours: Number((settingsQ.data as any).payment_hold_hours ?? 48),
+        overbooking_mode: ((settingsQ.data as any).overbooking_mode ?? "warn") as "warn" | "block",
+        max_stops_per_van_per_day: Number((settingsQ.data as any).max_stops_per_van_per_day ?? 12),
       });
       setSuburbFees(fromMap(settingsQ.data.suburb_fees));
     }
@@ -176,6 +180,28 @@ export default function TransportWorkflowPage() {
               <option value="hard">Required — block the booking until a photo is on file</option>
             </select>
           </Field>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Max stops per van per day" hint="Used to warn (or block) when a day's run is already full.">
+              <input
+                type="number" min={1} disabled={!canManage}
+                value={form.max_stops_per_van_per_day}
+                onChange={(e) => setForm((f) => ({ ...f, max_stops_per_van_per_day: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+              />
+            </Field>
+            <Field label="When every van is full" hint="Applies to staff booking forms and the customer portal.">
+              <select
+                disabled={!canManage}
+                value={form.overbooking_mode}
+                onChange={(e) => setForm((f) => ({ ...f, overbooking_mode: e.target.value as "warn" | "block" }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+              >
+                <option value="warn">Warn — allow the booking anyway</option>
+                <option value="block">Block — the day must be changed</option>
+              </select>
+            </Field>
+          </div>
 
           <PaymentHoldFields
             disabled={!canManage}

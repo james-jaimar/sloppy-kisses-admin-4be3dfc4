@@ -202,6 +202,8 @@ export interface TransportWorkflowSettings {
   radius_gate_mode: "warn" | "block";
   gate_code_required_by_time: string | null;
   require_gate_code: boolean;
+  overbooking_mode: "warn" | "block";
+  max_stops_per_van_per_day: number;
 }
 
 export function useTransportWorkflowSettings(tenantId: string | null | undefined) {
