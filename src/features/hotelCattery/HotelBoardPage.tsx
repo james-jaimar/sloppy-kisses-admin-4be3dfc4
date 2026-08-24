@@ -79,11 +79,32 @@ export default function HotelBoardPage() {
         }
       />
       <div className="flex-1 space-y-6 p-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">Show:</span>
+          {([
+            ["quotes", "Quotes (held dates)", showQuotes, setShowQuotes],
+            ["unpaid", "Awaiting payment", showUnpaid, setShowUnpaid],
+            ["cancelled", "Cancelled", showCancelled, setShowCancelled],
+          ] as [string, string, boolean, (v: boolean) => void][]).map(([key, label, on, set]) => (
+            <button
+              key={key}
+              onClick={() => set(!on)}
+              className={`h-8 rounded-full border px-3 text-xs font-medium transition ${
+                on
+                  ? "border-sk-coral bg-sk-coral-soft text-sk-coral-dark"
+                  : "border-border bg-white text-muted-foreground hover:bg-sk-surface-muted"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           <OccupancyGrid
             tenantId={tenantId}
             resources={resourcesQ.data ?? []}
-            bookings={bookingsQ.data ?? []}
+            bookings={visibleBookings}
+            quotes={showQuotes ? quotesQ.data ?? [] : []}
             windowStart={windowStart}
             windowDays={WINDOW_DAYS}
             loading={resourcesQ.isLoading || bookingsQ.isLoading}
@@ -91,11 +112,13 @@ export default function HotelBoardPage() {
           <TodayPanel
             tenantId={tenantId}
             bookings={bookingsQ.data ?? []}
+            quotes={quotesQ.data ?? []}
             resources={resourcesQ.data ?? []}
             today={today}
           />
         </div>
       </div>
+
     </>
   );
 }
