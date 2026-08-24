@@ -98,6 +98,7 @@ import ProductsPage from "@/features/shop/ProductsPage";
 import ProductPhotosPage from "@/features/shop/ProductPhotosPage";
 import StockPage from "@/features/shop/StockPage";
 import QuickSalePage from "@/features/shop/QuickSalePage";
+import UnknownBarcodesPage from "@/features/shop/UnknownBarcodesPage";
 import PosPage from "@/features/pos/PosPage";
 import ProductCategoriesPage from "@/features/settings/ProductCategoriesPage";
 import ProductBrandsPage from "@/features/settings/ProductBrandsPage";
@@ -225,6 +226,7 @@ const App = () => (
                 <Route path="/admin/shop-stock/stock" element={<StockPage />} />
                 <Route path="/admin/shop-stock/photos" element={<ProductPhotosPage />} />
                 <Route path="/admin/shop-stock/sale" element={<QuickSalePage />} />
+                <Route path="/admin/shop-stock/barcodes" element={<UnknownBarcodesPage />} />
                 <Route element={<RequirePermission code="pos.operate" />}>
                   <Route path="/admin/pos" element={<PosPage />} />
                 </Route>
