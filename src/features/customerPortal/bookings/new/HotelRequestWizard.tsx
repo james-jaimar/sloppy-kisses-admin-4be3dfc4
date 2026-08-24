@@ -7,6 +7,9 @@ import { supabase } from "@/lib/supabase/client";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls } from "./WizardShell";
 import { PetsVaccinationGate, usePetsVaxBlocked } from "@/features/bookings/VaccinationGatePanel";
+import { usePortalServiceGates } from "@/features/customerPortal/gatesQueries";
+import { HouseCapacityNotice, useHotelHouseAvailability, fullNights } from "@/features/hotelCattery/HouseCapacityNotice";
+
 import { usePortalPets, useResources } from "./wizardHooks";
 import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
 import {
