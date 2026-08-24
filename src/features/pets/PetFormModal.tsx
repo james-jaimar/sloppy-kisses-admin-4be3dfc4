@@ -85,6 +85,8 @@ export function PetFormModal({ tenantId, customerId, pet, onClose, onSaved, onCr
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    e.stopPropagation();
+
     if (!form.name.trim()) {
       toast.error("Pet name is required");
       return;
