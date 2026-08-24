@@ -283,7 +283,9 @@ export default function PosPage() {
 
         {/* Cart */}
         <aside className="flex min-h-0 max-h-[55vh] w-full shrink-0 flex-col border-t border-border lg:max-h-none lg:h-full lg:w-[420px] lg:border-l lg:border-t-0">
+          <div className="flex min-h-0 flex-1 flex-col">
           <PosSalePanel
+
             lines={lines}
             discount={discount}
             customerLabel={customerName}
