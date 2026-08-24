@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import { LogIn, LogOut, Hotel } from "lucide-react";
+import { LogIn, LogOut, Hotel, FileText } from "lucide-react";
 import {
   checkVaccinations, logVaccinationOverride, useHotelWorkflowSettings, useUpdateBookingStatus,
-  type HotelBookingRow, type HotelResourceRow,
+  type HotelBookingRow, type HotelQuoteRow, type HotelResourceRow,
 } from "./queries";
+
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PaymentChip, PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 import { StayPlayChip, StayPlayFlagsProvider } from "@/features/daycare/StayPlayBadge";
