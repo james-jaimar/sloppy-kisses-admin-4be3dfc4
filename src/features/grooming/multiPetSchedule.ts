@@ -188,3 +188,44 @@ export function layoutGroomingAppointments({
 export function canSeatAll(args: LayoutArgs): boolean {
   return layoutGroomingAppointments(args) !== null;
 }
+export interface FreeResourcesArgs {
+  resources: GroomerResource[];
+  busy: BusyInterval[];
+  start: Date;
+  end: Date;
+  excludeBookingIds?: string[];
+}
+
+/**
+ * Which groomers/vans can take a job in the given window — used by the slot
+ * picker to show free/busy across every groomer instead of a bare count.
+ */
+export function freeResourcesAt({
+  resources,
+  busy,
+  start,
+  end,
+  excludeBookingIds = [],
+}: FreeResourcesArgs): { free: GroomerResource[]; busyIds: string[] } {
+  const byResource = seedBusy(resources, busy, excludeBookingIds);
+  const s = start.getTime();
+  const e = end.getTime();
+  const free: GroomerResource[] = [];
+  const busyIds: string[] = [];
+  for (const r of resources) {
+    const ok = withinWorkingHours(r, start, end) && !overlaps(byResource.get(r.id) ?? [], s, e);
+    if (ok) free.push(r);
+    else busyIds.push(r.id);
+  }
+  return { free, busyIds };
+}
+
+/** Widest open/close window (in hours) across the given resources. */
+export function poolHours(resources: GroomerResource[], fallback = { openHour: 8, closeHour: 17 }) {
+  const opens = resources.map((r) => parseClock(r.workday_start)).filter((v): v is number => v != null);
+  const closes = resources.map((r) => parseClock(r.workday_end)).filter((v): v is number => v != null);
+  return {
+    openHour: opens.length ? Math.min(...opens) / 60 : fallback.openHour,
+    closeHour: closes.length ? Math.max(...closes) / 60 : fallback.closeHour,
+  };
+}
