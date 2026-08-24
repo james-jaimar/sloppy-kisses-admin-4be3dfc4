@@ -7,7 +7,7 @@ import { useHotelGroomPendingCount } from "@/features/hotelGrooming/queries";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { OccupancyGrid } from "./OccupancyGrid";
 import { TodayPanel } from "./TodayPanel";
-import { useHotelBookingsInWindow, useHotelResources } from "./queries";
+import { useHotelBookingsInWindow, useHotelQuotesInWindow, useHotelResources } from "./queries";
 
 function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
 function addDays(d: Date, n: number) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
