@@ -263,6 +263,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   // Mobile van bookings need an address the vans can actually navigate to.
   const isMobileVan = serviceType === "grooming_mobile";
   const { hasPermission, profile } = useCurrentUser();
+  const [addingPet, setAddingPet] = useState(false);
+  const canCreatePet = profile?.user_type === "platform" || hasPermission("pets.create");
   const canOverrideAddress = profile?.user_type === "platform" || hasPermission("settings.manage");
   const isTransport = serviceType === "pickup_dropoff";
   const needsVanAddress = isMobileVan || isTransport;
