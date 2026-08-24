@@ -18,16 +18,26 @@ export default function AdminLayout() {
     try { window.localStorage.setItem(STORAGE_KEY, collapsed ? "1" : "0"); } catch {}
   }, [collapsed]);
 
+  // Full-screen tools (the till) need a hard height cap so their internal
+  // scroll areas work and the pay buttons stay pinned to the bottom.
+  const { pathname } = useLocation();
+  const fixedHeight = pathname.startsWith("/admin/pos");
+
   return (
     <QuickAddProvider>
-    <div className="flex min-h-screen w-full bg-sk-bg text-foreground">
+    <div
+      className={
+        "flex w-full bg-sk-bg text-foreground " +
+        (fixedHeight ? "h-[100dvh] overflow-hidden" : "min-h-screen")
+      }
+    >
       <AppSidebar
         items={adminNav}
         footerLabel="Sloppy Kisses · Bryanston"
         collapsed={collapsed}
         onToggleCollapsed={() => setCollapsed((c) => !c)}
       />
-      <div className="flex-1 min-w-0 flex flex-col">
+      <div className={"flex-1 min-w-0 flex flex-col" + (fixedHeight ? " min-h-0 overflow-hidden" : "")}>
         <MobileTopBar items={adminNav} footerLabel="Sloppy Kisses · Bryanston" />
         <SendLockBanner />
         <Outlet />
