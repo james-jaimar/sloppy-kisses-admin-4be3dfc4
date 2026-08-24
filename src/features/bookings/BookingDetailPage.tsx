@@ -8,7 +8,7 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useBookingDetail, useDeleteBooking } from "./queries";
 import { BookingStatusChip } from "./statusMeta";
 import { BookingFormModal } from "./BookingFormModal";
-import { useTransportLegExistsForBooking } from "@/features/transport/queries";
+import { useTransportLegExistsForBooking, useLinkedChildBookings } from "@/features/transport/queries";
 import { Truck } from "lucide-react";
 import { BookingInvoicePanel } from "./BookingInvoicePanel";
 import { BookingCommsPanel } from "./BookingCommsPanel";
