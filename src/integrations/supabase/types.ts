@@ -7931,8 +7931,10 @@ export type Database = {
           gate_code_required_by_time: string
           id: string
           max_leg_gap_minutes: number
+          max_stops_per_van_per_day: number
           min_lead_hours: number
           min_leg_gap_minutes: number
+          overbooking_mode: string
           payment_hold_hours: number
           photo_gate_mode: string
           radius_gate_mode: string
@@ -7959,8 +7961,10 @@ export type Database = {
           gate_code_required_by_time?: string
           id?: string
           max_leg_gap_minutes?: number
+          max_stops_per_van_per_day?: number
           min_lead_hours?: number
           min_leg_gap_minutes?: number
+          overbooking_mode?: string
           payment_hold_hours?: number
           photo_gate_mode?: string
           radius_gate_mode?: string
@@ -7987,8 +7991,10 @@ export type Database = {
           gate_code_required_by_time?: string
           id?: string
           max_leg_gap_minutes?: number
+          max_stops_per_van_per_day?: number
           min_lead_hours?: number
           min_leg_gap_minutes?: number
+          overbooking_mode?: string
           payment_hold_hours?: number
           photo_gate_mode?: string
           radius_gate_mode?: string
@@ -9375,6 +9381,21 @@ export type Database = {
       transport_can_assign_leg: {
         Args: { _booking_id: string; _resource_id: string }
         Returns: Json
+      }
+      transport_day_load: {
+        Args: {
+          p_end: string
+          p_exclude_booking_id?: string
+          p_start: string
+          p_tenant_id: string
+        }
+        Returns: {
+          day: string
+          max_stops: number
+          resource_id: string
+          resource_name: string
+          stops: number
+        }[]
       }
       transport_radius_check: {
         Args: { p_lat: number; p_lng: number; p_tenant_id: string }
