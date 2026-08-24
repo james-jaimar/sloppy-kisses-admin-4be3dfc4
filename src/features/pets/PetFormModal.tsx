@@ -123,6 +123,7 @@ export function PetFormModal({ tenantId, customerId, pet, onClose, onSaved, onCr
       } else {
         const created = await create.mutateAsync({ ...payload, customer_id: customerId });
         toast.success(`Pet ${created.pet_number} added`);
+        onCreated?.(created.id);
       }
       onSaved?.();
       onClose();
