@@ -553,9 +553,11 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preferredGroomerId, serviceType, isEdit]);
   const groomingDayKey = startAt ? startAt.slice(0, 10) : null;
+  const groomingPoolKind = serviceType === "grooming_mobile" ? "mobile" : "inhouse";
   const groomingAvailQ = useGroomingDayAvailability(
     kind === "grooming" ? tenantId : null,
     groomingDayKey,
+    groomingPoolKind,
   );
 
   function packageIdForPet(petId: string): string | null {
@@ -1225,6 +1227,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               <GroomingSlotPicker
                 tenantId={tenantId}
                 value={startAt || null}
+                kind={groomingPoolKind}
                 durationMinutes={durationMins}
                 resourceId={resourceId}
                 excludeBookingId={booking?.id ?? null}

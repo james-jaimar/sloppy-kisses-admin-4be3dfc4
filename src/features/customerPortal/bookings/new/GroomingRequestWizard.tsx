@@ -151,7 +151,8 @@ export default function GroomingRequestWizard({ mode }: Props) {
     [petIds, packages.data, packageId, petPackages, treatments, addonsQ.data],
   );
   const slotDayKey = slotStart ? slotStart.slice(0, 10) : null;
-  const availQ = useGroomingDayAvailability(multiPet ? cust.data?.tenant_id ?? null : null, slotDayKey);
+  const poolKind = mode === "inhouse" ? "inhouse" : "mobile";
+  const availQ = useGroomingDayAvailability(multiPet ? cust.data?.tenant_id ?? null : null, slotDayKey, poolKind);
   const plan = useMemo(() => {
     if (!multiPet || !slotStart) return null;
     return layoutGroomingAppointments({
@@ -274,6 +275,7 @@ export default function GroomingRequestWizard({ mode }: Props) {
         <GroomingSlotPicker
           tenantId={cust.data?.tenant_id ?? null}
           value={slotStart}
+          kind={poolKind}
           durationMinutes={durationMinutes}
           petSlots={multiPet ? petSlotRequests : undefined}
           onChange={(s, e) => { setSlotStart(s); setSlotEnd(e); }}
