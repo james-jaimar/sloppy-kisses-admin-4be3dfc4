@@ -102,6 +102,9 @@ export default function PosPage() {
     return () => clearTimeout(t);
   }, [scan]);
 
+  // Filters changing means we're looking at a different set — go back to page one.
+  useEffect(() => { setPage(1); }, [search, categoryId, subCategoryId, brandId]);
+
   function addToCart(p: Product, qty = 1) {
     setLines((c) => {
       const i = c.findIndex((l) => l.product.id === p.id);
@@ -122,15 +125,19 @@ export default function PosPage() {
       ?? all.find((p) => p.sku && p.sku.toLowerCase() === code.toLowerCase());
     if (hit) {
       addToCart(hit);
-      playTone("hit");
+      if (beepOnScan) playTone("hit");
       setScan({ kind: "hit", text: `${hit.name} added` });
-    } else {
-      playTone("miss");
-      setScan({ kind: "miss", text: `No product for ${code}` });
+      return;
     }
+    if (beepOnScan) playTone("miss");
+    setScan({ kind: "miss", text: `No product for ${code}` });
+    // Always keep the code so admin can match it up later.
+    recordUnknown.mutate({ code });
+    if (unknownAction === "link") setUnknownCode(code);
   }
 
-  useBarcodeScanner(handleScan, { enabled: !showTender && !receipt });
+  useBarcodeScanner(handleScan, { enabled: !showTender && !receipt && !unknownCode });
+
 
   function resetSale() {
     setLines([]);
