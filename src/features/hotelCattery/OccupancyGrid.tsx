@@ -329,16 +329,22 @@ function ResourceRow({
         <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground">Occupancy</div>
         {days.map((d) => {
           const used = usedOnDay(bookings, d);
+          const held = heldOnDay(bookings, d);
           return (
             <div
               key={d.toISOString()}
               className={`border-l border-border px-1 py-1 text-center text-[11px] tabular-nums ${countTone(used, capacity)}`}
-              title={capacity != null ? `${used} of ${capacity} spaces used` : `${used} pets`}
+              title={
+                (capacity != null ? `${used} of ${capacity} spaces confirmed` : `${used} pets confirmed`) +
+                (held ? ` · ${held} held (unpaid / requested)` : "")
+              }
             >
               {capacity != null ? `${used}/${capacity}` : used || "—"}
+              {held > 0 && <span className="ml-0.5 text-sk-orange">+{held}</span>}
             </div>
           );
         })}
+
       </div>
 
       {assign && bookings.length > 0 && (
