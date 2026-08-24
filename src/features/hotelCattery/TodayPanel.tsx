@@ -25,10 +25,11 @@ function inHouse(b: HotelBookingRow, day: Date) {
 }
 
 export function TodayPanel({
-  tenantId, bookings, resources, today,
+  tenantId, bookings, quotes = [], resources, today,
 }: {
   tenantId: string | null;
   bookings: HotelBookingRow[];
+  quotes?: HotelQuoteRow[];
   resources: HotelResourceRow[];
   today: Date;
 }) {
@@ -38,9 +39,25 @@ export function TodayPanel({
   const gateMode = settingsQ.data?.vax_gate_mode ?? "soft";
 
   const arrivals = useMemo(
-    () => bookings.filter((b) => withinDay(b.start_at, today) && (b.status === "confirmed" || b.status === "approved" || b.status === "requested")),
+    () =>
+      bookings.filter(
+        (b) =>
+          withinDay(b.start_at, today) &&
+          ["confirmed", "approved", "requested", "pending_payment"].includes(b.status),
+      ),
     [bookings, today],
   );
+  const upcomingQuotes = useMemo(() => {
+    const from = startOfDay(today).getTime();
+    const to = from + 7 * 86_400_000;
+    return quotes
+      .filter((q) => {
+        const s = new Date(q.start_at).getTime();
+        return s >= from && s < to;
+      })
+      .sort((a, z) => new Date(a.start_at).getTime() - new Date(z.start_at).getTime());
+  }, [quotes, today]);
+
   const departures = useMemo(
     () => bookings.filter((b) => withinDay(b.end_at, today) && b.status !== "checked_out" && b.status !== "cancelled" && b.status !== "completed"),
     [bookings, today],
