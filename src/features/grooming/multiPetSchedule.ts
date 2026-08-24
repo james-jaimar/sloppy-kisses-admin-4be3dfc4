@@ -152,7 +152,10 @@ export function layoutGroomingAppointments({
       if (candidate + dur > dayClose.getTime()) return null;
       for (const r of ordered) {
         const ivs = byResource.get(r.id)!;
-        if (!overlaps(ivs, candidate, candidate + dur)) {
+        if (
+          withinWorkingHours(r, new Date(candidate), new Date(candidate + dur)) &&
+          !overlaps(ivs, candidate, candidate + dur)
+        ) {
           ivs.push({ start: candidate, end: candidate + dur });
           placed = {
             petId: pet.petId,
