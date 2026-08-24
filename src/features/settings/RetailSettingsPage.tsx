@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useRetailSettings, useStockLocations, useUpdateRetailSettings } from "@/features/shop/queries";
+import { useResources } from "@/features/bookings/queries";
 
 export default function RetailSettingsPage() {
   const { tenant } = useCurrentTenant();
@@ -11,8 +12,10 @@ export default function RetailSettingsPage() {
   const settingsQ = useRetailSettings(tenantId);
   const update = useUpdateRetailSettings(tenantId ?? "");
   const locsQ = useStockLocations(tenantId);
+  const resourcesQ = useResources(tenantId);
+  const tills = (resourcesQ.data ?? []).filter((r) => r.type === "retail_till");
 
-  const [form, setForm] = useState({ default_vat_rate: 15, allow_negative_stock: false, low_stock_notify_emails: "", till_name: "", receipt_footer: "", pos_location_id: "" });
+  const [form, setForm] = useState({ default_vat_rate: 15, allow_negative_stock: false, low_stock_notify_emails: "", till_name: "", receipt_footer: "", pos_location_id: "", pos_page_size: 24, unknown_barcode_action: "link" as "link" | "warn", scan_beep: true, till_resource_id: "" });
 
   useEffect(() => {
     const d = settingsQ.data;
@@ -23,6 +26,10 @@ export default function RetailSettingsPage() {
       till_name: d.till_name ?? "",
       receipt_footer: d.receipt_footer ?? "",
       pos_location_id: d.pos_location_id ?? "",
+      pos_page_size: Number(d.pos_page_size ?? 24),
+      unknown_barcode_action: (d.unknown_barcode_action ?? "link") as "link" | "warn",
+      scan_beep: d.scan_beep !== false,
+      till_resource_id: d.till_resource_id ?? "",
     });
   }, [settingsQ.data]);
 
@@ -35,6 +42,10 @@ export default function RetailSettingsPage() {
         till_name: form.till_name || null,
         receipt_footer: form.receipt_footer || null,
         pos_location_id: form.pos_location_id || null,
+        pos_page_size: form.pos_page_size,
+        unknown_barcode_action: form.unknown_barcode_action,
+        scan_beep: form.scan_beep,
+        till_resource_id: form.till_resource_id || null,
       });
       toast.success("Retail settings saved");
     } catch (err: any) { toast.error(err?.message ?? "Failed"); }
@@ -83,6 +94,38 @@ export default function RetailSettingsPage() {
                 {(locsQ.data ?? []).map((l) => (<option key={l.id} value={l.id}>{l.name}</option>))}
               </select>
               <div className="mt-1 text-[11px] text-muted-foreground">Stock sold at the till comes off this location.</div>
+            </label>
+            <label className="block">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Till resource</div>
+              <select value={form.till_resource_id}
+                onChange={(e) => setForm({ ...form, till_resource_id: e.target.value })}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm">
+                <option value="">Not linked to a till resource</option>
+                {tills.map((r) => (<option key={r.id} value={r.id}>{r.name}</option>))}
+              </select>
+              <div className="mt-1 text-[11px] text-muted-foreground">Used to roster shop staff onto a specific register.</div>
+            </label>
+            <label className="block">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Products per page</div>
+              <input type="number" min={8} max={60} value={form.pos_page_size}
+                onChange={(e) => setForm({ ...form, pos_page_size: Number(e.target.value) })}
+                className="h-10 w-40 rounded-lg border border-border bg-white px-3 text-sm" />
+              <div className="mt-1 text-[11px] text-muted-foreground">How many tiles show on the till grid before paging. 24 suits most tablets.</div>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.scan_beep}
+                onChange={(e) => setForm({ ...form, scan_beep: e.target.checked })} />
+              Beep on every scan
+            </label>
+            <label className="block">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Unrecognised barcode</div>
+              <select value={form.unknown_barcode_action}
+                onChange={(e) => setForm({ ...form, unknown_barcode_action: e.target.value as "link" | "warn" })}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm">
+                <option value="link">Open the link screen so staff can match it to a product</option>
+                <option value="warn">Just warn — the code is queued for admin</option>
+              </select>
+              <div className="mt-1 text-[11px] text-muted-foreground">Only staff with the “link barcodes” permission can save a match; everyone else can flag it.</div>
             </label>
             <label className="block">
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Receipt footer</div>
