@@ -1,5 +1,7 @@
 import { Minus, Percent, Plus, Trash2, User, X } from "lucide-react";
+import { useProductImageUrls } from "@/features/shop/productImages";
 import { cartTotal, lineTotal, lineUnitPrice, vatPortion, type PosLine } from "./queries";
+
 
 interface Props {
   lines: PosLine[];
