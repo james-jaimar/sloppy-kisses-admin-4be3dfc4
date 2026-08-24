@@ -98,9 +98,36 @@ function usedOnDay(bookings: HotelBookingRow[], day: Date) {
   const dayEnd = addDays(startOfDay(day), 1).getTime();
   let n = 0;
   for (const b of bookings) {
+    if (!isFirmBooking(b)) continue;
     const s = new Date(b.start_at).getTime();
     const e = b.end_at ? new Date(b.end_at).getTime() : Number.MAX_SAFE_INTEGER;
     if (s < dayEnd && e > dayStart) n += Math.max(1, b.pets.length);
+  }
+  return n;
+}
+
+/** Pets provisionally holding a space on a given day (unpaid / requested bookings). */
+function heldOnDay(bookings: HotelBookingRow[], day: Date) {
+  const dayStart = startOfDay(day).getTime();
+  const dayEnd = addDays(startOfDay(day), 1).getTime();
+  let n = 0;
+  for (const b of bookings) {
+    if (!isHeldBooking(b)) continue;
+    const s = new Date(b.start_at).getTime();
+    const e = b.end_at ? new Date(b.end_at).getTime() : Number.MAX_SAFE_INTEGER;
+    if (s < dayEnd && e > dayStart) n += Math.max(1, b.pets.length);
+  }
+  return n;
+}
+
+function quotesOnDay(quotes: HotelQuoteRow[], day: Date) {
+  const dayStart = startOfDay(day).getTime();
+  const dayEnd = addDays(startOfDay(day), 1).getTime();
+  let n = 0;
+  for (const q of quotes) {
+    const s = new Date(q.start_at).getTime();
+    const e = q.end_at ? new Date(q.end_at).getTime() : Number.MAX_SAFE_INTEGER;
+    if (s < dayEnd && e > dayStart) n += Math.max(1, q.petNames.length);
   }
   return n;
 }
@@ -113,7 +140,7 @@ function countTone(used: number, capacity: number | null) {
   return used > 0 ? "text-foreground" : "text-muted-foreground";
 }
 
-export function OccupancyGrid({ tenantId, resources, bookings, windowStart, windowDays, loading }: OccupancyGridProps) {
+export function OccupancyGrid({ tenantId, resources, bookings, quotes = [], windowStart, windowDays, loading }: OccupancyGridProps) {
   const days = Array.from({ length: windowDays }, (_, i) => addDays(windowStart, i));
   const today = startOfDay(new Date());
 
@@ -127,20 +154,38 @@ export function OccupancyGrid({ tenantId, resources, bookings, windowStart, wind
 
   const totalCapacity = resources.reduce((s, r) => s + (r.capacity ?? 0), 0);
   const anyCapacity = resources.some((r) => r.capacity != null);
-  const peak = days.reduce((max, d) => Math.max(max, usedOnDay(bookings.filter((b) => b.resource_id), d)), 0);
+  const assignedBookings = bookings.filter((b) => b.resource_id);
+  const peak = days.reduce((max, d) => Math.max(max, usedOnDay(assignedBookings, d)), 0);
+  const peakHeld = days.reduce(
+    (max, d) => Math.max(max, heldOnDay(bookings, d) + quotesOnDay(quotes, d)),
+    0,
+  );
 
   return (
     <div className="sk-card overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
         <div>
           <h2 className="text-base font-semibold">Occupancy</h2>
           <p className="text-xs text-muted-foreground">
             {resources.length} {resources.length === 1 ? "area" : "areas"}
             {anyCapacity ? ` · ${totalCapacity} spaces` : " · no space limits set"}
-            {" · "}peak {peak} {peak === 1 ? "pet" : "pets"} in view
+            {" · "}peak {peak} {peak === 1 ? "pet" : "pets"} confirmed
+            {peakHeld > 0 ? ` · +${peakHeld} held` : ""}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3 w-5 rounded border border-sk-green bg-sk-green-soft" /> Confirmed
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3 w-5 rounded border border-dashed border-sk-orange bg-sk-orange-soft" /> Held / unpaid
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3 w-5 rounded border border-dashed border-border bg-muted" /> Quote
+          </span>
+        </div>
       </div>
+
 
       {loading ? (
         <div className="p-10 text-center text-sm text-muted-foreground">Loading…</div>
