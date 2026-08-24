@@ -33,9 +33,13 @@ export function landingFor({ userType, hasPermission, depts }: LandingInput): st
   const isAdminUser = ADMIN_CODES.some((c) => hasPermission(c));
   if (isAdminUser) return "/admin/home";
 
+  // Shop staff live at the till.
+  if (hasPermission("pos.sell") && !hasPermission("work.access")) return "/admin/pos";
+
   if (!hasPermission("work.access")) return "/admin/home";
   if (depts.length === 1) return DEPT_ROUTE[depts[0]];
   return "/work";
+
 }
 
 /** True when the user has any admin-area screens worth showing. */
