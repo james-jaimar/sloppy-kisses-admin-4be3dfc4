@@ -138,6 +138,8 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    e.stopPropagation();
+
     const payload: any = {
       first_name: form.first_name.trim() || null,
       last_name: form.last_name.trim() || null,
