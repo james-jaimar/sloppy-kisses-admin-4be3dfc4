@@ -17,6 +17,10 @@ interface Props {
   pet?: PetRow | null; // present = edit
   onClose: () => void;
   onSaved?: () => void;
+  /** Called with the new pet's id after a successful create. */
+  onCreated?: (id: string) => void;
+  /** Pre-fill the pet's name (e.g. typed at the counter). */
+  prefillName?: string;
 }
 
 interface FormState {
