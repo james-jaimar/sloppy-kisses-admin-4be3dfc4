@@ -6781,6 +6781,83 @@ export type Database = {
           },
         ]
       }
+      pos_barcode_queue: {
+        Row: {
+          code: string
+          created_at: string
+          first_seen_at: string
+          id: string
+          last_scanned_by: string | null
+          last_seen_at: string
+          note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          resolved_product_id: string | null
+          scan_count: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          first_seen_at?: string
+          id?: string
+          last_scanned_by?: string | null
+          last_seen_at?: string
+          note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolved_product_id?: string | null
+          scan_count?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          first_seen_at?: string
+          id?: string
+          last_scanned_by?: string | null
+          last_seen_at?: string
+          note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          resolved_product_id?: string | null
+          scan_count?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_barcode_queue_last_scanned_by_fkey"
+            columns: ["last_scanned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_barcode_queue_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_barcode_queue_resolved_product_id_fkey"
+            columns: ["resolved_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_barcode_queue_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pos_parked_sales: {
         Row: {
           cart: Json
@@ -7303,10 +7380,14 @@ export type Database = {
           default_vat_rate: number
           low_stock_notify_emails: string | null
           pos_location_id: string | null
+          pos_page_size: number
           prices_include_vat: boolean
           receipt_footer: string | null
+          scan_beep: boolean
           tenant_id: string
           till_name: string
+          till_resource_id: string | null
+          unknown_barcode_action: string
           updated_at: string
           walkin_customer_id: string | null
         }
@@ -7316,10 +7397,14 @@ export type Database = {
           default_vat_rate?: number
           low_stock_notify_emails?: string | null
           pos_location_id?: string | null
+          pos_page_size?: number
           prices_include_vat?: boolean
           receipt_footer?: string | null
+          scan_beep?: boolean
           tenant_id: string
           till_name?: string
+          till_resource_id?: string | null
+          unknown_barcode_action?: string
           updated_at?: string
           walkin_customer_id?: string | null
         }
@@ -7329,10 +7414,14 @@ export type Database = {
           default_vat_rate?: number
           low_stock_notify_emails?: string | null
           pos_location_id?: string | null
+          pos_page_size?: number
           prices_include_vat?: boolean
           receipt_footer?: string | null
+          scan_beep?: boolean
           tenant_id?: string
           till_name?: string
+          till_resource_id?: string | null
+          unknown_barcode_action?: string
           updated_at?: string
           walkin_customer_id?: string | null
         }
@@ -7349,6 +7438,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: true
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retail_settings_till_resource_id_fkey"
+            columns: ["till_resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
             referencedColumns: ["id"]
           },
           {
@@ -9608,6 +9704,7 @@ export type Database = {
         | "daycare_area"
         | "hotel_area"
         | "cattery_area"
+        | "retail_till"
       service_type:
         | "daycare"
         | "daycare_assessment"
@@ -9884,6 +9981,7 @@ export const Constants = {
         "daycare_area",
         "hotel_area",
         "cattery_area",
+        "retail_till",
       ],
       service_type: [
         "daycare",
