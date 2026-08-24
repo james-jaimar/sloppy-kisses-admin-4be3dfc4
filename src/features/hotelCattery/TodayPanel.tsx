@@ -173,6 +173,38 @@ export function TodayPanel({
           />
         ))}
       </Panel>
+
+      {/* Quotes holding dates */}
+      <Panel
+        title="Quotes holding dates (7 days)"
+        empty="No quotes holding dates."
+        icon={<FileText className="h-4 w-4" />}
+      >
+        {upcomingQuotes.map((q) => (
+          <li key={q.id} className="flex items-center gap-3 px-4 py-3">
+            <div className="w-14 text-xs font-semibold tabular-nums text-muted-foreground">
+              {new Date(q.start_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}
+            </div>
+            <div className="min-w-0 flex-1">
+              <Link to={`/admin/quotes/${q.id}`} className="block truncate text-sm font-medium hover:underline">
+                {q.petNames.join(", ") || "Pet"}{" "}
+                <span className="font-normal text-muted-foreground">· {q.customer?.full_name ?? "—"}</span>
+              </Link>
+              <div className="truncate text-[11px] text-muted-foreground">
+                {q.estimate_number}
+                {q.total != null ? ` · R${q.total.toFixed(2)}` : ""}
+                {q.hold_expires_at
+                  ? ` · hold until ${new Date(q.hold_expires_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}`
+                  : ""}
+              </div>
+            </div>
+            <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+              {q.status}
+            </span>
+          </li>
+        ))}
+      </Panel>
+
     </div>
     </StayPlayFlagsProvider>
     </PaymentFlagsProvider>
