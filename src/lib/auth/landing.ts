@@ -34,7 +34,7 @@ export function landingFor({ userType, hasPermission, depts }: LandingInput): st
   if (isAdminUser) return "/admin/home";
 
   // Shop staff live at the till.
-  if (hasPermission("pos.sell") && !hasPermission("work.access")) return "/admin/pos";
+  if (hasPermission("pos.operate") && !hasPermission("work.access")) return "/admin/pos";
 
   if (!hasPermission("work.access")) return "/admin/home";
   if (depts.length === 1) return DEPT_ROUTE[depts[0]];
