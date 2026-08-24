@@ -445,6 +445,15 @@ export default function HotelRequestWizard() {
             </Field>
           </div>
 
+          <HouseCapacityNotice
+            rows={houseQ.data}
+            petCount={petIds.length}
+            mode={gates.data?.hotel_overbooking_mode ?? "warn"}
+            loading={houseQ.isLoading}
+          />
+
+
+
           <Field
             label={selectedPets.length > 1 ? "Accommodation (default for all pets)" : "Accommodation"}
             hint="This sets the nightly rate. Final room allocation is confirmed by our team."
