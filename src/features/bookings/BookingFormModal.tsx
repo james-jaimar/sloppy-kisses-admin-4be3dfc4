@@ -1115,9 +1115,34 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 {kind === "grooming" ? "Auto-assign — next free groomer" : "— Unassigned —"}
               </option>
               {filteredResources.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                  {kind === "grooming" && startAt
+                    ? groomerFreeIds.has(r.id)
+                      ? " — free"
+                      : " — busy"
+                    : ""}
+                </option>
               ))}
             </select>
+            {kind === "grooming" && startAt && (groomingAvailQ.data?.resources?.length ?? 0) > 0 && (
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                {(groomingAvailQ.data?.resources ?? []).map((r) => (
+                  <span key={r.id} className="inline-flex items-center gap-1">
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{
+                        backgroundColor: groomerFreeIds.has(r.id)
+                          ? (r.colour ?? "hsl(var(--muted-foreground))")
+                          : "transparent",
+                        border: `1px solid ${r.colour ?? "hsl(var(--border))"}`,
+                      }}
+                    />
+                    {r.name} {groomerFreeIds.has(r.id) ? "free" : "busy"}
+                  </span>
+                ))}
+              </div>
+            )}
             {kind === "grooming" && preferredGroomerId && resourceId === preferredGroomerId && (
               <div className="mt-1 text-[11px] text-muted-foreground">
                 This customer's preferred groomer.
