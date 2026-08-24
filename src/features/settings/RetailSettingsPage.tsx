@@ -13,7 +13,7 @@ export default function RetailSettingsPage() {
   const update = useUpdateRetailSettings(tenantId ?? "");
   const locsQ = useStockLocations(tenantId);
   const resourcesQ = useResources(tenantId);
-  const tills = (resourcesQ.data ?? []).filter((r) => r.type === "retail_till");
+  const tills = (resourcesQ.data ?? []).filter((r) => String(r.type) === "retail_till");
 
   const [form, setForm] = useState({ default_vat_rate: 15, allow_negative_stock: false, low_stock_notify_emails: "", till_name: "", receipt_footer: "", pos_location_id: "", pos_page_size: 24, unknown_barcode_action: "link" as "link" | "warn", scan_beep: true, till_resource_id: "" });
 
