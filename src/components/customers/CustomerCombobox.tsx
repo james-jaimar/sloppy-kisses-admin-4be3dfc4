@@ -1,8 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Loader2, Search, X } from "lucide-react";
+import { ChevronDown, Loader2, Search, UserPlus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useCustomers, type CustomerListRow } from "@/features/customers/queries";
+import { CustomerFormModal } from "@/features/customers/CustomerFormModal";
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
+
+/** Turn whatever was typed into the search box into sensible new-customer fields. */
+export function prefillFromTerm(term: string) {
+  const t = term.trim();
+  if (!t) return {};
+  if (t.includes("@")) return { email: t };
+  const digits = t.replace(/[^\d]/g, "");
+  if (digits.length >= 7 && digits.length / t.replace(/\s/g, "").length > 0.7) return { mobile: t };
+  const parts = t.split(/\s+/);
+  return { first_name: parts[0], last_name: parts.slice(1).join(" ") || undefined };
+}
 
 export interface CustomerOption {
   id: string;
