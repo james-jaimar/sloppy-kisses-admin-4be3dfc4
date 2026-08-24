@@ -102,7 +102,7 @@ export default function PosSalePanel({
 
       </div>
 
-      <div className="border-t border-border p-4 space-y-3">
+      <div className="shrink-0 border-t border-border bg-white p-4 space-y-3">
         <button
           onClick={discount > 0 ? onClearDiscount : onDiscount}
           className="flex w-full items-center justify-between rounded-xl border border-dashed border-border px-3 py-2 text-sm"
