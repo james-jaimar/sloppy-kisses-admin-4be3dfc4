@@ -4,6 +4,8 @@ import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useNavBadges } from "./useNavBadges";
+import { hasAdminArea } from "@/lib/auth/landing";
+
 
 interface NavItem {
   to: string;
