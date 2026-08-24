@@ -64,10 +64,11 @@ export default function PosProductGrid({
               onClick={() => onAdd(p)}
               className="group relative flex select-none flex-col overflow-hidden rounded-2xl border border-border bg-white text-left transition-transform active:scale-[0.98]"
             >
-              <div className="relative aspect-[4/3] w-full bg-sk-surface-muted">
+              <div className="relative aspect-square w-full bg-sk-surface-muted">
                 {img ? (
-                  <img src={img} alt={p.name} loading="lazy" className="h-full w-full object-cover" />
+                  <img src={img} alt={p.name} loading="lazy" className="h-full w-full object-contain p-2" />
                 ) : (
+
                   <div className="grid h-full w-full place-items-center text-2xl font-bold text-muted-foreground/60">
                     {initials(p.name)}
                   </div>

@@ -4,6 +4,8 @@ import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useNavBadges } from "./useNavBadges";
+import { hasAdminArea } from "@/lib/auth/landing";
+
 
 interface NavItem {
   to: string;
@@ -34,7 +36,14 @@ export function SidebarNavList({
   const isPlatform = profile?.user_type === "platform";
   const badges = useNavBadges();
   const visibleItems = items
-    .filter((it) => !it.code || isPlatform || hasPermission(it.code))
+    .filter((it) => {
+      if (!it.code || isPlatform) return true;
+      // Pseudo-code: shown to anyone with any admin-area screen (hides Home /
+      // Dashboard from till-only shop staff).
+      if (it.code === "admin.area") return hasAdminArea(hasPermission);
+      return hasPermission(it.code);
+    })
+
     .map((it) => {
       const dynamic = it.code ? badges[it.code] : undefined;
       return dynamic && dynamic > 0 ? { ...it, badge: dynamic } : it;

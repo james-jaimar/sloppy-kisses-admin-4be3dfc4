@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Package, PackageSearch, ShoppingCart, ChevronRight, Barcode, Camera, ScanLine } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { useHasPermission } from "@/lib/permissions/permissions";
 
 const SECTIONS = [
   { to: "/admin/pos", label: "Point of sale", description: "Full-screen tablet till with barcode scanning.", icon: Barcode },
@@ -8,17 +9,20 @@ const SECTIONS = [
   { to: "/admin/shop-stock/products", label: "Products", description: "Manage your retail catalogue.", icon: Package },
   { to: "/admin/shop-stock/stock", label: "Stock levels", description: "Current on-hand and stock adjustments.", icon: PackageSearch },
   { to: "/admin/shop-stock/photos", label: "Photo studio", description: "Snap product photos on the tablet, straight onto the till.", icon: Camera },
-  { to: "/admin/shop-stock/barcodes", label: "Unknown barcodes", description: "Match codes scanned at the till to a product.", icon: ScanLine },
+  { to: "/admin/shop-stock/barcodes", label: "Unknown barcodes", description: "Match codes scanned at the till to a product.", icon: ScanLine, code: "pos.barcode.link" },
 ];
 
 
 export default function ShopIndexPage() {
+  const canLinkBarcodes = useHasPermission("pos.barcode.link");
+  const sections = SECTIONS.filter((s) => !s.code || canLinkBarcodes);
   return (
     <>
       <AppHeader title="Shop & Stock" subtitle="Retail catalogue, stock and point-of-sale." />
       <div className="flex-1 p-6">
         <div className="grid gap-3 sm:grid-cols-2">
-          {SECTIONS.map((s) => {
+          {sections.map((s) => {
+
             const Icon = s.icon;
             return (
               <Link key={s.to} to={s.to} className="sk-card flex items-center gap-4 p-5 transition-colors hover:border-sk-coral">

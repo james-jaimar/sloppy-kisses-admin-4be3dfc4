@@ -282,8 +282,10 @@ export default function PosPage() {
         </main>
 
         {/* Cart */}
-        <aside className="flex max-h-[55vh] w-full shrink-0 flex-col border-t border-border lg:max-h-none lg:w-[420px] lg:border-l lg:border-t-0">
+        <aside className="flex min-h-0 max-h-[55vh] w-full shrink-0 flex-col border-t border-border lg:max-h-none lg:h-full lg:w-[420px] lg:border-l lg:border-t-0">
+          <div className="flex min-h-0 flex-1 flex-col">
           <PosSalePanel
+
             lines={lines}
             discount={discount}
             customerLabel={customerName}
@@ -297,7 +299,9 @@ export default function PosPage() {
             busy={sale.isPending}
             saleNumberHint={settings?.till_name ?? undefined}
           />
-          <div className="flex items-center gap-2 border-t border-border bg-white px-4 py-3">
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2 border-t border-border bg-white px-4 py-3">
             <button
               onClick={async () => {
                 if (!lines.length) return;
