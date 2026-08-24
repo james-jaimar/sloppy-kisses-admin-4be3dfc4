@@ -25,9 +25,11 @@ export default function PosSalePanel({
   const subtotal = cartTotal(lines);
   const total = Math.max(0, Number((subtotal - discount).toFixed(2)));
   const vat = vatPortion(lines);
+  const resolveImage = useProductImageUrls(lines.map((l) => l.product.image_url));
 
   return (
-    <div className="flex h-full flex-col bg-white">
+    <div className="flex h-full min-h-0 flex-col bg-white">
+
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div>
           <div className="text-sm font-semibold">Current sale</div>
