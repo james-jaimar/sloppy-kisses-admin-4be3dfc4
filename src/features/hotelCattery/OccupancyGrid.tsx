@@ -360,6 +360,113 @@ function ResourceRow({
   );
 }
 
+/** Pencilled quotes: dates a customer is holding but hasn't converted into a booking. */
+function QuotesRow({
+  quotes, days, windowStart, windowEnd,
+}: {
+  quotes: HotelQuoteRow[];
+  days: Date[];
+  windowStart: Date;
+  windowEnd: Date;
+}) {
+  const today = startOfDay(new Date());
+  type QSeg = { key: string; quote: HotelQuoteRow; petName: string; startMs: number; endMs: number; lane: number };
+  const raw: Omit<QSeg, "lane">[] = [];
+  for (const q of quotes) {
+    const startMs = Math.max(new Date(q.start_at).getTime(), windowStart.getTime());
+    const endMs = Math.min(
+      q.end_at ? new Date(q.end_at).getTime() : windowEnd.getTime(),
+      windowEnd.getTime(),
+    );
+    if (endMs <= startMs) continue;
+    const names = q.petNames.length ? q.petNames : ["Pet"];
+    names.forEach((petName, i) => raw.push({ key: `${q.id}:${i}`, quote: q, petName, startMs, endMs }));
+  }
+  raw.sort((a, z) => a.startMs - z.startMs);
+  const laneEnds: number[] = [];
+  const segments: QSeg[] = raw.map((s) => {
+    let lane = laneEnds.findIndex((e) => e <= s.startMs);
+    if (lane === -1) { lane = laneEnds.length; laneEnds.push(s.endMs); }
+    else laneEnds[lane] = s.endMs;
+    return { ...s, lane };
+  });
+  const lanes = Math.max(laneEnds.length, 1);
+  const bodyHeight = lanes * LANE_H + (lanes - 1) * LANE_GAP + ROW_PAD * 2;
+  const totalMs = windowEnd.getTime() - windowStart.getTime();
+
+  return (
+    <div className="border-b border-border bg-sk-surface-muted/40">
+      <div className="relative grid" style={{ gridTemplateColumns: `180px repeat(${days.length}, minmax(70px, 1fr))` }}>
+        <div className="px-3 py-3 text-sm">
+          <div className="truncate font-medium">Pencilled quotes</div>
+          <div className="text-[11px] text-muted-foreground">Dates held, not booked</div>
+        </div>
+        {days.map((d) => (
+          <div
+            key={d.toISOString()}
+            className={`border-l border-border ${sameDay(d, today) ? "bg-sk-coral-soft/30" : ""}`}
+            style={{ minHeight: bodyHeight }}
+          />
+        ))}
+
+        <div className="pointer-events-none absolute inset-0 grid" style={{ gridTemplateColumns: `180px repeat(${days.length}, minmax(70px, 1fr))` }}>
+          <div />
+          <div className="relative" style={{ gridColumn: `2 / span ${days.length}` }}>
+            {segments.map((seg) => {
+              const leftPct = ((seg.startMs - windowStart.getTime()) / totalMs) * 100;
+              const widthPct = Math.max(((seg.endMs - seg.startMs) / totalMs) * 100, 100 / days.length / 3);
+              const q = seg.quote;
+              const left = holdLeft(q.hold_expires_at);
+              return (
+                <Link
+                  key={seg.key}
+                  to={`/admin/quotes/${q.id}`}
+                  className="pointer-events-auto absolute flex items-center gap-1.5 truncate rounded-md border border-dashed border-border bg-background/80 px-2 text-xs font-medium text-muted-foreground shadow-sm transition hover:translate-y-[-1px] hover:shadow-md"
+                  style={{
+                    top: ROW_PAD + seg.lane * (LANE_H + LANE_GAP),
+                    height: LANE_H,
+                    left: `${leftPct}%`,
+                    width: `calc(${widthPct}% - 4px)`,
+                  }}
+                  title={`${q.estimate_number} · ${seg.petName} (${q.customer?.full_name ?? "—"})${
+                    q.total != null ? ` · R${q.total.toFixed(2)}` : ""
+                  }${left ? ` · hold ${left}` : ""}`}
+                >
+                  <span className="truncate">{seg.petName}</span>
+                  <span className="truncate text-[10px] opacity-80">{q.customer?.full_name ?? ""}</span>
+                  {left && (
+                    <span className="shrink-0 rounded bg-sk-orange-soft px-1 text-[10px] font-semibold text-sk-orange">
+                      {left}
+                    </span>
+                  )}
+                  <span className="ml-auto shrink-0 text-[10px] opacity-70">{q.estimate_number}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid border-t border-dashed border-border" style={{ gridTemplateColumns: `180px repeat(${days.length}, minmax(70px, 1fr))` }}>
+        <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground">Quoted pets</div>
+        {days.map((d) => {
+          const n = quotesOnDay(quotes, d);
+          return (
+            <div
+              key={d.toISOString()}
+              className={`border-l border-border px-1 py-1 text-center text-[11px] tabular-nums ${n ? "text-sk-orange font-medium" : "text-muted-foreground"}`}
+            >
+              {n || "—"}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
+
 /** Quick "put this stay in an area" control for unassigned hotel/cattery bookings. */
 function AssignPanel({
   tenantId, resources, allBookings, today, bookings,
