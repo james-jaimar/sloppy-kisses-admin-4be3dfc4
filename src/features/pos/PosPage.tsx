@@ -412,7 +412,19 @@ export default function PosPage() {
           onNewSale={resetSale}
         />
       )}
+
+      {unknownCode && (
+        <BarcodeLinkSheet
+          tenantId={tenantId}
+          code={unknownCode}
+          products={(productsQ.data ?? []) as Product[]}
+          canLink={canLinkBarcode}
+          onClose={() => setUnknownCode(null)}
+          onLinked={(p) => addToCart(p)}
+        />
+      )}
     </div>
+
   );
 }
 
