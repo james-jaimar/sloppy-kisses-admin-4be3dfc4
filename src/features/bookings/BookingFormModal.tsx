@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
+import { PetFormModal } from "@/features/pets/PetFormModal";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { useCustomerPets } from "@/features/customers/queries";
 import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
@@ -263,6 +264,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   // Mobile van bookings need an address the vans can actually navigate to.
   const isMobileVan = serviceType === "grooming_mobile";
   const { hasPermission, profile } = useCurrentUser();
+  const [addingPet, setAddingPet] = useState(false);
+  const canCreatePet = profile?.user_type === "platform" || hasPermission("pets.create");
   const canOverrideAddress = profile?.user_type === "platform" || hasPermission("settings.manage");
   const isTransport = serviceType === "pickup_dropoff";
   const needsVanAddress = isMobileVan || isTransport;
@@ -973,7 +976,30 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         {/* Pets */}
         {customerId && (
           <div>
-            <div className="mb-1 text-sm font-medium">Pets</div>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <div className="text-sm font-medium">Pets</div>
+              {canCreatePet && (
+                <button
+                  type="button"
+                  onClick={() => setAddingPet(true)}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-sk-coral-dark hover:underline"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add a pet
+                </button>
+              )}
+            </div>
+            {addingPet && customerId && (
+              <PetFormModal
+                tenantId={tenantId}
+                customerId={customerId}
+                onClose={() => setAddingPet(false)}
+                onCreated={async (id) => {
+                  setAddingPet(false);
+                  await petsQ.refetch();
+                  setPetIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+                }}
+              />
+            )}
             {(petsQ.data?.length ?? 0) === 0 ? (
               <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
                 This customer has no pets yet.

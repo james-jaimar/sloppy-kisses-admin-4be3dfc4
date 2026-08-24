@@ -1,8 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Loader2, Search, X } from "lucide-react";
+import { ChevronDown, Loader2, Search, UserPlus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { useCustomers, type CustomerListRow } from "@/features/customers/queries";
+import { CustomerFormModal } from "@/features/customers/CustomerFormModal";
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
+
+/** Turn whatever was typed into the search box into sensible new-customer fields. */
+export function prefillFromTerm(term: string) {
+  const t = term.trim();
+  if (!t) return {};
+  if (t.includes("@")) return { email: t };
+  const digits = t.replace(/[^\d]/g, "");
+  if (digits.length >= 7 && digits.length / t.replace(/\s/g, "").length > 0.7) return { mobile: t };
+  const parts = t.split(/\s+/);
+  return { first_name: parts[0], last_name: parts.slice(1).join(" ") || undefined };
+}
 
 export interface CustomerOption {
   id: string;
@@ -56,6 +69,8 @@ interface Props {
   autoFocus?: boolean;
   /** Pre-known customer so we don't refetch it. */
   initialCustomer?: CustomerOption | null;
+  /** Offer "Add new customer" inside the picker (default on). */
+  allowCreate?: boolean;
 }
 
 export function CustomerCombobox({
@@ -67,11 +82,17 @@ export function CustomerCombobox({
   disabled = false,
   autoFocus = false,
   initialCustomer = null,
+  allowCreate = true,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [creating, setCreating] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const { profile, hasPermission } = useCurrentUser();
+  const canCreate =
+    allowCreate && !disabled && Boolean(tenantId) &&
+    (profile?.user_type === "platform" || hasPermission("customers.create"));
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(term), 250);
@@ -136,7 +157,9 @@ export function CustomerCombobox({
           <li className="px-3 py-3 text-sm text-destructive">Couldn’t load customers. Try again.</li>
         )}
         {!listQ.isLoading && !listQ.isError && rows.length === 0 && (
-          <li className="px-3 py-3 text-sm text-muted-foreground">No customers found.</li>
+          <li className="px-3 py-3 text-sm text-muted-foreground">
+            No customers found{term.trim() ? ` for “${term.trim()}”` : ""}.
+          </li>
         )}
         {rows.map((c) => (
           <li key={c.id}>
@@ -159,12 +182,41 @@ export function CustomerCombobox({
           </li>
         )}
       </ul>
+      {canCreate && (
+        <div className="border-t border-border">
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-sk-coral-dark hover:bg-sk-coral-soft/40"
+          >
+            <UserPlus className="h-4 w-4" />
+            {term.trim() ? `Add “${term.trim()}” as a new customer` : "Add a new customer"}
+          </button>
+        </div>
+      )}
     </>
   );
+
+  const createModal =
+    creating && tenantId ? (
+      <CustomerFormModal
+        tenantId={tenantId}
+        prefill={prefillFromTerm(term)}
+        onClose={() => setCreating(false)}
+        onCreated={(id) => {
+          setCreating(false);
+          setTerm("");
+          setDebounced("");
+          setOpen(false);
+          onChange(id, null);
+        }}
+      />
+    ) : null;
 
   if (selected && value) {
     return (
       <div className="flex items-center justify-between rounded-lg border border-border bg-sk-surface-muted px-3 py-2 text-sm">
+        {createModal}
         <div>
           <div className="font-medium">{customerLabel(selected)}</div>
           <div className="text-xs text-muted-foreground">{customerSubLabel(selected)}</div>
@@ -187,11 +239,17 @@ export function CustomerCombobox({
   }
 
   if (inline) {
-    return <div className="rounded-lg border border-border">{results}</div>;
+    return (
+      <div className="rounded-lg border border-border">
+        {createModal}
+        {results}
+      </div>
+    );
   }
 
   return (
     <div ref={wrapRef} className="relative">
+      {createModal}
       <button
         type="button"
         disabled={disabled}

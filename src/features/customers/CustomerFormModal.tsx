@@ -16,6 +16,8 @@ interface Props {
   onClose: () => void;
   onCreated?: (id: string) => void;
   onSaved?: () => void;
+  /** Seed a new customer's details (e.g. what was typed into a search box). */
+  prefill?: { first_name?: string; last_name?: string; full_name?: string; email?: string; mobile?: string };
 }
 
 interface FormState {
@@ -84,10 +86,23 @@ function fromCustomer(c?: CustomerRow | null): FormState {
   };
 }
 
-export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSaved }: Props) {
+export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSaved, prefill }: Props) {
   const isEdit = Boolean(customer);
-  const [form, setForm] = useState<FormState>(() => fromCustomer(customer));
-  const [fullNameTouched, setFullNameTouched] = useState(Boolean(customer?.full_name));
+  const [form, setForm] = useState<FormState>(() => {
+    const base = fromCustomer(customer);
+    if (customer || !prefill) return base;
+    return {
+      ...base,
+      first_name: prefill.first_name ?? base.first_name,
+      last_name: prefill.last_name ?? base.last_name,
+      full_name: prefill.full_name ?? base.full_name,
+      email: prefill.email ?? base.email,
+      mobile: prefill.mobile ?? base.mobile,
+    };
+  });
+  const [fullNameTouched, setFullNameTouched] = useState(
+    Boolean(customer?.full_name) || Boolean(!customer && prefill?.full_name),
+  );
   const create = useCreateCustomer(tenantId);
   const update = useUpdateCustomer(tenantId);
   const emailDupes = useCustomerEmailLookup(tenantId, form.email, customer?.id);

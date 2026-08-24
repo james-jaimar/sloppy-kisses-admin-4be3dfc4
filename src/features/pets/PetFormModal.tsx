@@ -17,6 +17,10 @@ interface Props {
   pet?: PetRow | null; // present = edit
   onClose: () => void;
   onSaved?: () => void;
+  /** Called with the new pet's id after a successful create. */
+  onCreated?: (id: string) => void;
+  /** Pre-fill the pet's name (e.g. typed at the counter). */
+  prefillName?: string;
 }
 
 interface FormState {
@@ -65,9 +69,13 @@ function fromPet(p?: PetRow | null): FormState {
   };
 }
 
-export function PetFormModal({ tenantId, customerId, pet, onClose, onSaved }: Props) {
+export function PetFormModal({ tenantId, customerId, pet, onClose, onSaved, onCreated, prefillName }: Props) {
   const isEdit = Boolean(pet);
-  const [form, setForm] = useState<FormState>(() => fromPet(pet));
+  const [form, setForm] = useState<FormState>(() => {
+    const base = fromPet(pet);
+    if (!pet && prefillName) base.name = prefillName;
+    return base;
+  });
   const create = useCreatePet(tenantId);
   const update = useUpdatePet(tenantId);
   const busy = create.isPending || update.isPending;
@@ -115,6 +123,7 @@ export function PetFormModal({ tenantId, customerId, pet, onClose, onSaved }: Pr
       } else {
         const created = await create.mutateAsync({ ...payload, customer_id: customerId });
         toast.success(`Pet ${created.pet_number} added`);
+        onCreated?.(created.id);
       }
       onSaved?.();
       onClose();
