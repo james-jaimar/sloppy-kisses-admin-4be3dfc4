@@ -6,8 +6,9 @@ import {
 } from "lucide-react";
 
 export const adminNav = [
-  { to: "/admin/home", label: "Home", icon: Home },
-  { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/admin/home", label: "Home", icon: Home, code: "admin.area" },
+  { to: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, code: "admin.area" },
+
   { to: "/admin/calendar", label: "Calendar", icon: Calendar, code: "calendar.view" },
   { to: "/admin/customers", label: "Customers", icon: Users, code: "customers.view" },
   { to: "/admin/pets", label: "Pets", icon: PawPrint, code: "pets.view" },
