@@ -30,8 +30,21 @@ export default function HotelBoardPage() {
   const bookingsQ = useHotelBookingsInWindow({ tenantId, windowStart, windowEnd });
   const quotesQ = useHotelQuotesInWindow({ tenantId, windowStart, windowEnd });
 
+  const [showQuotes, setShowQuotes] = useState(true);
+  const [showUnpaid, setShowUnpaid] = useState(true);
+  const [showCancelled, setShowCancelled] = useState(false);
+
+  const visibleBookings = useMemo(() => {
+    const rows = bookingsQ.data ?? [];
+    return rows.filter((b) => {
+      if (!showCancelled && (b.status === "cancelled" || b.status === "no_show")) return false;
+      if (!showUnpaid && (b.status === "pending_payment" || b.status === "requested")) return false;
+      return true;
+    });
+  }, [bookingsQ.data, showCancelled, showUnpaid]);
 
   const today = startOfDay(new Date());
+
 
   return (
     <>
