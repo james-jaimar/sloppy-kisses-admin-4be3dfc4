@@ -69,9 +69,13 @@ function fromPet(p?: PetRow | null): FormState {
   };
 }
 
-export function PetFormModal({ tenantId, customerId, pet, onClose, onSaved }: Props) {
+export function PetFormModal({ tenantId, customerId, pet, onClose, onSaved, onCreated, prefillName }: Props) {
   const isEdit = Boolean(pet);
-  const [form, setForm] = useState<FormState>(() => fromPet(pet));
+  const [form, setForm] = useState<FormState>(() => {
+    const base = fromPet(pet);
+    if (!pet && prefillName) base.name = prefillName;
+    return base;
+  });
   const create = useCreatePet(tenantId);
   const update = useUpdatePet(tenantId);
   const busy = create.isPending || update.isPending;
