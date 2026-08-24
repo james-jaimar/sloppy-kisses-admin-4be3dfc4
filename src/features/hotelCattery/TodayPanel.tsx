@@ -245,9 +245,15 @@ function BookingRow({ b, timeLabel, action }: { b: HotelBookingRow; timeLabel: s
         </Link>
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
           <span className="truncate">{b.resource?.name ?? "Unassigned"} · {b.booking_number}</span>
+          {b.status === "pending_payment" && (
+            <span className="rounded bg-sk-orange-soft px-1.5 py-0.5 text-[10px] font-semibold text-sk-orange">
+              Awaiting payment
+            </span>
+          )}
           <PaymentChip bookingId={b.id} />
           <StayPlayChip bookingId={b.id} />
         </div>
+
       </div>
       {action}
     </li>
