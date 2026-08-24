@@ -41,7 +41,7 @@ import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQ
 import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtrasPanel";
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
 import { useGroomingDayAvailability } from "@/features/grooming/availabilityQueries";
-import { layoutGroomingAppointments, type PetSlotRequest } from "@/features/grooming/multiPetSchedule";
+import { freeResourcesAt, layoutGroomingAppointments, type PetSlotRequest } from "@/features/grooming/multiPetSchedule";
 import { effectivePetSize } from "@/features/pets/sizeUtils";
 import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries";
 import { useGroomingPackages, useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
