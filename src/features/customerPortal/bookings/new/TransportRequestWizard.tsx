@@ -95,6 +95,16 @@ export default function TransportRequestWizard() {
         <Field label="Preferred time"><input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputCls} /></Field>
       </div>
 
+      {date && (
+        <VanLoadNotice
+          rows={loadQ.data}
+          mode={gates.data?.transport_overbooking_mode ?? "warn"}
+          loading={loadQ.isLoading}
+        />
+      )}
+
+
+
       <AddressSelector
         customerId={cust.data?.id}
         tenantId={cust.data?.tenant_id}
