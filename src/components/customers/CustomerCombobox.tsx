@@ -69,6 +69,8 @@ interface Props {
   autoFocus?: boolean;
   /** Pre-known customer so we don't refetch it. */
   initialCustomer?: CustomerOption | null;
+  /** Offer "Add new customer" inside the picker (default on). */
+  allowCreate?: boolean;
 }
 
 export function CustomerCombobox({
@@ -80,11 +82,17 @@ export function CustomerCombobox({
   disabled = false,
   autoFocus = false,
   initialCustomer = null,
+  allowCreate = true,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState("");
   const [debounced, setDebounced] = useState("");
+  const [creating, setCreating] = useState(false);
   const wrapRef = useRef<HTMLDivElement | null>(null);
+  const { profile, hasPermission } = useCurrentUser();
+  const canCreate =
+    allowCreate && !disabled && Boolean(tenantId) &&
+    (profile?.user_type === "platform" || hasPermission("customers.create"));
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(term), 250);
