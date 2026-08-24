@@ -1,7 +1,12 @@
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { BOOKING_STATUS_META } from "@/features/bookings/statusMeta";
-import { useAssignBookingResource, type HotelBookingRow, type HotelResourceRow } from "./queries";
+import {
+  useAssignBookingResource,
+  type HotelBookingRow,
+  type HotelQuoteRow,
+  type HotelResourceRow,
+} from "./queries";
 
 function addDays(d: Date, n: number) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
 function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
@@ -10,6 +15,25 @@ function sameDay(a: Date, b: Date) {
 }
 function fmtColHeader(d: Date) {
   return { dow: d.toLocaleDateString("en-ZA", { weekday: "short" }), dom: d.getDate() };
+}
+
+/** Statuses that hold a space provisionally rather than firmly. */
+const HELD_STATUSES = new Set(["pending_payment", "requested", "draft", "needs_info"]);
+const DEAD_STATUSES = new Set(["cancelled", "no_show"]);
+
+export function isHeldBooking(b: { status: string }) {
+  return HELD_STATUSES.has(b.status);
+}
+export function isFirmBooking(b: { status: string }) {
+  return !HELD_STATUSES.has(b.status) && !DEAD_STATUSES.has(b.status);
+}
+
+function holdLeft(iso: string | null) {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return "expired";
+  const h = Math.floor(ms / 3_600_000);
+  return h >= 24 ? `${Math.floor(h / 24)}d left` : `${Math.max(1, h)}h left`;
 }
 
 /** Map booking.status to a background class for the occupancy bar. */
@@ -23,10 +47,12 @@ export interface OccupancyGridProps {
   tenantId: string | null;
   resources: HotelResourceRow[];
   bookings: HotelBookingRow[];
+  quotes?: HotelQuoteRow[];
   windowStart: Date;
   windowDays: number;
   loading: boolean;
 }
+
 
 const LANE_H = 34;      // px per pet lane
 const LANE_GAP = 4;
