@@ -239,11 +239,17 @@ export function CustomerCombobox({
   }
 
   if (inline) {
-    return <div className="rounded-lg border border-border">{results}</div>;
+    return (
+      <div className="rounded-lg border border-border">
+        {createModal}
+        {results}
+      </div>
+    );
   }
 
   return (
     <div ref={wrapRef} className="relative">
+      {createModal}
       <button
         type="button"
         disabled={disabled}
