@@ -92,6 +92,9 @@ export default function TransportWorkflowPage() {
         payment_hold_hours: Number((settingsQ.data as any).payment_hold_hours ?? 48),
         overbooking_mode: ((settingsQ.data as any).overbooking_mode ?? "warn") as "warn" | "block",
         max_stops_per_van_per_day: Number((settingsQ.data as any).max_stops_per_van_per_day ?? 12),
+        auto_create_hotel_legs: (settingsQ.data as any).auto_create_hotel_legs ?? true,
+        hotel_pickup_time: trimTime((settingsQ.data as any).hotel_pickup_time) || "09:00",
+        hotel_dropoff_time: trimTime((settingsQ.data as any).hotel_dropoff_time) || "16:00",
       });
       setSuburbFees(fromMap(settingsQ.data.suburb_fees));
     }
