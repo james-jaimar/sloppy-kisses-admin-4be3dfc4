@@ -184,8 +184,11 @@ export default function PosPage() {
       setReceipt({ result, lines, discount, tenders: chargeToAccount ? [] : tenders, customerName, customerEmail });
       toast.success(chargeToAccount ? "Charged to account" : "Payment captured");
     } catch (err: any) {
-      toast.error(err?.message ?? "Could not complete the sale");
+      const msg = err?.message || err?.details || err?.hint || "Could not complete the sale";
+      toast.error(msg, { description: err?.details && err?.details !== msg ? String(err.details) : undefined, duration: 10000 });
+      console.error("[POS] complete sale failed", err);
     }
+
   }
 
   function pickCustomer(id: string | null, customer: CustomerOption | null) {
