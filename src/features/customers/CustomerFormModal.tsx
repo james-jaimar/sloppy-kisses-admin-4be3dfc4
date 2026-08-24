@@ -16,6 +16,8 @@ interface Props {
   onClose: () => void;
   onCreated?: (id: string) => void;
   onSaved?: () => void;
+  /** Seed a new customer's details (e.g. what was typed into a search box). */
+  prefill?: { first_name?: string; last_name?: string; full_name?: string; email?: string; mobile?: string };
 }
 
 interface FormState {
