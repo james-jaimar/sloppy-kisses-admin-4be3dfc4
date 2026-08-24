@@ -44,7 +44,7 @@ export function ModalShell({
     };
   }, [onClose, closeOnEscape]);
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
       onClick={(e) => {
@@ -65,7 +65,7 @@ export function ModalShell({
           </div>
           <div className="flex items-center gap-2">
             {headerRight}
-            <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted">
+            <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -73,6 +73,7 @@ export function ModalShell({
         <div className="flex-1 overflow-y-auto">{children}</div>
         {footer && <div className="border-t border-border bg-sk-surface-muted px-6 py-3">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
