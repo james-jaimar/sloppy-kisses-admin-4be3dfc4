@@ -18,7 +18,30 @@ export interface GroomerResource {
   id: string;
   name: string;
   colour?: string | null;
+  /** "08:00:00" style local working window, when configured. */
+  workday_start?: string | null;
+  workday_end?: string | null;
 }
+
+/** Minutes past midnight for a "HH:MM[:SS]" string, or null. */
+export function parseClock(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const m = /^(\d{1,2}):(\d{2})/.exec(value);
+  if (!m) return null;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+
+/** True when [start,end) sits inside the resource's configured working hours. */
+export function withinWorkingHours(r: GroomerResource, start: Date, end: Date) {
+  const open = parseClock(r.workday_start);
+  const close = parseClock(r.workday_end);
+  const s = start.getHours() * 60 + start.getMinutes();
+  const e = end.getHours() * 60 + end.getMinutes() + (end.getDate() !== start.getDate() ? 24 * 60 : 0);
+  if (open != null && s < open) return false;
+  if (close != null && e > close) return false;
+  return true;
+}
+
 
 export interface PetSlotRequest {
   petId: string;
