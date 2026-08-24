@@ -797,8 +797,10 @@ export type Database = {
           invoice_id: string | null
           invoice_review_needed: boolean
           invoice_review_reason: string | null
+          link_kind: string | null
           notes_customer: string | null
           notes_internal: string | null
+          parent_booking_id: string | null
           payment_hold_expires_at: string | null
           recurring_rule_id: string | null
           release_reason: string | null
@@ -847,8 +849,10 @@ export type Database = {
           invoice_id?: string | null
           invoice_review_needed?: boolean
           invoice_review_reason?: string | null
+          link_kind?: string | null
           notes_customer?: string | null
           notes_internal?: string | null
+          parent_booking_id?: string | null
           payment_hold_expires_at?: string | null
           recurring_rule_id?: string | null
           release_reason?: string | null
@@ -897,8 +901,10 @@ export type Database = {
           invoice_id?: string | null
           invoice_review_needed?: boolean
           invoice_review_reason?: string | null
+          link_kind?: string | null
           notes_customer?: string | null
           notes_internal?: string | null
+          parent_booking_id?: string | null
           payment_hold_expires_at?: string | null
           recurring_rule_id?: string | null
           release_reason?: string | null
@@ -972,6 +978,13 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_parent_booking_id_fkey"
+            columns: ["parent_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
           {
@@ -7917,6 +7930,7 @@ export type Database = {
       }
       transport_workflow_settings: {
         Row: {
+          auto_create_hotel_legs: boolean
           base_address: string | null
           base_latitude: number | null
           base_longitude: number | null
@@ -7929,6 +7943,8 @@ export type Database = {
           default_pickup_lead_minutes: number
           enforce_radius: boolean
           gate_code_required_by_time: string
+          hotel_dropoff_time: string
+          hotel_pickup_time: string
           id: string
           max_leg_gap_minutes: number
           max_stops_per_van_per_day: number
@@ -7947,6 +7963,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_create_hotel_legs?: boolean
           base_address?: string | null
           base_latitude?: number | null
           base_longitude?: number | null
@@ -7959,6 +7976,8 @@ export type Database = {
           default_pickup_lead_minutes?: number
           enforce_radius?: boolean
           gate_code_required_by_time?: string
+          hotel_dropoff_time?: string
+          hotel_pickup_time?: string
           id?: string
           max_leg_gap_minutes?: number
           max_stops_per_van_per_day?: number
@@ -7977,6 +7996,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_create_hotel_legs?: boolean
           base_address?: string | null
           base_latitude?: number | null
           base_longitude?: number | null
@@ -7989,6 +8009,8 @@ export type Database = {
           default_pickup_lead_minutes?: number
           enforce_radius?: boolean
           gate_code_required_by_time?: string
+          hotel_dropoff_time?: string
+          hotel_pickup_time?: string
           id?: string
           max_leg_gap_minutes?: number
           max_stops_per_van_per_day?: number
@@ -8861,6 +8883,10 @@ export type Database = {
         Args: { p_source_id: string; p_source_type: string }
         Returns: undefined
       }
+      _strip_transport_leg_lines: {
+        Args: { p_leg_id: string }
+        Returns: undefined
+      }
       accept_estimate: { Args: { p_estimate_id: string }; Returns: string }
       accept_public_quote: { Args: { p_token: string }; Returns: Json }
       adjust_customer_credit: {
@@ -9386,6 +9412,10 @@ export type Database = {
       }
       sync_hotel_grooming_requests: {
         Args: { p_booking_id: string; p_payload: Json }
+        Returns: undefined
+      }
+      sync_hotel_transport_legs: {
+        Args: { p_hotel_booking_id: string }
         Returns: undefined
       }
       tenant_gateway_enabled: {
