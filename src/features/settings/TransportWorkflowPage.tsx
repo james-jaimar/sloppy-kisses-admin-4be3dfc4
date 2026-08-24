@@ -62,6 +62,9 @@ export default function TransportWorkflowPage() {
     payment_hold_hours: 48,
     overbooking_mode: "warn" as "warn" | "block",
     max_stops_per_van_per_day: 12,
+    auto_create_hotel_legs: true,
+    hotel_pickup_time: "09:00",
+    hotel_dropoff_time: "16:00",
   });
   const [suburbFees, setSuburbFees] = useState<SuburbFee[]>([]);
 
