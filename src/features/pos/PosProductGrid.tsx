@@ -1,4 +1,4 @@
-import { ImageOff, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageOff, Plus } from "lucide-react";
 import type { Product } from "@/features/shop/queries";
 import { useProductImageUrls } from "@/features/shop/productImages";
 
@@ -7,6 +7,10 @@ interface Props {
   stockByProduct: Map<string, number>;
   onAdd: (p: Product) => void;
   loading?: boolean;
+  /** 1-based current page. */
+  page?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
 }
 
 function initials(name: string) {
@@ -17,8 +21,14 @@ function initials(name: string) {
     .join("");
 }
 
-export default function PosProductGrid({ products, stockByProduct, onAdd, loading }: Props) {
-  const resolve = useProductImageUrls(products.slice(0, 200).map((p) => p.image_url));
+export default function PosProductGrid({
+  products, stockByProduct, onAdd, loading, page = 1, pageSize = 24, onPageChange,
+}: Props) {
+  const pageCount = Math.max(1, Math.ceil(products.length / pageSize));
+  const current = Math.min(Math.max(1, page), pageCount);
+  const visible = products.slice((current - 1) * pageSize, current * pageSize);
+  const resolve = useProductImageUrls(visible.map((p) => p.image_url));
+
 
   if (loading) {
     return (
