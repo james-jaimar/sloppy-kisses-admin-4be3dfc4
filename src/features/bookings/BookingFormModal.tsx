@@ -559,6 +559,22 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     groomingDayKey,
     groomingPoolKind,
   );
+  // Which groomers are free for the currently chosen slot (drives the dropdown hints).
+  const groomerFreeIds = useMemo(() => {
+    if (kind !== "grooming" || !startAt) return new Set<string>();
+    const start = new Date(startAt);
+    const end = new Date(start.getTime() + (durationMins || 60) * 60000);
+    const { free } = freeResourcesAt({
+      resources: groomingAvailQ.data?.resources ?? [],
+      busy: groomingAvailQ.data?.busy ?? [],
+      start,
+      end,
+      excludeBookingIds: booking?.id ? [booking.id] : [],
+    });
+    return new Set(free.map((r) => r.id));
+  }, [kind, startAt, durationMins, groomingAvailQ.data, booking?.id]);
+
+
 
   function packageIdForPet(petId: string): string | null {
     return petPackages[petId] || grooming.package_id || null;
