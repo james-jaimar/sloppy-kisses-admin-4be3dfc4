@@ -7,6 +7,7 @@ import { useCustomerPets } from "@/features/customers/queries";
 import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import { AddressSelector } from "@/features/customers/AddressSelector";
 import { useRadiusCheck, ServiceRadiusNotice } from "@/features/transport/ServiceRadiusNotice";
+import { VanLoadNotice, useTransportDayLoad, isRunFull } from "@/features/transport/VanLoadNotice";
 import { useTransportWorkflowSettings } from "@/features/transport/queries";
 import { useCustomerAddresses } from "@/features/customers/addressQueries";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
@@ -277,6 +278,13 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     radiusQ.data?.has_base && radiusQ.data.outside && radiusQ.data.gate_mode === "block",
   );
   const transportSettingsQ = useTransportWorkflowSettings(isTransport ? tenantId : null);
+  const transportLoadQ = useTransportDayLoad({
+    tenantId: isTransport ? tenantId : null,
+    date: isTransport && startAt ? startAt.slice(0, 10) : null,
+    excludeBookingId: booking?.id ?? null,
+    enabled: isTransport,
+  });
+  const transportRunFull = isTransport && isRunFull(transportLoadQ.data);
   const [addressOverride, setAddressOverride] = useState(false);
   const [closureOverride, setClosureOverride] = useState<boolean>(
     (booking as any)?.closure_override ?? false,
@@ -646,6 +654,19 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           `This address is outside the ${radiusQ.data?.radius_km} km travel radius. An admin override is needed.`,
         );
       }
+    }
+
+    if (transportRunFull) {
+      if ((transportSettingsQ.data as any)?.overbooking_mode === "block") {
+        return toast.error("Every van is already full on this day. Pick another day or raise the stop limit.");
+      }
+      const proceed = await confirm({
+        title: "Vans are full on this day",
+        description: "Every van has hit its planned stop limit. Save anyway?",
+        confirmLabel: "Save anyway",
+        tone: "destructive",
+      });
+      if (!proceed) return;
     }
 
     if (conflicts.length > 0) {
@@ -1428,6 +1449,11 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               label="Pickup / drop-off address"
             />
             <ServiceRadiusNotice check={radiusQ.data} />
+            <VanLoadNotice
+              rows={transportLoadQ.data}
+              mode={(transportSettingsQ.data as any)?.overbooking_mode ?? "warn"}
+              loading={transportLoadQ.isLoading}
+            />
             {transportSettingsQ.data?.require_gate_code &&
               selectedVanAddress &&
               !((selectedVanAddress as any).access_notes ?? "").trim() && (

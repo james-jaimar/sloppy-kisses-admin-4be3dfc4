@@ -7,6 +7,9 @@ import { supabase } from "@/lib/supabase/client";
 import { useCurrentCustomer } from "../../hooks";
 import { WizardShell, Field, inputCls, selectCls } from "./WizardShell";
 import { PetsVaccinationGate, usePetsVaxBlocked } from "@/features/bookings/VaccinationGatePanel";
+import { usePortalServiceGates } from "@/features/customerPortal/gatesQueries";
+import { HouseCapacityNotice, useHotelHouseAvailability, fullNights } from "@/features/hotelCattery/HouseCapacityNotice";
+
 import { usePortalPets, useResources } from "./wizardHooks";
 import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
 import {
@@ -206,10 +209,24 @@ export default function HotelRequestWizard() {
   const transportNeeded = form.pickup_required || form.dropoff_required;
   const transportAddressReady = !transportNeeded || Boolean(serviceAddressId);
 
+  // House-wide occupancy for the nights of this stay.
+  const gates = usePortalServiceGates(cust.data?.tenant_id);
+  const houseQ = useHotelHouseAvailability({
+    tenantId: cust.data?.tenant_id,
+    start: checkInDate ? new Date(`${checkInDate}T00:00:00`) : null,
+    end: checkOutDate ? new Date(`${checkOutDate}T00:00:00`) : null,
+    species: isCat ? "cat" : "dog",
+    enabled: Boolean(checkInDate && checkOutDate && petIds.length),
+  });
+  const overNights = fullNights(houseQ.data, petIds.length);
+  const capacityBlocked =
+    gates.data?.hotel_overbooking_mode === "block" && overNights.length > 0;
+
   const stayReady =
     petIds.length > 0 && !!checkInDate && nights >= 1 &&
-    transportAddressReady &&
+    transportAddressReady && !capacityBlocked &&
     selectedPets.every((p: any) => Boolean(accFor(p.id)));
+
 
 
   // Pet photo requirement (Settings → Hotel & Cattery workflow).
@@ -427,6 +444,15 @@ export default function HotelRequestWizard() {
               </div>
             </Field>
           </div>
+
+          <HouseCapacityNotice
+            rows={houseQ.data}
+            petCount={petIds.length}
+            mode={gates.data?.hotel_overbooking_mode ?? "warn"}
+            loading={houseQ.isLoading}
+          />
+
+
 
           <Field
             label={selectedPets.length > 1 ? "Accommodation (default for all pets)" : "Accommodation"}

@@ -6,6 +6,8 @@ import { usePortalPets, useCustomerBookings } from "./wizardHooks";
 import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
 import { AddressSelector } from "@/features/customers/AddressSelector";
 import { PetsVaccinationGate, usePetsVaxBlocked } from "@/features/bookings/VaccinationGatePanel";
+import { usePortalServiceGates } from "@/features/customerPortal/gatesQueries";
+import { VanLoadNotice, useTransportDayLoad, isRunFull } from "@/features/transport/VanLoadNotice";
 
 export default function TransportRequestWizard() {
   const cust = useCurrentCustomer();
@@ -23,7 +25,14 @@ export default function TransportRequestWizard() {
   const [notes, setNotes] = useState("");
 
   const vax = usePetsVaxBlocked(petIds, "pickup_dropoff", date || null);
-  const canSubmit = cust.data && petIds.length > 0 && date && serviceAddressId && !vax.blocked && !submit.isPending;
+
+  // Van load for the chosen day — keeps the run from being overloaded.
+  const gates = usePortalServiceGates(cust.data?.tenant_id);
+  const loadQ = useTransportDayLoad({ tenantId: cust.data?.tenant_id, date: date || null });
+  const loadBlocked = gates.data?.transport_overbooking_mode === "block" && isRunFull(loadQ.data);
+
+  const canSubmit = cust.data && petIds.length > 0 && date && serviceAddressId && !vax.blocked && !loadBlocked && !submit.isPending;
+
 
   function togglePet(id: string) {
     setPetIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -94,6 +103,16 @@ export default function TransportRequestWizard() {
         <Field label="Preferred date"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} /></Field>
         <Field label="Preferred time"><input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputCls} /></Field>
       </div>
+
+      {date && (
+        <VanLoadNotice
+          rows={loadQ.data}
+          mode={gates.data?.transport_overbooking_mode ?? "warn"}
+          loading={loadQ.isLoading}
+        />
+      )}
+
+
 
       <AddressSelector
         customerId={cust.data?.id}

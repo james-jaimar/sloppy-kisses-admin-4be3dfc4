@@ -7,6 +7,8 @@ import { dateToIso, useCreatePortalBooking } from "./useBookingSubmit";
 import { usePhotoGateMode } from "@/features/bookings/PhotoGatePanel";
 import { usePetPhotoStatus, isPhotoWaiverActive } from "@/features/pets/photoGateQueries";
 import { PetsVaccinationGate, usePetsVaxBlocked } from "@/features/bookings/VaccinationGatePanel";
+import { usePortalServiceGates } from "@/features/customerPortal/gatesQueries";
+import { DaycareCapacityNotice, useDaycareDayAvailability, daycareDayFull } from "@/features/daycare/DaycareCapacityNotice";
 
 const WEEKDAYS = [
   { code: "mon", label: "Mon" },
@@ -51,10 +53,22 @@ export default function DaycareRequestWizard() {
 
   const vax = usePetsVaxBlocked(petIds, assessment ? "daycare_assessment" : "daycare", assessment ? assessDate : startDate);
 
+  // Daily capacity gate — assessments land on one specific day, so we check that day.
+  const gates = usePortalServiceGates(cust.data?.tenant_id);
+  const capacityDay = assessment ? assessDate : startDate;
+  const capacityQ = useDaycareDayAvailability({
+    tenantId: cust.data?.tenant_id,
+    start: capacityDay || null,
+    end: capacityDay ? new Date(new Date(`${capacityDay}T00:00:00`).getTime() + 86400000).toISOString().slice(0, 10) : null,
+    enabled: Boolean(capacityDay && petIds.length),
+  });
+  const dayFull = daycareDayFull(capacityQ.data, petIds.length);
+  const capacityBlocked = assessment && dayFull;
+
   const canSubmit = Boolean(
     cust.data && petIds.length > 0 &&
     (assessment ? assessDate : startDate && planId),
-  ) && !photoBlocked && !vax.blocked && !submit.isPending;
+  ) && !photoBlocked && !vax.blocked && !capacityBlocked && !submit.isPending;
 
   function togglePet(id: string) {
     setPetIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -181,6 +195,15 @@ export default function DaycareRequestWizard() {
             <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputCls} />
           </Field>
         </>
+      )}
+
+      {capacityDay && petIds.length > 0 && (
+        <DaycareCapacityNotice
+          rows={capacityQ.data}
+          petCount={petIds.length}
+          blocked={capacityBlocked}
+          loading={capacityQ.isLoading}
+        />
       )}
 
       <Field label="Notes for our team"><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} className={textareaCls} /></Field>

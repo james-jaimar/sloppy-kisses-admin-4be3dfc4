@@ -9162,6 +9162,19 @@ export type Database = {
         Args: { p_booking_id: string; p_collected_at?: string; p_note?: string }
         Returns: Json
       }
+      hotel_house_availability: {
+        Args: {
+          p_end: string
+          p_species?: string
+          p_start: string
+          p_tenant_id: string
+        }
+        Returns: {
+          capacity: number
+          day: string
+          used: number
+        }[]
+      }
       hotel_movement_block: {
         Args: { p_date: string; p_kind: string; p_tenant_id: string }
         Returns: string
