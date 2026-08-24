@@ -182,8 +182,36 @@ export function CustomerCombobox({
           </li>
         )}
       </ul>
+      {canCreate && (
+        <div className="border-t border-border">
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-medium text-sk-coral-dark hover:bg-sk-coral-soft/40"
+          >
+            <UserPlus className="h-4 w-4" />
+            {term.trim() ? `Add “${term.trim()}” as a new customer` : "Add a new customer"}
+          </button>
+        </div>
+      )}
     </>
   );
+
+  const createModal =
+    creating && tenantId ? (
+      <CustomerFormModal
+        tenantId={tenantId}
+        prefill={prefillFromTerm(term)}
+        onClose={() => setCreating(false)}
+        onCreated={(id) => {
+          setCreating(false);
+          setTerm("");
+          setDebounced("");
+          setOpen(false);
+          onChange(id, null);
+        }}
+      />
+    ) : null;
 
   if (selected && value) {
     return (
