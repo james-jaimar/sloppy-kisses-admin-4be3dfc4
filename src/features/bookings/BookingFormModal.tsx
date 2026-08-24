@@ -988,6 +988,18 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 </button>
               )}
             </div>
+            {addingPet && customerId && (
+              <PetFormModal
+                tenantId={tenantId}
+                customerId={customerId}
+                onClose={() => setAddingPet(false)}
+                onCreated={async (id) => {
+                  setAddingPet(false);
+                  await petsQ.refetch();
+                  setPetIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+                }}
+              />
+            )}
             {(petsQ.data?.length ?? 0) === 0 ? (
               <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
                 This customer has no pets yet.
