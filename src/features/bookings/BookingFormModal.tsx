@@ -41,7 +41,7 @@ import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQ
 import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtrasPanel";
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
 import { useGroomingDayAvailability } from "@/features/grooming/availabilityQueries";
-import { layoutGroomingAppointments, type PetSlotRequest } from "@/features/grooming/multiPetSchedule";
+import { freeResourcesAt, layoutGroomingAppointments, type PetSlotRequest } from "@/features/grooming/multiPetSchedule";
 import { effectivePetSize } from "@/features/pets/sizeUtils";
 import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries";
 import { useGroomingPackages, useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
@@ -553,10 +553,28 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preferredGroomerId, serviceType, isEdit]);
   const groomingDayKey = startAt ? startAt.slice(0, 10) : null;
+  const groomingPoolKind = serviceType === "grooming_mobile" ? "mobile" : "inhouse";
   const groomingAvailQ = useGroomingDayAvailability(
     kind === "grooming" ? tenantId : null,
     groomingDayKey,
+    groomingPoolKind,
   );
+  // Which groomers are free for the currently chosen slot (drives the dropdown hints).
+  const groomerFreeIds = useMemo(() => {
+    if (kind !== "grooming" || !startAt) return new Set<string>();
+    const start = new Date(startAt);
+    const end = new Date(start.getTime() + (durationMins || 60) * 60000);
+    const { free } = freeResourcesAt({
+      resources: groomingAvailQ.data?.resources ?? [],
+      busy: groomingAvailQ.data?.busy ?? [],
+      start,
+      end,
+      excludeBookingIds: booking?.id ? [booking.id] : [],
+    });
+    return new Set(free.map((r) => r.id));
+  }, [kind, startAt, durationMins, groomingAvailQ.data, booking?.id]);
+
+
 
   function packageIdForPet(petId: string): string | null {
     return petPackages[petId] || grooming.package_id || null;
@@ -1113,9 +1131,34 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 {kind === "grooming" ? "Auto-assign — next free groomer" : "— Unassigned —"}
               </option>
               {filteredResources.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                  {kind === "grooming" && startAt
+                    ? groomerFreeIds.has(r.id)
+                      ? " — free"
+                      : " — busy"
+                    : ""}
+                </option>
               ))}
             </select>
+            {kind === "grooming" && startAt && (groomingAvailQ.data?.resources?.length ?? 0) > 0 && (
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                {(groomingAvailQ.data?.resources ?? []).map((r) => (
+                  <span key={r.id} className="inline-flex items-center gap-1">
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{
+                        backgroundColor: groomerFreeIds.has(r.id)
+                          ? (r.colour ?? "hsl(var(--muted-foreground))")
+                          : "transparent",
+                        border: `1px solid ${r.colour ?? "hsl(var(--border))"}`,
+                      }}
+                    />
+                    {r.name} {groomerFreeIds.has(r.id) ? "free" : "busy"}
+                  </span>
+                ))}
+              </div>
+            )}
             {kind === "grooming" && preferredGroomerId && resourceId === preferredGroomerId && (
               <div className="mt-1 text-[11px] text-muted-foreground">
                 This customer's preferred groomer.
@@ -1225,6 +1268,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               <GroomingSlotPicker
                 tenantId={tenantId}
                 value={startAt || null}
+                kind={groomingPoolKind}
                 durationMinutes={durationMins}
                 resourceId={resourceId}
                 excludeBookingId={booking?.id ?? null}
