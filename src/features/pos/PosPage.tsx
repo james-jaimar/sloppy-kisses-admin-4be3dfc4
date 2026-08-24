@@ -299,6 +299,8 @@ export default function PosPage() {
             busy={sale.isPending}
             saleNumberHint={settings?.till_name ?? undefined}
           />
+          </div>
+
           <div className="flex shrink-0 items-center gap-2 border-t border-border bg-white px-4 py-3">
             <button
               onClick={async () => {
