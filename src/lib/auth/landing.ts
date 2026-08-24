@@ -30,12 +30,22 @@ export function landingFor({ userType, hasPermission, depts }: LandingInput): st
   if (userType === "customer") return "/customer/dashboard";
   if (userType === "platform") return "/platform";
 
+  // Shop staff live at the till, even though they can see invoices/customers.
+  const isTillOnly = hasPermission("pos.operate")
+    && !hasPermission("settings.manage")
+    && !hasPermission("bookings.create")
+    && !hasPermission("work.access");
+  if (isTillOnly) return "/admin/pos";
+
   const isAdminUser = ADMIN_CODES.some((c) => hasPermission(c));
   if (isAdminUser) return "/admin/home";
+
+
 
   if (!hasPermission("work.access")) return "/admin/home";
   if (depts.length === 1) return DEPT_ROUTE[depts[0]];
   return "/work";
+
 }
 
 /** True when the user has any admin-area screens worth showing. */

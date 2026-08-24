@@ -81,6 +81,11 @@ export interface RetailSettings {
   receipt_footer: string | null;
   pos_location_id: string | null;
   walkin_customer_id: string | null;
+  prices_include_vat?: boolean | null;
+  till_resource_id?: string | null;
+  pos_page_size?: number | null;
+  unknown_barcode_action?: "link" | "warn" | null;
+  scan_beep?: boolean | null;
 }
 
 // -------- Products --------

@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
+import { useHasPermission } from "@/lib/permissions/permissions";
 import { CustomerCombobox, type CustomerOption } from "@/components/customers/CustomerCombobox";
 import {
   useCategoryTree, useDefaultLocation, useProductBrands, useProducts, useRetailSettings,
@@ -18,7 +19,10 @@ import PosProductGrid from "./PosProductGrid";
 import PosSalePanel from "./PosSalePanel";
 import TenderDialog from "./TenderDialog";
 import ReceiptView from "./ReceiptView";
+import BarcodeLinkSheet from "./BarcodeLinkSheet";
+import { useRecordUnknownBarcode } from "./barcodeQueries";
 import { playTone, useBarcodeScanner } from "./useBarcodeScanner";
+
 
 type ScanFeedback = { kind: "hit" | "miss"; text: string } | null;
 
@@ -41,8 +45,12 @@ export default function PosPage() {
   const [showParked, setShowParked] = useState(false);
   const [showRecent, setShowRecent] = useState(false);
   const [scan, setScan] = useState<ScanFeedback>(null);
+  const [unknownCode, setUnknownCode] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [receipt, setReceipt] = useState<{ result: PosSaleResult; lines: PosLine[]; discount: number; tenders: PosTender[]; customerName: string; customerEmail: string | null } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const canLinkBarcode = useHasPermission("pos.barcode.link");
+
 
   const productsQ = useProducts(tenantId, { activeOnly: true });
   const tree = useCategoryTree(tenantId);
@@ -53,6 +61,11 @@ export default function PosPage() {
   const settings = settingsQ.data;
   const locationId = settings?.pos_location_id || defaultLocation?.id || locsQ.data?.[0]?.id || "";
   const stockQ = useStockOnHand(tenantId, locationId || null);
+  const pageSize = Math.max(8, Number(settings?.pos_page_size ?? 24));
+  const beepOnScan = settings?.scan_beep !== false;
+  const unknownAction = settings?.unknown_barcode_action ?? "link";
+  const recordUnknown = useRecordUnknownBarcode(tenantId);
+
   const parkedQ = useParkedSales(tenantId);
   const recentQ = useRecentSales(tenantId, 15);
 
@@ -94,6 +107,9 @@ export default function PosPage() {
     return () => clearTimeout(t);
   }, [scan]);
 
+  // Filters changing means we're looking at a different set — go back to page one.
+  useEffect(() => { setPage(1); }, [search, categoryId, subCategoryId, brandId]);
+
   function addToCart(p: Product, qty = 1) {
     setLines((c) => {
       const i = c.findIndex((l) => l.product.id === p.id);
@@ -114,15 +130,19 @@ export default function PosPage() {
       ?? all.find((p) => p.sku && p.sku.toLowerCase() === code.toLowerCase());
     if (hit) {
       addToCart(hit);
-      playTone("hit");
+      if (beepOnScan) playTone("hit");
       setScan({ kind: "hit", text: `${hit.name} added` });
-    } else {
-      playTone("miss");
-      setScan({ kind: "miss", text: `No product for ${code}` });
+      return;
     }
+    if (beepOnScan) playTone("miss");
+    setScan({ kind: "miss", text: `No product for ${code}` });
+    // Always keep the code so admin can match it up later.
+    recordUnknown.mutate({ code });
+    if (unknownAction === "link") setUnknownCode(code);
   }
 
-  useBarcodeScanner(handleScan, { enabled: !showTender && !receipt });
+  useBarcodeScanner(handleScan, { enabled: !showTender && !receipt && !unknownCode });
+
 
   function resetSale() {
     setLines([]);
@@ -249,7 +269,16 @@ export default function PosPage() {
             </select>
             <div className="text-xs text-muted-foreground">{products.length} items</div>
           </div>
-          <PosProductGrid products={products} stockByProduct={stockByProduct} onAdd={(p) => addToCart(p)} loading={productsQ.isLoading} />
+          <PosProductGrid
+            products={products}
+            stockByProduct={stockByProduct}
+            onAdd={(p) => addToCart(p)}
+            loading={productsQ.isLoading}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+          />
+
         </main>
 
         {/* Cart */}
@@ -383,7 +412,19 @@ export default function PosPage() {
           onNewSale={resetSale}
         />
       )}
+
+      {unknownCode && (
+        <BarcodeLinkSheet
+          tenantId={tenantId}
+          code={unknownCode}
+          products={(productsQ.data ?? []) as Product[]}
+          canLink={canLinkBarcode}
+          onClose={() => setUnknownCode(null)}
+          onLinked={(p) => addToCart(p)}
+        />
+      )}
     </div>
+
   );
 }
 
