@@ -297,13 +297,15 @@ function ResourceRow({
               const leftPct = ((seg.startMs - windowStart.getTime()) / totalMs) * 100;
               const widthPct = Math.max(((seg.endMs - seg.startMs) / totalMs) * 100, 100 / days.length / 3);
               const b = seg.booking;
+              const held = isHeldBooking(b);
               const cls = barClass(b.status);
               return (
                 <Link
                   key={seg.key}
                   to={`/admin/bookings/${b.id}`}
                   state={{ from: "/admin/hotel-cattery" }}
-                  className={`pointer-events-auto absolute flex items-center gap-1.5 truncate rounded-md border px-2 text-xs font-medium shadow-sm transition hover:translate-y-[-1px] hover:shadow-md ${cls}`}
+                  className={`pointer-events-auto absolute flex items-center gap-1.5 truncate rounded-md border px-2 text-xs font-medium shadow-sm transition hover:translate-y-[-1px] hover:shadow-md ${cls} ${held ? "border-dashed opacity-90" : ""}`}
+
                   style={{
                     top: ROW_PAD + seg.lane * (LANE_H + LANE_GAP),
                     height: LANE_H,
