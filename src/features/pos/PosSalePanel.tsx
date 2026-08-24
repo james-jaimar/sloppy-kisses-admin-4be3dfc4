@@ -97,7 +97,9 @@ export default function PosSalePanel({
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
-        ))}
+          );
+        })}
+
       </div>
 
       <div className="border-t border-border p-4 space-y-3">
