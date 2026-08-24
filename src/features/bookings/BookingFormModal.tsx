@@ -973,7 +973,18 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         {/* Pets */}
         {customerId && (
           <div>
-            <div className="mb-1 text-sm font-medium">Pets</div>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <div className="text-sm font-medium">Pets</div>
+              {canCreatePet && (
+                <button
+                  type="button"
+                  onClick={() => setAddingPet(true)}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-sk-coral-dark hover:underline"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add a pet
+                </button>
+              )}
+            </div>
             {(petsQ.data?.length ?? 0) === 0 ? (
               <div className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
                 This customer has no pets yet.
