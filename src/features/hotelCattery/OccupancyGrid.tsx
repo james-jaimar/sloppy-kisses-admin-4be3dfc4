@@ -234,7 +234,17 @@ export function OccupancyGrid({ tenantId, resources, bookings, quotes = [], wind
                 }
               />
             ))}
+
+            {quotes.length > 0 && (
+              <QuotesRow
+                quotes={quotes}
+                days={days}
+                windowStart={windowStart}
+                windowEnd={addDays(windowStart, windowDays)}
+              />
+            )}
           </div>
+
         </div>
       )}
     </div>
