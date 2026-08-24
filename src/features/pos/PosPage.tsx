@@ -61,6 +61,11 @@ export default function PosPage() {
   const settings = settingsQ.data;
   const locationId = settings?.pos_location_id || defaultLocation?.id || locsQ.data?.[0]?.id || "";
   const stockQ = useStockOnHand(tenantId, locationId || null);
+  const pageSize = Math.max(8, Number(settings?.pos_page_size ?? 24));
+  const beepOnScan = settings?.scan_beep !== false;
+  const unknownAction = settings?.unknown_barcode_action ?? "link";
+  const recordUnknown = useRecordUnknownBarcode(tenantId);
+
   const parkedQ = useParkedSales(tenantId);
   const recentQ = useRecentSales(tenantId, 15);
 
