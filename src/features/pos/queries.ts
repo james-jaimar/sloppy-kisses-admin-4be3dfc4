@@ -125,14 +125,23 @@ export function useEnsureWalkInCustomer(tenantId: string) {
 
       let id = (found as any)?.id as string | undefined;
       if (!id) {
+        const { data: number, error: numErr } = await supabase
+          .rpc("next_customer_number" as any, { target_tenant_id: tenantId } as any);
+        if (numErr) throw numErr;
         const { data: created, error } = await supabase
           .from("customers")
-          .insert({ tenant_id: tenantId, full_name: "Walk-in customer", notify_email: false } as any)
+          .insert({
+            tenant_id: tenantId,
+            customer_number: number as any,
+            full_name: "Walk-in customer",
+            notify_email: false,
+          } as any)
           .select("id")
           .single();
         if (error) throw error;
         id = created.id as string;
       }
+
       await supabase
         .from("retail_settings" as any)
         .upsert({ tenant_id: tenantId, walkin_customer_id: id } as any, { onConflict: "tenant_id" });
