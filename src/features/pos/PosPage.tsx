@@ -45,8 +45,12 @@ export default function PosPage() {
   const [showParked, setShowParked] = useState(false);
   const [showRecent, setShowRecent] = useState(false);
   const [scan, setScan] = useState<ScanFeedback>(null);
+  const [unknownCode, setUnknownCode] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [receipt, setReceipt] = useState<{ result: PosSaleResult; lines: PosLine[]; discount: number; tenders: PosTender[]; customerName: string; customerEmail: string | null } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const canLinkBarcode = useHasPermission("pos.barcode.link");
+
 
   const productsQ = useProducts(tenantId, { activeOnly: true });
   const tree = useCategoryTree(tenantId);
