@@ -9323,6 +9323,7 @@ export type Database = {
         Args: { p_booking_id: string; p_end_at?: string; p_start_at: string }
         Returns: undefined
       }
+      portal_service_gates: { Args: { p_tenant_id: string }; Returns: Json }
       recompute_invoice_payments: {
         Args: { p_invoice_id: string }
         Returns: undefined
