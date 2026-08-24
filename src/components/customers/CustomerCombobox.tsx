@@ -157,7 +157,9 @@ export function CustomerCombobox({
           <li className="px-3 py-3 text-sm text-destructive">Couldn’t load customers. Try again.</li>
         )}
         {!listQ.isLoading && !listQ.isError && rows.length === 0 && (
-          <li className="px-3 py-3 text-sm text-muted-foreground">No customers found.</li>
+          <li className="px-3 py-3 text-sm text-muted-foreground">
+            No customers found{term.trim() ? ` for “${term.trim()}”` : ""}.
+          </li>
         )}
         {rows.map((c) => (
           <li key={c.id}>
