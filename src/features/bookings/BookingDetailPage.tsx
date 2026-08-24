@@ -8,7 +8,7 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useBookingDetail, useDeleteBooking } from "./queries";
 import { BookingStatusChip } from "./statusMeta";
 import { BookingFormModal } from "./BookingFormModal";
-import { useTransportLegExistsForBooking } from "@/features/transport/queries";
+import { useTransportLegExistsForBooking, useLinkedChildBookings } from "@/features/transport/queries";
 import { Truck } from "lucide-react";
 import { BookingInvoicePanel } from "./BookingInvoicePanel";
 import { BookingCommsPanel } from "./BookingCommsPanel";
@@ -66,7 +66,10 @@ export default function BookingDetailPage() {
     isoDate: bookingDate,
     enabled: needsTransportHint,
   });
-  const showAddTransportHint = needsTransportHint && legExistsQ.data === false;
+  const linkedQ = useLinkedChildBookings(b?.id ?? null);
+  const linked = linkedQ.data ?? [];
+  const showAddTransportHint =
+    needsTransportHint && legExistsQ.data === false && linked.length === 0;
 
   return (
     <>
@@ -228,6 +231,42 @@ export default function BookingDetailPage() {
                   </Link>
                 </div>
               )}
+
+              {linked.length > 0 && (
+                <div className="sk-card p-5">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Linked bookings
+                  </div>
+                  <ul className="mt-3 space-y-2">
+                    {linked.map((l) => (
+                      <li key={l.id} className="flex flex-wrap items-center gap-2 text-sm">
+                        <Truck className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <Link to={`/admin/bookings/${l.id}`} className="font-medium hover:text-sk-coral-dark">
+                          {l.booking_number}
+                        </Link>
+                        <span className="text-muted-foreground">
+                          {l.link_kind === "hotel_transport_pickup"
+                            ? "Collection"
+                            : l.link_kind === "hotel_transport_dropoff"
+                              ? "Return home"
+                              : l.link_kind === "hotel_checkout_groom"
+                                ? "Checkout groom"
+                                : "Linked"}
+                          {" · "}
+                          {fmt(l.start_at)}
+                        </span>
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs capitalize">
+                          {String(l.status).replace(/_/g, " ")}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {l.resource?.name ?? "Unassigned"}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
             </div>
 
             <div className="space-y-6">

@@ -6,6 +6,34 @@ export const TRANSPORT_SERVICE_TYPES: ServiceType[] = ["pickup_dropoff"];
 
 export type TransportDirection = "pickup" | "dropoff" | "round_trip";
 
+export interface LinkedBookingRow {
+  id: string;
+  booking_number: string;
+  status: BookingStatus;
+  service_type: ServiceType;
+  start_at: string;
+  link_kind: string | null;
+  resource: { id: string; name: string } | null;
+}
+
+/** Bookings automatically spawned by this one (transport legs, checkout-day grooms). */
+export function useLinkedChildBookings(bookingId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["linked_child_bookings", bookingId],
+    enabled: Boolean(bookingId),
+    queryFn: async (): Promise<LinkedBookingRow[]> => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("id, booking_number, status, service_type, start_at, link_kind, resource:resources(id, name)")
+        .eq("parent_booking_id", bookingId as string)
+        .order("start_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []).map((b: any) => ({ ...b, resource: b.resource ?? null })) as LinkedBookingRow[];
+    },
+  });
+}
+
+
 export interface TransportVehicle {
   id: string;
   name: string;

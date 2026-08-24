@@ -62,6 +62,9 @@ export default function TransportWorkflowPage() {
     payment_hold_hours: 48,
     overbooking_mode: "warn" as "warn" | "block",
     max_stops_per_van_per_day: 12,
+    auto_create_hotel_legs: true,
+    hotel_pickup_time: "09:00",
+    hotel_dropoff_time: "16:00",
   });
   const [suburbFees, setSuburbFees] = useState<SuburbFee[]>([]);
 
@@ -89,6 +92,9 @@ export default function TransportWorkflowPage() {
         payment_hold_hours: Number((settingsQ.data as any).payment_hold_hours ?? 48),
         overbooking_mode: ((settingsQ.data as any).overbooking_mode ?? "warn") as "warn" | "block",
         max_stops_per_van_per_day: Number((settingsQ.data as any).max_stops_per_van_per_day ?? 12),
+        auto_create_hotel_legs: (settingsQ.data as any).auto_create_hotel_legs ?? true,
+        hotel_pickup_time: trimTime((settingsQ.data as any).hotel_pickup_time) || "09:00",
+        hotel_dropoff_time: trimTime((settingsQ.data as any).hotel_dropoff_time) || "16:00",
       });
       setSuburbFees(fromMap(settingsQ.data.suburb_fees));
     }
@@ -202,6 +208,45 @@ export default function TransportWorkflowPage() {
               </select>
             </Field>
           </div>
+
+          <div className="space-y-4 rounded-lg border border-border p-4">
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox" disabled={!canManage}
+                checked={form.auto_create_hotel_legs}
+                onChange={(e) => setForm((f) => ({ ...f, auto_create_hotel_legs: e.target.checked }))}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span>
+                <span className="font-medium">Auto-create legs for hotel stays</span>
+                <span className="block text-xs text-muted-foreground">
+                  When a hotel booking asks for collection or return home, the system creates a provisional
+                  leg (no van assigned) on the arrival and collection days and bills it on the hotel invoice.
+                  Cancelling the stay cancels the legs.
+                </span>
+              </span>
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Default collection time" hint="Used for the arrival-day pick-up leg.">
+                <input
+                  type="time" disabled={!canManage || !form.auto_create_hotel_legs}
+                  value={form.hotel_pickup_time}
+                  onChange={(e) => setForm((f) => ({ ...f, hotel_pickup_time: e.target.value }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                />
+              </Field>
+              <Field label="Default return-home time" hint="Used for the collection-day drop-off leg.">
+                <input
+                  type="time" disabled={!canManage || !form.auto_create_hotel_legs}
+                  value={form.hotel_dropoff_time}
+                  onChange={(e) => setForm((f) => ({ ...f, hotel_dropoff_time: e.target.value }))}
+                  className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                />
+              </Field>
+            </div>
+          </div>
+
+
 
           <PaymentHoldFields
             disabled={!canManage}
