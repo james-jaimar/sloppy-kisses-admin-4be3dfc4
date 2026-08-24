@@ -103,7 +103,7 @@ export default function BarcodeLinkSheet({ tenantId, code, products, canLink, on
                       {[p.sku, p.external_code, p.barcode ? `barcode ${p.barcode}` : null].filter(Boolean).join(" · ") || "No codes yet"}
                     </div>
                   </div>
-                  <div className="text-sm font-semibold tabular-nums">R {Number(p.price_incl_vat ?? p.price ?? 0).toFixed(2)}</div>
+                  <div className="text-sm font-semibold tabular-nums">R {Number(p.sell_price ?? 0).toFixed(2)}</div>
                   <Check className="h-4 w-4 text-muted-foreground" />
                 </button>
               ))}
