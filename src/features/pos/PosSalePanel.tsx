@@ -30,7 +30,7 @@ export default function PosSalePanel({
   return (
     <div className="flex h-full min-h-0 flex-col bg-white">
 
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
         <div>
           <div className="text-sm font-semibold">Current sale</div>
           <div className="text-[11px] text-muted-foreground">{saleNumberHint ?? "New sale"}</div>
@@ -44,20 +44,23 @@ export default function PosSalePanel({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 py-2">
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
         {lines.length === 0 && (
           <div className="px-4 py-16 text-center text-sm text-muted-foreground">
             Scan a barcode or tap a product to start.
           </div>
         )}
-        {lines.map((l) => (
+        {lines.map((l) => {
+          const img = resolveImage(l.product.image_url);
+          return (
           <div key={l.product.id} className="flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-sk-surface-muted/50">
-            <div className="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg bg-sk-surface-muted text-xs font-bold text-muted-foreground">
-              {l.product.image_url ? (
-                <img src={l.product.image_url} alt="" className="h-full w-full object-cover" />
+            <div className="grid aspect-square h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg bg-sk-surface-muted text-xs font-bold text-muted-foreground">
+              {img ? (
+                <img src={img} alt="" className="h-full w-full object-contain" />
               ) : (
                 l.product.name.slice(0, 2).toUpperCase()
               )}
+
             </div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium">{l.product.name}</div>
