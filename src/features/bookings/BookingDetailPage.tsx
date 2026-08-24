@@ -66,7 +66,10 @@ export default function BookingDetailPage() {
     isoDate: bookingDate,
     enabled: needsTransportHint,
   });
-  const showAddTransportHint = needsTransportHint && legExistsQ.data === false;
+  const linkedQ = useLinkedChildBookings(b?.id ?? null);
+  const linked = linkedQ.data ?? [];
+  const showAddTransportHint =
+    needsTransportHint && legExistsQ.data === false && linked.length === 0;
 
   return (
     <>
