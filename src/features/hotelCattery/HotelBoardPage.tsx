@@ -28,6 +28,8 @@ export default function HotelBoardPage() {
 
   const resourcesQ = useHotelResources(tenantId);
   const bookingsQ = useHotelBookingsInWindow({ tenantId, windowStart, windowEnd });
+  const quotesQ = useHotelQuotesInWindow({ tenantId, windowStart, windowEnd });
+
 
   const today = startOfDay(new Date());
 
