@@ -269,7 +269,16 @@ export default function PosPage() {
             </select>
             <div className="text-xs text-muted-foreground">{products.length} items</div>
           </div>
-          <PosProductGrid products={products} stockByProduct={stockByProduct} onAdd={(p) => addToCart(p)} loading={productsQ.isLoading} />
+          <PosProductGrid
+            products={products}
+            stockByProduct={stockByProduct}
+            onAdd={(p) => addToCart(p)}
+            loading={productsQ.isLoading}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+          />
+
         </main>
 
         {/* Cart */}
