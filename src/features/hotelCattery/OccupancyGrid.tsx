@@ -1,7 +1,12 @@
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { BOOKING_STATUS_META } from "@/features/bookings/statusMeta";
-import { useAssignBookingResource, type HotelBookingRow, type HotelResourceRow } from "./queries";
+import {
+  useAssignBookingResource,
+  type HotelBookingRow,
+  type HotelQuoteRow,
+  type HotelResourceRow,
+} from "./queries";
 
 function addDays(d: Date, n: number) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
 function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
@@ -10,6 +15,25 @@ function sameDay(a: Date, b: Date) {
 }
 function fmtColHeader(d: Date) {
   return { dow: d.toLocaleDateString("en-ZA", { weekday: "short" }), dom: d.getDate() };
+}
+
+/** Statuses that hold a space provisionally rather than firmly. */
+const HELD_STATUSES = new Set(["pending_payment", "requested", "draft", "needs_info"]);
+const DEAD_STATUSES = new Set(["cancelled", "no_show"]);
+
+export function isHeldBooking(b: { status: string }) {
+  return HELD_STATUSES.has(b.status);
+}
+export function isFirmBooking(b: { status: string }) {
+  return !HELD_STATUSES.has(b.status) && !DEAD_STATUSES.has(b.status);
+}
+
+function holdLeft(iso: string | null) {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return "expired";
+  const h = Math.floor(ms / 3_600_000);
+  return h >= 24 ? `${Math.floor(h / 24)}d left` : `${Math.max(1, h)}h left`;
 }
 
 /** Map booking.status to a background class for the occupancy bar. */
@@ -23,10 +47,12 @@ export interface OccupancyGridProps {
   tenantId: string | null;
   resources: HotelResourceRow[];
   bookings: HotelBookingRow[];
+  quotes?: HotelQuoteRow[];
   windowStart: Date;
   windowDays: number;
   loading: boolean;
 }
+
 
 const LANE_H = 34;      // px per pet lane
 const LANE_GAP = 4;
@@ -72,9 +98,36 @@ function usedOnDay(bookings: HotelBookingRow[], day: Date) {
   const dayEnd = addDays(startOfDay(day), 1).getTime();
   let n = 0;
   for (const b of bookings) {
+    if (!isFirmBooking(b)) continue;
     const s = new Date(b.start_at).getTime();
     const e = b.end_at ? new Date(b.end_at).getTime() : Number.MAX_SAFE_INTEGER;
     if (s < dayEnd && e > dayStart) n += Math.max(1, b.pets.length);
+  }
+  return n;
+}
+
+/** Pets provisionally holding a space on a given day (unpaid / requested bookings). */
+function heldOnDay(bookings: HotelBookingRow[], day: Date) {
+  const dayStart = startOfDay(day).getTime();
+  const dayEnd = addDays(startOfDay(day), 1).getTime();
+  let n = 0;
+  for (const b of bookings) {
+    if (!isHeldBooking(b)) continue;
+    const s = new Date(b.start_at).getTime();
+    const e = b.end_at ? new Date(b.end_at).getTime() : Number.MAX_SAFE_INTEGER;
+    if (s < dayEnd && e > dayStart) n += Math.max(1, b.pets.length);
+  }
+  return n;
+}
+
+function quotesOnDay(quotes: HotelQuoteRow[], day: Date) {
+  const dayStart = startOfDay(day).getTime();
+  const dayEnd = addDays(startOfDay(day), 1).getTime();
+  let n = 0;
+  for (const q of quotes) {
+    const s = new Date(q.start_at).getTime();
+    const e = q.end_at ? new Date(q.end_at).getTime() : Number.MAX_SAFE_INTEGER;
+    if (s < dayEnd && e > dayStart) n += Math.max(1, q.petNames.length);
   }
   return n;
 }
@@ -87,7 +140,7 @@ function countTone(used: number, capacity: number | null) {
   return used > 0 ? "text-foreground" : "text-muted-foreground";
 }
 
-export function OccupancyGrid({ tenantId, resources, bookings, windowStart, windowDays, loading }: OccupancyGridProps) {
+export function OccupancyGrid({ tenantId, resources, bookings, quotes = [], windowStart, windowDays, loading }: OccupancyGridProps) {
   const days = Array.from({ length: windowDays }, (_, i) => addDays(windowStart, i));
   const today = startOfDay(new Date());
 
@@ -101,20 +154,38 @@ export function OccupancyGrid({ tenantId, resources, bookings, windowStart, wind
 
   const totalCapacity = resources.reduce((s, r) => s + (r.capacity ?? 0), 0);
   const anyCapacity = resources.some((r) => r.capacity != null);
-  const peak = days.reduce((max, d) => Math.max(max, usedOnDay(bookings.filter((b) => b.resource_id), d)), 0);
+  const assignedBookings = bookings.filter((b) => b.resource_id);
+  const peak = days.reduce((max, d) => Math.max(max, usedOnDay(assignedBookings, d)), 0);
+  const peakHeld = days.reduce(
+    (max, d) => Math.max(max, heldOnDay(bookings, d) + quotesOnDay(quotes, d)),
+    0,
+  );
 
   return (
     <div className="sk-card overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
         <div>
           <h2 className="text-base font-semibold">Occupancy</h2>
           <p className="text-xs text-muted-foreground">
             {resources.length} {resources.length === 1 ? "area" : "areas"}
             {anyCapacity ? ` · ${totalCapacity} spaces` : " · no space limits set"}
-            {" · "}peak {peak} {peak === 1 ? "pet" : "pets"} in view
+            {" · "}peak {peak} {peak === 1 ? "pet" : "pets"} confirmed
+            {peakHeld > 0 ? ` · +${peakHeld} held` : ""}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3 w-5 rounded border border-sk-green bg-sk-green-soft" /> Confirmed
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3 w-5 rounded border border-dashed border-sk-orange bg-sk-orange-soft" /> Held / unpaid
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3 w-5 rounded border border-dashed border-border bg-muted" /> Quote
+          </span>
+        </div>
       </div>
+
 
       {loading ? (
         <div className="p-10 text-center text-sm text-muted-foreground">Loading…</div>
@@ -163,7 +234,17 @@ export function OccupancyGrid({ tenantId, resources, bookings, windowStart, wind
                 }
               />
             ))}
+
+            {quotes.length > 0 && (
+              <QuotesRow
+                quotes={quotes}
+                days={days}
+                windowStart={windowStart}
+                windowEnd={addDays(windowStart, windowDays)}
+              />
+            )}
           </div>
+
         </div>
       )}
     </div>
@@ -216,13 +297,15 @@ function ResourceRow({
               const leftPct = ((seg.startMs - windowStart.getTime()) / totalMs) * 100;
               const widthPct = Math.max(((seg.endMs - seg.startMs) / totalMs) * 100, 100 / days.length / 3);
               const b = seg.booking;
+              const held = isHeldBooking(b);
               const cls = barClass(b.status);
               return (
                 <Link
                   key={seg.key}
                   to={`/admin/bookings/${b.id}`}
                   state={{ from: "/admin/hotel-cattery" }}
-                  className={`pointer-events-auto absolute flex items-center gap-1.5 truncate rounded-md border px-2 text-xs font-medium shadow-sm transition hover:translate-y-[-1px] hover:shadow-md ${cls}`}
+                  className={`pointer-events-auto absolute flex items-center gap-1.5 truncate rounded-md border px-2 text-xs font-medium shadow-sm transition hover:translate-y-[-1px] hover:shadow-md ${cls} ${held ? "border-dashed opacity-90" : ""}`}
+
                   style={{
                     top: ROW_PAD + seg.lane * (LANE_H + LANE_GAP),
                     height: LANE_H,
@@ -246,16 +329,22 @@ function ResourceRow({
         <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground">Occupancy</div>
         {days.map((d) => {
           const used = usedOnDay(bookings, d);
+          const held = heldOnDay(bookings, d);
           return (
             <div
               key={d.toISOString()}
               className={`border-l border-border px-1 py-1 text-center text-[11px] tabular-nums ${countTone(used, capacity)}`}
-              title={capacity != null ? `${used} of ${capacity} spaces used` : `${used} pets`}
+              title={
+                (capacity != null ? `${used} of ${capacity} spaces confirmed` : `${used} pets confirmed`) +
+                (held ? ` · ${held} held (unpaid / requested)` : "")
+              }
             >
               {capacity != null ? `${used}/${capacity}` : used || "—"}
+              {held > 0 && <span className="ml-0.5 text-sk-orange">+{held}</span>}
             </div>
           );
         })}
+
       </div>
 
       {assign && bookings.length > 0 && (
@@ -270,6 +359,113 @@ function ResourceRow({
     </div>
   );
 }
+
+/** Pencilled quotes: dates a customer is holding but hasn't converted into a booking. */
+function QuotesRow({
+  quotes, days, windowStart, windowEnd,
+}: {
+  quotes: HotelQuoteRow[];
+  days: Date[];
+  windowStart: Date;
+  windowEnd: Date;
+}) {
+  const today = startOfDay(new Date());
+  type QSeg = { key: string; quote: HotelQuoteRow; petName: string; startMs: number; endMs: number; lane: number };
+  const raw: Omit<QSeg, "lane">[] = [];
+  for (const q of quotes) {
+    const startMs = Math.max(new Date(q.start_at).getTime(), windowStart.getTime());
+    const endMs = Math.min(
+      q.end_at ? new Date(q.end_at).getTime() : windowEnd.getTime(),
+      windowEnd.getTime(),
+    );
+    if (endMs <= startMs) continue;
+    const names = q.petNames.length ? q.petNames : ["Pet"];
+    names.forEach((petName, i) => raw.push({ key: `${q.id}:${i}`, quote: q, petName, startMs, endMs }));
+  }
+  raw.sort((a, z) => a.startMs - z.startMs);
+  const laneEnds: number[] = [];
+  const segments: QSeg[] = raw.map((s) => {
+    let lane = laneEnds.findIndex((e) => e <= s.startMs);
+    if (lane === -1) { lane = laneEnds.length; laneEnds.push(s.endMs); }
+    else laneEnds[lane] = s.endMs;
+    return { ...s, lane };
+  });
+  const lanes = Math.max(laneEnds.length, 1);
+  const bodyHeight = lanes * LANE_H + (lanes - 1) * LANE_GAP + ROW_PAD * 2;
+  const totalMs = windowEnd.getTime() - windowStart.getTime();
+
+  return (
+    <div className="border-b border-border bg-sk-surface-muted/40">
+      <div className="relative grid" style={{ gridTemplateColumns: `180px repeat(${days.length}, minmax(70px, 1fr))` }}>
+        <div className="px-3 py-3 text-sm">
+          <div className="truncate font-medium">Pencilled quotes</div>
+          <div className="text-[11px] text-muted-foreground">Dates held, not booked</div>
+        </div>
+        {days.map((d) => (
+          <div
+            key={d.toISOString()}
+            className={`border-l border-border ${sameDay(d, today) ? "bg-sk-coral-soft/30" : ""}`}
+            style={{ minHeight: bodyHeight }}
+          />
+        ))}
+
+        <div className="pointer-events-none absolute inset-0 grid" style={{ gridTemplateColumns: `180px repeat(${days.length}, minmax(70px, 1fr))` }}>
+          <div />
+          <div className="relative" style={{ gridColumn: `2 / span ${days.length}` }}>
+            {segments.map((seg) => {
+              const leftPct = ((seg.startMs - windowStart.getTime()) / totalMs) * 100;
+              const widthPct = Math.max(((seg.endMs - seg.startMs) / totalMs) * 100, 100 / days.length / 3);
+              const q = seg.quote;
+              const left = holdLeft(q.hold_expires_at);
+              return (
+                <Link
+                  key={seg.key}
+                  to={`/admin/quotes/${q.id}`}
+                  className="pointer-events-auto absolute flex items-center gap-1.5 truncate rounded-md border border-dashed border-border bg-background/80 px-2 text-xs font-medium text-muted-foreground shadow-sm transition hover:translate-y-[-1px] hover:shadow-md"
+                  style={{
+                    top: ROW_PAD + seg.lane * (LANE_H + LANE_GAP),
+                    height: LANE_H,
+                    left: `${leftPct}%`,
+                    width: `calc(${widthPct}% - 4px)`,
+                  }}
+                  title={`${q.estimate_number} · ${seg.petName} (${q.customer?.full_name ?? "—"})${
+                    q.total != null ? ` · R${q.total.toFixed(2)}` : ""
+                  }${left ? ` · hold ${left}` : ""}`}
+                >
+                  <span className="truncate">{seg.petName}</span>
+                  <span className="truncate text-[10px] opacity-80">{q.customer?.full_name ?? ""}</span>
+                  {left && (
+                    <span className="shrink-0 rounded bg-sk-orange-soft px-1 text-[10px] font-semibold text-sk-orange">
+                      {left}
+                    </span>
+                  )}
+                  <span className="ml-auto shrink-0 text-[10px] opacity-70">{q.estimate_number}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid border-t border-dashed border-border" style={{ gridTemplateColumns: `180px repeat(${days.length}, minmax(70px, 1fr))` }}>
+        <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground">Quoted pets</div>
+        {days.map((d) => {
+          const n = quotesOnDay(quotes, d);
+          return (
+            <div
+              key={d.toISOString()}
+              className={`border-l border-border px-1 py-1 text-center text-[11px] tabular-nums ${n ? "text-sk-orange font-medium" : "text-muted-foreground"}`}
+            >
+              {n || "—"}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
 
 /** Quick "put this stay in an area" control for unassigned hotel/cattery bookings. */
 function AssignPanel({

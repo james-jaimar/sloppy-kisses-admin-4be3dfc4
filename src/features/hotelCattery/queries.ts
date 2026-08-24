@@ -100,6 +100,78 @@ export function useHotelBookingsInWindow(params: {
   });
 }
 
+export interface HotelQuoteRow {
+  id: string;
+  estimate_number: string;
+  status: string;
+  service_type: ServiceType;
+  start_at: string;
+  end_at: string | null;
+  hold_expires_at: string | null;
+  total: number | null;
+  customer: { id: string; full_name: string | null } | null;
+  petNames: string[];
+}
+
+/** Open hotel/cattery quotes (draft or sent) whose dates overlap the board window. */
+export function useHotelQuotesInWindow(params: {
+  tenantId: string | null | undefined;
+  windowStart: Date;
+  windowEnd: Date;
+}) {
+  const { tenantId, windowStart, windowEnd } = params;
+  const startIso = windowStart.toISOString();
+  const endIso = windowEnd.toISOString();
+  return useQuery({
+    queryKey: ["hotel_quotes", tenantId, startIso, endIso],
+    enabled: Boolean(tenantId),
+    refetchInterval: 60000,
+    queryFn: async (): Promise<HotelQuoteRow[]> => {
+      const { data, error } = await supabase
+        .from("estimates")
+        .select(
+          "id, estimate_number, status, service_type, start_at, end_at, hold_expires_at, total, pet_ids, customer:customers(id, full_name)",
+        )
+        .eq("tenant_id", tenantId as string)
+        .in("service_type", HOTEL_SERVICE_TYPES as any)
+        .in("status", ["draft", "sent"] as any)
+        .not("start_at", "is", null)
+        .lt("start_at", endIso)
+        .order("start_at", { ascending: true })
+        .limit(500);
+      if (error) throw error;
+      const startMs = windowStart.getTime();
+      const rows = (data ?? []).filter((q: any) => {
+        if (!q.end_at) return true;
+        return new Date(q.end_at).getTime() > startMs;
+      });
+
+      // Resolve pet names in one lookup.
+      const petIds = Array.from(new Set(rows.flatMap((q: any) => (q.pet_ids ?? []) as string[])));
+      const nameById = new Map<string, string>();
+      if (petIds.length) {
+        const { data: pets } = await supabase.from("pets").select("id, name").in("id", petIds);
+        for (const p of pets ?? []) nameById.set((p as any).id, (p as any).name ?? "Unnamed pet");
+      }
+
+      return rows.map((q: any): HotelQuoteRow => ({
+        id: q.id,
+        estimate_number: q.estimate_number,
+        status: q.status,
+        service_type: q.service_type,
+        start_at: q.start_at,
+        end_at: q.end_at,
+        hold_expires_at: q.hold_expires_at ?? null,
+        total: q.total == null ? null : Number(q.total),
+        customer: q.customer ?? null,
+        petNames: ((q.pet_ids ?? []) as string[]).map((id) => nameById.get(id) ?? "Pet"),
+      }));
+    },
+  });
+}
+
+
+
 export function useUpdateBookingStatus(tenantId: string) {
   const qc = useQueryClient();
   return useMutation({

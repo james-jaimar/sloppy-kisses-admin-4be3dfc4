@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import { LogIn, LogOut, Hotel } from "lucide-react";
+import { LogIn, LogOut, Hotel, FileText } from "lucide-react";
 import {
   checkVaccinations, logVaccinationOverride, useHotelWorkflowSettings, useUpdateBookingStatus,
-  type HotelBookingRow, type HotelResourceRow,
+  type HotelBookingRow, type HotelQuoteRow, type HotelResourceRow,
 } from "./queries";
+
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PaymentChip, PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 import { StayPlayChip, StayPlayFlagsProvider } from "@/features/daycare/StayPlayBadge";
@@ -25,10 +26,11 @@ function inHouse(b: HotelBookingRow, day: Date) {
 }
 
 export function TodayPanel({
-  tenantId, bookings, resources, today,
+  tenantId, bookings, quotes = [], resources, today,
 }: {
   tenantId: string | null;
   bookings: HotelBookingRow[];
+  quotes?: HotelQuoteRow[];
   resources: HotelResourceRow[];
   today: Date;
 }) {
@@ -38,9 +40,25 @@ export function TodayPanel({
   const gateMode = settingsQ.data?.vax_gate_mode ?? "soft";
 
   const arrivals = useMemo(
-    () => bookings.filter((b) => withinDay(b.start_at, today) && (b.status === "confirmed" || b.status === "approved" || b.status === "requested")),
+    () =>
+      bookings.filter(
+        (b) =>
+          withinDay(b.start_at, today) &&
+          ["confirmed", "approved", "requested", "pending_payment"].includes(b.status),
+      ),
     [bookings, today],
   );
+  const upcomingQuotes = useMemo(() => {
+    const from = startOfDay(today).getTime();
+    const to = from + 7 * 86_400_000;
+    return quotes
+      .filter((q) => {
+        const s = new Date(q.start_at).getTime();
+        return s >= from && s < to;
+      })
+      .sort((a, z) => new Date(a.start_at).getTime() - new Date(z.start_at).getTime());
+  }, [quotes, today]);
+
   const departures = useMemo(
     () => bookings.filter((b) => withinDay(b.end_at, today) && b.status !== "checked_out" && b.status !== "cancelled" && b.status !== "completed"),
     [bookings, today],
@@ -155,6 +173,38 @@ export function TodayPanel({
           />
         ))}
       </Panel>
+
+      {/* Quotes holding dates */}
+      <Panel
+        title="Quotes holding dates (7 days)"
+        empty="No quotes holding dates."
+        icon={<FileText className="h-4 w-4" />}
+      >
+        {upcomingQuotes.map((q) => (
+          <li key={q.id} className="flex items-center gap-3 px-4 py-3">
+            <div className="w-14 text-xs font-semibold tabular-nums text-muted-foreground">
+              {new Date(q.start_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}
+            </div>
+            <div className="min-w-0 flex-1">
+              <Link to={`/admin/quotes/${q.id}`} className="block truncate text-sm font-medium hover:underline">
+                {q.petNames.join(", ") || "Pet"}{" "}
+                <span className="font-normal text-muted-foreground">· {q.customer?.full_name ?? "—"}</span>
+              </Link>
+              <div className="truncate text-[11px] text-muted-foreground">
+                {q.estimate_number}
+                {q.total != null ? ` · R${q.total.toFixed(2)}` : ""}
+                {q.hold_expires_at
+                  ? ` · hold until ${new Date(q.hold_expires_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}`
+                  : ""}
+              </div>
+            </div>
+            <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+              {q.status}
+            </span>
+          </li>
+        ))}
+      </Panel>
+
     </div>
     </StayPlayFlagsProvider>
     </PaymentFlagsProvider>
@@ -195,9 +245,15 @@ function BookingRow({ b, timeLabel, action }: { b: HotelBookingRow; timeLabel: s
         </Link>
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
           <span className="truncate">{b.resource?.name ?? "Unassigned"} · {b.booking_number}</span>
+          {b.status === "pending_payment" && (
+            <span className="rounded bg-sk-orange-soft px-1.5 py-0.5 text-[10px] font-semibold text-sk-orange">
+              Awaiting payment
+            </span>
+          )}
           <PaymentChip bookingId={b.id} />
           <StayPlayChip bookingId={b.id} />
         </div>
+
       </div>
       {action}
     </li>
