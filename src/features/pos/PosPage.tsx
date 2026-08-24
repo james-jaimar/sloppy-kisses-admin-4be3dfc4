@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
+import { useHasPermission } from "@/lib/permissions/permissions";
 import { CustomerCombobox, type CustomerOption } from "@/components/customers/CustomerCombobox";
 import {
   useCategoryTree, useDefaultLocation, useProductBrands, useProducts, useRetailSettings,
@@ -18,7 +19,10 @@ import PosProductGrid from "./PosProductGrid";
 import PosSalePanel from "./PosSalePanel";
 import TenderDialog from "./TenderDialog";
 import ReceiptView from "./ReceiptView";
+import BarcodeLinkSheet from "./BarcodeLinkSheet";
+import { useRecordUnknownBarcode } from "./barcodeQueries";
 import { playTone, useBarcodeScanner } from "./useBarcodeScanner";
+
 
 type ScanFeedback = { kind: "hit" | "miss"; text: string } | null;
 
