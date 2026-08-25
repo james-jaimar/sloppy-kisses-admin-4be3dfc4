@@ -2,6 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import type { ServiceType } from "./queries";
 import { autoEmailBookingInvoice } from "@/features/invoices/autoEmail";
+import {
+  notifyBookingRescheduled,
+  readBookingInvoiceSnapshot,
+  type InvoiceSnapshot,
+} from "./rescheduleNotify";
+
 
 // ---------- Grooming ----------
 export interface GroomingDetails {
@@ -127,9 +133,14 @@ export function useUpsertBookingDetails(tenantId: string) {
       | { kind: "transport"; bookingId: string; data: Partial<TransportDetails> }
       | { kind: "none"; bookingId: string; data?: unknown }
     ) => {
-      if (payload.kind === "none") return { ok: true };
+      if (payload.kind === "none") return { ok: true, money: null as null | { before: InvoiceSnapshot; after: InvoiceSnapshot } };
+
+      // Snapshot the money before the write so we can tell a repriced booking
+      // apart from a plain time move (a time move must not resend the invoice).
+      const before = await readBookingInvoiceSnapshot(payload.bookingId);
 
       const table =
+
         payload.kind === "grooming"
           ? "grooming_booking_details"
           : payload.kind === "hotel"
