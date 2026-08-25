@@ -65,9 +65,8 @@ export function StudioSnapDialog({
     if (received > 0) toast.success(`${received} photo${received === 1 ? "" : "s"} saved from your phone`);
   }
 
-  const url = session
-    ? `${window.location.origin}${productId ? `/snap/studio/${session.token}` : `/snap/studio/${session.token}`}`
-    : "";
+  const url = session ? `${window.location.origin}/snap/studio/${session.token}` : "";
+
 
   return (
     <>
