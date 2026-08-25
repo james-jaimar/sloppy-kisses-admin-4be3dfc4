@@ -188,7 +188,9 @@ const App = () => (
               <Route path="/q/:token" element={<PublicQuotePage />} />
               <Route path="/pay/success" element={<PaySuccessPage />} />
               <Route path="/pay/cancel" element={<PayCancelPage />} />
-             <Route path="/snap/:token" element={<SnapUpload />} />
+            <Route path="/snap/studio/:token" element={<SnapStudio />} />
+            <Route path="/snap/:token" element={<SnapUpload />} />
+
 
               <Route element={<RequireAdmin />}>
               <Route element={<AdminLayout />}>
