@@ -79,6 +79,9 @@ export default function ProductPhotosPage() {
               </button>
             ))}
           </div>
+          {tenantId && (
+            <StudioSnapDialog tenantId={tenantId} label="Shop photo studio" onProgress={refreshPhotos} />
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -86,26 +89,40 @@ export default function ProductPhotosPage() {
             const img = resolve(p.image_url);
             const busy = busyId === p.id;
             return (
-              <button key={p.id} disabled={busy}
-                onClick={() => { target.current = p; fileRef.current?.click(); }}
-                className="sk-card group flex flex-col overflow-hidden p-0 text-left transition-colors hover:border-sk-coral disabled:opacity-60">
-                <div className="relative grid aspect-square w-full place-items-center overflow-hidden bg-sk-surface-muted">
-                  {img
-                    ? <img src={img} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
-                    : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
-                  <span className="absolute bottom-2 right-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-sk-coral text-white shadow">
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                  </span>
-                </div>
-                <div className="p-3">
-                  <div className="line-clamp-2 text-sm font-semibold">{p.name}</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">
-                    {[p.variant_label, p.size_pack].filter(Boolean).join(" · ") || tree.labelFor(p.category_id) || "—"}
+              <div key={p.id}
+                className="sk-card group relative flex flex-col overflow-hidden p-0 text-left transition-colors hover:border-sk-coral">
+                <button type="button" disabled={busy}
+                  onClick={() => { target.current = p; fileRef.current?.click(); }}
+                  className="flex flex-col text-left disabled:opacity-60">
+                  <div className="relative grid aspect-square w-full place-items-center overflow-hidden bg-sk-surface-muted">
+                    {img
+                      ? <img src={img} alt={p.name} className="absolute inset-0 h-full w-full object-contain p-2" loading="lazy" />
+                      : <ImageIcon className="h-8 w-8 text-muted-foreground" />}
+                    <span className="absolute bottom-2 right-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-sk-coral text-white shadow">
+                      {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                    </span>
                   </div>
-                </div>
-              </button>
+                  <div className="p-3">
+                    <div className="line-clamp-2 text-sm font-semibold">{p.name}</div>
+                    <div className="mt-0.5 text-xs text-muted-foreground">
+                      {[p.variant_label, p.size_pack].filter(Boolean).join(" · ") || tree.labelFor(p.category_id) || "—"}
+                    </div>
+                  </div>
+                </button>
+                {tenantId && (
+                  <StudioSnapDialog
+                    tenantId={tenantId}
+                    productId={p.id}
+                    label={p.name}
+                    buttonLabel=""
+                    onProgress={refreshPhotos}
+                    className="absolute left-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-white/95 text-sk-coral-dark shadow"
+                  />
+                )}
+              </div>
             );
           })}
+
           {page.length === 0 && (
             <div className="col-span-full py-16 text-center text-muted-foreground">
               {listQ.isLoading ? "Loading…" : "Nothing here — every product in this view has a photo."}
