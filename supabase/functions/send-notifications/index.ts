@@ -33,6 +33,30 @@ function isQuietHours(nowUtc: Date, quietStart: string, quietEnd: string): boole
   const e = eh + (em ?? 0) / 60;
   return s <= e ? h >= s && h < e : h >= s || h < e;
 }
+/** Reschedule payloads carry raw ISO times — expose them in SA-friendly wording. */
+function fmtSaDateTime(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const date = d.toLocaleDateString("en-ZA", {
+    weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: "Africa/Johannesburg",
+  });
+  const time = d.toLocaleTimeString("en-ZA", {
+    hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Africa/Johannesburg",
+  });
+  return `${date}, ${time}`;
+}
+
+function buildChangeCtx(payload: any): Record<string, string> {
+  return {
+    previous_start: fmtSaDateTime(payload?.from_start),
+    new_start: fmtSaDateTime(payload?.to_start),
+    previous_end: fmtSaDateTime(payload?.from_end),
+    new_end: fmtSaDateTime(payload?.to_end),
+    invoice_line: typeof payload?.invoice_line === "string" ? payload.invoice_line : "",
+  };
+}
+
 
 function buildInvoiceCtx(invoice: any, brand: any): any {
   if (!invoice) return null;
@@ -142,15 +166,28 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // Pet name for booking events that carry no pet_id (booking_pets is the link).
+      let pet: any = petRes.data;
+      if (!pet && ev.booking_id) {
+        const { data: bp } = await sb
+          .from("booking_pets")
+          .select("pet:pets(id, name)")
+          .eq("booking_id", ev.booking_id)
+          .limit(1);
+        pet = (bp?.[0] as any)?.pet ?? null;
+      }
+
       const ctx = {
         tenant: tenantRes.data,
         customer,
         booking: bookingRes.data,
         invoice: buildInvoiceCtx(invoiceRes.data, brand),
-        pet: petRes.data,
+        pet,
         vaccine: ev.payload?.vaccine ?? {},
+        change: buildChangeCtx(ev.payload),
         payload: ev.payload,
       };
+
       const tenantName = (tenantRes.data as any)?.name ?? "Sloppy Kisses";
       const fallbackSubject = `${ev.event_type} — ${tenantName}`;
       const subject = (tpl.subject ? render(tpl.subject, ctx) : "") || fallbackSubject;
