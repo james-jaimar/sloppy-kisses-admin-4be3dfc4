@@ -50,13 +50,15 @@ Deno.serve(async (req) => {
 
   const { data: est } = await admin
     .from("estimates")
-    .select("id, status, booking_id, customer_id, tenant_id, public_token, hold_expires_at")
+    .select("id, status, booking_id, enrolment_id, customer_id, tenant_id, public_token, hold_expires_at")
     .eq("id", quote_id)
     .maybeSingle();
   if (!est || est.customer_id !== customer.id) return j(403, { error: "forbidden" });
 
   if (action === "cancel") {
-    if (est.booking_id) return j(200, { ok: false, error: "This quote has already become a booking." });
+    if (est.booking_id || est.enrolment_id) {
+      return j(200, { ok: false, error: "This quote has already been accepted." });
+    }
     const { error } = await admin
       .from("estimates")
       .update({ status: "cancelled", declined_at: new Date().toISOString(), updated_at: new Date().toISOString() })
@@ -66,6 +68,7 @@ Deno.serve(async (req) => {
   }
 
   if (est.booking_id) return j(200, { ok: true, booking_id: est.booking_id });
+  if (est.enrolment_id) return j(200, { ok: true, enrolment_id: est.enrolment_id });
   if (est.status !== "sent") return j(200, { ok: false, error: "This quote is no longer available." });
   if (est.hold_expires_at && new Date(est.hold_expires_at).getTime() <= Date.now()) {
     return j(200, { ok: false, error: "This quote has expired — please start a new booking." });
@@ -78,7 +81,8 @@ Deno.serve(async (req) => {
 
   return j(200, {
     ok: true,
-    booking_id: res.booking_id,
+    booking_id: res.booking_id ?? null,
+    enrolment_id: res.enrolment_id ?? null,
     invoice_number: res.invoice_number ?? null,
     invoice_token: res.invoice_token ?? null,
   });

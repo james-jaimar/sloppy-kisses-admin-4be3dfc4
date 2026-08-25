@@ -34,7 +34,7 @@ export default function QuotesListPage() {
     <>
       <AppHeader
         title="Quotes"
-        subtitle="Send a hotel quote, then accept it to create the booking and deposit invoice."
+        subtitle="Quote a hotel stay or a daycare place, then accept it to create the booking or enrolment and its invoice."
         actions={
           <button
             onClick={() => setOpen(true)}

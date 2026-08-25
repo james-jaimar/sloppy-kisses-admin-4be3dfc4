@@ -94,7 +94,11 @@ Deno.serve(async (req) => {
     ? Math.max(1, Math.round((new Date(q.end_at).getTime() - new Date(q.start_at).getTime()) / 86400000))
     : null;
   const total = Number(q.total ?? 0);
-  const deposit = Math.round(total * 50) / 100;
+  const isDaycare = q.service_type === "daycare";
+  // Daycare places are billed in full for the first month — there is no 50% deposit.
+  const deposit = isDaycare ? total : Math.round(total * 50) / 100;
+  const daycarePlan = extras?.daycare_plan_name ?? null;
+  const daycareDays: string[] = Array.isArray(extras?.weekdays) ? extras.weekdays : [];
   const validUntil = q.hold_until ?? q.expiry_date ?? null;
   const firstName = (customer?.full_name ?? "there").split(/\s+/)[0];
 
@@ -104,9 +108,11 @@ Deno.serve(async (req) => {
     pet: { names: petNames.length ? petNames.join(" and ") : "your dog" },
     quote: {
       number: q.estimate_number ?? "",
-      dates: q.start_at ? `${fmtD(q.start_at)} to ${fmtD(q.end_at)}` : "your requested dates",
+      dates: isDaycare
+        ? (q.start_at ? `starting ${fmtD(q.start_at)}` : "your requested start date")
+        : (q.start_at ? `${fmtD(q.start_at)} to ${fmtD(q.end_at)}` : "your requested dates"),
       nights: nights ?? "",
-      accommodation: q.accommodation_type ?? "",
+      accommodation: (isDaycare ? daycarePlan : q.accommodation_type) ?? "",
       total: fmtZar(total),
       deposit: fmtZar(deposit),
       valid_until: fmtD(validUntil),
@@ -157,8 +163,11 @@ Deno.serve(async (req) => {
     quoteNumber: q.estimate_number ?? "",
     startAt: q.start_at,
     endAt: q.end_at,
-    nights,
-    accommodationType: q.accommodation_type,
+    nights: isDaycare ? null : nights,
+    accommodationType: isDaycare
+      ? [daycarePlan, daycareDays.length ? `${daycareDays.length} day${daycareDays.length === 1 ? "" : "s"} a week` : null]
+          .filter(Boolean).join(" — ") || null
+      : q.accommodation_type,
     petNames,
     checkInWindow: extras?.check_in_window ?? null,
     checkOutWindow: extras?.check_out_window ?? null,

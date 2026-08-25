@@ -13,6 +13,7 @@ export interface PortalQuote {
   hold_expires_at: string | null;
   expiry_date: string | null;
   booking_id: string | null;
+  enrolment_id: string | null;
   created_via: string | null;
   pet_ids: string[];
 }
@@ -25,7 +26,7 @@ export function usePortalQuotes(customerId?: string) {
       const { data, error } = await supabase
         .from("estimates")
         .select(
-          "id, estimate_number, status, service_type, accommodation_type, start_at, end_at, total, hold_expires_at, expiry_date, booking_id, created_via, pet_ids",
+          "id, estimate_number, status, service_type, accommodation_type, start_at, end_at, total, hold_expires_at, expiry_date, booking_id, enrolment_id, created_via, pet_ids",
         )
         .eq("customer_id", customerId!)
         .order("created_at", { ascending: false });
@@ -43,7 +44,7 @@ export function usePortalQuote(id?: string) {
       const { data, error } = await supabase
         .from("estimates")
         .select(
-          "id, estimate_number, status, service_type, accommodation_type, start_at, end_at, total, subtotal, notes, hold_expires_at, expiry_date, booking_id, public_token, pet_ids",
+          "id, estimate_number, status, service_type, accommodation_type, start_at, end_at, total, subtotal, notes, hold_expires_at, expiry_date, booking_id, enrolment_id, public_token, extras, pet_ids",
         )
         .eq("id", id!)
         .maybeSingle();

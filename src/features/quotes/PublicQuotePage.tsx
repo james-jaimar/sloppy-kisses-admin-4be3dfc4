@@ -85,7 +85,9 @@ export default function PublicQuotePage() {
   const { quote, items, pets, tenant, customer } = data;
   const brand = tenant?.primary_colour || "#ff5a5a";
   const total = Number(quote?.total ?? 0);
-  const deposit = Math.round(total * 50) / 100;
+  const isDaycare = quote?.service_type === "daycare";
+  // Daycare places are billed in full for the first month — no 50% deposit.
+  const deposit = isDaycare ? total : Math.round(total * 50) / 100;
   const nights = quote?.start_at && quote?.end_at
     ? Math.max(1, Math.round((new Date(quote.end_at).getTime() - new Date(quote.start_at).getTime()) / 86400000))
     : null;
@@ -97,7 +99,7 @@ export default function PublicQuotePage() {
         <div className="sk-card overflow-hidden">
           <div className="px-6 py-6 text-center sm:px-8" style={{ background: brand }}>
             <div className="text-xs font-bold uppercase tracking-[0.16em] text-white/85">
-              Hotel quote {quote?.estimate_number}
+              {isDaycare ? "Daycare quote" : "Hotel quote"} {quote?.estimate_number}
             </div>
             <div className="mt-1 text-2xl font-extrabold text-white">{tenant?.name}</div>
           </div>
@@ -105,11 +107,19 @@ export default function PublicQuotePage() {
           {done ? (
             <div className="p-6 text-center sm:p-8">
               <CheckCircle2 className="mx-auto h-10 w-10" style={{ color: brand }} />
-              <h1 className="mt-3 text-xl font-semibold">Thank you — your booking is confirmed</h1>
+              <h1 className="mt-3 text-xl font-semibold">
+                {isDaycare ? "Thank you — the daycare place is booked" : "Thank you — your booking is confirmed"}
+              </h1>
               <p className="mt-2 text-sm text-muted-foreground">
-                {fmtDate(quote?.start_at)} – {fmtDate(quote?.end_at)}
-                {nights ? ` · ${nights} night${nights === 1 ? "" : "s"}` : ""} for{" "}
-                {pets.map((p) => p.name).join(", ") || "your dog"}.
+                {isDaycare ? (
+                  <>Starting {fmtDate(quote?.start_at)} for {pets.map((p) => p.name).join(", ") || "your dog"}.</>
+                ) : (
+                  <>
+                    {fmtDate(quote?.start_at)} – {fmtDate(quote?.end_at)}
+                    {nights ? ` · ${nights} night${nights === 1 ? "" : "s"}` : ""} for{" "}
+                    {pets.map((p) => p.name).join(", ") || "your dog"}.
+                  </>
+                )}
               </p>
               <p className="mt-3 text-sm text-muted-foreground">
                 {done.invoice_number
@@ -126,7 +136,7 @@ export default function PublicQuotePage() {
                   <a href="/login"
                     className="mt-3 inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold text-white"
                     style={{ background: brand }}>
-                    Sign in to pay the deposit
+                    {isDaycare ? "Sign in to pay" : "Sign in to pay the deposit"}
                   </a>
                 </div>
               ) : (
@@ -144,8 +154,25 @@ export default function PublicQuotePage() {
 
               <div className="mt-5 rounded-xl border border-border">
                 <dl className="divide-y divide-border text-sm">
-                  <Row label="Dates" value={`${fmtDate(quote?.start_at)} – ${fmtDate(quote?.end_at)}${nights ? ` · ${nights} night${nights === 1 ? "" : "s"}` : ""}`} icon={<CalendarDays className="h-4 w-4" />} />
-                  {quote?.accommodation_type && <Row label="Accommodation" value={quote.accommodation_type} />}
+                  {isDaycare ? (
+                    <Row label="Starts" value={fmtDate(quote?.start_at)} icon={<CalendarDays className="h-4 w-4" />} />
+                  ) : (
+                    <Row label="Dates" value={`${fmtDate(quote?.start_at)} – ${fmtDate(quote?.end_at)}${nights ? ` · ${nights} night${nights === 1 ? "" : "s"}` : ""}`} icon={<CalendarDays className="h-4 w-4" />} />
+                  )}
+                  {isDaycare && (quote?.extras as any)?.daycare_plan_name && (
+                    <Row label="Plan" value={String((quote?.extras as any).daycare_plan_name)} />
+                  )}
+                  {isDaycare && Array.isArray((quote?.extras as any)?.weekdays) && (
+                    <Row
+                      label="Days"
+                      value={((quote?.extras as any).weekdays as string[])
+                        .map((d) => d.slice(0, 3).replace(/^./, (c) => c.toUpperCase())).join(", ")}
+                    />
+                  )}
+                  {isDaycare && (quote?.extras as any)?.daycare_monthly_price && (
+                    <Row label="Monthly after that" value={fmtZar(Number((quote?.extras as any).daycare_monthly_price))} />
+                  )}
+                  {!isDaycare && quote?.accommodation_type && <Row label="Accommodation" value={quote.accommodation_type} />}
                   {quote?.extras?.check_in_window && <Row label="Arrival" value={quote.extras.check_in_window} icon={<Clock className="h-4 w-4" />} />}
                   {quote?.extras?.check_out_window && <Row label="Collection" value={quote.extras.check_out_window} icon={<Clock className="h-4 w-4" />} />}
                 </dl>
@@ -169,11 +196,15 @@ export default function PublicQuotePage() {
 
               <div className="mt-5 grid grid-cols-2 gap-4 rounded-xl border border-border p-4">
                 <div>
-                  <div className="text-xs text-muted-foreground">Total for the stay</div>
+                  <div className="text-xs text-muted-foreground">
+                    {isDaycare ? "First invoice" : "Total for the stay"}
+                  </div>
                   <div className="text-xl font-extrabold">{fmtZar(total)}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">50% deposit to secure</div>
+                  <div className="text-xs text-muted-foreground">
+                    {isDaycare ? "Payable to secure the place" : "50% deposit to secure"}
+                  </div>
                   <div className="text-xl font-extrabold" style={{ color: brand }}>{fmtZar(deposit)}</div>
                 </div>
               </div>
@@ -203,7 +234,9 @@ export default function PublicQuotePage() {
                     Accept this quote
                   </button>
                   <div className="mt-3 text-xs text-muted-foreground">
-                    Accepting confirms the booking and generates your invoice.
+                    {isDaycare
+                      ? "Accepting books the daycare place and generates your first invoice."
+                      : "Accepting confirms the booking and generates your invoice."}
                   </div>
                 </div>
               )}
