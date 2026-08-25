@@ -8147,7 +8147,9 @@ export type Database = {
           id: string
           label: string | null
           max_files: number
+          mode: string
           pet_id: string | null
+          product_id: string | null
           tenant_id: string
           token: string
           updated_at: string
@@ -8164,7 +8166,9 @@ export type Database = {
           id?: string
           label?: string | null
           max_files?: number
+          mode?: string
           pet_id?: string | null
+          product_id?: string | null
           tenant_id: string
           token: string
           updated_at?: string
@@ -8181,7 +8185,9 @@ export type Database = {
           id?: string
           label?: string | null
           max_files?: number
+          mode?: string
           pet_id?: string | null
+          product_id?: string | null
           tenant_id?: string
           token?: string
           updated_at?: string
@@ -8213,6 +8219,13 @@ export type Database = {
             columns: ["pet_id"]
             isOneToOne: false
             referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upload_sessions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {

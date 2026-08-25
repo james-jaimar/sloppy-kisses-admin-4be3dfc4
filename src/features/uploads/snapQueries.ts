@@ -137,3 +137,50 @@ export async function readFnError(error: any): Promise<string> {
   }
   return error?.message ?? "Something went wrong";
 }
+
+// ---------------- Shop photo studio (phone -> product photos) --------------
+
+export interface StudioSessionInput {
+  tenantId: string;
+  /** Omit for a whole-catalogue studio session. */
+  productId?: string | null;
+  label?: string | null;
+}
+
+/** Creates a phone session that can photograph shop products. */
+export function useCreateStudioSession() {
+  return useMutation({
+    mutationFn: async (t: StudioSessionInput): Promise<SnapSession> => {
+      const { data, error } = await supabase!.functions.invoke("snap-upload", {
+        body: {
+          action: "create",
+          tenant_id: t.tenantId,
+          product_id: t.productId ?? null,
+          mode: t.productId ? "single" : "studio",
+          doc_type: "product_photo",
+          label: t.label ?? null,
+        },
+      });
+      if (error) throw new Error(await readFnError(error));
+      return data as SnapSession;
+    },
+  });
+}
+
+/** How many photos have landed through a phone session (polled on the desktop). */
+export function useSnapSessionProgress(sessionId: string | null) {
+  return useQuery({
+    queryKey: ["snap_session_progress", sessionId],
+    enabled: Boolean(sessionId),
+    refetchInterval: 3000,
+    queryFn: async () => {
+      const { data, error } = await supabase!
+        .from("upload_sessions")
+        .select("id, files_uploaded, max_files, expires_at, closed_at")
+        .eq("id", sessionId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as { id: string; files_uploaded: number; max_files: number; expires_at: string; closed_at: string | null } | null;
+    },
+  });
+}

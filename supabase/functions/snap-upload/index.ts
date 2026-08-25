@@ -37,10 +37,13 @@ function newToken() {
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
+const PRODUCT_IMAGE_BUCKET = "product-images";
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+
 async function loadSession(token: string) {
   const { data } = await admin
     .from("upload_sessions")
-    .select("id, tenant_id, pet_id, customer_id, booking_id, doc_type, label, expires_at, max_files, files_uploaded, closed_at")
+    .select("id, tenant_id, pet_id, customer_id, booking_id, product_id, mode, doc_type, label, expires_at, max_files, files_uploaded, closed_at")
     .eq("token", token)
     .maybeSingle();
   if (!data) return { error: "not_found" as const };
@@ -48,6 +51,51 @@ async function loadSession(token: string) {
   if (new Date(data.expires_at).getTime() < Date.now()) return { error: "expired" as const };
   return { session: data };
 }
+
+/** Saves a shop product photo into Supabase storage and points the product at it. */
+async function saveProductPhoto(s: any, productId: string, file: File) {
+  const { data: product } = await admin
+    .from("products")
+    .select("id, tenant_id, image_url")
+    .eq("id", productId)
+    .maybeSingle();
+  if (!product || product.tenant_id !== s.tenant_id) return json(403, { error: "forbidden" });
+  if (s.mode !== "studio" && s.product_id && s.product_id !== productId) {
+    return json(403, { error: "forbidden" });
+  }
+
+  const contentType = file.type || "image/jpeg";
+  if (!IMAGE_TYPES.includes(contentType)) return json(415, { error: "unsupported_type" });
+
+  const { data: settings } = await admin
+    .from("document_settings").select("max_upload_mb").eq("tenant_id", s.tenant_id).maybeSingle();
+  const maxMb = Number(settings?.max_upload_mb ?? 20);
+  if (file.size > maxMb * 1024 * 1024) return json(413, { error: `File exceeds ${maxMb}MB limit` });
+
+  const nameExt = (file.name.split(".").pop() ?? "").toLowerCase();
+  const ext = nameExt && nameExt.length <= 5
+    ? nameExt
+    : contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const path = `${s.tenant_id}/${productId}-${Date.now()}.${ext}`;
+
+  const { error: upErr } = await admin.storage
+    .from(PRODUCT_IMAGE_BUCKET)
+    .upload(path, new Uint8Array(await file.arrayBuffer()), { contentType, upsert: true, cacheControl: "3600" });
+  if (upErr) return json(502, { error: upErr.message });
+
+  const { error: setErr } = await admin.from("products").update({ image_url: path }).eq("id", productId);
+  if (setErr) return json(500, { error: setErr.message });
+
+  if (product.image_url && !/^https?:\/\//i.test(product.image_url)) {
+    await admin.storage.from(PRODUCT_IMAGE_BUCKET).remove([product.image_url]).catch(() => undefined);
+  }
+  await admin.from("upload_sessions")
+    .update({ files_uploaded: Number(s.files_uploaded) + 1 })
+    .eq("id", s.id);
+
+  return json(200, { product_id: productId, image_path: path });
+}
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -71,6 +119,11 @@ Deno.serve(async (req) => {
     const s = loaded.session!;
 
     if (Number(s.files_uploaded) >= Number(s.max_files)) return json(429, { error: "limit_reached" });
+
+    // Shop product photos live in Supabase storage, not the documents/S3 pipeline.
+    const productId = String(form.get("product_id") ?? "") || (s.mode === "single" ? s.product_id : null);
+    if (productId) return await saveProductPhoto(s, productId, file);
+
     const contentType = file.type || "application/octet-stream";
     if (!ALLOWED_TYPES.includes(contentType)) return json(415, { error: "unsupported_type" });
 
@@ -158,6 +211,8 @@ Deno.serve(async (req) => {
     const tenantId = body.tenant_id as string | undefined;
     if (!tenantId) return json(400, { error: "tenant_id required" });
 
+    const mode = body.mode === "studio" ? "studio" : "single";
+
     // The caller must already be able to read the target through RLS.
     if (body.pet_id) {
       const { data: pet } = await asCaller.from("pets").select("id").eq("id", body.pet_id).maybeSingle();
@@ -166,6 +221,15 @@ Deno.serve(async (req) => {
       const { data: cust } = await asCaller.from("customers").select("id").eq("id", body.customer_id).maybeSingle();
       if (!cust) return json(403, { error: "forbidden" });
     }
+    if (body.product_id) {
+      const { data: prod } = await asCaller.from("products").select("id").eq("id", body.product_id).maybeSingle();
+      if (!prod) return json(403, { error: "forbidden" });
+    } else if (mode === "studio") {
+      // Studio sessions cover the whole catalogue — prove the caller can read it.
+      const { data: any1 } = await asCaller
+        .from("products").select("id").eq("tenant_id", tenantId).limit(1).maybeSingle();
+      if (!any1) return json(403, { error: "forbidden" });
+    }
 
     const { data: settings } = await admin
       .from("document_settings")
@@ -173,7 +237,7 @@ Deno.serve(async (req) => {
       .eq("tenant_id", tenantId)
       .maybeSingle();
     const minutes = Number(settings?.snap_expiry_minutes ?? 15);
-    const maxFiles = Number(settings?.snap_max_files ?? 10);
+    const maxFiles = mode === "studio" ? 200 : Number(settings?.snap_max_files ?? 10);
 
     const token = newToken();
     const { data: session, error } = await admin
@@ -184,6 +248,8 @@ Deno.serve(async (req) => {
         pet_id: body.pet_id ?? null,
         customer_id: body.customer_id ?? null,
         booking_id: body.booking_id ?? null,
+        product_id: body.product_id ?? null,
+        mode,
         doc_type: body.doc_type ?? "other",
         label: body.label ?? null,
         created_by_profile_id: profile.id,
@@ -195,6 +261,7 @@ Deno.serve(async (req) => {
     if (error) return json(500, { error: error.message });
     return json(200, session);
   }
+
 
   // ---- token-authorised actions ----------------------------------------
   const token = String(body.token ?? "");
@@ -208,12 +275,55 @@ Deno.serve(async (req) => {
     return json(200, {
       label: s.label,
       doc_type: s.doc_type,
+      mode: s.mode,
+      product_id: s.product_id,
       expires_at: s.expires_at,
       max_files: s.max_files,
       files_uploaded: s.files_uploaded,
       business_name: tenant?.name ?? null,
     });
   }
+
+  // ---- studio: browse the tenant's products from the phone ---------------
+  if (action === "products") {
+    const search = String(body.search ?? "").trim();
+    const missingOnly = body.missing_only === true;
+    let q = admin
+      .from("products")
+      .select("id, name, sku, barcode, size_pack, variant_label, image_url")
+      .eq("tenant_id", s.tenant_id)
+      .eq("active", true)
+      .order("name", { ascending: true })
+      .limit(Number(body.limit ?? 60));
+    if (s.mode !== "studio" && s.product_id) q = q.eq("id", s.product_id);
+    if (missingOnly) q = q.is("image_url", null);
+    if (search) {
+      const like = `%${search}%`;
+      q = q.or(`name.ilike.${like},sku.ilike.${like},barcode.ilike.${like},external_code.ilike.${like}`);
+    }
+    const { data, error } = await q;
+    if (error) return json(500, { error: error.message });
+    const rows = (data ?? []).map((p: any) => ({
+      ...p,
+      image_public_url: p.image_url
+        ? (/^https?:\/\//i.test(p.image_url)
+            ? p.image_url
+            : `${SUPABASE_URL}/storage/v1/object/public/${PRODUCT_IMAGE_BUCKET}/${p.image_url}`)
+        : null,
+    }));
+    return json(200, { products: rows });
+  }
+
+  // ---- keep an actively-used session alive -------------------------------
+  if (action === "extend") {
+    const { data: settings } = await admin
+      .from("document_settings").select("snap_expiry_minutes").eq("tenant_id", s.tenant_id).maybeSingle();
+    const minutes = Number(settings?.snap_expiry_minutes ?? 15);
+    const expires = new Date(Date.now() + minutes * 60_000).toISOString();
+    await admin.from("upload_sessions").update({ expires_at: expires }).eq("id", s.id);
+    return json(200, { expires_at: expires });
+  }
+
 
   if (action === "sign") {
     if (Number(s.files_uploaded) >= Number(s.max_files)) return json(429, { error: "limit_reached" });
