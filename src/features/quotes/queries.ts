@@ -18,6 +18,7 @@ export interface QuoteRow {
   accommodation_type: string | null;
   pet_ids: string[] | null;
   booking_id: string | null;
+  enrolment_id: string | null;
   sent_at: string | null;
   accepted_at: string | null;
   declined_at: string | null;
@@ -26,7 +27,7 @@ export interface QuoteRow {
   customer?: { id: string; full_name: string | null; email: string | null } | null;
 }
 
-/** Everything the quote carries over to the booking when it is accepted. */
+/** Everything the quote carries over to the booking or enrolment when it is accepted. */
 export interface QuoteExtras {
   check_in_window?: string | null;
   check_out_window?: string | null;
@@ -39,6 +40,13 @@ export interface QuoteExtras {
     grooming_required?: boolean;
     grooming_notes?: string | null;
   }[];
+  /** Daycare quotes — read by accept_daycare_estimate to build the enrolment. */
+  daycare_plan_id?: string | null;
+  daycare_plan_name?: string | null;
+  daycare_monthly_price?: number | null;
+  weekdays?: string[];
+  start_date?: string | null;
+  assessment_waived?: boolean;
 }
 
 export interface QuoteItemRow {

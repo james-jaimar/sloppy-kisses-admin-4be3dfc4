@@ -104,8 +104,18 @@ export async function renderQuotePdf({ q, items, customer, settings, tenant, adm
   // ── Stay summary ──────────────────────────────────────────────────────────
   const extras = (q.extras ?? {}) as any;
   const stayBits: string[] = [];
-  if (q.start_at || q.end_at) stayBits.push(`${fmtDate(q.start_at)} to ${fmtDate(q.end_at)}`);
-  if (q.accommodation_type) stayBits.push(String(q.accommodation_type));
+  const isDaycare = q.service_type === "daycare";
+  if (isDaycare) {
+    if (q.start_at) stayBits.push(`Starts ${fmtDate(q.start_at)}`);
+    if (extras?.daycare_plan_name) stayBits.push(String(extras.daycare_plan_name));
+    if (Array.isArray(extras?.weekdays) && extras.weekdays.length) {
+      stayBits.push(extras.weekdays.map((d: string) => String(d).slice(0, 3).replace(/^./, (c: string) => c.toUpperCase())).join(", "));
+    }
+    if (extras?.daycare_monthly_price) stayBits.push(`Then R${Number(extras.daycare_monthly_price).toFixed(2)} per month, per dog`);
+  } else {
+    if (q.start_at || q.end_at) stayBits.push(`${fmtDate(q.start_at)} to ${fmtDate(q.end_at)}`);
+    if (q.accommodation_type) stayBits.push(String(q.accommodation_type));
+  }
   if (extras?.check_in_window) stayBits.push(`Arrival ${extras.check_in_window}`);
   if (extras?.check_out_window) stayBits.push(`Collection ${extras.check_out_window}`);
   const groomPets: string[] = (extras?.pets ?? [])
@@ -116,7 +126,7 @@ export async function renderQuotePdf({ q, items, customer, settings, tenant, adm
   if (stayBits.length) {
     const stayH = 44;
     page.drawRectangle({ x: M, y: cursorY - stayH, width: width - 2 * M, height: stayH, color: brandSoft, opacity: 0.5, borderColor: line, borderWidth: 0.6 });
-    draw("YOUR STAY", M + 10, cursorY - 15, 7, bold, muted);
+    draw(isDaycare ? "DAYCARE PLACE" : "YOUR STAY", M + 10, cursorY - 15, 7, bold, muted);
     wrapText(page, safe(stayBits.join("   |   ")), M + 10, cursorY - 30, width - 2 * M - 20, 9.5, reg, text);
     cursorY -= stayH + 18;
   }

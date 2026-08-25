@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, ArrowLeftRight, Pencil, Trash2 } from "lucide-react";
+import { Plus, ArrowLeftRight, Pencil, Trash2, FileText } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -8,6 +8,8 @@ import { useDaycareEnrolments, useDeleteEnrolment, WEEKDAY_LABEL, type DaycareEn
 import { EnrolmentDrawer } from "./EnrolmentDrawer";
 import { DaySwapDialog } from "./DaySwapDialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { NewQuoteDrawer } from "@/features/quotes/NewQuoteDrawer";
+import { Can } from "@/components/auth/Can";
 
 export default function EnrolmentsPage() {
   const { tenant } = useCurrentTenant();
@@ -20,6 +22,7 @@ export default function EnrolmentsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<DaycareEnrolment | null>(null);
   const [swapEnrolment, setSwapEnrolment] = useState<DaycareEnrolment | null>(null);
+  const [quoteOpen, setQuoteOpen] = useState(false);
 
   const rows = useMemo(() => listQ.data ?? [], [listQ.data]);
 
@@ -49,6 +52,14 @@ export default function EnrolmentsPage() {
               <input type="checkbox" checked={showInactive} onChange={(e) => setShowInactive(e.target.checked)} />
               Show inactive
             </label>
+            <Can code="bookings.create">
+              <button
+                onClick={() => setQuoteOpen(true)}
+                className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 text-sm font-semibold hover:bg-sk-surface-muted"
+              >
+                <FileText className="h-4 w-4" /> Quote a place
+              </button>
+            </Can>
             <button
               onClick={() => { setEditing(null); setDrawerOpen(true); }}
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-sk-coral px-3 text-sm font-semibold text-white hover:bg-sk-coral-dark"
@@ -144,6 +155,9 @@ export default function EnrolmentsPage() {
       </div>
 
       <EnrolmentDrawer tenantId={tenantId as string} open={drawerOpen} onOpenChange={setDrawerOpen} editing={editing} />
+      {quoteOpen && tenantId && (
+        <NewQuoteDrawer tenantId={tenantId} initialService="daycare" onClose={() => setQuoteOpen(false)} />
+      )}
       <DaySwapDialog tenantId={tenantId as string} enrolment={swapEnrolment} open={!!swapEnrolment} onOpenChange={(v) => !v && setSwapEnrolment(null)} />
     </>
   );

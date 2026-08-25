@@ -3151,6 +3151,7 @@ export type Database = {
           customer_id: string
           declined_at: string | null
           end_at: string | null
+          enrolment_id: string | null
           estimate_number: string
           expiry_date: string | null
           extras: Json
@@ -3183,6 +3184,7 @@ export type Database = {
           customer_id: string
           declined_at?: string | null
           end_at?: string | null
+          enrolment_id?: string | null
           estimate_number: string
           expiry_date?: string | null
           extras?: Json
@@ -3215,6 +3217,7 @@ export type Database = {
           customer_id?: string
           declined_at?: string | null
           end_at?: string | null
+          enrolment_id?: string | null
           estimate_number?: string
           expiry_date?: string | null
           extras?: Json
@@ -3263,6 +3266,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "estimates_enrolment_id_fkey"
+            columns: ["enrolment_id"]
+            isOneToOne: false
+            referencedRelation: "daycare_enrolments"
             referencedColumns: ["id"]
           },
           {
@@ -9046,6 +9056,10 @@ export type Database = {
       _strip_transport_leg_lines: {
         Args: { p_leg_id: string }
         Returns: undefined
+      }
+      accept_daycare_estimate: {
+        Args: { p_estimate_id: string }
+        Returns: string
       }
       accept_estimate: { Args: { p_estimate_id: string }; Returns: string }
       accept_public_quote: { Args: { p_token: string }; Returns: Json }

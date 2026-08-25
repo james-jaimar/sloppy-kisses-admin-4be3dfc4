@@ -7,6 +7,7 @@ import {
   useQuote, useQuoteItems, useUpdateQuoteStatus, useAcceptQuote,
   useSendQuote, downloadQuotePdf, isQuoteExpired,
 } from "./queries";
+import { WEEKDAY_LABEL, type Weekday } from "@/features/daycare/queries";
 
 export default function QuoteDetailPage() {
   const { id } = useParams();
@@ -19,6 +20,8 @@ export default function QuoteDetailPage() {
 
   const q = quoteQ.data;
   const expired = q ? isQuoteExpired(q) : false;
+  const isDaycare = q?.service_type === "daycare";
+  const converted = Boolean(q?.booking_id || q?.enrolment_id);
   async function onSend() {
     if (!id) return;
     try {
@@ -42,9 +45,14 @@ export default function QuoteDetailPage() {
   async function onAccept() {
     if (!id) return;
     try {
-      const bookingId = await accept.mutateAsync(id);
-      toast.success("Booking created — deposit invoice issued");
-      navigate(`/admin/bookings/${bookingId}`);
+      const newId = await accept.mutateAsync(id);
+      if (isDaycare) {
+        toast.success("Enrolment created — first invoice raised");
+        navigate("/admin/daycare");
+      } else {
+        toast.success("Booking created — deposit invoice issued");
+        navigate(`/admin/bookings/${newId}`);
+      }
     } catch (err: any) {
       toast.error(err?.message ?? "Could not accept quote");
     }
@@ -74,13 +82,14 @@ export default function QuoteDetailPage() {
                 <Send className="h-4 w-4" /> {send.isPending ? "Sending…" : q.sent_at ? "Resend to customer" : "Email to customer"}
               </button>
             )}
-            {q && !q.booking_id && q.status !== "cancelled" && (
+            {q && !converted && q.status !== "cancelled" && (
               <button
                 onClick={onAccept}
                 disabled={accept.isPending}
                 className="inline-flex h-10 items-center gap-2 rounded-lg bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral/90 disabled:opacity-50"
               >
-                <CheckCircle2 className="h-4 w-4" /> Accept &amp; create booking
+                <CheckCircle2 className="h-4 w-4" />
+                {isDaycare ? "Accept & create enrolment" : "Accept & create booking"}
               </button>
             )}
             {q && q.status !== "accepted" && q.status !== "cancelled" && (
@@ -108,8 +117,15 @@ export default function QuoteDetailPage() {
         {q && (
           <div className="sk-card grid gap-4 p-4 sm:grid-cols-4">
             <Info label="Status" value={expired ? "expired" : q.status} />
-            <Info label="Check-in" value={q.start_at ? format(parseISO(q.start_at), "dd MMM yyyy") : "—"} />
-            <Info label="Check-out" value={q.end_at ? format(parseISO(q.end_at), "dd MMM yyyy") : "—"} />
+            <Info
+              label={isDaycare ? "Starts" : "Check-in"}
+              value={q.start_at ? format(parseISO(q.start_at), "dd MMM yyyy") : "—"}
+            />
+            {isDaycare ? (
+              <Info label="Service" value="Daycare place" />
+            ) : (
+              <Info label="Check-out" value={q.end_at ? format(parseISO(q.end_at), "dd MMM yyyy") : "—"} />
+            )}
             <Info label="Total" value={`R${Number(q.total ?? 0).toFixed(2)}`} />
           </div>
         )}
@@ -123,7 +139,26 @@ export default function QuoteDetailPage() {
           </div>
         )}
 
-        {q && q.status === "sent" && q.hold_until && !q.booking_id && (
+        {q && isDaycare && (
+          <div className="sk-card grid gap-4 p-4 text-sm sm:grid-cols-4">
+            <Info label="Plan" value={q.extras?.daycare_plan_name ?? "—"} />
+            <Info
+              label="Days per week"
+              value={(q.extras?.weekdays ?? []).map((d) => WEEKDAY_LABEL[d as Weekday] ?? d).join(", ") || "—"}
+            />
+            <Info
+              label="Ongoing monthly"
+              value={
+                q.extras?.daycare_monthly_price
+                  ? `R${(Number(q.extras.daycare_monthly_price) * ((q.pet_ids ?? []).length || 1)).toFixed(2)}`
+                  : "—"
+              }
+            />
+            <Info label="Assessment" value={q.extras?.assessment_waived ? "Waived / already done" : "Still required"} />
+          </div>
+        )}
+
+        {q && q.status === "sent" && q.hold_until && !converted && !isDaycare && (
           <div className="rounded-lg border border-sk-coral/30 bg-sk-coral-soft p-3 text-sm text-sk-coral-dark">
             These dates are pencilled in until {format(parseISO(q.hold_until), "dd MMM yyyy")}. If the quote isn't
             accepted by then the hold is released automatically and the dates go back on sale.
@@ -167,6 +202,12 @@ export default function QuoteDetailPage() {
         </div>
 
         {q?.notes && <div className="sk-card p-4 text-sm text-muted-foreground">{q.notes}</div>}
+
+        {q?.enrolment_id && (
+          <Link to="/admin/daycare" className="text-sm font-semibold text-sk-coral-dark">
+            View the daycare enrolment created from this quote →
+          </Link>
+        )}
 
         {q?.booking_id && (
           <Link to={`/admin/bookings/${q.booking_id}`} className="text-sm font-semibold text-sk-coral-dark">

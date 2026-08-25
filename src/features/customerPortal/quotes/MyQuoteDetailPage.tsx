@@ -17,15 +17,23 @@ export default function MyQuoteDetailPage() {
   const quote = q.data?.quote;
   const items = q.data?.items ?? [];
   const left = quote?.status === "sent" ? holdRemaining(quote?.hold_expires_at) : null;
-  const canAct = quote?.status === "sent" && !quote?.booking_id && Boolean(left);
+  const isDaycare = quote?.service_type === "daycare";
+  // Daycare places don't hold dates, so there is no hold countdown to wait on.
+  const canAct =
+    quote?.status === "sent" && !quote?.booking_id && !quote?.enrolment_id && (isDaycare || Boolean(left));
 
   async function run(action: "accept" | "cancel") {
     if (!id) return;
     try {
       const res = await act.mutateAsync({ quoteId: id, action });
       if (action === "accept") {
-        toast.success("Quote accepted — your booking is confirmed.");
-        if ((res as any)?.booking_id) nav(`/customer/bookings/${(res as any).booking_id}`);
+        if (isDaycare) {
+          toast.success("Quote accepted — your daycare place is booked.");
+          nav("/customer/dashboard");
+        } else {
+          toast.success("Quote accepted — your booking is confirmed.");
+          if ((res as any)?.booking_id) nav(`/customer/bookings/${(res as any).booking_id}`);
+        }
       } else {
         toast.success("Quote cancelled and the dates released.");
       }
