@@ -3,6 +3,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
+import { notifyBookingRescheduled, readBookingInvoiceSnapshot } from "@/features/bookings/rescheduleNotify";
+
 
 type Kind = "cancel" | "reschedule";
 
@@ -38,6 +40,7 @@ export function BookingChangeModal({
 
   const run = useMutation({
     mutationFn: async () => {
+      const before = await readBookingInvoiceSnapshot(bookingId);
       if (kind === "cancel") {
         const { error } = await supabase.rpc("portal_cancel_booking", {
           p_booking_id: bookingId,
@@ -57,13 +60,12 @@ export function BookingChangeModal({
       }
 
       // Pull the repriced invoice so we can tell the customer what changed.
-      const { data: bk } = await supabase
-        .from("bookings")
-        .select("invoice:invoices!bookings_invoice_id_fkey(total)")
-        .eq("id", bookingId)
-        .maybeSingle();
-      const total = (bk as any)?.invoice?.total ?? null;
-      return { total: total == null ? null : Number(total) };
+      const after = await readBookingInvoiceSnapshot(bookingId);
+      if (kind === "reschedule") await notifyBookingRescheduled(bookingId, { before, after });
+      const changed =
+        before.invoiceId !== after.invoiceId ||
+        Number(before.total ?? 0) !== Number(after.total ?? 0);
+      return { total: changed ? after.total : null };
     },
     onSuccess: async (res) => {
       // Money for this booking lives in separate caches — refresh them all.
@@ -94,6 +96,7 @@ export function BookingChangeModal({
       );
     },
   });
+
 
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
