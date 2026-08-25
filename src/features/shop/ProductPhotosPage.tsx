@@ -27,6 +27,13 @@ export default function ProductPhotosPage() {
   const listQ = useProducts(tenantId, { search, activeOnly: true });
   const tree = useCategoryTree(tenantId);
   const setImage = useSetProductImage(tenantId ?? "");
+  const qc = useQueryClient();
+
+  /** Photos taken on a phone land server-side — pull the grid up to date. */
+  function refreshPhotos() {
+    qc.invalidateQueries({ queryKey: ["products"] });
+  }
+
 
   const catIds = parentId ? tree.familyIds(parentId) : null;
   const rows = (listQ.data ?? [])
