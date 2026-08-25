@@ -211,6 +211,8 @@ Deno.serve(async (req) => {
     const tenantId = body.tenant_id as string | undefined;
     if (!tenantId) return json(400, { error: "tenant_id required" });
 
+    const mode = body.mode === "studio" ? "studio" : "single";
+
     // The caller must already be able to read the target through RLS.
     if (body.pet_id) {
       const { data: pet } = await asCaller.from("pets").select("id").eq("id", body.pet_id).maybeSingle();
@@ -219,6 +221,15 @@ Deno.serve(async (req) => {
       const { data: cust } = await asCaller.from("customers").select("id").eq("id", body.customer_id).maybeSingle();
       if (!cust) return json(403, { error: "forbidden" });
     }
+    if (body.product_id) {
+      const { data: prod } = await asCaller.from("products").select("id").eq("id", body.product_id).maybeSingle();
+      if (!prod) return json(403, { error: "forbidden" });
+    } else if (mode === "studio") {
+      // Studio sessions cover the whole catalogue — prove the caller can read it.
+      const { data: any1 } = await asCaller
+        .from("products").select("id").eq("tenant_id", tenantId).limit(1).maybeSingle();
+      if (!any1) return json(403, { error: "forbidden" });
+    }
 
     const { data: settings } = await admin
       .from("document_settings")
@@ -226,7 +237,7 @@ Deno.serve(async (req) => {
       .eq("tenant_id", tenantId)
       .maybeSingle();
     const minutes = Number(settings?.snap_expiry_minutes ?? 15);
-    const maxFiles = Number(settings?.snap_max_files ?? 10);
+    const maxFiles = mode === "studio" ? 200 : Number(settings?.snap_max_files ?? 10);
 
     const token = newToken();
     const { data: session, error } = await admin
@@ -237,6 +248,8 @@ Deno.serve(async (req) => {
         pet_id: body.pet_id ?? null,
         customer_id: body.customer_id ?? null,
         booking_id: body.booking_id ?? null,
+        product_id: body.product_id ?? null,
+        mode,
         doc_type: body.doc_type ?? "other",
         label: body.label ?? null,
         created_by_profile_id: profile.id,
@@ -248,6 +261,7 @@ Deno.serve(async (req) => {
     if (error) return json(500, { error: error.message });
     return json(200, session);
   }
+
 
   // ---- token-authorised actions ----------------------------------------
   const token = String(body.token ?? "");
