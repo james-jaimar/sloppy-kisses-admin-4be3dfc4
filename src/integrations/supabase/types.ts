@@ -9091,6 +9091,25 @@ export type Database = {
         Args: { p_as_of?: string; p_preview?: boolean; p_tenant_id: string }
         Returns: Json
       }
+      complete_pos_sale: {
+        Args: {
+          p_customer_id: string
+          p_discount?: number
+          p_lines: Json
+          p_location_id: string
+          p_notes?: string
+          p_tenant_id: string
+          p_tenders?: Json
+          p_till_name?: string
+        }
+        Returns: {
+          change: number
+          invoice_id: string
+          invoice_number: string
+          paid: number
+          total: number
+        }[]
+      }
       create_checkout_groom: {
         Args: {
           p_hotel_booking_id: string
