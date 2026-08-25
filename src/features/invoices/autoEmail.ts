@@ -37,3 +37,4 @@ export async function autoEmailBookingInvoice(bookingId: string): Promise<boolea
   if (!invoiceId) return false;
   return emailIssuedInvoice(invoiceId);
 }
+
