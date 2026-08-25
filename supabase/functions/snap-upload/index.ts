@@ -37,10 +37,13 @@ function newToken() {
 
 const admin = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
+const PRODUCT_IMAGE_BUCKET = "product-images";
+const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+
 async function loadSession(token: string) {
   const { data } = await admin
     .from("upload_sessions")
-    .select("id, tenant_id, pet_id, customer_id, booking_id, doc_type, label, expires_at, max_files, files_uploaded, closed_at")
+    .select("id, tenant_id, pet_id, customer_id, booking_id, product_id, mode, doc_type, label, expires_at, max_files, files_uploaded, closed_at")
     .eq("token", token)
     .maybeSingle();
   if (!data) return { error: "not_found" as const };
@@ -48,6 +51,51 @@ async function loadSession(token: string) {
   if (new Date(data.expires_at).getTime() < Date.now()) return { error: "expired" as const };
   return { session: data };
 }
+
+/** Saves a shop product photo into Supabase storage and points the product at it. */
+async function saveProductPhoto(s: any, productId: string, file: File) {
+  const { data: product } = await admin
+    .from("products")
+    .select("id, tenant_id, image_url")
+    .eq("id", productId)
+    .maybeSingle();
+  if (!product || product.tenant_id !== s.tenant_id) return json(403, { error: "forbidden" });
+  if (s.mode !== "studio" && s.product_id && s.product_id !== productId) {
+    return json(403, { error: "forbidden" });
+  }
+
+  const contentType = file.type || "image/jpeg";
+  if (!IMAGE_TYPES.includes(contentType)) return json(415, { error: "unsupported_type" });
+
+  const { data: settings } = await admin
+    .from("document_settings").select("max_upload_mb").eq("tenant_id", s.tenant_id).maybeSingle();
+  const maxMb = Number(settings?.max_upload_mb ?? 20);
+  if (file.size > maxMb * 1024 * 1024) return json(413, { error: `File exceeds ${maxMb}MB limit` });
+
+  const nameExt = (file.name.split(".").pop() ?? "").toLowerCase();
+  const ext = nameExt && nameExt.length <= 5
+    ? nameExt
+    : contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const path = `${s.tenant_id}/${productId}-${Date.now()}.${ext}`;
+
+  const { error: upErr } = await admin.storage
+    .from(PRODUCT_IMAGE_BUCKET)
+    .upload(path, new Uint8Array(await file.arrayBuffer()), { contentType, upsert: true, cacheControl: "3600" });
+  if (upErr) return json(502, { error: upErr.message });
+
+  const { error: setErr } = await admin.from("products").update({ image_url: path }).eq("id", productId);
+  if (setErr) return json(500, { error: setErr.message });
+
+  if (product.image_url && !/^https?:\/\//i.test(product.image_url)) {
+    await admin.storage.from(PRODUCT_IMAGE_BUCKET).remove([product.image_url]).catch(() => undefined);
+  }
+  await admin.from("upload_sessions")
+    .update({ files_uploaded: Number(s.files_uploaded) + 1 })
+    .eq("id", s.id);
+
+  return json(200, { product_id: productId, image_path: path });
+}
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
