@@ -6909,6 +6909,54 @@ export type Database = {
           },
         ]
       }
+      product_barcodes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_primary: boolean
+          product_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_primary?: boolean
+          product_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_primary?: boolean
+          product_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_barcodes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_barcodes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_brands: {
         Row: {
           active: boolean
@@ -7375,6 +7423,7 @@ export type Database = {
       }
       retail_settings: {
         Row: {
+          allow_multi_barcode: boolean
           allow_negative_stock: boolean
           created_at: string
           default_vat_rate: number
@@ -7392,6 +7441,7 @@ export type Database = {
           walkin_customer_id: string | null
         }
         Insert: {
+          allow_multi_barcode?: boolean
           allow_negative_stock?: boolean
           created_at?: string
           default_vat_rate?: number
@@ -7409,6 +7459,7 @@ export type Database = {
           walkin_customer_id?: string | null
         }
         Update: {
+          allow_multi_barcode?: boolean
           allow_negative_stock?: boolean
           created_at?: string
           default_vat_rate?: number

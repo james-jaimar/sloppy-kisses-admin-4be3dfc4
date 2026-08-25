@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
     const tenantId = body.tenant_id as string | undefined;
     if (!tenantId) return json(400, { error: "tenant_id required" });
 
-    const mode = body.mode === "studio" ? "studio" : "single";
+    const mode = body.mode === "studio" || body.mode === "barcodes" ? String(body.mode) : "single";
 
     // The caller must already be able to read the target through RLS.
     if (body.pet_id) {
@@ -224,8 +224,8 @@ Deno.serve(async (req) => {
     if (body.product_id) {
       const { data: prod } = await asCaller.from("products").select("id").eq("id", body.product_id).maybeSingle();
       if (!prod) return json(403, { error: "forbidden" });
-    } else if (mode === "studio") {
-      // Studio sessions cover the whole catalogue — prove the caller can read it.
+    } else if (mode === "studio" || mode === "barcodes") {
+      // Catalogue-wide sessions — prove the caller can read the catalogue.
       const { data: any1 } = await asCaller
         .from("products").select("id").eq("tenant_id", tenantId).limit(1).maybeSingle();
       if (!any1) return json(403, { error: "forbidden" });
@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
       .eq("tenant_id", tenantId)
       .maybeSingle();
     const minutes = Number(settings?.snap_expiry_minutes ?? 15);
-    const maxFiles = mode === "studio" ? 200 : Number(settings?.snap_max_files ?? 10);
+    const maxFiles = mode === "barcodes" ? 1000 : mode === "studio" ? 200 : Number(settings?.snap_max_files ?? 10);
 
     const token = newToken();
     const { data: session, error } = await admin
@@ -284,10 +284,11 @@ Deno.serve(async (req) => {
     });
   }
 
-  // ---- studio: browse the tenant's products from the phone ---------------
+  // ---- studio / barcodes: browse the tenant's products from the phone -----
   if (action === "products") {
     const search = String(body.search ?? "").trim();
     const missingOnly = body.missing_only === true;
+    const missingBarcodeOnly = body.missing_barcode_only === true;
     let q = admin
       .from("products")
       .select("id, name, sku, barcode, size_pack, variant_label, image_url")
@@ -295,8 +296,9 @@ Deno.serve(async (req) => {
       .eq("active", true)
       .order("name", { ascending: true })
       .limit(Number(body.limit ?? 60));
-    if (s.mode !== "studio" && s.product_id) q = q.eq("id", s.product_id);
+    if (s.mode === "single" && s.product_id) q = q.eq("id", s.product_id);
     if (missingOnly) q = q.is("image_url", null);
+    if (missingBarcodeOnly) q = q.is("barcode", null);
     if (search) {
       const like = `%${search}%`;
       q = q.or(`name.ilike.${like},sku.ilike.${like},barcode.ilike.${like},external_code.ilike.${like}`);
@@ -312,6 +314,65 @@ Deno.serve(async (req) => {
         : null,
     }));
     return json(200, { products: rows });
+  }
+
+  // ---- barcodes: how much of the catalogue still needs a code -------------
+  if (action === "barcode_counts") {
+    const [{ count: total }, { count: missing }] = await Promise.all([
+      admin.from("products").select("id", { count: "exact", head: true })
+        .eq("tenant_id", s.tenant_id).eq("active", true),
+      admin.from("products").select("id", { count: "exact", head: true })
+        .eq("tenant_id", s.tenant_id).eq("active", true).is("barcode", null),
+    ]);
+    return json(200, { total: total ?? 0, missing: missing ?? 0 });
+  }
+
+  // ---- barcodes: save a scanned code onto a product -----------------------
+  if (action === "link_barcode") {
+    const code = String(body.code ?? "").trim();
+    const productId = String(body.product_id ?? "");
+    if (!code) return json(400, { error: "code required" });
+    if (!productId) return json(400, { error: "product_id required" });
+    if (s.mode !== "barcodes" && s.product_id !== productId) return json(403, { error: "forbidden" });
+
+    const { data: product } = await admin
+      .from("products").select("id, tenant_id, name").eq("id", productId).maybeSingle();
+    if (!product || product.tenant_id !== s.tenant_id) return json(403, { error: "forbidden" });
+
+    const { data: clash } = await admin
+      .from("product_barcodes")
+      .select("id, product_id, products(name)")
+      .eq("tenant_id", s.tenant_id)
+      .ilike("code", code)
+      .maybeSingle();
+    if (clash && clash.product_id !== productId) {
+      return json(409, { error: `That code is already on “${(clash as any).products?.name ?? "another product"}”.` });
+    }
+    if (clash) return json(200, { ok: true, product_id: productId, code, already: true });
+
+    const { data: retail } = await admin
+      .from("retail_settings").select("allow_multi_barcode").eq("tenant_id", s.tenant_id).maybeSingle();
+    if (!retail?.allow_multi_barcode) {
+      await admin.from("product_barcodes").delete().eq("product_id", productId);
+    }
+
+    const { error: insErr } = await admin.from("product_barcodes").insert({
+      tenant_id: s.tenant_id,
+      product_id: productId,
+      code,
+      is_primary: true,
+    });
+    if (insErr) return json(500, { error: insErr.message });
+
+    await admin.from("pos_barcode_queue")
+      .update({ resolved_product_id: productId, resolved_at: new Date().toISOString() })
+      .eq("tenant_id", s.tenant_id).eq("code", code);
+
+    await admin.from("upload_sessions")
+      .update({ files_uploaded: Number(s.files_uploaded) + 1 })
+      .eq("id", s.id);
+
+    return json(200, { ok: true, product_id: productId, code, product_name: product.name });
   }
 
   // ---- keep an actively-used session alive -------------------------------

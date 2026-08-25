@@ -22,6 +22,7 @@ import ReceiptView from "./ReceiptView";
 import BarcodeLinkSheet from "./BarcodeLinkSheet";
 import { useRecordUnknownBarcode } from "./barcodeQueries";
 import { playTone, useBarcodeScanner } from "./useBarcodeScanner";
+import { findProductIdByBarcode } from "@/features/shop/barcodeLinks";
 
 
 type ScanFeedback = { kind: "hit" | "miss"; text: string } | null;
@@ -124,10 +125,15 @@ export default function PosPage() {
     setLines((c) => (qty === 0 ? c.filter((l) => l.product.id !== productId) : c.map((l) => (l.product.id === productId ? { ...l, qty } : l))));
   }
 
-  function handleScan(code: string) {
+  async function handleScan(code: string) {
     const all = (productsQ.data ?? []) as Product[];
-    const hit = all.find((p) => p.barcode && p.barcode.toLowerCase() === code.toLowerCase())
+    let hit = all.find((p) => p.barcode && p.barcode.toLowerCase() === code.toLowerCase())
       ?? all.find((p) => p.sku && p.sku.toLowerCase() === code.toLowerCase());
+    // A product can carry several codes — check the barcode table before giving up.
+    if (!hit) {
+      const linkedId = await findProductIdByBarcode(tenantId, code).catch(() => null);
+      if (linkedId) hit = all.find((p) => p.id === linkedId);
+    }
     if (hit) {
       addToCart(hit);
       if (beepOnScan) playTone("hit");
