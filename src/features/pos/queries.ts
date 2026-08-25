@@ -161,11 +161,7 @@ export interface PosSaleResult {
   change: number;
 }
 
-/**
- * Rings up a till sale: draft invoice -> lines + stock movements -> issue -> tenders.
- * The invoice must be created as a draft because line items are locked once an
- * invoice is issued; the status is flipped after all lines land.
- */
+/** Rings up a till sale atomically through the permission-scoped database RPC. */
 export function usePosSale(tenantId: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -179,120 +175,36 @@ export function usePosSale(tenantId: string) {
       notes?: string | null;
     }): Promise<PosSaleResult> => {
       if (input.lines.length === 0) throw new Error("Cart is empty");
+      const { data, error } = await supabase.rpc("complete_pos_sale", {
+        p_tenant_id: tenantId,
+        p_customer_id: input.customer_id,
+        p_location_id: input.location_id,
+        p_lines: input.lines.map((line) => ({
+          product_id: line.product.id,
+          qty: line.qty,
+          unit_price: lineUnitPrice(line),
+        })),
+        p_tenders: input.tenders.map((tender) => ({
+          method: tender.method,
+          amount: tender.amount,
+          reference: tender.reference ?? null,
+          tendered: tender.tendered ?? null,
+        })),
+        p_discount: input.discount ?? 0,
+        p_till_name: input.till_name ?? null,
+        p_notes: input.notes ?? null,
+      });
+      if (error) throw error;
 
-      const { data: num, error: numErr } = await supabase.rpc("next_invoice_number", { target_tenant_id: tenantId });
-      if (numErr) throw numErr;
-
-      const iso = (d: Date) => d.toISOString().slice(0, 10);
-      const today = new Date();
-
-      const { data: inv, error: invErr } = await supabase
-        .from("invoices")
-        .insert({
-          tenant_id: tenantId,
-          customer_id: input.customer_id,
-          invoice_number: num as string,
-          status: "draft",
-          issue_date: iso(today),
-          due_date: iso(today),
-          notes: input.notes ?? `${POS_SALE_TAG}${input.till_name ? ` · ${input.till_name}` : ""}`,
-        } as any)
-        .select("id")
-        .single();
-      if (invErr) throw invErr;
-      const invoiceId = inv.id as string;
-
-      const { data: userRes } = await supabase.auth.getUser();
-      const userId = userRes.user?.id ?? null;
-
-      let sort = 0;
-      for (const l of input.lines) {
-        const unit = lineUnitPrice(l);
-        const total = lineTotal(l);
-
-        const { data: mv, error: mvErr } = await supabase
-          .from("stock_movements" as any)
-          .insert({
-            tenant_id: tenantId,
-            product_id: l.product.id,
-            location_id: input.location_id,
-            // negative qty on the line = a return, which puts stock back
-            qty_delta: -l.qty,
-            reason: l.qty < 0 ? "return" : "sale",
-            ref_type: "invoice",
-            ref_id: invoiceId,
-            created_by: userId,
-          } as any)
-          .select("id")
-          .single();
-        if (mvErr) throw mvErr;
-
-        const { error: liErr } = await supabase.from("invoice_items").insert({
-          tenant_id: tenantId,
-          invoice_id: invoiceId,
-          description: `${l.product.name}${l.product.sku ? ` (${l.product.sku})` : ""}`,
-          quantity: l.qty,
-          unit_price: unit,
-          line_total: total,
-          product_id: l.product.id,
-          stock_movement_id: (mv as any).id,
-          sort_order: sort++,
-        } as any);
-        if (liErr) throw liErr;
-      }
-
-      if (input.discount && input.discount > 0) {
-        const { error: dErr } = await supabase.from("invoice_items").insert({
-          tenant_id: tenantId,
-          invoice_id: invoiceId,
-          description: "Discount",
-          quantity: 1,
-          unit_price: -Math.abs(input.discount),
-          line_total: -Math.abs(input.discount),
-          sort_order: sort++,
-        } as any);
-        if (dErr) throw dErr;
-      }
-
-      // Issue the invoice (locks lines, recomputes totals via triggers)
-      const { error: sErr } = await supabase
-        .from("invoices")
-        .update({ status: "sent" } as any)
-        .eq("id", invoiceId)
-        .eq("tenant_id", tenantId);
-      if (sErr) throw sErr;
-
-      let paid = 0;
-      let change = 0;
-      for (const t of input.tenders) {
-        if (!t.amount) continue;
-        const { error: pErr } = await supabase.from("payments").insert({
-          tenant_id: tenantId,
-          invoice_id: invoiceId,
-          customer_id: input.customer_id,
-          amount: t.amount,
-          payment_method: t.method as any,
-          payment_reference: t.reference ?? null,
-          paid_at: new Date().toISOString(),
-          status: "received",
-        } as any);
-        if (pErr) throw pErr;
-        paid += Number(t.amount);
-        if (t.tendered != null) change += Math.max(0, Number(t.tendered) - Number(t.amount));
-      }
-
-      const { data: fresh } = await supabase
-        .from("invoices")
-        .select("total, invoice_number")
-        .eq("id", invoiceId)
-        .maybeSingle();
+      const result = data?.[0];
+      if (!result) throw new Error("The till did not return a receipt");
 
       return {
-        invoice_id: invoiceId,
-        invoice_number: (fresh as any)?.invoice_number ?? (num as string),
-        total: Number((fresh as any)?.total ?? 0),
-        paid: Number(paid.toFixed(2)),
-        change: Number(change.toFixed(2)),
+        invoice_id: result.invoice_id,
+        invoice_number: result.invoice_number,
+        total: Number(result.total),
+        paid: Number(result.paid),
+        change: Number(result.change),
       };
     },
     onSuccess: () => {
