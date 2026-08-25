@@ -34,11 +34,12 @@ export default function PosProductGrid({
     return (
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="h-44 animate-pulse rounded-2xl bg-sk-surface-muted" />
+          <div key={i} className="aspect-square animate-pulse rounded-2xl bg-sk-surface-muted" />
         ))}
       </div>
     );
   }
+
 
   if (products.length === 0) {
     return (
@@ -64,15 +65,15 @@ export default function PosProductGrid({
               onClick={() => onAdd(p)}
               className="group relative flex select-none flex-col overflow-hidden rounded-2xl border border-border bg-white text-left transition-transform active:scale-[0.98]"
             >
-              <div className="relative aspect-square w-full bg-sk-surface-muted">
+              <div className="relative aspect-square w-full shrink-0 min-h-0 bg-sk-surface-muted">
                 {img ? (
-                  <img src={img} alt={p.name} loading="lazy" className="h-full w-full object-contain p-2" />
+                  <img src={img} alt={p.name} loading="lazy" className="absolute inset-0 h-full w-full object-contain p-2" />
                 ) : (
-
                   <div className="grid h-full w-full place-items-center text-2xl font-bold text-muted-foreground/60">
                     {initials(p.name)}
                   </div>
                 )}
+
                 <span
                   className={
                     "absolute left-2 top-2 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide " +
