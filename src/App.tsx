@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ConfirmProvider } from "@/components/ui/confirm-dialog";
 import NotFound from "./pages/NotFound.tsx";
 import SnapUpload from "@/pages/SnapUpload";
+import SnapStudio from "@/pages/SnapStudio";
+
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { TenantProvider } from "@/lib/tenant/TenantContext";
 import { BrandingProvider } from "@/lib/branding/BrandingProvider";
