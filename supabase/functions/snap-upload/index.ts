@@ -275,12 +275,55 @@ Deno.serve(async (req) => {
     return json(200, {
       label: s.label,
       doc_type: s.doc_type,
+      mode: s.mode,
+      product_id: s.product_id,
       expires_at: s.expires_at,
       max_files: s.max_files,
       files_uploaded: s.files_uploaded,
       business_name: tenant?.name ?? null,
     });
   }
+
+  // ---- studio: browse the tenant's products from the phone ---------------
+  if (action === "products") {
+    const search = String(body.search ?? "").trim();
+    const missingOnly = body.missing_only === true;
+    let q = admin
+      .from("products")
+      .select("id, name, sku, barcode, size_pack, variant_label, image_url")
+      .eq("tenant_id", s.tenant_id)
+      .eq("active", true)
+      .order("name", { ascending: true })
+      .limit(Number(body.limit ?? 60));
+    if (s.mode !== "studio" && s.product_id) q = q.eq("id", s.product_id);
+    if (missingOnly) q = q.is("image_url", null);
+    if (search) {
+      const like = `%${search}%`;
+      q = q.or(`name.ilike.${like},sku.ilike.${like},barcode.ilike.${like},external_code.ilike.${like}`);
+    }
+    const { data, error } = await q;
+    if (error) return json(500, { error: error.message });
+    const rows = (data ?? []).map((p: any) => ({
+      ...p,
+      image_public_url: p.image_url
+        ? (/^https?:\/\//i.test(p.image_url)
+            ? p.image_url
+            : `${SUPABASE_URL}/storage/v1/object/public/${PRODUCT_IMAGE_BUCKET}/${p.image_url}`)
+        : null,
+    }));
+    return json(200, { products: rows });
+  }
+
+  // ---- keep an actively-used session alive -------------------------------
+  if (action === "extend") {
+    const { data: settings } = await admin
+      .from("document_settings").select("snap_expiry_minutes").eq("tenant_id", s.tenant_id).maybeSingle();
+    const minutes = Number(settings?.snap_expiry_minutes ?? 15);
+    const expires = new Date(Date.now() + minutes * 60_000).toISOString();
+    await admin.from("upload_sessions").update({ expires_at: expires }).eq("id", s.id);
+    return json(200, { expires_at: expires });
+  }
+
 
   if (action === "sign") {
     if (Number(s.files_uploaded) >= Number(s.max_files)) return json(429, { error: "limit_reached" });
