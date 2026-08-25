@@ -77,11 +77,20 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   const sb = createClient(SUPABASE_URL, SERVICE_KEY);
 
-  const { data: events, error } = await sb
-    .from("notification_events")
-    .select("*")
-    .eq("status", "pending")
-    .limit(20);
+  // Callers may target one booking (e.g. right after a reschedule) for instant delivery.
+  let onlyBookingId: string | null = null;
+  if (req.method === "POST") {
+    try {
+      const body = await req.json();
+      const id = body?.booking_id;
+      if (typeof id === "string" && id.length > 0) onlyBookingId = id;
+    } catch { /* no body — drain everything */ }
+  }
+
+  let q = sb.from("notification_events").select("*").eq("status", "pending").limit(20);
+  if (onlyBookingId) q = q.eq("booking_id", onlyBookingId);
+  const { data: events, error } = await q;
+
   if (error) {
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
