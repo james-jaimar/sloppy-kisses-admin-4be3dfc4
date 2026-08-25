@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import type { BookingStatus, ServiceType } from "@/features/bookings/queries";
+import { notifyBookingRescheduled, readBookingInvoiceSnapshot } from "@/features/bookings/rescheduleNotify";
+
 
 /**
  * Statuses relevant to the grooming board (in workflow order).
@@ -106,6 +108,7 @@ export function useRescheduleGrooming(tenantId: string) {
     mutationFn: async ({
       bookingId, resourceId, start, end,
     }: { bookingId: string; resourceId: string | null; start: Date; end: Date }) => {
+      const before = await readBookingInvoiceSnapshot(bookingId);
       const { error } = await supabase
         .from("bookings")
         .update({
@@ -124,14 +127,20 @@ export function useRescheduleGrooming(tenantId: string) {
         .from("grooming_booking_details")
         .update({ duration_minutes: minutes } as any)
         .eq("booking_id", bookingId);
+
+      const after = await readBookingInvoiceSnapshot(bookingId);
+      return { bookingId, money: { before, after } };
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["grooming_board"] });
       qc.invalidateQueries({ queryKey: ["grooming_day_availability"] });
       qc.invalidateQueries({ queryKey: ["bookings"] });
+      // Tell the customer their appointment moved (no invoice resend for a time-only change).
+      void notifyBookingRescheduled(res.bookingId, res.money);
     },
   });
 }
+
 
 /**
  * Update booking status. On transition into "grooming" we stamp actual_start_at;

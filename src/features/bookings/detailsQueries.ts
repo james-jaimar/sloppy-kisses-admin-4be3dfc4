@@ -2,6 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import type { ServiceType } from "./queries";
 import { autoEmailBookingInvoice } from "@/features/invoices/autoEmail";
+import {
+  notifyBookingRescheduled,
+  readBookingInvoiceSnapshot,
+  type InvoiceSnapshot,
+} from "./rescheduleNotify";
+
 
 // ---------- Grooming ----------
 export interface GroomingDetails {
@@ -127,9 +133,14 @@ export function useUpsertBookingDetails(tenantId: string) {
       | { kind: "transport"; bookingId: string; data: Partial<TransportDetails> }
       | { kind: "none"; bookingId: string; data?: unknown }
     ) => {
-      if (payload.kind === "none") return { ok: true };
+      if (payload.kind === "none") return { ok: true, money: null as null | { before: InvoiceSnapshot; after: InvoiceSnapshot } };
+
+      // Snapshot the money before the write so we can tell a repriced booking
+      // apart from a plain time move (a time move must not resend the invoice).
+      const before = await readBookingInvoiceSnapshot(payload.bookingId);
 
       const table =
+
         payload.kind === "grooming"
           ? "grooming_booking_details"
           : payload.kind === "hotel"
@@ -162,16 +173,28 @@ export function useUpsertBookingDetails(tenantId: string) {
           });
         if (error) throw error;
       }
-      return { ok: true };
+      const after = await readBookingInvoiceSnapshot(payload.bookingId);
+      return { ok: true, money: { before, after } };
     },
-    onSuccess: (_d, vars) => {
+    onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ["booking-details", tenantId, vars.bookingId] });
-      // The DB triggers price the booking onto its own issued invoice — email it once.
-      if (vars.kind !== "none") {
+      if (vars.kind === "none") return;
+
+      const money = (res as any)?.money as { before: InvoiceSnapshot; after: InvoiceSnapshot } | null;
+      const priceChanged =
+        !money ||
+        money.before.invoiceId !== money.after.invoiceId ||
+        Number(money.before.total ?? 0) !== Number(money.after.total ?? 0);
+
+      // Only email the invoice when the amount actually moved. A time-only change
+      // gets a booking change confirmation instead of a confusing invoice resend.
+      if (priceChanged) {
         void autoEmailBookingInvoice(vars.bookingId).then((sent) => {
           if (sent) qc.invalidateQueries({ queryKey: ["invoices"] });
         });
       }
+      void notifyBookingRescheduled(vars.bookingId, money ?? undefined);
+
     },
   });
 }
