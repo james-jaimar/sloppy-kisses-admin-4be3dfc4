@@ -1,10 +1,13 @@
 import { useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Camera, ImageIcon, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
+import { StudioSnapDialog } from "@/features/uploads/StudioSnapDialog";
 import { useCategoryTree, useProducts, useSetProductImage, type Product } from "./queries";
 import { deleteProductImage, forgetProductImage, uploadProductImage, useProductImageUrls } from "./productImages";
+
 
 const PAGE = 60;
 
