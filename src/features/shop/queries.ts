@@ -86,6 +86,7 @@ export interface RetailSettings {
   pos_page_size?: number | null;
   unknown_barcode_action?: "link" | "warn" | null;
   scan_beep?: boolean | null;
+  allow_multi_barcode?: boolean | null;
 }
 
 // -------- Products --------

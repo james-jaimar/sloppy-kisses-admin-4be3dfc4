@@ -144,6 +144,8 @@ export interface StudioSessionInput {
   tenantId: string;
   /** Omit for a whole-catalogue studio session. */
   productId?: string | null;
+  /** "studio" photographs products, "barcodes" attaches scanned codes. */
+  mode?: "studio" | "barcodes";
   label?: string | null;
 }
 
@@ -156,7 +158,7 @@ export function useCreateStudioSession() {
           action: "create",
           tenant_id: t.tenantId,
           product_id: t.productId ?? null,
-          mode: t.productId ? "single" : "studio",
+          mode: t.mode === "barcodes" ? "barcodes" : t.productId ? "single" : "studio",
           doc_type: "product_photo",
           label: t.label ?? null,
         },

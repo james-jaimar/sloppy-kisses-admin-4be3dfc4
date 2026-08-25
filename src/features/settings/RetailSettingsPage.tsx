@@ -15,7 +15,7 @@ export default function RetailSettingsPage() {
   const resourcesQ = useResources(tenantId);
   const tills = (resourcesQ.data ?? []).filter((r) => String(r.type) === "retail_till");
 
-  const [form, setForm] = useState({ default_vat_rate: 15, allow_negative_stock: false, low_stock_notify_emails: "", till_name: "", receipt_footer: "", pos_location_id: "", pos_page_size: 24, unknown_barcode_action: "link" as "link" | "warn", scan_beep: true, till_resource_id: "" });
+  const [form, setForm] = useState({ default_vat_rate: 15, allow_negative_stock: false, low_stock_notify_emails: "", till_name: "", receipt_footer: "", pos_location_id: "", pos_page_size: 24, unknown_barcode_action: "link" as "link" | "warn", scan_beep: true, allow_multi_barcode: false, till_resource_id: "" });
 
   useEffect(() => {
     const d = settingsQ.data;
@@ -29,6 +29,7 @@ export default function RetailSettingsPage() {
       pos_page_size: Number(d.pos_page_size ?? 24),
       unknown_barcode_action: (d.unknown_barcode_action ?? "link") as "link" | "warn",
       scan_beep: d.scan_beep !== false,
+      allow_multi_barcode: !!(d as any).allow_multi_barcode,
       till_resource_id: d.till_resource_id ?? "",
     });
   }, [settingsQ.data]);
@@ -45,6 +46,7 @@ export default function RetailSettingsPage() {
         pos_page_size: form.pos_page_size,
         unknown_barcode_action: form.unknown_barcode_action,
         scan_beep: form.scan_beep,
+        allow_multi_barcode: form.allow_multi_barcode,
         till_resource_id: form.till_resource_id || null,
       });
       toast.success("Retail settings saved");
@@ -116,6 +118,16 @@ export default function RetailSettingsPage() {
               <input type="checkbox" checked={form.scan_beep}
                 onChange={(e) => setForm({ ...form, scan_beep: e.target.checked })} />
               Beep on every scan
+            </label>
+            <label className="flex items-start gap-2 text-sm">
+              <input type="checkbox" className="mt-0.5" checked={form.allow_multi_barcode}
+                onChange={(e) => setForm({ ...form, allow_multi_barcode: e.target.checked })} />
+              <span>
+                Allow more than one barcode per product
+                <span className="block text-[11px] text-muted-foreground">
+                  Handy when a supplier changes packaging. Off means a new scan replaces the old code.
+                </span>
+              </span>
             </label>
             <label className="block">
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Unrecognised barcode</div>

@@ -17,6 +17,7 @@ import {
 export function StudioSnapDialog({
   tenantId,
   productId,
+  mode = "studio",
   label,
   buttonLabel = "Use my phone",
   className,
@@ -26,6 +27,8 @@ export function StudioSnapDialog({
   tenantId: string;
   /** Set for a one-off shot of a single product; omit for the whole catalogue. */
   productId?: string | null;
+  /** "studio" = photograph products, "barcodes" = attach scanned codes. */
+  mode?: "studio" | "barcodes";
   label?: string | null;
   buttonLabel?: string;
   className?: string;
@@ -49,7 +52,7 @@ export function StudioSnapDialog({
     setOpen(true);
     if (session) return;
     try {
-      setSession(await create.mutateAsync({ tenantId, productId, label }));
+      setSession(await create.mutateAsync({ tenantId, productId, mode, label }));
     } catch (e: any) {
       toast.error(await readFnError(e));
       setOpen(false);
@@ -62,10 +65,13 @@ export function StudioSnapDialog({
     setOpen(false);
     onProgress?.();
     onFinished?.();
-    if (received > 0) toast.success(`${received} photo${received === 1 ? "" : "s"} saved from your phone`);
+    if (received > 0) toast.success(`${received} ${noun}${received === 1 ? "" : "s"} saved from your phone`);
   }
 
-  const url = session ? `${window.location.origin}/snap/studio/${session.token}` : "";
+  const url = session
+    ? `${window.location.origin}/snap/${mode === "barcodes" ? "barcodes" : "studio"}/${session.token}`
+    : "";
+  const noun = mode === "barcodes" ? "code" : "photo";
 
 
   return (
@@ -81,9 +87,11 @@ export function StudioSnapDialog({
       <Dialog open={open} onOpenChange={(o) => { if (!o) finish(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Take photos with your phone</DialogTitle>
+            <DialogTitle>{mode === "barcodes" ? "Scan barcodes with your phone" : "Take photos with your phone"}</DialogTitle>
             <DialogDescription>
-              Scan this code with the phone camera, then work through the products — photos appear here as they land.
+              {mode === "barcodes"
+                ? "Scan this code with the phone camera, then scan each item and pick the product it belongs to."
+                : "Scan this code with the phone camera, then work through the products — photos appear here as they land."}
             </DialogDescription>
           </DialogHeader>
 
@@ -99,7 +107,7 @@ export function StudioSnapDialog({
               <div className="break-all text-center text-xs text-muted-foreground">{url}</div>
               <div className="flex items-center justify-center gap-2 rounded-xl bg-sk-surface-muted p-3 text-sm font-semibold">
                 {received > 0 ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Loader2 className="h-4 w-4 animate-spin" />}
-                {received} photo{received === 1 ? "" : "s"} received
+                {received} {noun}{received === 1 ? "" : "s"} received
               </div>
               <button
                 type="button"

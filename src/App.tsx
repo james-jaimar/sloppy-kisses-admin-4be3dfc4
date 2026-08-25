@@ -7,6 +7,7 @@ import { ConfirmProvider } from "@/components/ui/confirm-dialog";
 import NotFound from "./pages/NotFound.tsx";
 import SnapUpload from "@/pages/SnapUpload";
 import SnapStudio from "@/pages/SnapStudio";
+import SnapBarcodes from "@/pages/SnapBarcodes";
 
 import { AuthProvider } from "@/lib/auth/AuthContext";
 import { TenantProvider } from "@/lib/tenant/TenantContext";
@@ -101,6 +102,7 @@ import ProductPhotosPage from "@/features/shop/ProductPhotosPage";
 import StockPage from "@/features/shop/StockPage";
 import QuickSalePage from "@/features/shop/QuickSalePage";
 import UnknownBarcodesPage from "@/features/shop/UnknownBarcodesPage";
+import BarcodesPage from "@/features/shop/BarcodesPage";
 import PosPage from "@/features/pos/PosPage";
 import ProductCategoriesPage from "@/features/settings/ProductCategoriesPage";
 import ProductBrandsPage from "@/features/settings/ProductBrandsPage";
@@ -189,6 +191,7 @@ const App = () => (
               <Route path="/pay/success" element={<PaySuccessPage />} />
               <Route path="/pay/cancel" element={<PayCancelPage />} />
             <Route path="/snap/studio/:token" element={<SnapStudio />} />
+            <Route path="/snap/barcodes/:token" element={<SnapBarcodes />} />
             <Route path="/snap/:token" element={<SnapUpload />} />
 
 
@@ -231,6 +234,7 @@ const App = () => (
                 <Route path="/admin/shop-stock/photos" element={<ProductPhotosPage />} />
                 <Route path="/admin/shop-stock/sale" element={<QuickSalePage />} />
                 <Route path="/admin/shop-stock/barcodes" element={<UnknownBarcodesPage />} />
+                <Route path="/admin/shop-stock/barcode-capture" element={<BarcodesPage />} />
                 <Route element={<RequirePermission code="pos.operate" />}>
                   <Route path="/admin/pos" element={<PosPage />} />
                 </Route>
