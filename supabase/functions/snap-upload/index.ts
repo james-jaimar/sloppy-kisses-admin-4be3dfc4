@@ -119,6 +119,11 @@ Deno.serve(async (req) => {
     const s = loaded.session!;
 
     if (Number(s.files_uploaded) >= Number(s.max_files)) return json(429, { error: "limit_reached" });
+
+    // Shop product photos live in Supabase storage, not the documents/S3 pipeline.
+    const productId = String(form.get("product_id") ?? "") || (s.mode === "single" ? s.product_id : null);
+    if (productId) return await saveProductPhoto(s, productId, file);
+
     const contentType = file.type || "application/octet-stream";
     if (!ALLOWED_TYPES.includes(contentType)) return json(415, { error: "unsupported_type" });
 
