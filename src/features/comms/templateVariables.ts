@@ -22,6 +22,14 @@ const BOOKING_VARS: TemplateVariable[] = [
   { path: "booking.end_at", label: "End", sample: "31 Jul 2026 10:30" },
   { path: "pet.name", label: "Pet name", sample: "Charlie" },
 ];
+const CHANGE_VARS: TemplateVariable[] = [
+  { path: "change.previous_start", label: "Previous start", sample: "Tue 25 Aug 2026, 12:00" },
+  { path: "change.new_start", label: "New start", sample: "Fri 28 Aug 2026, 14:00" },
+  { path: "change.previous_end", label: "Previous end", sample: "Tue 25 Aug 2026, 13:00" },
+  { path: "change.new_end", label: "New end", sample: "Fri 28 Aug 2026, 15:00" },
+  { path: "change.invoice_line", label: "Invoice note", sample: "Nothing else changed, so your invoice amount stays the same." },
+];
+
 
 const INVOICE_VARS: TemplateVariable[] = [
   { path: "invoice.invoice_number", label: "Invoice number", sample: "INV-2026-0142" },
@@ -46,7 +54,7 @@ export const TEMPLATE_VARIABLE_MAP: Record<string, TemplateVariable[]> = {
   booking_created: [...CUSTOMER_VARS, ...BOOKING_VARS],
   booking_reminder_24h: [...CUSTOMER_VARS, ...BOOKING_VARS],
   booking_cancelled: [...CUSTOMER_VARS, ...BOOKING_VARS],
-  booking_rescheduled: [...CUSTOMER_VARS, ...BOOKING_VARS],
+  booking_rescheduled: [...CUSTOMER_VARS, ...BOOKING_VARS, ...CHANGE_VARS],
   booking_status_changed: [...CUSTOMER_VARS, ...BOOKING_VARS],
   invoice_issued: [...CUSTOMER_VARS, ...INVOICE_VARS],
   invoice_reminder: [...CUSTOMER_VARS, ...INVOICE_VARS],
