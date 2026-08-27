@@ -24,6 +24,7 @@ const ACTION_ICONS = {
 export default function VansWorkPage() {
   const { tenantId, depts, myResourceIds } = useWorkDepts();
   const [day, setDay] = useState(() => new Date());
+  const { canSeeCustomerPhone } = useCustomerContactVisibility();
   const routeDepts = depts.filter((d) => d === "transport" || d === "grooming_mobile");
   const jobsQ = useWorkJobs({
     tenantId,
