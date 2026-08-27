@@ -245,3 +245,16 @@
 .sk-rte blockquote { border-left: 3px solid hsl(var(--border)); padding-left: .75rem; color: hsl(var(--muted-foreground)); margin: 0 0 .7rem; }
 .sk-rte hr { border: none; border-top: 1px solid hsl(var(--border)); margin: 1rem 0; }
 .sk-rte strong { font-weight: 700; }
+
+/* ---------- Printable daily lists ---------- */
+/* Orientation is switched at runtime by injecting an @page rule (see DailyListsPage). */
+@media print {
+  html, body { background: #fff !important; }
+  aside, header, .sk-no-print { display: none !important; }
+  .sk-sheet { color: #000 !important; }
+  .sk-sheet + .sk-sheet { page-break-before: always; }
+  .sk-sheet table { page-break-inside: auto; }
+  .sk-sheet tr { page-break-inside: avoid; }
+  .sk-sheet thead { display: table-header-group; }
+  .sk-sheet * { color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
