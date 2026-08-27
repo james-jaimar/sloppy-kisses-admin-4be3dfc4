@@ -23,6 +23,7 @@ import { groomingNextAction, isGroomingService } from "./workflowActions";
 import { JobAlerts, JobAddress, JobGroomingBrief, JobService } from "./JobBrief";
 import { PET_SIZE_LABEL, type PetSize } from "@/features/pets/sizeUtils";
 import { Button } from "@/components/ui/button";
+import { useCustomerContactVisibility } from "@/lib/privacy/useCustomerContactVisibility";
 
 /** Next status in the simple worker flow, per department. */
 function nextStep(status: BookingStatus, serviceType: Parameters<typeof isGroomingService>[0]): { label: string; status: BookingStatus; icon: any; tone: "primary" | "green" | "orange" } | null {
@@ -47,6 +48,7 @@ export default function JobPage() {
   const navigate = useNavigate();
   const { profile } = useCurrentUser();
   const { tenantId, canSignoff, canRaiseIncident } = useWorkDepts();
+  const { canSeeCustomerPhone } = useCustomerContactVisibility();
 
   const jobQ = useWorkJob(bookingId, tenantId);
   const job = jobQ.data;
@@ -160,7 +162,7 @@ export default function JobPage() {
               )}
             </div>
           </div>
-          {job.customer?.mobile && (
+          {canSeeCustomerPhone && job.customer?.mobile && (
             <a
               href={`tel:${job.customer.mobile}`}
               aria-label="Call owner"

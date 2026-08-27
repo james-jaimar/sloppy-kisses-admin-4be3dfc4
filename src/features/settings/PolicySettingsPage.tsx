@@ -30,6 +30,7 @@ type Row = {
   transport_radius_km: number;
   parasite_treatment_fee_zar: number;
   annual_increase_percent: number;
+  hide_customer_phone_from_staff: boolean;
 };
 
 const DEFAULTS: Omit<Row, "tenant_id"> = {
@@ -55,6 +56,7 @@ const DEFAULTS: Omit<Row, "tenant_id"> = {
   transport_radius_km: 20,
   parasite_treatment_fee_zar: 0,
   annual_increase_percent: 10,
+  hide_customer_phone_from_staff: false,
 };
 
 export default function PolicySettingsPage() {
@@ -209,6 +211,25 @@ export default function PolicySettingsPage() {
               {num("Failed collection fee", "failed_collection_fee_zar", "Nobody home when the van arrives", "ZAR")}
               {num("On-arrival tick & flea treatment", "parasite_treatment_fee_zar", "Charged when proof of treatment is missing", "ZAR")}
             </div>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-base font-semibold">Customer privacy</h2>
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={Boolean(form.hide_customer_phone_from_staff)}
+                onChange={(e) => set("hide_customer_phone_from_staff", e.target.checked as any)}
+                className="mt-1 h-4 w-4"
+              />
+              <span>
+                <span className="font-medium">Hide customer phone numbers from staff</span>
+                <span className="block text-xs text-muted-foreground">
+                  Drivers, groomers and other work-mode staff stop seeing or calling client mobile numbers.
+                  Only roles with "See customer phone numbers" (front desk, accounts, admins) keep access.
+                </span>
+              </span>
+            </label>
           </section>
 
           <section className="space-y-3">

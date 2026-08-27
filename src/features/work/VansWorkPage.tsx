@@ -7,6 +7,7 @@ import { WorkTopBar } from "./WorkTopBar";
 import { useWorkDepts } from "./useWorkDepts";
 import { useSetJobStatus, useWorkJobs } from "./queries";
 import { groomingNextAction, mobileGroomingStateLabel } from "./workflowActions";
+import { useCustomerContactVisibility } from "@/lib/privacy/useCustomerContactVisibility";
 
 const ACTION_TONES = {
   primary: "bg-sk-coral text-white",
@@ -23,6 +24,7 @@ const ACTION_ICONS = {
 export default function VansWorkPage() {
   const { tenantId, depts, myResourceIds } = useWorkDepts();
   const [day, setDay] = useState(() => new Date());
+  const { canSeeCustomerPhone } = useCustomerContactVisibility();
   const routeDepts = depts.filter((d) => d === "transport" || d === "grooming_mobile");
   const jobsQ = useWorkJobs({
     tenantId,
@@ -72,7 +74,7 @@ export default function VansWorkPage() {
                   </span>
                 </div>
               </div>
-              {job.customer?.mobile && (
+              {canSeeCustomerPhone && job.customer?.mobile && (
                 <a
                   href={`tel:${job.customer.mobile}`}
                   aria-label="Call owner"

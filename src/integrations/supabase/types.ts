@@ -6709,6 +6709,7 @@ export type Database = {
           daycare_notice_months: number
           failed_collection_fee_zar: number
           grooming_cancellation_hours: number
+          hide_customer_phone_from_staff: boolean
           hotel_amendment_fee: number
           hotel_balance_due_days_before: number
           hotel_cancellation_cutoff_days: number
@@ -6736,6 +6737,7 @@ export type Database = {
           daycare_notice_months?: number
           failed_collection_fee_zar?: number
           grooming_cancellation_hours?: number
+          hide_customer_phone_from_staff?: boolean
           hotel_amendment_fee?: number
           hotel_balance_due_days_before?: number
           hotel_cancellation_cutoff_days?: number
@@ -6763,6 +6765,7 @@ export type Database = {
           daycare_notice_months?: number
           failed_collection_fee_zar?: number
           grooming_cancellation_hours?: number
+          hide_customer_phone_from_staff?: boolean
           hotel_amendment_fee?: number
           hotel_balance_due_days_before?: number
           hotel_cancellation_cutoff_days?: number
