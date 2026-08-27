@@ -7,6 +7,7 @@ import { WorkTopBar } from "./WorkTopBar";
 import { useWorkDepts } from "./useWorkDepts";
 import { useSetJobStatus, useWorkJobs } from "./queries";
 import { groomingNextAction, mobileGroomingStateLabel } from "./workflowActions";
+import { useCustomerContactVisibility } from "@/lib/privacy/useCustomerContactVisibility";
 
 const ACTION_TONES = {
   primary: "bg-sk-coral text-white",
