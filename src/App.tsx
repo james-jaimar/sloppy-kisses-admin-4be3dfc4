@@ -162,6 +162,7 @@ import PublicInvoicePage from "@/features/invoices/PublicInvoicePage";
 import PublicQuotePage from "@/features/quotes/PublicQuotePage";
 import { PaySuccessPage, PayCancelPage } from "@/features/invoices/PayResultPages";
 import ReportsIndexPage from "@/features/reports/ReportsIndexPage";
+import DailyListsPage from "@/features/lists/DailyListsPage";
 import AgingReportPage from "@/features/reports/AgingReportPage";
 import CustomerStatementPage from "@/features/reports/CustomerStatementPage";
 import RevenueReportPage from "@/features/reports/RevenueReportPage";
@@ -227,6 +228,7 @@ const App = () => (
                   <Route path="/admin/credit-notes" element={<CreditNotesListPage />} />
                   <Route path="/admin/credit-notes/:id" element={<CreditNoteDetailPage />} />
                 </Route>
+                <Route path="/admin/lists" element={<DailyListsPage />} />
                 <Route path="/admin/comms" element={<CommsInboxPage />} />
                 <Route path="/admin/shop-stock" element={<ShopIndexPage />} />
                 <Route path="/admin/shop-stock/products" element={<ProductsPage />} />
