@@ -33,8 +33,16 @@ export default function DailyListsPage() {
   });
   const landscape = TABS.find((t) => t.key === dept)?.landscape ?? false;
 
+  // @page can't be targeted by a class, so the paper orientation is injected.
+  useEffect(() => {
+    const el = document.createElement("style");
+    el.textContent = `@page { size: A4 ${landscape ? "landscape" : "portrait"}; margin: 12mm; }`;
+    document.head.appendChild(el);
+    return () => { el.remove(); };
+  }, [landscape]);
+
   return (
-    <div className={`flex-1 ${landscape ? "sk-print-landscape" : "sk-print-portrait"}`}>
+    <div className="flex-1">
       <div className="print:hidden">
         <AppHeader
           title="Daily lists"
