@@ -15,8 +15,8 @@ export function DaycareRegisterSheet({
 }) {
   const expectedQ = useExpectedForDay(tenantId, day);
   const rows = useMemo(
-    () => [...(expectedQ.data ?? [])].sort((a, b) => a.pet_name.localeCompare(b.pet_name)),
-    [expectedQ.data],
+    () => [...(expectedQ.items ?? [])].sort((a, b) => a.pet_name.localeCompare(b.pet_name)),
+    [expectedQ.items],
   );
   const alertsQ = usePetAlerts(tenantId, rows.map((r) => r.pet_id));
   const notesQ = useDayNotes(tenantId, day);
