@@ -160,7 +160,7 @@ export default function JobPage() {
               )}
             </div>
           </div>
-          {job.customer?.mobile && (
+          {canSeeCustomerPhone && job.customer?.mobile && (
             <a
               href={`tel:${job.customer.mobile}`}
               aria-label="Call owner"
