@@ -26,7 +26,7 @@ export default function DailyListsPage() {
   const tenantId = tenant?.id ?? null;
   const [day, setDay] = useState<Date>(() => startOfDay(new Date()));
   const [dept, setDept] = useState<Dept>("daycare");
-  const { canSeePhone } = useCustomerContactVisibility();
+  const { canSeeCustomerPhone } = useCustomerContactVisibility();
 
   const dayLabel = day.toLocaleDateString("en-ZA", {
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
