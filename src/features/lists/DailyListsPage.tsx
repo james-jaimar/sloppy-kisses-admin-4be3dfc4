@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
