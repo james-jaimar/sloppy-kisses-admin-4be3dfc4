@@ -89,13 +89,13 @@ export default function DailyListsPage() {
           <DaycareRegisterSheet tenantId={tenantId} day={day} dayLabel={dayLabel} />
         )}
         {dept === "grooming" && (
-          <GroomingRunSheet tenantId={tenantId} day={day} dayLabel={dayLabel} showPhone={canSeePhone} />
+          <GroomingRunSheet tenantId={tenantId} day={day} dayLabel={dayLabel} showPhone={canSeeCustomerPhone} />
         )}
         {dept === "hotel" && (
-          <HotelDailySheet tenantId={tenantId} day={day} dayLabel={dayLabel} showPhone={canSeePhone} />
+          <HotelDailySheet tenantId={tenantId} day={day} dayLabel={dayLabel} showPhone={canSeeCustomerPhone} />
         )}
         {dept === "vans" && (
-          <VanRunSheet tenantId={tenantId} day={day} dayLabel={dayLabel} showPhone={canSeePhone} />
+          <VanRunSheet tenantId={tenantId} day={day} dayLabel={dayLabel} showPhone={canSeeCustomerPhone} />
         )}
       </div>
     </div>
