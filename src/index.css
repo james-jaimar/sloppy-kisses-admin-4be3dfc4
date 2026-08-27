@@ -255,13 +255,8 @@
   .sk-print-landscape { page-break-before: auto; }
 
   html, body { background: #fff !important; }
-  body * { visibility: hidden; }
-  .sk-sheet, .sk-sheet * { visibility: visible; }
-  .sk-sheet {
-    position: static;
-    color: #000 !important;
-    font-family: inherit;
-  }
+  aside, header, .sk-no-print { display: none !important; }
+  .sk-sheet { color: #000 !important; }
   .sk-sheet + .sk-sheet { page-break-before: always; }
   .sk-sheet table { page-break-inside: auto; }
   .sk-sheet tr { page-break-inside: avoid; }
