@@ -47,6 +47,7 @@ export default function JobPage() {
   const navigate = useNavigate();
   const { profile } = useCurrentUser();
   const { tenantId, canSignoff, canRaiseIncident } = useWorkDepts();
+  const { canSeeCustomerPhone } = useCustomerContactVisibility();
 
   const jobQ = useWorkJob(bookingId, tenantId);
   const job = jobQ.data;
