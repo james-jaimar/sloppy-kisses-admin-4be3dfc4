@@ -247,13 +247,8 @@
 .sk-rte strong { font-weight: 700; }
 
 /* ---------- Printable daily lists ---------- */
-.sk-print-portrait { --sk-print-orientation: portrait; }
-.sk-print-landscape { --sk-print-orientation: landscape; }
-
+/* Orientation is switched at runtime by injecting an @page rule (see DailyListsPage). */
 @media print {
-  @page { size: A4 portrait; margin: 12mm; }
-  .sk-print-landscape { page-break-before: auto; }
-
   html, body { background: #fff !important; }
   aside, header, .sk-no-print { display: none !important; }
   .sk-sheet { color: #000 !important; }
