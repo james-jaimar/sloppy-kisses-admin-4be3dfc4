@@ -74,7 +74,7 @@ export default function VansWorkPage() {
                   </span>
                 </div>
               </div>
-              {job.customer?.mobile && (
+              {canSeeCustomerPhone && job.customer?.mobile && (
                 <a
                   href={`tel:${job.customer.mobile}`}
                   aria-label="Call owner"
