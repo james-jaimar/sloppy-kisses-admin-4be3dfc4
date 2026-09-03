@@ -8722,7 +8722,7 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
-          batch: string
+          batch?: string
           city?: string | null
           created_at?: string
           customer_no: string
@@ -8733,7 +8733,7 @@ export type Database = {
           postcode?: string | null
           province?: string | null
           suburb?: string | null
-          tenant_id: string
+          tenant_id?: string
         }
         Update: {
           batch?: string
@@ -8760,12 +8760,15 @@ export type Database = {
           city: string | null
           created_at: string
           customer_no: string
+          decision: string
           email: string | null
           first_name: string | null
           full_name: string | null
           id: string
           internal_notes: string | null
           last_name: string | null
+          merge_into_customer_no: string | null
+          mobile_clean: string | null
           mobile_raw: string | null
           postcode: string | null
           province: string | null
@@ -8776,21 +8779,24 @@ export type Database = {
           address_line1?: string | null
           address_line2?: string | null
           alt_phone?: string | null
-          batch: string
+          batch?: string
           city?: string | null
           created_at?: string
           customer_no: string
+          decision?: string
           email?: string | null
           first_name?: string | null
           full_name?: string | null
           id?: string
           internal_notes?: string | null
           last_name?: string | null
+          merge_into_customer_no?: string | null
+          mobile_clean?: string | null
           mobile_raw?: string | null
           postcode?: string | null
           province?: string | null
           suburb?: string | null
-          tenant_id: string
+          tenant_id?: string
         }
         Update: {
           address_line1?: string | null
@@ -8800,12 +8806,15 @@ export type Database = {
           city?: string | null
           created_at?: string
           customer_no?: string
+          decision?: string
           email?: string | null
           first_name?: string | null
           full_name?: string | null
           id?: string
           internal_notes?: string | null
           last_name?: string | null
+          merge_into_customer_no?: string | null
+          mobile_clean?: string | null
           mobile_raw?: string | null
           postcode?: string | null
           province?: string | null
@@ -8826,10 +8835,11 @@ export type Database = {
           pet_no: string
           special_handling: boolean
           species: string | null
+          species_clean: string | null
           tenant_id: string
         }
         Insert: {
-          batch: string
+          batch?: string
           behaviour_notes?: string | null
           breed?: string | null
           created_at?: string
@@ -8839,7 +8849,8 @@ export type Database = {
           pet_no: string
           special_handling?: boolean
           species?: string | null
-          tenant_id: string
+          species_clean?: string | null
+          tenant_id?: string
         }
         Update: {
           batch?: string
@@ -8852,6 +8863,7 @@ export type Database = {
           pet_no?: string
           special_handling?: boolean
           species?: string | null
+          species_clean?: string | null
           tenant_id?: string
         }
         Relationships: []
