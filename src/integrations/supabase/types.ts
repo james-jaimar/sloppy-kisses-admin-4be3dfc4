@@ -8706,6 +8706,156 @@ export type Database = {
           },
         ]
       }
+      xero_import_addresses: {
+        Row: {
+          batch: string
+          city: string | null
+          created_at: string
+          customer_no: string
+          id: string
+          label: string | null
+          line1: string | null
+          line2: string | null
+          postcode: string | null
+          province: string | null
+          suburb: string | null
+          tenant_id: string
+        }
+        Insert: {
+          batch: string
+          city?: string | null
+          created_at?: string
+          customer_no: string
+          id?: string
+          label?: string | null
+          line1?: string | null
+          line2?: string | null
+          postcode?: string | null
+          province?: string | null
+          suburb?: string | null
+          tenant_id: string
+        }
+        Update: {
+          batch?: string
+          city?: string | null
+          created_at?: string
+          customer_no?: string
+          id?: string
+          label?: string | null
+          line1?: string | null
+          line2?: string | null
+          postcode?: string | null
+          province?: string | null
+          suburb?: string | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      xero_import_customers: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          alt_phone: string | null
+          batch: string
+          city: string | null
+          created_at: string
+          customer_no: string
+          email: string | null
+          first_name: string | null
+          full_name: string | null
+          id: string
+          internal_notes: string | null
+          last_name: string | null
+          mobile_raw: string | null
+          postcode: string | null
+          province: string | null
+          suburb: string | null
+          tenant_id: string
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          alt_phone?: string | null
+          batch: string
+          city?: string | null
+          created_at?: string
+          customer_no: string
+          email?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          internal_notes?: string | null
+          last_name?: string | null
+          mobile_raw?: string | null
+          postcode?: string | null
+          province?: string | null
+          suburb?: string | null
+          tenant_id: string
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          alt_phone?: string | null
+          batch?: string
+          city?: string | null
+          created_at?: string
+          customer_no?: string
+          email?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string
+          internal_notes?: string | null
+          last_name?: string | null
+          mobile_raw?: string | null
+          postcode?: string | null
+          province?: string | null
+          suburb?: string | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      xero_import_pets: {
+        Row: {
+          batch: string
+          behaviour_notes: string | null
+          breed: string | null
+          created_at: string
+          customer_no: string
+          id: string
+          pet_name: string | null
+          pet_no: string
+          special_handling: boolean
+          species: string | null
+          tenant_id: string
+        }
+        Insert: {
+          batch: string
+          behaviour_notes?: string | null
+          breed?: string | null
+          created_at?: string
+          customer_no: string
+          id?: string
+          pet_name?: string | null
+          pet_no: string
+          special_handling?: boolean
+          species?: string | null
+          tenant_id: string
+        }
+        Update: {
+          batch?: string
+          behaviour_notes?: string | null
+          breed?: string | null
+          created_at?: string
+          customer_no?: string
+          id?: string
+          pet_name?: string | null
+          pet_no?: string
+          special_handling?: boolean
+          species?: string | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       xero_settings: {
         Row: {
           auto_push: boolean
