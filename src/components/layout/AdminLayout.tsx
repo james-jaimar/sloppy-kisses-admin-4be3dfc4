@@ -31,14 +31,16 @@ export default function AdminLayout() {
         (fixedHeight ? "h-[100dvh] overflow-hidden" : "min-h-screen")
       }
     >
-      <AppSidebar
-        items={adminNav}
-        footerLabel="Sloppy Kisses · Bryanston"
-        collapsed={collapsed}
-        onToggleCollapsed={() => setCollapsed((c) => !c)}
-      />
+      {!fixedHeight && (
+        <AppSidebar
+          items={adminNav}
+          footerLabel="Sloppy Kisses · Bryanston"
+          collapsed={collapsed}
+          onToggleCollapsed={() => setCollapsed((c) => !c)}
+        />
+      )}
       <div className={"flex-1 min-w-0 flex flex-col" + (fixedHeight ? " min-h-0 overflow-hidden" : "")}>
-        <MobileTopBar items={adminNav} footerLabel="Sloppy Kisses · Bryanston" />
+        {!fixedHeight && <MobileTopBar items={adminNav} footerLabel="Sloppy Kisses · Bryanston" />}
         <SendLockBanner />
         <Outlet />
       </div>
