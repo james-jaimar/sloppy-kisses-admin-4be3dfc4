@@ -75,17 +75,17 @@ export default function TenderDialog({ tenantId, total, allowAccount, initialMet
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
-      <div className="flex items-center justify-between border-b border-border bg-white px-5 py-4">
+      <div className="flex items-center justify-between border-b border-border bg-white px-4 py-2 xl:px-5 xl:py-4">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Take payment</div>
-          <div className="text-2xl font-bold tabular-nums">R {total.toFixed(2)}</div>
+          <div className="text-xl font-bold tabular-nums xl:text-2xl">R {total.toFixed(2)}</div>
         </div>
         <button onClick={onClose} className="grid h-11 w-11 place-items-center rounded-xl border border-border" aria-label="Close">
           <X className="h-5 w-5" />
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5 lg:flex-row">
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3 md:flex-row xl:gap-4 xl:p-5">
         {/* Keypad */}
         <div className="flex-1">
           <div className="mb-3 flex flex-wrap gap-2">
@@ -94,7 +94,7 @@ export default function TenderDialog({ tenantId, total, allowAccount, initialMet
                 key={m.code}
                 onClick={() => setMethod(m.code)}
                 className={
-                  "inline-flex h-12 items-center gap-2 rounded-xl border px-4 text-sm font-semibold " +
+                  "inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-sm font-semibold xl:h-12 xl:rounded-xl xl:px-4 " +
                   (method === m.code ? "border-sk-coral bg-sk-coral-soft text-sk-coral-dark" : "border-border bg-white")
                 }
               >
@@ -104,12 +104,12 @@ export default function TenderDialog({ tenantId, total, allowAccount, initialMet
             ))}
           </div>
 
-          <div className="rounded-2xl border border-border bg-white p-4">
+          <div className="rounded-xl border border-border bg-white p-3 xl:rounded-2xl xl:p-4">
             <div className="mb-3 flex items-baseline justify-between">
               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {isCash ? "Cash tendered" : "Amount"}
               </span>
-              <span className="text-3xl font-bold tabular-nums">R {(entry === "" ? outstanding : entryNum).toFixed(2)}</span>
+              <span className="text-2xl font-bold tabular-nums xl:text-3xl">R {(entry === "" ? outstanding : entryNum).toFixed(2)}</span>
             </div>
 
             <div className="mb-3 grid grid-cols-4 gap-2">
@@ -121,11 +121,11 @@ export default function TenderDialog({ tenantId, total, allowAccount, initialMet
 
             <div className="grid grid-cols-3 gap-2">
               {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0"].map((k) => (
-                <button key={k} onClick={() => press(k)} className="h-16 rounded-xl border border-border bg-white text-2xl font-semibold active:bg-sk-surface-muted">
+                 <button key={k} onClick={() => press(k)} className="h-12 rounded-lg border border-border bg-white text-xl font-semibold active:bg-sk-surface-muted xl:h-16 xl:rounded-xl xl:text-2xl">
                   {k}
                 </button>
               ))}
-              <button onClick={() => press("back")} className="grid h-16 place-items-center rounded-xl border border-border bg-white active:bg-sk-surface-muted">
+              <button onClick={() => press("back")} className="grid h-12 place-items-center rounded-lg border border-border bg-white active:bg-sk-surface-muted xl:h-16 xl:rounded-xl">
                 <Delete className="h-6 w-6" />
               </button>
             </div>
@@ -142,7 +142,7 @@ export default function TenderDialog({ tenantId, total, allowAccount, initialMet
         </div>
 
         {/* Summary */}
-        <div className="w-full lg:w-96">
+        <div className="w-full md:w-80 xl:w-96">
           <div className="rounded-2xl border border-border bg-white p-4">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tenders</div>
             {tenders.length === 0 && <div className="text-sm text-muted-foreground">Nothing captured yet.</div>}
@@ -179,7 +179,7 @@ export default function TenderDialog({ tenantId, total, allowAccount, initialMet
           <button
             onClick={finish}
             disabled={busy}
-            className="mt-3 h-16 w-full rounded-2xl bg-sk-coral text-lg font-bold text-white disabled:opacity-40"
+            className="mt-3 h-12 w-full rounded-xl bg-sk-coral text-base font-bold text-white disabled:opacity-40 xl:h-16 xl:rounded-2xl xl:text-lg"
           >
             {busy ? "Processing…" : "Complete sale"}
           </button>

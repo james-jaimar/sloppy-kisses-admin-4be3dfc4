@@ -32,7 +32,7 @@ export default function PosProductGrid({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:gap-3">
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="aspect-square animate-pulse rounded-2xl bg-sk-surface-muted" />
         ))}
@@ -63,7 +63,7 @@ export default function PosProductGrid({
             <button
               key={p.id}
               onClick={() => onAdd(p)}
-              className="group relative flex select-none flex-col overflow-hidden rounded-2xl border border-border bg-white text-left transition-transform active:scale-[0.98]"
+              className="group relative flex select-none flex-col overflow-hidden rounded-xl border border-border bg-white text-left transition-transform active:scale-[0.98] xl:rounded-2xl"
             >
               <div className="relative aspect-square w-full shrink-0 min-h-0 bg-sk-surface-muted">
                 {img ? (
@@ -87,16 +87,16 @@ export default function PosProductGrid({
                   {out ? "Out of stock" : `${qty} in stock`}
                 </span>
               </div>
-              <div className="flex flex-1 items-end gap-2 p-3">
+              <div className="flex flex-1 items-end gap-1.5 p-2 xl:gap-2 xl:p-3">
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold leading-tight">{p.name}</div>
+                  <div className="truncate text-xs font-semibold leading-tight xl:text-sm">{p.name}</div>
                   <div className="truncate text-[11px] text-muted-foreground">{[p.variant_label, p.size_pack].filter(Boolean).join(" · ") || p.unit || p.sku || "each"}</div>
-                  <div className="mt-1 text-base font-bold tabular-nums">
+                  <div className="mt-1 text-sm font-bold tabular-nums xl:text-base">
                     R {Number(p.sell_price ?? 0).toFixed(2)}
                   </div>
                 </div>
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-sk-coral text-white shadow-sm">
-                  <Plus className="h-5 w-5" />
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-sk-coral text-white shadow-sm xl:h-10 xl:w-10">
+                  <Plus className="h-4 w-4 xl:h-5 xl:w-5" />
                 </span>
               </div>
             </button>

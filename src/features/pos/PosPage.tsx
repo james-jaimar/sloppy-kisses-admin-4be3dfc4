@@ -209,8 +209,8 @@ export default function PosPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-sk-surface-muted/40">
       {/* Top bar */}
-      <header className="flex items-center gap-3 border-b border-border bg-white px-4 py-3">
-        <Link to="/admin/shop-stock" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border" aria-label="Back">
+      <header className="flex items-center gap-2 border-b border-border bg-white px-3 py-2 xl:gap-3 xl:px-4 xl:py-3">
+        <Link to="/admin/shop-stock" className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border xl:h-11 xl:w-11 xl:rounded-xl" aria-label="Back">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="hidden min-w-0 sm:block">
@@ -224,7 +224,7 @@ export default function PosPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search or scan a product…"
-            className="h-12 w-full rounded-xl border border-border bg-white pl-10 pr-10 text-base"
+            className="h-10 w-full rounded-lg border border-border bg-white pl-10 pr-10 text-sm xl:h-12 xl:rounded-xl xl:text-base"
           />
           {search && (
             <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg" aria-label="Clear">
@@ -232,7 +232,7 @@ export default function PosPage() {
             </button>
           )}
         </div>
-        <button onClick={() => setShowParked(true)} className="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border" aria-label="Parked sales">
+        <button onClick={() => setShowParked(true)} className="relative grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border xl:h-11 xl:w-11 xl:rounded-xl" aria-label="Parked sales">
           <Inbox className="h-5 w-5" />
           {(parkedQ.data?.length ?? 0) > 0 && (
             <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-sk-coral px-1 text-[10px] font-bold text-white">
@@ -240,7 +240,7 @@ export default function PosPage() {
             </span>
           )}
         </button>
-        <button onClick={() => setShowRecent(true)} className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-border" aria-label="Recent sales">
+        <button onClick={() => setShowRecent(true)} className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-border xl:h-11 xl:w-11 xl:rounded-xl" aria-label="Recent sales">
           <Clock className="h-5 w-5" />
         </button>
       </header>
@@ -252,9 +252,9 @@ export default function PosPage() {
         </div>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         {/* Products */}
-        <main className="min-h-0 flex-1 overflow-y-auto p-4">
+        <main className="min-h-0 flex-1 overflow-y-auto p-3 xl:p-4">
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
             <CatChip active={categoryId === "all"} onClick={() => { setCategoryId("all"); setSubCategoryId("all"); }} label="All" />
             {tree.parents.filter((c) => c.active).map((c) => (
@@ -291,7 +291,7 @@ export default function PosPage() {
         </main>
 
         {/* Cart */}
-        <aside className="flex min-h-0 max-h-[55vh] w-full shrink-0 flex-col border-t border-border lg:max-h-none lg:h-full lg:w-[420px] lg:border-l lg:border-t-0">
+        <aside className="flex min-h-0 max-h-[48vh] w-full shrink-0 flex-col border-t border-border md:h-full md:max-h-none md:w-[340px] md:border-l md:border-t-0 xl:w-[400px]">
           <div className="flex min-h-0 flex-1 flex-col">
           <PosSalePanel
 
@@ -310,7 +310,7 @@ export default function PosPage() {
           />
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 border-t border-border bg-white px-4 py-3">
+          <div className="flex shrink-0 items-center gap-2 border-t border-border bg-white px-3 py-2 xl:px-4 xl:py-3">
             <button
               onClick={async () => {
                 if (!lines.length) return;
@@ -319,14 +319,14 @@ export default function PosPage() {
                 resetSale();
               }}
               disabled={!lines.length}
-              className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border text-sm font-semibold disabled:opacity-40"
+              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-border text-xs font-semibold disabled:opacity-40 xl:h-11 xl:rounded-xl xl:text-sm"
             >
               <Layers className="h-4 w-4" /> Park sale
             </button>
             <button
               onClick={resetSale}
               disabled={!lines.length}
-              className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-border text-sm font-semibold disabled:opacity-40"
+              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg border border-border text-xs font-semibold disabled:opacity-40 xl:h-11 xl:rounded-xl xl:text-sm"
             >
               <X className="h-4 w-4" /> Clear
             </button>
