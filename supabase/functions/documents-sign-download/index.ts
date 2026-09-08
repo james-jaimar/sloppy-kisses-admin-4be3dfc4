@@ -34,9 +34,31 @@ Deno.serve(async (req) => {
   const { data: userRes } = await asCaller.auth.getUser();
   if (!userRes?.user) return json(401, { error: "Not authenticated" });
 
-  let body: { document_id?: string };
+  let body: { document_id?: string; document_ids?: string[] };
   try { body = await req.json(); } catch { return json(400, { error: "Invalid JSON" }); }
+
+  // Batch mode: sign several documents at once (pet photo thumbnails in lists).
+  if (Array.isArray(body.document_ids)) {
+    const ids = body.document_ids.filter(Boolean).slice(0, 200);
+    if (ids.length === 0) return json(200, { urls: [] });
+    const rows = await asCaller
+      .from("documents")
+      .select("id, s3_key, storage_provider")
+      .in("id", ids);
+    if (rows.error) return json(403, { error: rows.error.message });
+    const urls: { id: string; download_url: string }[] = [];
+    for (const r of rows.data ?? []) {
+      if (r.storage_provider !== "s3" || !r.s3_key) continue;
+      try {
+        const signed = await signStorageUrl(r.s3_key, "read");
+        urls.push({ id: r.id, download_url: signed.url });
+      } catch { /* skip unsignable */ }
+    }
+    return json(200, { urls });
+  }
+
   if (!body.document_id) return json(400, { error: "document_id required" });
+
 
   const doc = await asCaller
     .from("documents")
