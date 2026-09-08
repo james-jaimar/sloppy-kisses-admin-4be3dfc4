@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, LogOut, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AttendanceRow, AttendanceStatus, ExpectedItem, useUpsertAttendance } from "./queries";
+import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+import { usePetPhotos } from "@/features/pets/photo/petPhotoQueries";
+
 
 interface Props {
   tenantId: string;
@@ -91,7 +94,10 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
     return result;
   }, [expectedItems, attendance]);
 
+  const photos = usePetPhotos(rows.map((r) => r.pet_id));
+
   async function setStatus(row: Row, status: AttendanceStatus) {
+
     setBusyKey(row.key);
     try {
       const nowIso = new Date().toISOString();
