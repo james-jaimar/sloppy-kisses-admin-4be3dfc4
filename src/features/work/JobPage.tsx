@@ -22,6 +22,8 @@ import {
 import { groomingNextAction, isGroomingService } from "./workflowActions";
 import { JobAlerts, JobAddress, JobGroomingBrief, JobService } from "./JobBrief";
 import { PET_SIZE_LABEL, type PetSize } from "@/features/pets/sizeUtils";
+import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+
 import { Button } from "@/components/ui/button";
 import { useCustomerContactVisibility } from "@/lib/privacy/useCustomerContactVisibility";
 
@@ -146,7 +148,9 @@ export default function JobPage() {
           >
             <ArrowLeft className="h-6 w-6" />
           </button>
+          <PetAvatar petId={primaryPet?.id ?? null} petName={primaryPet?.name ?? null} size="lg" editable={Boolean(primaryPet?.id)} />
           <div className="min-w-0 flex-1">
+
             <h1 className="truncate text-xl font-bold">{petNames}</h1>
             <p className="truncate text-sm text-muted-foreground">{subLine || "—"}</p>
             <div className="mt-1">
