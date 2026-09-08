@@ -110,7 +110,13 @@ export default function AttendancePage() {
                 {rows.map((a) => (
                   <tr key={a.id}>
                     <td className="px-5 py-3 tabular-nums">{a.attendance_date}</td>
-                    <td className="px-5 py-3 font-medium">{a.pet?.name ?? "-"}</td>
+                    <td className="px-5 py-3 font-medium">
+                      <div className="flex items-center gap-2">
+                        <PetAvatar petId={a.pet_id} petName={a.pet?.name ?? null} photoUrl={photos.data?.[a.pet_id]?.url ?? null} size="xs" editable />
+                        {a.pet?.name ?? "-"}
+                      </div>
+                    </td>
+
                     <td className="px-5 py-3 text-muted-foreground">{a.customer?.full_name ?? ""}</td>
                     <td className="px-5 py-3 capitalize">{a.status.replace("_"," ")}</td>
                     <td className="px-5 py-3 tabular-nums">{a.checked_in_at ? new Date(a.checked_in_at).toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"}) : "-"}</td>
