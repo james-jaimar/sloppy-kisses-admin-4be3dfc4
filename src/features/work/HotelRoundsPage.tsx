@@ -4,6 +4,8 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { ChevronRight, Loader2, LogIn, LogOut } from "lucide-react";
 import { WorkTopBar } from "./WorkTopBar";
+import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+
 import { useWorkDepts } from "./useWorkDepts";
 import {
   CARE_ROUNDS, isoDay, useCareRounds, useSetJobStatus, useToggleCareRound, useWorkJobs,

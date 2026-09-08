@@ -4,6 +4,8 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { CheckCircle2, ChevronRight, Loader2, LogIn, LogOut, Phone, Play, BellRing } from "lucide-react";
 import { WorkTopBar } from "./WorkTopBar";
+import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+
 import { useWorkDepts } from "./useWorkDepts";
 import { useSetJobStatus, useWorkJobs } from "./queries";
 import { groomingNextAction, mobileGroomingStateLabel } from "./workflowActions";
@@ -59,7 +61,9 @@ export default function VansWorkPage() {
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sk-turquoise-soft text-base font-bold text-sk-turquoise-dark">
                 {i + 1}
               </span>
+              <PetAvatar petId={job.pets[0]?.id ?? null} petName={job.pets[0]?.name ?? null} size="md" editable={Boolean(job.pets[0]?.id)} />
               <div className="min-w-0 flex-1">
+
                 <div className="truncate text-lg font-bold">
                   {job.pets.map((p) => p.name).filter(Boolean).join(", ") || "No pet linked"}
                 </div>
