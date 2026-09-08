@@ -148,7 +148,9 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
                 <tr key={r.key} className="hover:bg-sk-surface-muted/60">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
+                      <PetAvatar petId={r.pet_id} petName={r.pet_name} photoUrl={photos.data?.[r.pet_id]?.url ?? null} size="xs" editable />
                       <Link
+
                         to={`/admin/pets/${r.pet_id}`}
                         className="font-semibold text-foreground hover:text-sk-coral-dark hover:underline underline-offset-2"
                       >
