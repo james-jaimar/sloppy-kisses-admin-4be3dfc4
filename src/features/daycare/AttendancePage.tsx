@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useAttendanceForRange, useTenantPetsWithOwners } from "./queries";
+import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+import { usePetPhotos } from "@/features/pets/photo/petPhotoQueries";
+
 
 function isoDate(d: Date) {
   const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,"0"); const day = String(d.getDate()).padStart(2,"0");
@@ -53,6 +56,9 @@ export default function AttendancePage() {
     }
     return m;
   }, [notesQ.data]);
+
+  const photos = usePetPhotos(rows.map((r: any) => r.pet_id));
+
 
   return (
     <>
