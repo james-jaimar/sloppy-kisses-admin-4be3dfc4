@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 import { Camera, ImagePlus, Loader2, Smartphone, CheckCircle2 } from "lucide-react";
@@ -32,20 +32,26 @@ export function PetPhotoDialog({
   const docs = useSnapSessionDocuments(open && qr && !received ? qr.id : null);
 
   const arrived = docs.data ?? [];
-  if (qr && !received && arrived.length > 0) {
+
+  const close = useCallback(() => {
+    onOpenChange(false);
+    setQr(null);
+    setReceived(false);
+  }, [onOpenChange]);
+
+  // A photo landed from the phone: refresh, lock the QR link, and dismiss.
+  useEffect(() => {
+    if (!open || received || !qr || arrived.length === 0) return;
     setReceived(true);
     closeSession.mutate(qr.token);
     invalidatePetPhotos(qc);
     onDone?.();
     toast.success(`New photo saved for ${petName}`);
-    setTimeout(() => close(), 1200);
-  }
+    const t = setTimeout(close, 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, received, qr, arrived.length]);
 
-  function close() {
-    onOpenChange(false);
-    setQr(null);
-    setReceived(false);
-  }
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
