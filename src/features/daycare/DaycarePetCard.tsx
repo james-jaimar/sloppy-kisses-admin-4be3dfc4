@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, LogOut, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AttendanceRow, AttendanceStatus, useUpsertAttendance } from "./queries";
+import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+
 
 interface Props {
   tenantId: string;
