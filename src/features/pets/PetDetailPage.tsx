@@ -42,6 +42,12 @@ export default function PetDetailPage() {
         actions={
           pet && tenant && customer ? (
             <div className="flex gap-2">
+              <PetPhotoButton
+                petId={pet.id}
+                petName={pet.name}
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-white px-4 text-sm font-semibold hover:bg-muted"
+              />
+
               <button
                 onClick={() => setEditing(true)}
                 className="h-10 rounded-xl border border-border bg-white px-4 text-sm font-semibold hover:bg-muted"
