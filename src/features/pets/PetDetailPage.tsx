@@ -17,6 +17,10 @@ import { PetDayNotesCard } from "@/features/daycare/PetDayNotesCard";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PetGroomingDefaultsPanel } from "@/features/grooming/instructions/PetGroomingDefaultsPanel";
 import { SizeOverrideControl, SizeOverrideBadge } from "./SizeOverrideControl";
+import { PetAvatar } from "./photo/PetAvatar";
+import { PetPhotoButton } from "./photo/PetPhotoButton";
+import { PetPhotoHistory } from "./photo/PetPhotoHistory";
+
 
 export default function PetDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +42,12 @@ export default function PetDetailPage() {
         actions={
           pet && tenant && customer ? (
             <div className="flex gap-2">
+              <PetPhotoButton
+                petId={pet.id}
+                petName={pet.name}
+                className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-white px-4 text-sm font-semibold hover:bg-muted"
+              />
+
               <button
                 onClick={() => setEditing(true)}
                 className="h-10 rounded-xl border border-border bg-white px-4 text-sm font-semibold hover:bg-muted"
@@ -100,9 +110,8 @@ export default function PetDetailPage() {
             <div className="sk-card p-6">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="grid h-14 w-14 place-items-center rounded-2xl bg-sk-turquoise-soft text-sk-turquoise-dark text-lg font-semibold">
-                    {pet.name?.[0]?.toUpperCase() ?? "?"}
-                  </div>
+                  <PetAvatar petId={pet.id} petName={pet.name} size="xl" editable />
+
                   <div>
                     <div className="text-xl font-semibold leading-tight">{pet.name}</div>
                     <div className="mt-1 text-xs text-muted-foreground">
@@ -197,6 +206,15 @@ export default function PetDetailPage() {
             </div>
 
             <PetDayNotesCard tenantId={tenant?.id ?? null} petId={pet.id} />
+
+            {tenant && (
+              <CollapsibleCard title="Photos" subtitle="Keep a recent picture on file — helps staff match dog to owner." storageKey={`admin-photos-${pet.id}`} defaultOpen>
+                <div className="p-1">
+                  <PetPhotoHistory petId={pet.id} petName={pet.name} />
+                </div>
+              </CollapsibleCard>
+            )}
+
 
             {tenant && (
               <div className="px-1">

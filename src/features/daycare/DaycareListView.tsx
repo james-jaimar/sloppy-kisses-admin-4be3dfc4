@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, LogOut, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AttendanceRow, AttendanceStatus, ExpectedItem, useUpsertAttendance } from "./queries";
+import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+import { usePetPhotos } from "@/features/pets/photo/petPhotoQueries";
+
 
 interface Props {
   tenantId: string;
@@ -91,7 +94,10 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
     return result;
   }, [expectedItems, attendance]);
 
+  const photos = usePetPhotos(rows.map((r) => r.pet_id));
+
   async function setStatus(row: Row, status: AttendanceStatus) {
+
     setBusyKey(row.key);
     try {
       const nowIso = new Date().toISOString();
@@ -148,7 +154,9 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
                 <tr key={r.key} className="hover:bg-sk-surface-muted/60">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
+                      <PetAvatar petId={r.pet_id} petName={r.pet_name} photoUrl={photos.data?.[r.pet_id]?.url ?? null} size="xs" editable />
                       <Link
+
                         to={`/admin/pets/${r.pet_id}`}
                         className="font-semibold text-foreground hover:text-sk-coral-dark hover:underline underline-offset-2"
                       >

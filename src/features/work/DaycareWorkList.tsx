@@ -1,6 +1,9 @@
 import { Check, Loader2, LogIn, LogOut, StickyNote, Undo2 } from "lucide-react";
 import { StayPlayBadge } from "@/features/daycare/StayPlayBadge";
 import type { StayPlaySession } from "@/features/daycare/stayPlayQueries";
+import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+import { usePetPhotos } from "@/features/pets/photo/petPhotoQueries";
+
 
 export type DaycareStatus = "due" | "in" | "out" | "no_show";
 
@@ -48,15 +51,21 @@ interface Props {
 
 /** Compact one-line-per-dog list. Fits many more dogs on a tablet screen. */
 export function DaycareWorkList({ rows, graceMinutes, savingPetId, canAddNotes, onMark, onUndo, onNote }: Props) {
+  const photos = usePetPhotos(rows.map((r) => r.pet_id));
   return (
     <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-white">
       {rows.map((r) => {
         const saving = savingPetId === r.pet_id;
         return (
           <li key={r.key} className="flex flex-wrap items-center gap-3 p-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sk-coral-soft text-sm font-bold text-sk-coral-dark">
-              {r.pet_name.slice(0, 1).toUpperCase()}
-            </span>
+            <PetAvatar
+              petId={r.pet_id}
+              petName={r.pet_name}
+              photoUrl={photos.data?.[r.pet_id]?.url ?? null}
+              size="md"
+              editable
+            />
+
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="truncate font-semibold">{r.pet_name}</span>

@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, LogOut, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AttendanceRow, AttendanceStatus, useUpsertAttendance } from "./queries";
+import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+
 
 interface Props {
   tenantId: string;
@@ -47,7 +49,9 @@ export function DaycarePetCard(p: Props) {
   return (
     <div className="sk-card flex flex-col gap-3 p-4">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <div className="flex min-w-0 items-start gap-2">
+          <PetAvatar petId={p.pet_id} petName={p.pet_name} size="sm" editable />
+          <div className="min-w-0">
           <Link
             to={`/admin/pets/${p.pet_id}`}
             className="text-sm font-semibold text-foreground hover:text-sk-coral-dark hover:underline underline-offset-2"
@@ -62,7 +66,9 @@ export function DaycarePetCard(p: Props) {
               {p.customer_name}
             </Link>
           </div>
+          </div>
         </div>
+
         {p.badge && (
           <span className="rounded-full bg-sk-turquoise-soft px-2 py-0.5 text-[10px] font-medium text-sk-turquoise-dark">
             {p.badge}

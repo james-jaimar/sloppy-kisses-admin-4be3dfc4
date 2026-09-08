@@ -4,6 +4,8 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { ChevronRight, Loader2, LogIn, LogOut } from "lucide-react";
 import { WorkTopBar } from "./WorkTopBar";
+import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+
 import { useWorkDepts } from "./useWorkDepts";
 import {
   CARE_ROUNDS, isoDay, useCareRounds, useSetJobStatus, useToggleCareRound, useWorkJobs,
@@ -77,7 +79,9 @@ export default function HotelRoundsPage() {
           return (
             <div key={job.id} className="rounded-2xl border border-border bg-white p-4">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+                <PetAvatar petId={petId} petName={job.pets[0]?.name ?? null} size="md" editable={Boolean(petId)} />
+                <div className="min-w-0 flex-1">
+
                   <div className="truncate text-lg font-bold">
                     {job.pets.map((p) => p.name).filter(Boolean).join(", ") || "No pet linked"}
                   </div>
