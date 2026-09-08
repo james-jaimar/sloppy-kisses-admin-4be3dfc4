@@ -7,6 +7,9 @@ import { useTenantPets } from "@/features/customers/queries";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { AlertCircle, ChevronLeft, ChevronRight, Dog, Search } from "lucide-react";
 import { SortableHeader } from "@/components/ui/sortable-header";
+import { PetAvatar } from "./photo/PetAvatar";
+import { usePetPhotos } from "./photo/petPhotoQueries";
+
 
 type SortCol = "name" | "breed" | "species" | "status" | "owner";
 
@@ -59,7 +62,9 @@ export default function PetsPage() {
     });
     return copy;
   }, [rawPets, sortColumn, sortAscending]);
+  const photos = usePetPhotos((pets ?? []).map((p: any) => p.id));
   const total = data?.total ?? 0;
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
@@ -124,16 +129,22 @@ export default function PetsPage() {
                       className="cursor-pointer hover:bg-sk-surface-muted/40"
                     >
                       <td className="px-5 py-3">
-                        <div className="font-medium">{p.name}</div>
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                          {p.pet_number ?? "—"}
-                          {p.vax_waived_until && p.vax_waived_until >= new Date().toISOString().slice(0, 10) && (
-                            <span className="rounded-full bg-sk-orange-soft px-2 py-0.5 text-[10px] font-semibold uppercase text-sk-orange">
-                              Vax waived
-                            </span>
-                          )}
+                        <div className="flex items-center gap-3">
+                          <PetAvatar petId={p.id} petName={p.name} photoUrl={photos.data?.[p.id]?.url ?? null} size="sm" editable />
+                          <div>
+                            <div className="font-medium">{p.name}</div>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                              {p.pet_number ?? "—"}
+                              {p.vax_waived_until && p.vax_waived_until >= new Date().toISOString().slice(0, 10) && (
+                                <span className="rounded-full bg-sk-orange-soft px-2 py-0.5 text-[10px] font-semibold uppercase text-sk-orange">
+                                  Vax waived
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </td>
+
                       <td className="px-5 py-3">
                         {p.breed ?? <span className="text-muted-foreground">—</span>}
                       </td>
