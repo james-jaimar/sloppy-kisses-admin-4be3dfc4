@@ -7,6 +7,8 @@ import { useWorkDepts } from "./useWorkDepts";
 import { DEPT_LABEL, useWorkJobs, type WorkJob } from "./queries";
 import { BOOKING_STATUS_META } from "@/features/bookings/statusMeta";
 import { StayPlayChip, StayPlayFlagsProvider } from "@/features/daycare/StayPlayBadge";
+import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -28,9 +30,13 @@ export function JobRowCard({ job }: { job: WorkJob }) {
     >
       <span className={`w-2 shrink-0 ${meta.dot.split(" ")[0]}`} />
       <span className="flex min-w-0 flex-1 items-center gap-3 p-4">
-        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-sk-coral-soft text-lg font-bold text-sk-coral-dark">
-          {(job.pets[0]?.name ?? "?").slice(0, 1).toUpperCase()}
-        </span>
+        <PetAvatar
+          petId={job.pets[0]?.id ?? null}
+          petName={job.pets[0]?.name ?? null}
+          size="lg"
+          editable={Boolean(job.pets[0]?.id)}
+        />
+
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <span className="truncate text-lg font-bold">{pets}</span>
