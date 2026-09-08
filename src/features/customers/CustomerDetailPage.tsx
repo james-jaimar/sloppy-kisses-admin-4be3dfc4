@@ -8,6 +8,8 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useCustomer, useCustomerPets, useCustomerEmailDuplicates, useDeleteCustomer } from "./queries";
 import { CustomerFormModal } from "./CustomerFormModal";
 import { PetFormModal } from "@/features/pets/PetFormModal";
+import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+
 import { format } from "date-fns";
 import {
   AlertCircle,
