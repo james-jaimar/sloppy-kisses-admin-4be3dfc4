@@ -208,6 +208,15 @@ export default function PetDetailPage() {
             <PetDayNotesCard tenantId={tenant?.id ?? null} petId={pet.id} />
 
             {tenant && (
+              <CollapsibleCard title="Photos" subtitle="Keep a recent picture on file — helps staff match dog to owner." storageKey={`admin-photos-${pet.id}`} defaultOpen>
+                <div className="p-1">
+                  <PetPhotoHistory petId={pet.id} petName={pet.name} />
+                </div>
+              </CollapsibleCard>
+            )}
+
+
+            {tenant && (
               <div className="px-1">
                 <HealthGateBanner petId={pet.id} />
               </div>
