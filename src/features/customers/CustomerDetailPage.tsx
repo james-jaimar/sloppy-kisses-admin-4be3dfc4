@@ -335,9 +335,8 @@ export default function CustomerDetailPage() {
                             key={p.id}
                             className="flex items-center gap-3 rounded-xl border border-border bg-white p-3"
                           >
-                            <div className="grid h-12 w-12 place-items-center rounded-xl bg-sk-turquoise-soft text-sk-turquoise-dark font-semibold">
-                              {p.name?.[0]?.toUpperCase() ?? "?"}
-                            </div>
+                            <PetAvatar petId={p.id} petName={p.name} size="md" editable />
+
                             <Link
                               to={`/admin/pets/${p.id}`}
                               className="min-w-0 flex-1 hover:underline"
