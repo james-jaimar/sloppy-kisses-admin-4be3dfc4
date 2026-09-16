@@ -17,6 +17,7 @@ import {
 } from "./queries";
 import PosProductGrid from "./PosProductGrid";
 import PosSalePanel from "./PosSalePanel";
+import CustomerSalePanel from "./CustomerSalePanel";
 import TenderDialog from "./TenderDialog";
 import ReceiptView from "./ReceiptView";
 import BarcodeLinkSheet from "./BarcodeLinkSheet";
@@ -414,7 +415,7 @@ export default function PosPage() {
       {showTender && (
         <TenderDialog
           tenantId={tenantId}
-          total={total}
+          total={dueTotal}
           allowAccount={!isWalkIn}
           initialMethod={tenderMethod}
           busy={sale.isPending}
