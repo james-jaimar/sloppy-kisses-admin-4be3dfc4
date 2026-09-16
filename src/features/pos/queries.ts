@@ -272,7 +272,8 @@ export function usePosSale(tenantId: string) {
         p_discount: input.discount ?? 0,
         p_till_name: input.till_name ?? null,
         p_notes: input.notes ?? null,
-      });
+        p_invoice_id: input.invoice_id ?? null,
+      } as any);
       if (error) throw error;
 
       const result = data?.[0];
