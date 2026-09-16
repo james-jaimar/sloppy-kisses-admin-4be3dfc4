@@ -344,12 +344,16 @@ export default function PosPage() {
 
       {/* Customer picker */}
       {showCustomer && (
-        <Overlay title="Attach a customer" onClose={() => setShowCustomer(false)}>
-          <CustomerCombobox tenantId={tenantId} value={customerId} onChange={pickCustomer} />
-          <button onClick={() => pickCustomer(null, null)} className="mt-3 h-12 w-full rounded-xl border border-border text-sm font-semibold">
-            Use walk-in customer
-          </button>
-        </Overlay>
+        <CustomerSalePanel
+          tenantId={tenantId}
+          customerId={customerId}
+          onClose={() => setShowCustomer(false)}
+          onPick={pickCustomer}
+          onAttach={(inv, customer) => {
+            pickCustomer(customer?.id ?? customerId, customer);
+            setAttachInvoice(inv);
+          }}
+        />
       )}
 
       {/* Parked sales */}
