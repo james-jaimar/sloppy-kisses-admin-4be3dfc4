@@ -312,6 +312,9 @@ export default function PosPage() {
             onQuickTender={(m) => { setTenderMethod(m); setShowTender(true); }}
             busy={sale.isPending}
             saleNumberHint={settings?.till_name ?? undefined}
+            attachInvoice={attachInvoice}
+            onDetachInvoice={() => setAttachInvoice(null)}
+            onAddOnly={() => completeSale([], true)}
           />
           </div>
 
