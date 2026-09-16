@@ -9338,6 +9338,7 @@ export type Database = {
         Args: {
           p_customer_id: string
           p_discount?: number
+          p_invoice_id?: string
           p_lines: Json
           p_location_id: string
           p_notes?: string
