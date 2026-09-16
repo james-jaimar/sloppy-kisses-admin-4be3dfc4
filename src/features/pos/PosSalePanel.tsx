@@ -16,14 +16,20 @@ interface Props {
   onQuickTender: (method: "cash" | "card") => void;
   saleNumberHint?: string;
   busy?: boolean;
+  /** When set, shop items are being added to this existing bill. */
+  attachInvoice?: { id: string; invoice_number: string; balance_due: number } | null;
+  onDetachInvoice?: () => void;
+  onAddOnly?: () => void;
 }
 
 export default function PosSalePanel({
   lines, discount, customerLabel, onChangeQty, onRemove, onDiscount, onClearDiscount,
   onPickCustomer, onCharge, onQuickTender, saleNumberHint, busy,
+  attachInvoice, onDetachInvoice, onAddOnly,
 }: Props) {
   const subtotal = cartTotal(lines);
   const total = Math.max(0, Number((subtotal - discount).toFixed(2)));
+  const dueTotal = Number((total + (attachInvoice?.balance_due ?? 0)).toFixed(2));
   const vat = vatPortion(lines);
   const resolveImage = useProductImageUrls(lines.map((l) => l.product.image_url));
 
