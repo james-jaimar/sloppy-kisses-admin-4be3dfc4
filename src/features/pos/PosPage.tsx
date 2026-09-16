@@ -50,7 +50,7 @@ export default function PosPage() {
   const [scan, setScan] = useState<ScanFeedback>(null);
   const [unknownCode, setUnknownCode] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [receipt, setReceipt] = useState<{ result: PosSaleResult; lines: PosLine[]; discount: number; tenders: PosTender[]; customerName: string; customerEmail: string | null } | null>(null);
+  const [receipt, setReceipt] = useState<{ result: PosSaleResult; lines: PosLine[]; discount: number; tenders: PosTender[]; customerName: string; customerEmail: string | null; priorAmount: number } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const canLinkBarcode = useHasPermission("pos.barcode.link");
 
@@ -191,7 +191,7 @@ export default function PosPage() {
         invoice_id: attachInvoice?.id ?? null,
       });
       setShowTender(false);
-      setReceipt({ result, lines, discount, tenders: chargeToAccount ? [] : tenders, customerName, customerEmail });
+      setReceipt({ result, lines, discount, tenders: chargeToAccount ? [] : tenders, customerName, customerEmail, priorAmount: attachInvoice?.balance_due ?? 0 });
       toast.success(chargeToAccount ? "Charged to account" : "Payment captured");
     } catch (err: any) {
       const msg = err?.message || err?.details || err?.hint || "Could not complete the sale";
@@ -435,6 +435,7 @@ export default function PosPage() {
           customerEmail={receipt.customerEmail}
           tillName={settings?.till_name || "Till"}
           footer={settings?.receipt_footer ?? null}
+          priorAmount={receipt.priorAmount}
           onNewSale={resetSale}
         />
       )}
