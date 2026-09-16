@@ -151,6 +151,83 @@ export function useEnsureWalkInCustomer(tenantId: string) {
   });
 }
 
+// -------- Customer account snapshot (open bills + today) --------
+
+export interface OpenBill {
+  id: string;
+  invoice_number: string;
+  issue_date: string | null;
+  status: string;
+  total: number;
+  balance_due: number;
+  what: string | null;
+  /** Draft/issued bills can still have till items added to them. */
+  editable: boolean;
+}
+
+export function useCustomerBillingSnapshot(tenantId: string | null | undefined, customerId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["pos_customer_bills", tenantId, customerId],
+    enabled: Boolean(tenantId && customerId),
+    queryFn: async (): Promise<OpenBill[]> => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("id, invoice_number, issue_date, status, total, balance_due, notes")
+        .eq("tenant_id", tenantId as string)
+        .eq("customer_id", customerId as string)
+        .not("status", "in", "(cancelled,paid)")
+        .order("issue_date", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return (data ?? [])
+        .map((r: any) => ({
+          id: r.id,
+          invoice_number: r.invoice_number,
+          issue_date: r.issue_date,
+          status: r.status,
+          total: Number(r.total ?? 0),
+          balance_due: Number(r.balance_due ?? 0),
+          what: r.notes ? String(r.notes).split("\n")[0].slice(0, 60) : null,
+          editable: r.status === "draft" || r.status === "issued",
+        }))
+        .filter((r) => r.balance_due > 0 || r.status === "draft");
+    },
+  });
+}
+
+export interface TodayBooking {
+  id: string;
+  service_type: string;
+  status: string;
+  pets: string[];
+}
+
+export function useCustomerTodayBookings(tenantId: string | null | undefined, customerId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["pos_customer_today", tenantId, customerId],
+    enabled: Boolean(tenantId && customerId),
+    queryFn: async (): Promise<TodayBooking[]> => {
+      const today = new Date();
+      const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("id, service_type, status, booking_pets(pet:pets(name))")
+        .eq("tenant_id", tenantId as string)
+        .eq("customer_id", customerId as string)
+        .eq("start_date", iso)
+        .not("status", "in", "(cancelled,no_show)")
+        .limit(10);
+      if (error) throw error;
+      return (data ?? []).map((b: any) => ({
+        id: b.id,
+        service_type: b.service_type,
+        status: b.status,
+        pets: (b.booking_pets ?? []).map((bp: any) => bp?.pet?.name).filter(Boolean),
+      }));
+    },
+  });
+}
+
 // -------- The sale --------
 
 export interface PosSaleResult {
