@@ -159,6 +159,7 @@ export default function PosPage() {
     setCustomerEmail(null);
     setReceipt(null);
     setSearch("");
+    setAttachInvoice(null);
   }
 
   function askDiscount() {
@@ -186,6 +187,7 @@ export default function PosPage() {
         tenders: chargeToAccount ? [] : tenders,
         discount,
         till_name: settings?.till_name ?? null,
+        invoice_id: attachInvoice?.id ?? null,
       });
       setShowTender(false);
       setReceipt({ result, lines, discount, tenders: chargeToAccount ? [] : tenders, customerName, customerEmail });
@@ -201,11 +203,13 @@ export default function PosPage() {
   function pickCustomer(id: string | null, customer: CustomerOption | null) {
     setCustomerId(id ?? "");
     setShowCustomer(false);
+    setAttachInvoice(null);
     setCustomerName(customer?.full_name || "Walk-in customer");
     setCustomerEmail(customer?.email ?? null);
   }
 
   const total = Math.max(0, cartTotal(lines) - discount);
+  const dueTotal = Number((total + (attachInvoice?.balance_due ?? 0)).toFixed(2));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-sk-surface-muted/40">
