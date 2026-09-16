@@ -85,6 +85,7 @@ export default function ReceiptView({
           <Row label="Subtotal" value={subtotal} />
           {discount > 0 && <Row label="Discount" value={-discount} />}
           <Row label="VAT included" value={vat} />
+          {priorAmount > 0 && <Row label="Earlier on this bill" value={priorAmount} />}
           <div className="flex justify-between text-sm font-bold">
             <span>TOTAL</span>
             <span className="tabular-nums">R {result.total.toFixed(2)}</span>
