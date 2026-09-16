@@ -17,10 +17,12 @@ interface Props {
   tillName: string;
   footer: string | null;
   onNewSale: () => void;
+  /** Amount that was already on this bill before the shop items were added. */
+  priorAmount?: number;
 }
 
 export default function ReceiptView({
-  tenantId, result, lines, discount, tenders, customerName, customerEmail, tillName, footer, onNewSale,
+  tenantId, result, lines, discount, tenders, customerName, customerEmail, tillName, footer, onNewSale, priorAmount = 0,
 }: Props) {
   const { tenant } = useCurrentTenant();
   const [logo, setLogo] = useState<string | null>(null);
