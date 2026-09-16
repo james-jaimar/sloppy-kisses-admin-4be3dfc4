@@ -6,7 +6,7 @@ import {
 import { toast } from "sonner";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useHasPermission } from "@/lib/permissions/permissions";
-import { CustomerCombobox, type CustomerOption } from "@/components/customers/CustomerCombobox";
+import { type CustomerOption } from "@/components/customers/CustomerCombobox";
 import {
   useCategoryTree, useDefaultLocation, useProductBrands, useProducts, useRetailSettings,
   useStockLocations, useStockOnHand, type Product,
