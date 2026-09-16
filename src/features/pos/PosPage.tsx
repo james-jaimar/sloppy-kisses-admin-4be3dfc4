@@ -41,6 +41,7 @@ export default function PosPage() {
   const [customerName, setCustomerName] = useState("Walk-in customer");
   const [customerEmail, setCustomerEmail] = useState<string | null>(null);
   const [showCustomer, setShowCustomer] = useState(false);
+  const [attachInvoice, setAttachInvoice] = useState<{ id: string; invoice_number: string; balance_due: number } | null>(null);
   const [showTender, setShowTender] = useState(false);
   const [tenderMethod, setTenderMethod] = useState<string | undefined>();
   const [showParked, setShowParked] = useState(false);
