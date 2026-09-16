@@ -250,6 +250,8 @@ export function usePosSale(tenantId: string) {
       discount?: number;
       till_name?: string | null;
       notes?: string | null;
+      /** When set, the shop items are appended to this existing invoice. */
+      invoice_id?: string | null;
     }): Promise<PosSaleResult> => {
       if (input.lines.length === 0) throw new Error("Cart is empty");
       const { data, error } = await supabase.rpc("complete_pos_sale", {
