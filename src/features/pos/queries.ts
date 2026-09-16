@@ -294,6 +294,8 @@ export function usePosSale(tenantId: string) {
       qc.invalidateQueries({ queryKey: ["stock_movements"] });
       qc.invalidateQueries({ queryKey: ["pos_recent_sales"] });
       qc.invalidateQueries({ queryKey: ["pos_today"] });
+      qc.invalidateQueries({ queryKey: ["pos_customer_bills"] });
+      qc.invalidateQueries({ queryKey: ["customer-open-invoices"] });
     },
   });
 }
