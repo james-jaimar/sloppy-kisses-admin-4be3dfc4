@@ -96,6 +96,9 @@ export default function ReceiptView({
           ))}
           {tenders.length === 0 && <div>Charged to account</div>}
           {result.change > 0 && <Row label="CHANGE" value={result.change} />}
+          {result.total - result.paid > 0.004 && (
+            <Row label="BALANCE STILL DUE" value={Number((result.total - result.paid).toFixed(2))} />
+          )}
           <Divider />
           <div className="whitespace-pre-line text-center text-[11px]">
             {footer || "Thank you for shopping with us!"}
