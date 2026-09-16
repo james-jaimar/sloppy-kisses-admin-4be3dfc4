@@ -16,14 +16,20 @@ interface Props {
   onQuickTender: (method: "cash" | "card") => void;
   saleNumberHint?: string;
   busy?: boolean;
+  /** When set, shop items are being added to this existing bill. */
+  attachInvoice?: { id: string; invoice_number: string; balance_due: number } | null;
+  onDetachInvoice?: () => void;
+  onAddOnly?: () => void;
 }
 
 export default function PosSalePanel({
   lines, discount, customerLabel, onChangeQty, onRemove, onDiscount, onClearDiscount,
   onPickCustomer, onCharge, onQuickTender, saleNumberHint, busy,
+  attachInvoice, onDetachInvoice, onAddOnly,
 }: Props) {
   const subtotal = cartTotal(lines);
   const total = Math.max(0, Number((subtotal - discount).toFixed(2)));
+  const dueTotal = Number((total + (attachInvoice?.balance_due ?? 0)).toFixed(2));
   const vat = vatPortion(lines);
   const resolveImage = useProductImageUrls(lines.map((l) => l.product.image_url));
 
@@ -43,6 +49,17 @@ export default function PosSalePanel({
           <span className="truncate">{customerLabel}</span>
         </button>
       </div>
+
+      {attachInvoice && (
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-sk-coral-soft/50 px-3 py-2 text-xs">
+          <span className="font-semibold text-sk-coral-dark">
+            Adding to bill {attachInvoice.invoice_number} · R {attachInvoice.balance_due.toFixed(2)} already due
+          </span>
+          <button onClick={onDetachInvoice} className="rounded-lg border border-border bg-white px-2 py-1 font-semibold">
+            New sale instead
+          </button>
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
         {lines.length === 0 && (
@@ -120,9 +137,15 @@ export default function PosSalePanel({
           <Row label="Subtotal" value={subtotal} />
           {discount > 0 && <Row label="Discount" value={-discount} />}
           <Row label={`VAT included`} value={vat} muted />
+          {attachInvoice && (
+            <>
+              <Row label="Shop items now" value={total} />
+              <Row label={`Already on ${attachInvoice.invoice_number}`} value={attachInvoice.balance_due} />
+            </>
+          )}
           <div className="flex items-center justify-between pt-1">
-            <span className="text-sm font-semibold">Total</span>
-            <span className="text-2xl font-bold tabular-nums xl:text-3xl">R {total.toFixed(2)}</span>
+            <span className="text-sm font-semibold">{attachInvoice ? "New total to pay" : "Total"}</span>
+            <span className="text-2xl font-bold tabular-nums xl:text-3xl">R {dueTotal.toFixed(2)}</span>
           </div>
         </div>
 
@@ -131,8 +154,17 @@ export default function PosSalePanel({
           disabled={busy || lines.length === 0}
           className="h-12 w-full rounded-xl bg-sk-coral text-base font-bold text-white shadow-sm transition-transform active:scale-[0.99] disabled:opacity-40 xl:h-16 xl:rounded-2xl xl:text-lg"
         >
-          Charge R {total.toFixed(2)}
+          {attachInvoice ? "Add to bill & take payment" : "Charge"} R {dueTotal.toFixed(2)}
         </button>
+        {attachInvoice && (
+          <button
+            onClick={onAddOnly}
+            disabled={busy || lines.length === 0}
+            className="h-10 w-full rounded-xl border border-border text-sm font-semibold disabled:opacity-40 xl:h-12"
+          >
+            Add to bill only (pay later)
+          </button>
+        )}
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => onQuickTender("cash")}

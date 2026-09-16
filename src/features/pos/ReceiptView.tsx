@@ -17,10 +17,12 @@ interface Props {
   tillName: string;
   footer: string | null;
   onNewSale: () => void;
+  /** Amount that was already on this bill before the shop items were added. */
+  priorAmount?: number;
 }
 
 export default function ReceiptView({
-  tenantId, result, lines, discount, tenders, customerName, customerEmail, tillName, footer, onNewSale,
+  tenantId, result, lines, discount, tenders, customerName, customerEmail, tillName, footer, onNewSale, priorAmount = 0,
 }: Props) {
   const { tenant } = useCurrentTenant();
   const [logo, setLogo] = useState<string | null>(null);
@@ -83,6 +85,7 @@ export default function ReceiptView({
           <Row label="Subtotal" value={subtotal} />
           {discount > 0 && <Row label="Discount" value={-discount} />}
           <Row label="VAT included" value={vat} />
+          {priorAmount > 0 && <Row label="Earlier on this bill" value={priorAmount} />}
           <div className="flex justify-between text-sm font-bold">
             <span>TOTAL</span>
             <span className="tabular-nums">R {result.total.toFixed(2)}</span>
@@ -93,6 +96,9 @@ export default function ReceiptView({
           ))}
           {tenders.length === 0 && <div>Charged to account</div>}
           {result.change > 0 && <Row label="CHANGE" value={result.change} />}
+          {result.total - result.paid > 0.004 && (
+            <Row label="BALANCE STILL DUE" value={Number((result.total - result.paid).toFixed(2))} />
+          )}
           <Divider />
           <div className="whitespace-pre-line text-center text-[11px]">
             {footer || "Thank you for shopping with us!"}

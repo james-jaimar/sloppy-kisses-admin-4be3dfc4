@@ -6,7 +6,7 @@ import {
 import { toast } from "sonner";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useHasPermission } from "@/lib/permissions/permissions";
-import { CustomerCombobox, type CustomerOption } from "@/components/customers/CustomerCombobox";
+import { type CustomerOption } from "@/components/customers/CustomerCombobox";
 import {
   useCategoryTree, useDefaultLocation, useProductBrands, useProducts, useRetailSettings,
   useStockLocations, useStockOnHand, type Product,
@@ -17,6 +17,7 @@ import {
 } from "./queries";
 import PosProductGrid from "./PosProductGrid";
 import PosSalePanel from "./PosSalePanel";
+import CustomerSalePanel from "./CustomerSalePanel";
 import TenderDialog from "./TenderDialog";
 import ReceiptView from "./ReceiptView";
 import BarcodeLinkSheet from "./BarcodeLinkSheet";
@@ -41,6 +42,7 @@ export default function PosPage() {
   const [customerName, setCustomerName] = useState("Walk-in customer");
   const [customerEmail, setCustomerEmail] = useState<string | null>(null);
   const [showCustomer, setShowCustomer] = useState(false);
+  const [attachInvoice, setAttachInvoice] = useState<{ id: string; invoice_number: string; balance_due: number } | null>(null);
   const [showTender, setShowTender] = useState(false);
   const [tenderMethod, setTenderMethod] = useState<string | undefined>();
   const [showParked, setShowParked] = useState(false);
@@ -48,7 +50,7 @@ export default function PosPage() {
   const [scan, setScan] = useState<ScanFeedback>(null);
   const [unknownCode, setUnknownCode] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [receipt, setReceipt] = useState<{ result: PosSaleResult; lines: PosLine[]; discount: number; tenders: PosTender[]; customerName: string; customerEmail: string | null } | null>(null);
+  const [receipt, setReceipt] = useState<{ result: PosSaleResult; lines: PosLine[]; discount: number; tenders: PosTender[]; customerName: string; customerEmail: string | null; priorAmount: number } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const canLinkBarcode = useHasPermission("pos.barcode.link");
 
@@ -158,6 +160,7 @@ export default function PosPage() {
     setCustomerEmail(null);
     setReceipt(null);
     setSearch("");
+    setAttachInvoice(null);
   }
 
   function askDiscount() {
@@ -185,9 +188,10 @@ export default function PosPage() {
         tenders: chargeToAccount ? [] : tenders,
         discount,
         till_name: settings?.till_name ?? null,
+        invoice_id: attachInvoice?.id ?? null,
       });
       setShowTender(false);
-      setReceipt({ result, lines, discount, tenders: chargeToAccount ? [] : tenders, customerName, customerEmail });
+      setReceipt({ result, lines, discount, tenders: chargeToAccount ? [] : tenders, customerName, customerEmail, priorAmount: attachInvoice?.balance_due ?? 0 });
       toast.success(chargeToAccount ? "Charged to account" : "Payment captured");
     } catch (err: any) {
       const msg = err?.message || err?.details || err?.hint || "Could not complete the sale";
@@ -200,11 +204,13 @@ export default function PosPage() {
   function pickCustomer(id: string | null, customer: CustomerOption | null) {
     setCustomerId(id ?? "");
     setShowCustomer(false);
+    setAttachInvoice(null);
     setCustomerName(customer?.full_name || "Walk-in customer");
     setCustomerEmail(customer?.email ?? null);
   }
 
   const total = Math.max(0, cartTotal(lines) - discount);
+  const dueTotal = Number((total + (attachInvoice?.balance_due ?? 0)).toFixed(2));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-sk-surface-muted/40">
@@ -307,6 +313,9 @@ export default function PosPage() {
             onQuickTender={(m) => { setTenderMethod(m); setShowTender(true); }}
             busy={sale.isPending}
             saleNumberHint={settings?.till_name ?? undefined}
+            attachInvoice={attachInvoice}
+            onDetachInvoice={() => setAttachInvoice(null)}
+            onAddOnly={() => completeSale([], true)}
           />
           </div>
 
@@ -336,12 +345,16 @@ export default function PosPage() {
 
       {/* Customer picker */}
       {showCustomer && (
-        <Overlay title="Attach a customer" onClose={() => setShowCustomer(false)}>
-          <CustomerCombobox tenantId={tenantId} value={customerId} onChange={pickCustomer} />
-          <button onClick={() => pickCustomer(null, null)} className="mt-3 h-12 w-full rounded-xl border border-border text-sm font-semibold">
-            Use walk-in customer
-          </button>
-        </Overlay>
+        <CustomerSalePanel
+          tenantId={tenantId}
+          customerId={customerId}
+          onClose={() => setShowCustomer(false)}
+          onPick={pickCustomer}
+          onAttach={(inv, customer) => {
+            pickCustomer(customer?.id ?? customerId, customer);
+            setAttachInvoice(inv);
+          }}
+        />
       )}
 
       {/* Parked sales */}
@@ -402,7 +415,7 @@ export default function PosPage() {
       {showTender && (
         <TenderDialog
           tenantId={tenantId}
-          total={total}
+          total={dueTotal}
           allowAccount={!isWalkIn}
           initialMethod={tenderMethod}
           busy={sale.isPending}
@@ -422,6 +435,7 @@ export default function PosPage() {
           customerEmail={receipt.customerEmail}
           tillName={settings?.till_name || "Till"}
           footer={settings?.receipt_footer ?? null}
+          priorAmount={receipt.priorAmount}
           onNewSale={resetSale}
         />
       )}
