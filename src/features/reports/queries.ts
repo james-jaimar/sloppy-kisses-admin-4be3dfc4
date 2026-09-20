@@ -187,13 +187,23 @@ export function useCustomerExport(
   return useQuery({
     enabled: !!tenantId && !!supabase,
     queryKey: ["reports", "export", "customers", tenantId, activeOnly],
-    queryFn: async (): Promise<CustomerExportRow[]> => {
-      const { data, error } = await (supabase as any).rpc(
-        "export_customers_for_xero",
-        { p_tenant_id: tenantId, p_active_only: activeOnly }
-      );
-      if (error) throw error;
-      return (data ?? []) as CustomerExportRow[];
+      queryFn: async (): Promise<CustomerExportRow[]> => {
+      // PostgREST caps each response at 1000 rows — page through until done.
+      const pageSize = 1000;
+      const rows: CustomerExportRow[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await (supabase as any)
+          .rpc("export_customers_for_xero", {
+            p_tenant_id: tenantId,
+            p_active_only: activeOnly,
+          })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const batch = (data ?? []) as CustomerExportRow[];
+        rows.push(...batch);
+        if (batch.length < pageSize) break;
+      }
+      return rows;
     },
   });
 }
@@ -205,13 +215,22 @@ export function usePetExport(
   return useQuery({
     enabled: !!tenantId && !!supabase,
     queryKey: ["reports", "export", "pets", tenantId, activeOnly],
-    queryFn: async (): Promise<PetExportRow[]> => {
-      const { data, error } = await (supabase as any).rpc(
-        "export_pets_for_xero",
-        { p_tenant_id: tenantId, p_active_only: activeOnly }
-      );
-      if (error) throw error;
-      return (data ?? []) as PetExportRow[];
+      queryFn: async (): Promise<PetExportRow[]> => {
+      const pageSize = 1000;
+      const rows: PetExportRow[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await (supabase as any)
+          .rpc("export_pets_for_xero", {
+            p_tenant_id: tenantId,
+            p_active_only: activeOnly,
+          })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const batch = (data ?? []) as PetExportRow[];
+        rows.push(...batch);
+        if (batch.length < pageSize) break;
+      }
+      return rows;
     },
   });
 }
