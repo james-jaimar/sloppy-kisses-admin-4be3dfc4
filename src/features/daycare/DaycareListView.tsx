@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, LogOut, XCircle } from "lucide-react";
+import { CheckCircle2, LogOut, XCircle, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { AttendanceRow, AttendanceStatus, ExpectedItem, useUpsertAttendance } from "./queries";
 import { PetAvatar } from "@/features/pets/photo/PetAvatar";
