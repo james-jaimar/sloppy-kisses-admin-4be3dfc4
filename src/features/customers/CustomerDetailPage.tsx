@@ -40,6 +40,9 @@ import { DocumentsTab } from "./tabs/DocumentsTab";
 import { HistoryTab } from "./tabs/HistoryTab";
 import { AddressesTab } from "./tabs/AddressesTab";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { CustomerTypesPanel } from "./CustomerTypesPanel";
+import { CustomerTypeChips } from "./CustomerTypeChips";
+import { ContactsPanel } from "./ContactsPanel";
 
 const TABS = ["Pets", "Bookings", "Invoices", "Credit", "Addresses", "Notes", "Documents", "History"] as const;
 type Tab = (typeof TABS)[number];
