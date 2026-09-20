@@ -22,6 +22,7 @@ export interface CustomerListRow {
   suburb: string | null;
   status: CustomerRow["status"];
   portal_access_enabled: boolean | null;
+  customer_types: string[] | null;
   pet_count: number;
 }
 
