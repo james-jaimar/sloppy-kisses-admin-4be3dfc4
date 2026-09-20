@@ -94,6 +94,7 @@ export function useCustomers(params: {
         suburb: c.suburb,
         status: c.status,
         portal_access_enabled: c.portal_access_enabled,
+        customer_types: c.customer_types ?? [],
         pet_count: Array.isArray(c.pets) ? Number(c.pets[0]?.count ?? 0) : 0,
       }));
       return { rows, total: count ?? rows.length, page, pageSize };
