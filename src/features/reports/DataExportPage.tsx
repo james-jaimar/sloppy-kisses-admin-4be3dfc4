@@ -155,7 +155,7 @@ export default function DataExportPage() {
               <button
                 onClick={downloadCustomers}
                 disabled={loading || customers.length === 0}
-                className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted disabled:opacity-50"
+                className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-medium hover:bg-muted disabled:opacity-50"
               >
                 <Download className="h-4 w-4" /> Download customers
               </button>
@@ -183,7 +183,7 @@ export default function DataExportPage() {
               <button
                 onClick={downloadPets}
                 disabled={loading || pets.length === 0}
-                className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted disabled:opacity-50"
+                className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-3 text-sm font-medium hover:bg-muted disabled:opacity-50"
               >
                 <Download className="h-4 w-4" /> Download pets
               </button>
@@ -195,7 +195,7 @@ export default function DataExportPage() {
           <button
             onClick={downloadBoth}
             disabled={loading || (customers.length === 0 && pets.length === 0)}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
           >
             <Download className="h-4 w-4" /> Download both (one file per list)
           </button>
