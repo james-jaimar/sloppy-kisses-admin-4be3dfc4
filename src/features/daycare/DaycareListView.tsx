@@ -161,7 +161,7 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
     }
   }
 
-  if (rows.length === 0) {
+  if (allRows.length === 0) {
     return (
       <div className="sk-card p-8 text-center text-sm text-muted-foreground">
         Nothing scheduled or checked in for this day.
@@ -172,16 +172,69 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
   const fmtTime = (iso: string | null) =>
     iso ? new Date(iso).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" }) : "—";
 
+  const filtering = Boolean(search.trim() || statusFilter);
+
+  const SortTh = ({ col, label, className = "" }: { col: SortCol; label: string; className?: string }) => (
+    <th className={`px-4 py-3 text-left font-medium ${className}`}>
+      <button
+        type="button"
+        onClick={() => toggleSort(col)}
+        className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-foreground"
+      >
+        {label}
+        {sort.col === col &&
+          (sort.asc ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+      </button>
+    </th>
+  );
+
   return (
     <div className="sk-card overflow-hidden">
-      <div className="sk-scroll-x">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search pet or owner…"
+            className="h-9 w-full rounded-lg border border-border bg-white pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="h-9 rounded-lg border border-border bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40"
+        >
+          <option value="">All statuses</option>
+          {STATUS_FILTERS.map((s) => (
+            <option key={s} value={s}>{STATUS_META[s].label}</option>
+          ))}
+        </select>
+        <div className="text-xs tabular-nums text-muted-foreground">
+          Showing {rows.length} of {allRows.length}
+        </div>
+        {filtering && (
+          <button
+            onClick={() => { setSearch(""); setStatusFilter(""); }}
+            className="h-9 rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      {rows.length === 0 && (
+        <div className="p-8 text-center text-sm text-muted-foreground">
+          No dogs match this search or status.
+        </div>
+      )}
+      <div className={`sk-scroll-x ${rows.length === 0 ? "hidden" : ""}`}>
         <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-sk-surface-muted text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Pet</th>
-              <th className="px-4 py-3 text-left font-medium">Owner</th>
+              <SortTh col="pet" label="Pet" />
+              <SortTh col="owner" label="Owner" />
               <th className="px-4 py-3 text-left font-medium hidden md:table-cell">Plan</th>
-              <th className="px-4 py-3 text-left font-medium">Status</th>
+              <SortTh col="status" label="Status" />
               <th className="px-4 py-3 text-left font-medium hidden sm:table-cell">In / Out</th>
               <th className="px-4 py-3 text-right font-medium">Actions</th>
             </tr>
