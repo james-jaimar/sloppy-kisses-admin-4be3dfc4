@@ -225,6 +225,33 @@ Deno.serve(async (req) => {
             provider_message_id: null, attempts: (ev.attempts ?? 0) + 1,
           }).eq("id", ev.id);
           await logEmail(sb, ev.tenant_id, recipient, subject, "sent", null, `notify.${ev.event_type}`);
+          // Copy the same message to any second contacts who should receive emails.
+          if (ev.customer_id) {
+            const { data: extras } = await sb
+              .from("customer_contacts")
+              .select("email")
+              .eq("customer_id", ev.customer_id)
+              .eq("receives_emails", true)
+              .not("email", "is", null);
+            for (const c of extras ?? []) {
+              const cc = (c as any).email as string;
+              if (!cc || cc.toLowerCase() === recipient.toLowerCase()) continue;
+              const copy = await sendMail(transport, cc, subject, body, html, {
+                admin: sb,
+                tenantId: ev.tenant_id,
+                templateCode: `notify.${ev.event_type}`,
+                customerId: ev.customer_id ?? null,
+                bookingId: ev.booking_id ?? null,
+                invoiceId: ev.invoice_id ?? null,
+              });
+              await logEmail(
+                sb, ev.tenant_id, cc, subject,
+                copy.ok ? "sent" : (copy as { blocked?: boolean }).blocked ? "blocked" : "failed",
+                copy.ok ? null : (copy as any).error ?? null,
+                `notify.${ev.event_type}`,
+              );
+            }
+          }
         } else if ((result as { blocked?: boolean }).blocked) {
           // Global send lock is on and this recipient is not allowlisted.
           // Record it as blocked (not failed) so it is never silently retried.
