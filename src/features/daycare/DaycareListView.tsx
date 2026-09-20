@@ -110,15 +110,29 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
       });
     }
 
-    result.sort((x, y) => {
-      const sx = STATUS_ORDER[x.status] ?? 99;
-      const sy = STATUS_ORDER[y.status] ?? 99;
-      if (sx !== sy) return sx - sy;
-      return x.pet_name.localeCompare(y.pet_name);
-    });
-
     return result;
   }, [expectedItems, attendance]);
+
+  const rows: Row[] = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = allRows.filter((r) => {
+      if (statusFilter && r.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        r.pet_name.toLowerCase().includes(q) || r.customer_name.toLowerCase().includes(q)
+      );
+    });
+    const dir = sort.asc ? 1 : -1;
+    const sorted = [...filtered].sort((x, y) => {
+      if (sort.col === "pet") return dir * x.pet_name.localeCompare(y.pet_name);
+      if (sort.col === "owner") return dir * (x.customer_name || "").localeCompare(y.customer_name || "");
+      const sx = STATUS_ORDER[x.status] ?? 99;
+      const sy = STATUS_ORDER[y.status] ?? 99;
+      if (sx !== sy) return dir * (sx - sy);
+      return x.pet_name.localeCompare(y.pet_name);
+    });
+    return sorted;
+  }, [allRows, search, statusFilter, sort]);
 
   const photos = usePetPhotos(rows.map((r) => r.pet_id));
 
