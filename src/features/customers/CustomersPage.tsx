@@ -78,6 +78,26 @@ export default function CustomersPage() {
         }
       />
       <div className="flex-1 space-y-4 p-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">Type:</span>
+          <button
+            onClick={() => { setType(""); setPage(0); }}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${type === "" ? "bg-foreground text-white" : "border border-border hover:bg-muted"}`}
+          >
+            All
+          </button>
+          {CUSTOMER_TYPES.map((code) => (
+            <button
+              key={code}
+              onClick={() => { setType(type === code ? "" : code); setPage(0); }}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                type === code ? CUSTOMER_TYPE_META[code].className : "border border-border hover:bg-muted"
+              }`}
+            >
+              {CUSTOMER_TYPE_META[code].label}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center justify-between gap-4">
           <div className="relative max-w-md flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
