@@ -172,6 +172,7 @@ export default function CustomersPage() {
                     <td className="px-5 py-3">
                       <div className="font-medium">{name}</div>
                       <div className="text-xs text-muted-foreground">{c.customer_number ?? "—"}</div>
+                      <CustomerTypeChips types={c.customer_types} size="xs" className="mt-1" />
                     </td>
                     <td className="px-5 py-3">
                       <div>{c.email ?? <span className="text-muted-foreground">—</span>}</div>
