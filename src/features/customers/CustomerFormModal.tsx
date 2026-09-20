@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import AddressField from "@/components/address/AddressField";
 import { useCustomerAddresses } from "./addressQueries";
 import { useGroomers } from "@/features/settings/resourceQueries";
+import { CUSTOMER_TYPES, CUSTOMER_TYPE_META } from "./customerTypes";
 
 type Status = "active" | "inactive" | "archived";
 
