@@ -167,6 +167,7 @@ import AgingReportPage from "@/features/reports/AgingReportPage";
 import CustomerStatementPage from "@/features/reports/CustomerStatementPage";
 import RevenueReportPage from "@/features/reports/RevenueReportPage";
 import VatReportPage from "@/features/reports/VatReportPage";
+import DataExportPage from "@/features/reports/DataExportPage";
 
 const queryClient = new QueryClient();
 
