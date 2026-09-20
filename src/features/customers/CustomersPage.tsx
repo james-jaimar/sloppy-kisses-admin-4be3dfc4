@@ -8,6 +8,8 @@ import { Plus, Search, AlertCircle, Users, ChevronLeft, ChevronRight } from "luc
 import { Skeleton } from "@/components/ui/skeleton";
 import { CustomerFormModal } from "./CustomerFormModal";
 import { SortableHeader } from "@/components/ui/sortable-header";
+import { CUSTOMER_TYPES, CUSTOMER_TYPE_META } from "./customerTypes";
+import { CustomerTypeChips } from "./CustomerTypeChips";
 
 type SortCol = "full_name" | "email" | "status" | "pet_count";
 
