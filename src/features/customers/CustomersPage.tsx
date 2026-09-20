@@ -22,6 +22,7 @@ export default function CustomersPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [creating, setCreating] = useState(false);
+  const [type, setType] = useState("");
   const [sortColumn, setSortColumn] = useState<SortCol>("full_name");
   const [sortAscending, setSortAscending] = useState(true);
   const handleSort = (col: SortCol) => {
@@ -44,6 +45,7 @@ export default function CustomersPage() {
   const { data, isLoading, isError, error, isFetching } = useCustomers({
     tenantId: tenant?.id,
     search,
+    type,
     page,
     pageSize: PAGE_SIZE,
     // pet_count is aggregated — sort client-side; server sort by full_name in that case
