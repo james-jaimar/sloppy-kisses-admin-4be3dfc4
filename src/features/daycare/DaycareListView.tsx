@@ -39,11 +39,37 @@ const STATUS_ORDER: Record<string, number> = {
   checked_in: 0, expected: 1, walk_in: 2, checked_out: 3, not_arrived: 4,
 };
 
+const STATUS_FILTERS = ["expected", "checked_in", "checked_out", "not_arrived", "walk_in"] as const;
+
+type SortCol = "pet" | "owner" | "status";
+
+const LS_SEARCH = "sk.daycare.list.search";
+const LS_STATUS = "sk.daycare.list.status";
+const LS_SORT = "sk.daycare.list.sort";
+
 export function DaycareListView({ tenantId, attendanceDate, expectedItems, attendance }: Props) {
   const upsert = useUpsertAttendance(tenantId);
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
-  const rows: Row[] = useMemo(() => {
+  const [search, setSearch] = useState(() => localStorage.getItem(LS_SEARCH) ?? "");
+  const [statusFilter, setStatusFilter] = useState(() => localStorage.getItem(LS_STATUS) ?? "");
+  const [sort, setSort] = useState<{ col: SortCol; asc: boolean }>(() => {
+    try {
+      const raw = localStorage.getItem(LS_SORT);
+      if (raw) return JSON.parse(raw);
+    } catch { /* ignore */ }
+    return { col: "status", asc: true };
+  });
+
+  useEffect(() => { localStorage.setItem(LS_SEARCH, search); }, [search]);
+  useEffect(() => { localStorage.setItem(LS_STATUS, statusFilter); }, [statusFilter]);
+  useEffect(() => { localStorage.setItem(LS_SORT, JSON.stringify(sort)); }, [sort]);
+
+  function toggleSort(col: SortCol) {
+    setSort((s) => (s.col === col ? { col, asc: !s.asc } : { col, asc: true }));
+  }
+
+  const allRows: Row[] = useMemo(() => {
     const attByPet = new Map(attendance.map((a) => [a.pet_id, a]));
     const expectedPetIds = new Set(expectedItems.map((it) => it.pet_id));
     const result: Row[] = [];
