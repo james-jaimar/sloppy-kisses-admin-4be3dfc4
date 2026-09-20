@@ -40,6 +40,9 @@ import { DocumentsTab } from "./tabs/DocumentsTab";
 import { HistoryTab } from "./tabs/HistoryTab";
 import { AddressesTab } from "./tabs/AddressesTab";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { CustomerTypesPanel } from "./CustomerTypesPanel";
+import { CustomerTypeChips } from "./CustomerTypeChips";
+import { ContactsPanel } from "./ContactsPanel";
 
 const TABS = ["Pets", "Bookings", "Invoices", "Credit", "Addresses", "Notes", "Documents", "History"] as const;
 type Tab = (typeof TABS)[number];
@@ -187,6 +190,7 @@ export default function CustomerDetailPage() {
                         <StatusBadge status="ready" label="Portal access" tone="turquoise" />
                       )}
                     </div>
+                    <CustomerTypeChips types={(customer as any).customer_types} className="mt-2" />
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -272,6 +276,22 @@ export default function CustomerDetailPage() {
                 </div>
               )}
             </div>
+
+            {tenant?.id && (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <CustomerTypesPanel
+                  tenantId={tenant.id}
+                  customerId={customer.id}
+                  types={(customer as any).customer_types}
+                  excluded={(customer as any).customer_types_excluded}
+                />
+                <ContactsPanel
+                  tenantId={tenant.id}
+                  customerId={customer.id}
+                  accountHolderName={name}
+                />
+              </div>
+            )}
 
             <PortalAccessPanel customer={customer} />
 

@@ -22,6 +22,7 @@ export interface CustomerListRow {
   suburb: string | null;
   status: CustomerRow["status"];
   portal_access_enabled: boolean | null;
+  customer_types: string[] | null;
   pet_count: number;
 }
 
@@ -39,10 +40,12 @@ export function useCustomers(params: {
   pageSize?: number;
   sortColumn?: "full_name" | "email" | "status" | "customer_number";
   sortAscending?: boolean;
+  /** Only customers carrying this type (daycare, hotel, …). */
+  type?: string;
 }) {
-  const { tenantId, search = "", page = 0, pageSize = 50, sortColumn = "full_name", sortAscending = true } = params;
+  const { tenantId, search = "", page = 0, pageSize = 50, sortColumn = "full_name", sortAscending = true, type = "" } = params;
   return useQuery({
-    queryKey: ["customers", "list", tenantId, search, page, pageSize, sortColumn, sortAscending],
+    queryKey: ["customers", "list", tenantId, search, page, pageSize, sortColumn, sortAscending, type],
     enabled: Boolean(tenantId),
     queryFn: async (): Promise<CustomersPage> => {
       const from = page * pageSize;
@@ -50,12 +53,14 @@ export function useCustomers(params: {
       let query = supabase
         .from("customers")
         .select(
-          "id, customer_number, full_name, first_name, last_name, email, mobile, city, suburb, status, portal_access_enabled, pets(count)",
+          "id, customer_number, full_name, first_name, last_name, email, mobile, city, suburb, status, portal_access_enabled, customer_types, pets(count)",
           { count: "exact" },
         )
         .eq("tenant_id", tenantId as string)
         .order(sortColumn, { ascending: sortAscending, nullsFirst: false })
         .range(from, to);
+
+      if (type) query = query.contains("customer_types", [type]);
 
       const s = search.trim();
       if (s) {
@@ -89,6 +94,7 @@ export function useCustomers(params: {
         suburb: c.suburb,
         status: c.status,
         portal_access_enabled: c.portal_access_enabled,
+        customer_types: c.customer_types ?? [],
         pet_count: Array.isArray(c.pets) ? Number(c.pets[0]?.count ?? 0) : 0,
       }));
       return { rows, total: count ?? rows.length, page, pageSize };

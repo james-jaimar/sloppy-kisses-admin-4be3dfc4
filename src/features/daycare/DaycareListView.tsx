@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, LogOut, XCircle } from "lucide-react";
+import { CheckCircle2, LogOut, XCircle, Search, ArrowUp, ArrowDown } from "lucide-react";
 import { toast } from "sonner";
 import { AttendanceRow, AttendanceStatus, ExpectedItem, useUpsertAttendance } from "./queries";
 import { PetAvatar } from "@/features/pets/photo/PetAvatar";
@@ -39,11 +39,37 @@ const STATUS_ORDER: Record<string, number> = {
   checked_in: 0, expected: 1, walk_in: 2, checked_out: 3, not_arrived: 4,
 };
 
+const STATUS_FILTERS = ["expected", "checked_in", "checked_out", "not_arrived", "walk_in"] as const;
+
+type SortCol = "pet" | "owner" | "status";
+
+const LS_SEARCH = "sk.daycare.list.search";
+const LS_STATUS = "sk.daycare.list.status";
+const LS_SORT = "sk.daycare.list.sort";
+
 export function DaycareListView({ tenantId, attendanceDate, expectedItems, attendance }: Props) {
   const upsert = useUpsertAttendance(tenantId);
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
-  const rows: Row[] = useMemo(() => {
+  const [search, setSearch] = useState(() => localStorage.getItem(LS_SEARCH) ?? "");
+  const [statusFilter, setStatusFilter] = useState(() => localStorage.getItem(LS_STATUS) ?? "");
+  const [sort, setSort] = useState<{ col: SortCol; asc: boolean }>(() => {
+    try {
+      const raw = localStorage.getItem(LS_SORT);
+      if (raw) return JSON.parse(raw);
+    } catch { /* ignore */ }
+    return { col: "status", asc: true };
+  });
+
+  useEffect(() => { localStorage.setItem(LS_SEARCH, search); }, [search]);
+  useEffect(() => { localStorage.setItem(LS_STATUS, statusFilter); }, [statusFilter]);
+  useEffect(() => { localStorage.setItem(LS_SORT, JSON.stringify(sort)); }, [sort]);
+
+  function toggleSort(col: SortCol) {
+    setSort((s) => (s.col === col ? { col, asc: !s.asc } : { col, asc: true }));
+  }
+
+  const allRows: Row[] = useMemo(() => {
     const attByPet = new Map(attendance.map((a) => [a.pet_id, a]));
     const expectedPetIds = new Set(expectedItems.map((it) => it.pet_id));
     const result: Row[] = [];
@@ -84,15 +110,29 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
       });
     }
 
-    result.sort((x, y) => {
-      const sx = STATUS_ORDER[x.status] ?? 99;
-      const sy = STATUS_ORDER[y.status] ?? 99;
-      if (sx !== sy) return sx - sy;
-      return x.pet_name.localeCompare(y.pet_name);
-    });
-
     return result;
   }, [expectedItems, attendance]);
+
+  const rows: Row[] = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = allRows.filter((r) => {
+      if (statusFilter && r.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        r.pet_name.toLowerCase().includes(q) || r.customer_name.toLowerCase().includes(q)
+      );
+    });
+    const dir = sort.asc ? 1 : -1;
+    const sorted = [...filtered].sort((x, y) => {
+      if (sort.col === "pet") return dir * x.pet_name.localeCompare(y.pet_name);
+      if (sort.col === "owner") return dir * (x.customer_name || "").localeCompare(y.customer_name || "");
+      const sx = STATUS_ORDER[x.status] ?? 99;
+      const sy = STATUS_ORDER[y.status] ?? 99;
+      if (sx !== sy) return dir * (sx - sy);
+      return x.pet_name.localeCompare(y.pet_name);
+    });
+    return sorted;
+  }, [allRows, search, statusFilter, sort]);
 
   const photos = usePetPhotos(rows.map((r) => r.pet_id));
 
@@ -121,7 +161,7 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
     }
   }
 
-  if (rows.length === 0) {
+  if (allRows.length === 0) {
     return (
       <div className="sk-card p-8 text-center text-sm text-muted-foreground">
         Nothing scheduled or checked in for this day.
@@ -132,16 +172,69 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
   const fmtTime = (iso: string | null) =>
     iso ? new Date(iso).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" }) : "—";
 
+  const filtering = Boolean(search.trim() || statusFilter);
+
+  const SortTh = ({ col, label, className = "" }: { col: SortCol; label: string; className?: string }) => (
+    <th className={`px-4 py-3 text-left font-medium ${className}`}>
+      <button
+        type="button"
+        onClick={() => toggleSort(col)}
+        className="inline-flex items-center gap-1 uppercase tracking-wide hover:text-foreground"
+      >
+        {label}
+        {sort.col === col &&
+          (sort.asc ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+      </button>
+    </th>
+  );
+
   return (
     <div className="sk-card overflow-hidden">
-      <div className="sk-scroll-x">
+      <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search pet or owner…"
+            className="h-9 w-full rounded-lg border border-border bg-white pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="h-9 rounded-lg border border-border bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40"
+        >
+          <option value="">All statuses</option>
+          {STATUS_FILTERS.map((s) => (
+            <option key={s} value={s}>{STATUS_META[s].label}</option>
+          ))}
+        </select>
+        <div className="text-xs tabular-nums text-muted-foreground">
+          Showing {rows.length} of {allRows.length}
+        </div>
+        {filtering && (
+          <button
+            onClick={() => { setSearch(""); setStatusFilter(""); }}
+            className="h-9 rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+      {rows.length === 0 && (
+        <div className="p-8 text-center text-sm text-muted-foreground">
+          No dogs match this search or status.
+        </div>
+      )}
+      <div className={`sk-scroll-x ${rows.length === 0 ? "hidden" : ""}`}>
         <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-sk-surface-muted text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Pet</th>
-              <th className="px-4 py-3 text-left font-medium">Owner</th>
+              <SortTh col="pet" label="Pet" />
+              <SortTh col="owner" label="Owner" />
               <th className="px-4 py-3 text-left font-medium hidden md:table-cell">Plan</th>
-              <th className="px-4 py-3 text-left font-medium">Status</th>
+              <SortTh col="status" label="Status" />
               <th className="px-4 py-3 text-left font-medium hidden sm:table-cell">In / Out</th>
               <th className="px-4 py-3 text-right font-medium">Actions</th>
             </tr>

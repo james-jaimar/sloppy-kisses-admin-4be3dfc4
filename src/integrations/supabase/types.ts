@@ -1568,6 +1568,63 @@ export type Database = {
           },
         ]
       }
+      customer_contacts: {
+        Row: {
+          created_at: string
+          customer_id: string
+          email: string | null
+          full_name: string
+          id: string
+          mobile: string | null
+          notes: string | null
+          receives_emails: boolean
+          relationship: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          email?: string | null
+          full_name: string
+          id?: string
+          mobile?: string | null
+          notes?: string | null
+          receives_emails?: boolean
+          relationship?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          email?: string | null
+          full_name?: string
+          id?: string
+          mobile?: string | null
+          notes?: string | null
+          receives_emails?: boolean
+          relationship?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_contacts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_contacts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_credit_ledger: {
         Row: {
           amount: number
@@ -1731,6 +1788,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           customer_number: string
+          customer_types: string[]
+          customer_types_excluded: string[]
           email: string | null
           emergency_contact_mobile: string | null
           emergency_contact_name: string | null
@@ -1780,6 +1839,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_number: string
+          customer_types?: string[]
+          customer_types_excluded?: string[]
           email?: string | null
           emergency_contact_mobile?: string | null
           emergency_contact_name?: string | null
@@ -1829,6 +1890,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_number?: string
+          customer_types?: string[]
+          customer_types_excluded?: string[]
           email?: string | null
           emergency_contact_mobile?: string | null
           emergency_contact_name?: string | null
@@ -9368,6 +9431,10 @@ export type Database = {
         Returns: string
       }
       current_profile_id: { Args: never; Returns: string }
+      customer_type_for_service: {
+        Args: { p_service: Database["public"]["Enums"]["service_type"] }
+        Returns: string
+      }
       daycare_day_availability: {
         Args: { p_end: string; p_start: string; p_tenant_id: string }
         Returns: {
@@ -9797,6 +9864,10 @@ export type Database = {
       submit_accommodation_form: {
         Args: { p_booking_id: string; p_payload: Json }
         Returns: string
+      }
+      swap_customer_account_holder: {
+        Args: { p_contact_id: string }
+        Returns: undefined
       }
       sync_hotel_daycare_credits: {
         Args: { p_booking_id: string }

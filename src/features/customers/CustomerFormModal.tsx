@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import AddressField from "@/components/address/AddressField";
 import { useCustomerAddresses } from "./addressQueries";
 import { useGroomers } from "@/features/settings/resourceQueries";
+import { CUSTOMER_TYPES, CUSTOMER_TYPE_META } from "./customerTypes";
 
 type Status = "active" | "inactive" | "archived";
 
@@ -49,6 +50,8 @@ interface FormState {
   vet_clinic_contact: string;
   vet_clinic_address: string;
   preferred_groomer_resource_id: string;
+  customer_types: string[];
+  customer_types_excluded: string[];
 }
 
 function fromCustomer(c?: CustomerRow | null): FormState {
@@ -83,6 +86,8 @@ function fromCustomer(c?: CustomerRow | null): FormState {
     vet_clinic_contact: (c as any)?.vet_clinic_contact ?? "",
     vet_clinic_address: (c as any)?.vet_clinic_address ?? "",
     preferred_groomer_resource_id: (c as any)?.preferred_groomer_resource_id ?? "",
+    customer_types: ((c as any)?.customer_types ?? []) as string[],
+    customer_types_excluded: ((c as any)?.customer_types_excluded ?? []) as string[],
   };
 }
 
@@ -180,6 +185,8 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
       vet_clinic_contact: form.vet_clinic_contact.trim() || null,
       vet_clinic_address: form.vet_clinic_address.trim() || null,
       preferred_groomer_resource_id: form.preferred_groomer_resource_id || null,
+      customer_types: form.customer_types,
+      customer_types_excluded: form.customer_types_excluded,
     };
 
     if (!payload.first_name && !payload.last_name && payload.full_name === "Unnamed") {
@@ -308,6 +315,35 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
             <option value="inactive">Inactive</option>
             <option value="archived">Archived</option>
           </select>
+        </Field>
+        <Field label="Customer type">
+          <div className="flex flex-wrap gap-2">
+            {CUSTOMER_TYPES.map((code) => {
+              const on = form.customer_types.includes(code);
+              return (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() =>
+                    setForm((f) => ({
+                      ...f,
+                      customer_types: on
+                        ? f.customer_types.filter((t) => t !== code)
+                        : [...f.customer_types, code],
+                      customer_types_excluded: on
+                        ? Array.from(new Set([...f.customer_types_excluded, code]))
+                        : f.customer_types_excluded.filter((t) => t !== code),
+                    }))
+                  }
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    on ? CUSTOMER_TYPE_META[code].className : "border border-dashed border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {CUSTOMER_TYPE_META[code].label}
+                </button>
+              );
+            })}
+          </div>
         </Field>
         <div className="border-t border-border pt-4">
           <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">

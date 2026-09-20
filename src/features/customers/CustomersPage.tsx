@@ -8,6 +8,8 @@ import { Plus, Search, AlertCircle, Users, ChevronLeft, ChevronRight } from "luc
 import { Skeleton } from "@/components/ui/skeleton";
 import { CustomerFormModal } from "./CustomerFormModal";
 import { SortableHeader } from "@/components/ui/sortable-header";
+import { CUSTOMER_TYPES, CUSTOMER_TYPE_META } from "./customerTypes";
+import { CustomerTypeChips } from "./CustomerTypeChips";
 
 type SortCol = "full_name" | "email" | "status" | "pet_count";
 
@@ -20,6 +22,7 @@ export default function CustomersPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [creating, setCreating] = useState(false);
+  const [type, setType] = useState("");
   const [sortColumn, setSortColumn] = useState<SortCol>("full_name");
   const [sortAscending, setSortAscending] = useState(true);
   const handleSort = (col: SortCol) => {
@@ -42,6 +45,7 @@ export default function CustomersPage() {
   const { data, isLoading, isError, error, isFetching } = useCustomers({
     tenantId: tenant?.id,
     search,
+    type,
     page,
     pageSize: PAGE_SIZE,
     // pet_count is aggregated — sort client-side; server sort by full_name in that case
@@ -74,6 +78,26 @@ export default function CustomersPage() {
         }
       />
       <div className="flex-1 space-y-4 p-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">Type:</span>
+          <button
+            onClick={() => { setType(""); setPage(0); }}
+            className={`rounded-full px-3 py-1 text-xs font-medium ${type === "" ? "bg-foreground text-white" : "border border-border hover:bg-muted"}`}
+          >
+            All
+          </button>
+          {CUSTOMER_TYPES.map((code) => (
+            <button
+              key={code}
+              onClick={() => { setType(type === code ? "" : code); setPage(0); }}
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                type === code ? CUSTOMER_TYPE_META[code].className : "border border-border hover:bg-muted"
+              }`}
+            >
+              {CUSTOMER_TYPE_META[code].label}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center justify-between gap-4">
           <div className="relative max-w-md flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -148,6 +172,7 @@ export default function CustomersPage() {
                     <td className="px-5 py-3">
                       <div className="font-medium">{name}</div>
                       <div className="text-xs text-muted-foreground">{c.customer_number ?? "—"}</div>
+                      <CustomerTypeChips types={c.customer_types} size="xs" className="mt-1" />
                     </td>
                     <td className="px-5 py-3">
                       <div>{c.email ?? <span className="text-muted-foreground">—</span>}</div>
