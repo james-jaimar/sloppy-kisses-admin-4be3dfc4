@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { BarChart3, FileText, TrendingUp, Percent } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Percent, Download } from "lucide-react";
 
 const CARDS = [
   {
@@ -26,6 +26,12 @@ const CARDS = [
     title: "Customer statements",
     description: "Open a customer's profile and click Statement to generate a printable account statement showing invoices, payments, credit notes and credit balance.",
     icon: FileText,
+  },
+  {
+    to: "/admin/reports/export",
+    title: "Data export",
+    description: "Download the full customer and pet lists with their SK and SP numbers, alongside the original Xero name each record came in with. Use it to match our records against Xero.",
+    icon: Download,
   },
 ];
 

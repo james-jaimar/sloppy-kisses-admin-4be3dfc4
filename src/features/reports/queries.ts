@@ -144,3 +144,74 @@ export function vatPeriods(year: number, category: "A" | "B" = "A") {
   }
   return periods;
 }
+
+/* ---------------- Data export (customers & pets for Xero matching) ------- */
+
+export type CustomerExportRow = {
+  sk_number: string | null;
+  original_xero_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string | null;
+  email: string | null;
+  mobile: string | null;
+  phone_alt: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
+  suburb: string | null;
+  city: string | null;
+  province: string | null;
+  postcode: string | null;
+  status: string | null;
+  pet_count: number | null;
+  date_added: string | null;
+};
+
+export type PetExportRow = {
+  sp_number: string | null;
+  pet_name: string | null;
+  species: string | null;
+  breed: string | null;
+  size: string | null;
+  date_of_birth: string | null;
+  owner_sk_number: string | null;
+  owner_name: string | null;
+  owner_email: string | null;
+  owner_mobile: string | null;
+};
+
+export function useCustomerExport(
+  tenantId: string | null | undefined,
+  activeOnly: boolean
+) {
+  return useQuery({
+    enabled: !!tenantId && !!supabase,
+    queryKey: ["reports", "export", "customers", tenantId, activeOnly],
+    queryFn: async (): Promise<CustomerExportRow[]> => {
+      const { data, error } = await (supabase as any).rpc(
+        "export_customers_for_xero",
+        { p_tenant_id: tenantId, p_active_only: activeOnly }
+      );
+      if (error) throw error;
+      return (data ?? []) as CustomerExportRow[];
+    },
+  });
+}
+
+export function usePetExport(
+  tenantId: string | null | undefined,
+  activeOnly: boolean
+) {
+  return useQuery({
+    enabled: !!tenantId && !!supabase,
+    queryKey: ["reports", "export", "pets", tenantId, activeOnly],
+    queryFn: async (): Promise<PetExportRow[]> => {
+      const { data, error } = await (supabase as any).rpc(
+        "export_pets_for_xero",
+        { p_tenant_id: tenantId, p_active_only: activeOnly }
+      );
+      if (error) throw error;
+      return (data ?? []) as PetExportRow[];
+    },
+  });
+}

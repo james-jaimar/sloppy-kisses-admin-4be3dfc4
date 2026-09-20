@@ -9453,6 +9453,43 @@ export type Database = {
         Returns: string
       }
       expire_quote_holds: { Args: never; Returns: number }
+      export_customers_for_xero: {
+        Args: { p_active_only?: boolean; p_tenant_id: string }
+        Returns: {
+          address_line_1: string
+          address_line_2: string
+          city: string
+          date_added: string
+          email: string
+          first_name: string
+          full_name: string
+          last_name: string
+          mobile: string
+          original_xero_name: string
+          pet_count: number
+          phone_alt: string
+          postcode: string
+          province: string
+          sk_number: string
+          status: string
+          suburb: string
+        }[]
+      }
+      export_pets_for_xero: {
+        Args: { p_active_only?: boolean; p_tenant_id: string }
+        Returns: {
+          breed: string
+          date_of_birth: string
+          owner_email: string
+          owner_mobile: string
+          owner_name: string
+          owner_sk_number: string
+          pet_name: string
+          size: string
+          sp_number: string
+          species: string
+        }[]
+      }
       find_customer_email_duplicates: {
         Args: { target_customer_id: string }
         Returns: {
