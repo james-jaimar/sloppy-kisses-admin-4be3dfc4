@@ -315,6 +315,35 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
             <option value="archived">Archived</option>
           </select>
         </Field>
+        <Field label="Customer type">
+          <div className="flex flex-wrap gap-2">
+            {CUSTOMER_TYPES.map((code) => {
+              const on = form.customer_types.includes(code);
+              return (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() =>
+                    setForm((f) => ({
+                      ...f,
+                      customer_types: on
+                        ? f.customer_types.filter((t) => t !== code)
+                        : [...f.customer_types, code],
+                      customer_types_excluded: on
+                        ? Array.from(new Set([...f.customer_types_excluded, code]))
+                        : f.customer_types_excluded.filter((t) => t !== code),
+                    }))
+                  }
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    on ? CUSTOMER_TYPE_META[code].className : "border border-dashed border-border text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {CUSTOMER_TYPE_META[code].label}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
         <div className="border-t border-border pt-4">
           <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Registration details
