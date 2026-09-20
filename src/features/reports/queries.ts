@@ -163,6 +163,7 @@ export type CustomerExportRow = {
   province: string | null;
   postcode: string | null;
   status: string | null;
+  customer_types: string | null;
   pet_count: number | null;
   date_added: string | null;
 };
