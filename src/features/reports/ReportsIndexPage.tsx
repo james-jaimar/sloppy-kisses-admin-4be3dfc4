@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { BarChart3, FileText, TrendingUp, Percent } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Percent, Download } from "lucide-react";
 
 const CARDS = [
   {
