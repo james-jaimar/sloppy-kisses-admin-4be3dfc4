@@ -49,6 +49,8 @@ interface FormState {
   vet_clinic_contact: string;
   vet_clinic_address: string;
   preferred_groomer_resource_id: string;
+  customer_types: string[];
+  customer_types_excluded: string[];
 }
 
 function fromCustomer(c?: CustomerRow | null): FormState {
@@ -83,6 +85,8 @@ function fromCustomer(c?: CustomerRow | null): FormState {
     vet_clinic_contact: (c as any)?.vet_clinic_contact ?? "",
     vet_clinic_address: (c as any)?.vet_clinic_address ?? "",
     preferred_groomer_resource_id: (c as any)?.preferred_groomer_resource_id ?? "",
+    customer_types: ((c as any)?.customer_types ?? []) as string[],
+    customer_types_excluded: ((c as any)?.customer_types_excluded ?? []) as string[],
   };
 }
 
@@ -180,6 +184,8 @@ export function CustomerFormModal({ tenantId, customer, onClose, onCreated, onSa
       vet_clinic_contact: form.vet_clinic_contact.trim() || null,
       vet_clinic_address: form.vet_clinic_address.trim() || null,
       preferred_groomer_resource_id: form.preferred_groomer_resource_id || null,
+      customer_types: form.customer_types,
+      customer_types_excluded: form.customer_types_excluded,
     };
 
     if (!payload.first_name && !payload.last_name && payload.full_name === "Unnamed") {
