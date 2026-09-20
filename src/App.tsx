@@ -246,6 +246,7 @@ const App = () => (
                   <Route path="/admin/reports/aging" element={<AgingReportPage />} />
                   <Route path="/admin/reports/revenue" element={<RevenueReportPage />} />
                   <Route path="/admin/reports/vat" element={<VatReportPage />} />
+                  <Route path="/admin/reports/export" element={<DataExportPage />} />
                 </Route>
                 <Route element={<RequirePermission code="users.manage" />}>
                   <Route path="/admin/users" element={<UsersPage />} />
