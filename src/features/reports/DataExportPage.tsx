@@ -25,6 +25,7 @@ const CUSTOMER_HEADERS: { key: keyof CustomerExportRow; label: string }[] = [
   { key: "province", label: "Province" },
   { key: "postcode", label: "Postcode" },
   { key: "status", label: "Status" },
+  { key: "customer_types", label: "Types" },
   { key: "pet_count", label: "Number of pets" },
   { key: "date_added", label: "Date added" },
 ];

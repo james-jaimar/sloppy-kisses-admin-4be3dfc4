@@ -9526,6 +9526,7 @@ export type Database = {
           address_line_1: string
           address_line_2: string
           city: string
+          customer_types: string
           date_added: string
           email: string
           first_name: string

@@ -210,6 +210,73 @@ Deno.serve(async (req) => {
 
   if (!ok) return j(502, { ok: false, error });
 
+  // Copy the invoice to any second contacts flagged to receive emails.
+  if (inv.customer_id) {
+    const { data: extras } = await admin
+      .from("customer_contacts")
+      .select("email")
+      .eq("customer_id", inv.customer_id)
+      .eq("receives_emails", true)
+      .not("email", "is", null);
+    const templateCode = kind === "reminder" ? "invoice_reminder" : "invoice_send";
+    for (const c of extras ?? []) {
+      const cc = (c as any).email as string;
+      if (!cc || cc.toLowerCase() === String(recipient).toLowerCase()) continue;
+      const ccGate = await guardSend(admin, {
+        tenantId: inv.tenant_id,
+        recipient: cc,
+        subject,
+        templateCode,
+        customerId: inv.customer_id ?? null,
+        invoiceId: inv.id,
+      });
+      if (!ccGate.allowed) continue;
+      let ccOk = false;
+      let ccErr: string | null = null;
+      try {
+        const ccClient = new SMTPClient({
+          connection: {
+            hostname: smtp.smtp_host,
+            port: Number(smtp.smtp_port),
+            tls: (smtp.smtp_secure ?? "starttls") === "ssl",
+            auth: smtp.smtp_username && smtp.smtp_password
+              ? { username: smtp.smtp_username, password: smtp.smtp_password }
+              : undefined,
+          },
+        });
+        await ccClient.send({
+          from: smtp.from_name ? `${smtp.from_name} <${smtp.from_email}>` : smtp.from_email,
+          to: cc,
+          replyTo: smtp.reply_to ?? undefined,
+          subject,
+          content: text,
+          html,
+          attachments: [{
+            filename: `${inv.invoice_number}.pdf`,
+            content: pdfBytes,
+            contentType: "application/pdf",
+            encoding: "binary",
+          }],
+        });
+        await ccClient.close();
+        ccOk = true;
+      } catch (e) {
+        ccErr = (e as Error).message;
+      }
+      await admin.from("email_log").insert({
+        tenant_id: inv.tenant_id,
+        customer_id: inv.customer_id,
+        invoice_id: inv.id,
+        template_code: templateCode,
+        to_email: cc,
+        subject,
+        status: ccOk ? "sent" : "failed",
+        error_message: ccErr,
+        sent_at: ccOk ? new Date().toISOString() : null,
+      } as any);
+    }
+  }
+
   // Bump send_count + audit event (as System actor)
   await admin.rpc("mark_invoice_sent", { p_invoice_id: inv.id, p_recipient: recipient, p_kind: kind });
 
