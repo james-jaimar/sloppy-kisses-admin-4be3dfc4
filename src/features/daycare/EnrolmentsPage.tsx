@@ -10,6 +10,21 @@ import { DaySwapDialog } from "./DaySwapDialog";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { NewQuoteDrawer } from "@/features/quotes/NewQuoteDrawer";
 import { Can } from "@/components/auth/Can";
+import { useColumnTable, type ColumnDef } from "@/components/table/useColumnTable";
+
+const enrolmentColumns: ColumnDef<DaycareEnrolment>[] = [
+  { key: "pet", label: "Pet", get: (r) => r.pet?.name ?? "" },
+  { key: "owner", label: "Owner", get: (r) => r.customer?.full_name ?? "" },
+  { key: "plan", label: "Plan", filter: "select", get: (r) => r.plan?.name ?? "No plan" },
+  {
+    key: "days", label: "Days",
+    get: (r) => (r.selected_days ?? []).map((d) => WEEKDAY_LABEL[d as Weekday] ?? d).join(" "),
+    sortValue: (r) => (r.selected_days ?? []).length,
+  },
+  { key: "start", label: "Start", get: (r) => r.start_date ?? "" },
+  { key: "end", label: "End", get: (r) => r.end_date ?? "" },
+  { key: "status", label: "Status", filter: "select", get: (r) => (r.active ? "Active" : "Inactive") },
+];
 
 export default function EnrolmentsPage() {
   const { tenant } = useCurrentTenant();
@@ -25,6 +40,7 @@ export default function EnrolmentsPage() {
   const [quoteOpen, setQuoteOpen] = useState(false);
 
   const rows = useMemo(() => listQ.data ?? [], [listQ.data]);
+  const table = useColumnTable(rows, enrolmentColumns, "sk.daycare.enrolments", { key: "pet", asc: true });
 
   async function onDelete(r: DaycareEnrolment) {
     if (!(await confirm({ title: `Delete enrolment for ${r.pet?.name ?? "this pet"}?`, description: "Any auto-created draft invoice line will also be removed.", confirmLabel: "Delete", tone: "destructive" }))) return;
@@ -70,28 +86,32 @@ export default function EnrolmentsPage() {
         }
       />
       <div className="flex-1 p-6">
+        <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+          <span>Showing {table.rows.length} of {table.total}</span>
+          {table.active && (
+            <button onClick={table.clear} className="font-medium text-sk-coral-dark hover:underline">Clear filters</button>
+          )}
+        </div>
         <div className="sk-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-sk-surface-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-5 py-3">Pet</th>
-                  <th className="px-5 py-3">Owner</th>
-                  <th className="px-5 py-3">Plan</th>
-                  <th className="px-5 py-3">Days</th>
-                  <th className="px-5 py-3">Start</th>
-                  <th className="px-5 py-3">End</th>
-                  <th className="px-5 py-3">Status</th>
+                  {enrolmentColumns.map((c) => table.headerCell(c.key))}
                   <th className="px-5 py-3 text-right">Actions</th>
+                </tr>
+                <tr>
+                  {enrolmentColumns.map((c) => table.filterCell(c.key))}
+                  <th />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {rows.length === 0 && (
+                {table.rows.length === 0 && (
                   <tr><td colSpan={8} className="px-5 py-10 text-center text-muted-foreground">
-                    No enrolments yet.
+                    {rows.length === 0 ? "No enrolments yet." : "No enrolments match these filters."}
                   </td></tr>
                 )}
-                {rows.map((r) => (
+                {table.rows.map((r) => (
                   <tr key={r.id} className="hover:bg-sk-surface-muted/40">
                     <td className="px-5 py-3 font-medium">
                       {r.pet?.id ? (
