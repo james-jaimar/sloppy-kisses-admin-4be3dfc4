@@ -9269,6 +9269,10 @@ export type Database = {
         Args: { target_customer_id: string }
         Returns: Database["public"]["Enums"]["notification_status"]
       }
+      _daycare_count_days: {
+        Args: { p_days: string[]; p_from: string; p_to: string }
+        Returns: number
+      }
       _invoice_locked: { Args: { p_invoice_id: string }; Returns: boolean }
       _period_bounds: {
         Args: { p_anchor: string }
@@ -9442,6 +9446,16 @@ export type Database = {
           day: string
           expected: number
         }[]
+      }
+      daycare_end_enrolment: {
+        Args: {
+          p_end_date: string
+          p_enrolment_id: string
+          p_notice_date?: string
+          p_preview?: boolean
+          p_reason?: string
+        }
+        Returns: Json
       }
       daycare_expire_catchup_credits: {
         Args: { p_tenant_id?: string }
