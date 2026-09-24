@@ -103,12 +103,39 @@ Deno.serve(async (req) => {
 
   // Callers may target one booking (e.g. right after a reschedule) for instant delivery.
   let onlyBookingId: string | null = null;
+  let groupIds: string[] = [];
   if (req.method === "POST") {
     try {
       const body = await req.json();
       const id = body?.booking_id;
       if (typeof id === "string" && id.length > 0) onlyBookingId = id;
+      if (Array.isArray(body?.group_booking_ids)) {
+        groupIds = body.group_booking_ids.filter((x: unknown) => typeof x === "string");
+      }
     } catch { /* no body — drain everything */ }
+  }
+
+  // Batch booking: fold every "booking created" email into the first one.
+  let groupSchedule = "";
+  let groupPets = "";
+  if (onlyBookingId && groupIds.length > 1) {
+    const others = groupIds.filter((x) => x !== onlyBookingId);
+    await sb.from("notification_events")
+      .update({ status: "skipped", error: "Included in combined booking confirmation" })
+      .in("booking_id", others).eq("event_type", "booking_created").eq("status", "pending");
+    const { data: rows } = await sb
+      .from("bookings")
+      .select("id, booking_number, start_at, resource:resources(name), booking_pets(pet:pets(name))")
+      .in("id", groupIds)
+      .order("start_at");
+    const petSet = new Set<string>();
+    groupSchedule = (rows ?? []).map((b: any) => {
+      const pets = (b.booking_pets ?? []).map((p: any) => p?.pet?.name).filter(Boolean);
+      pets.forEach((n: string) => petSet.add(n));
+      const who = b.resource?.name ? ` with ${b.resource.name}` : "";
+      return `• ${fmtSaDateTime(b.start_at)} — ${pets.join(" & ") || "your pet"}${who} (${b.booking_number})`;
+    }).join("\n");
+    groupPets = Array.from(petSet).join(" & ");
   }
 
   let q = sb.from("notification_events").select("*").eq("status", "pending").limit(20);
@@ -122,6 +149,13 @@ Deno.serve(async (req) => {
   let processed = 0, sent = 0, failed = 0, skipped = 0;
   for (const ev of events ?? []) {
     processed++;
+    // A repeat/multi-dog series is still being saved: the booking form sends one
+    // combined confirmation when done. Give it 3 minutes before the cron falls back.
+    if (!onlyBookingId && ev.event_type === "booking_created" && ev.booking_id &&
+        Date.now() - new Date(ev.created_at).getTime() < 3 * 60_000) {
+      const { data: b } = await sb.from("bookings").select("recurring_rule_id, booking_group_id").eq("id", ev.booking_id).maybeSingle();
+      if (b && ((b as any).recurring_rule_id || (b as any).booking_group_id)) { skipped++; continue; }
+    }
     try {
       const [settingsRes, tenantRes, custRes, bookingRes, invoiceRes, petRes, tplRes] = await Promise.all([
         sb.from("comms_settings").select("*").eq("tenant_id", ev.tenant_id).maybeSingle(),
