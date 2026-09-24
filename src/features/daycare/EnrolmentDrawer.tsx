@@ -1,27 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, ChevronsUpDown, Search } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle,
 } from "@/components/ui/sheet";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  useCreateEnrolment, useDaycarePlans, useTenantPetsWithOwnersSearch, usePetWithOwner, useUpdateEnrolment,
+  useCreateEnrolment, useDaycarePlans, usePetWithOwner, useUpdateEnrolment,
   WEEKDAYS, WEEKDAY_LABEL, type DaycareEnrolment, type Weekday,
 } from "./queries";
 import { prorataQuote } from "./prorata";
 import { supabase } from "@/lib/supabase/client";
 import { emailIssuedInvoice } from "@/features/invoices/autoEmail";
 import { useQuery } from "@tanstack/react-query";
+import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
+import { useCustomerPets } from "@/features/customers/queries";
 
 const DAY_INDEX: Record<string, number> = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
 
 /** Days over capacity in the next 4 weeks on the weekdays this enrolment would attend. */
-function useCapacityWarning(tenantId: string, startDate: string, days: Weekday[]) {
+function useCapacityWarning(tenantId: string, startDate: string, days: Weekday[], adding: number) {
   const from = startDate || new Date().toISOString().slice(0, 10);
   const to = new Date(new Date(from).getTime() + 27 * 86_400_000).toISOString().slice(0, 10);
   return useQuery({
-    queryKey: ["daycare-capacity-check", tenantId, from, to, days.join(",")],
+    queryKey: ["daycare-capacity-check", tenantId, from, to, days.join(","), adding],
     enabled: Boolean(tenantId && days.length),
     queryFn: async () => {
       const { data, error } = await supabase.rpc("daycare_day_availability" as any, {
@@ -33,7 +34,7 @@ function useCapacityWarning(tenantId: string, startDate: string, days: Weekday[]
       const wanted = new Set(days.map((d) => DAY_INDEX[String(d).slice(0, 3).toLowerCase()]));
       return ((data ?? []) as any[])
         .filter((r) => r.capacity != null && wanted.has(new Date(r.day + "T00:00:00").getDay()))
-        .filter((r) => Number(r.expected) + 1 > Number(r.capacity))
+        .filter((r) => Number(r.expected) + adding > Number(r.capacity))
         .map((r) => ({ day: r.day as string, expected: Number(r.expected), capacity: Number(r.capacity) }));
     },
   });
@@ -52,14 +53,9 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
   const update = useUpdateEnrolment(tenantId);
 
   const [petId, setPetId] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(query), 200);
-    return () => clearTimeout(t);
-  }, [query]);
-  const petsQ = useTenantPetsWithOwnersSearch(tenantId, debouncedQuery);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [petIds, setPetIds] = useState<string[]>([]);
+  const customerPetsQ = useCustomerPets(editing ? null : customerId, tenantId);
   const selectedPetQ = usePetWithOwner(tenantId, petId || null);
   const [planId, setPlanId] = useState<string>("");
   const [startDate, setStartDate] = useState("");
@@ -90,13 +86,19 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
       setEndReason((editing as any).end_reason ?? "");
     } else {
       setPetId(""); setPlanId(""); setStartDate(""); setEndDate("");
-      setDays([]); setNotes(""); setActive(true);
+      setDays([]); setNotes(""); setActive(true); setAssessmentWaived(false);
       setPausedFrom(""); setPausedTo(""); setNoticeGivenAt(""); setEndReason("");
     }
+    setCustomerId(null);
+    setPetIds([]);
     setNoticeQuote(null);
-    setQuery("");
-    setPickerOpen(false);
   }, [editing, open]);
+
+  // One dog on the account? Tick it straight away.
+  useEffect(() => {
+    const list = customerPetsQ.data ?? [];
+    if (!editing && customerId && list.length === 1 && petIds.length === 0) setPetIds([list[0].id]);
+  }, [customerPetsQ.data, customerId, editing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function toggleDay(d: Weekday) {
     setDays((cur) => cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d]);
@@ -108,7 +110,8 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
     [editing, startDate, endDate, days, selectedPlan?.price],
   );
   const showProrata = !!quote?.isPartial && quote.amount > 0;
-  const capacityQ = useCapacityWarning(tenantId, startDate, days);
+  const adding = editing ? 1 : Math.max(1, petIds.length);
+  const capacityQ = useCapacityWarning(tenantId, startDate, days, adding);
   const fullDays = capacityQ.data ?? [];
 
   /** Works out the earliest legal end date from the notice period in Policy settings. */
@@ -125,14 +128,13 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
   }
 
   async function save() {
-    if (!petId || !startDate || days.length === 0) {
-      toast.error("Pet, start date, and at least one weekday are required");
+    const targetPets = editing ? [petId] : petIds;
+    if (targetPets.length === 0 || !startDate || days.length === 0) {
+      toast.error(editing ? "Start date and at least one weekday are required" : "Pick a customer, at least one dog, a start date and at least one weekday");
       return;
     }
-    const pet =
-      (petsQ.data ?? []).find((p: any) => p.id === petId) ??
-      selectedPetQ.data;
-    if (!pet?.customer_id) { toast.error("Selected pet has no owner"); return; }
+    const ownerId = editing ? editing.customer_id : customerId;
+    if (!ownerId) { toast.error("Pick a customer first"); return; }
     try {
       if (editing) {
         await update.mutateAsync({
@@ -151,40 +153,58 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
             end_reason: endReason || null,
           } as any,
         });
-      } else {
-        const created = await create.mutateAsync({
-          pet_id: petId,
-          customer_id: pet.customer_id,
-          daycare_plan_id: planId || null,
-          start_date: startDate,
-          end_date: endDate || null,
-          selected_days: days,
-          notes: notes || null,
-          active,
-          assessment_waived: assessmentWaived,
-        } as any);
-        if (showProrata) {
-          // The DB trigger raises a standalone issued pro-rata invoice — email it.
-          const { data: item } = await supabase
-            .from("invoice_items")
-            .select("invoice_id")
-            .eq("source_type", "daycare_enrolment_prorata")
-            .eq("source_id", (created as any).id)
-            .maybeSingle();
-          const invoiceId = (item as any)?.invoice_id as string | undefined;
-          if (invoiceId) void emailIssuedInvoice(invoiceId);
-          toast.success("Enrolment created · pro-rata invoice issued and emailed", {
-            description: `${quote!.daysBilled} of ${quote!.daysTotal} days — R${quote!.amount.toFixed(2)}. Full months follow on the monthly run.`,
-          });
-        } else {
-          toast.success("Enrolment created · billed on the next monthly daycare run", {
-            description: "Daycare is invoiced once a month for the coming month.",
-          });
-        }
+        toast.success("Enrolment updated");
         onOpenChange(false);
         return;
       }
-      toast.success(editing ? "Enrolment updated" : "Enrolment created");
+      const done: string[] = [];
+      const failed: string[] = [];
+      let invoicesSent = 0;
+      for (const id of targetPets) {
+        const name = (customerPetsQ.data ?? []).find((p) => p.id === id)?.name ?? "Dog";
+        try {
+          const created = await create.mutateAsync({
+            pet_id: id,
+            customer_id: ownerId,
+            daycare_plan_id: planId || null,
+            start_date: startDate,
+            end_date: endDate || null,
+            selected_days: days,
+            notes: notes || null,
+            active,
+            assessment_waived: assessmentWaived,
+          } as any);
+          done.push(name);
+          if (showProrata) {
+            // The DB trigger raises a standalone issued pro-rata invoice — email it.
+            const { data: item } = await supabase
+              .from("invoice_items")
+              .select("invoice_id")
+              .eq("source_type", "daycare_enrolment_prorata")
+              .eq("source_id", (created as any).id)
+              .maybeSingle();
+            const invoiceId = (item as any)?.invoice_id as string | undefined;
+            if (invoiceId) { void emailIssuedInvoice(invoiceId); invoicesSent++; }
+          }
+        } catch (e: any) {
+          failed.push(`${name}: ${e?.message ?? "failed"}`);
+        }
+      }
+      if (done.length) {
+        const who = done.join(" & ");
+        toast.success(
+          done.length > 1 ? `${done.length} enrolments created — ${who}` : `Enrolment created — ${who}`,
+          {
+            description: showProrata
+              ? `Pro-rata ${quote!.daysBilled} of ${quote!.daysTotal} days — R${quote!.amount.toFixed(2)} per dog${invoicesSent ? ", invoice issued and emailed" : ""}. Full months follow on the monthly run.`
+              : "Billed on the next monthly daycare run.",
+          },
+        );
+      }
+      if (failed.length) {
+        toast.error("Some enrolments weren't created", { description: failed.join("\n") });
+        return;
+      }
       onOpenChange(false);
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to save enrolment");
@@ -198,75 +218,66 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
           <SheetTitle>{editing ? "Edit enrolment" : "New enrolment"}</SheetTitle>
         </SheetHeader>
         <div className="mt-4 space-y-4">
-          <Field label="Customer & pet">
-            {(() => {
-              const pets = (petsQ.data ?? []) as any[];
-              const selected =
-                pets.find((p) => p.id === petId) ?? (selectedPetQ.data as any) ?? null;
-              // Group by customer (server already filtered)
-              const groups = new Map<string, { customer: any; pets: any[] }>();
-              for (const p of pets) {
-                const key = p.customer_id ?? "_none";
-                if (!groups.has(key)) groups.set(key, { customer: p.customer ?? null, pets: [] });
-                groups.get(key)!.pets.push(p);
-              }
-              const groupList = Array.from(groups.values()).sort((a, b) => {
-                const an = a.customer?.full_name ?? "";
-                const bn = b.customer?.full_name ?? "";
-                return an.localeCompare(bn);
-              });
-              return (
-                <Popover open={pickerOpen && !editing} onOpenChange={(v) => !editing && setPickerOpen(v)}>
-                  <PopoverTrigger asChild>
-                    <button type="button" disabled={!!editing}
-                      className="flex h-10 w-full items-center justify-between rounded-lg border border-border bg-white px-3 text-left text-sm disabled:opacity-60">
-                      <span className={selected ? "" : "text-muted-foreground"}>
-                        {selected
-                          ? `${selected.name} — ${selected.customer?.full_name ?? "no owner"}${selected.customer?.customer_number ? ` (${selected.customer.customer_number})` : ""}`
-                          : "Search customer or pet..."}
-                      </span>
-                      <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-                      <Search className="h-4 w-4 text-muted-foreground" />
-                      <input autoFocus value={query} onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Name, SK number, email, pet..."
-                        className="h-8 w-full bg-transparent text-sm focus:outline-none" />
-                    </div>
-                    <div className="max-h-72 overflow-y-auto py-1">
-                      {groupList.length === 0 && (
-                        <div className="px-3 py-6 text-center text-xs text-muted-foreground">No matching customer or pet</div>
+          {editing ? (
+            <Field label="Customer & pet">
+              <div className="flex h-10 w-full items-center rounded-lg border border-border bg-sk-surface-muted px-3 text-sm">
+                {selectedPetQ.data
+                  ? `${(selectedPetQ.data as any).name} — ${(selectedPetQ.data as any).customer?.full_name ?? "no owner"}${(selectedPetQ.data as any).customer?.customer_number ? ` (${(selectedPetQ.data as any).customer.customer_number})` : ""}`
+                  : "Loading…"}
+              </div>
+            </Field>
+          ) : (
+            <>
+              <div>
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Customer</div>
+                <CustomerCombobox
+                  tenantId={tenantId}
+                  value={customerId}
+                  onChange={(id) => { setCustomerId(id); setPetIds([]); }}
+                  placeholder="Owner name, SK number, email or mobile…"
+                />
+              </div>
+              {customerId && (
+                <div>
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Dogs joining daycare
+                  </div>
+                  {customerPetsQ.isLoading ? (
+                    <div className="text-xs text-muted-foreground">Loading dogs…</div>
+                  ) : (customerPetsQ.data ?? []).length === 0 ? (
+                    <div className="text-xs text-muted-foreground">This customer has no pets on file yet — add one on their customer record first.</div>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap gap-2">
+                        {(customerPetsQ.data ?? []).map((p) => {
+                          const on = petIds.includes(p.id);
+                          return (
+                            <button key={p.id} type="button"
+                              onClick={() => setPetIds((cur) => on ? cur.filter((x) => x !== p.id) : [...cur, p.id])}
+                              className={
+                                "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm " +
+                                (on ? "border-sk-coral bg-sk-coral-soft text-sk-coral-dark" : "border-border bg-white hover:bg-sk-surface-muted")
+                              }>
+                              {on && <Check className="h-3.5 w-3.5" />}
+                              {p.name}
+                              {p.breed ? <span className="text-xs opacity-70">· {p.breed}</span> : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {(customerPetsQ.data ?? []).length > 1 && (
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {petIds.length > 1
+                            ? `${petIds.length} enrolments will be created on the same plan and days.`
+                            : "Tap every dog that's joining — each gets their own enrolment on the same plan and days."}
+                        </p>
                       )}
-                      {groupList.map((g) => (
-                        <div key={g.customer?.id ?? "_none"} className="py-1">
-                          <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                            {g.customer?.full_name ?? "No owner"}
-                            {g.customer?.customer_number ? ` — ${g.customer.customer_number}` : ""}
-                          </div>
-                          {g.pets.map((p) => {
-                            const isSel = p.id === petId;
-                            return (
-                              <button key={p.id} type="button"
-                                onClick={() => { setPetId(p.id); setPickerOpen(false); setQuery(""); }}
-                                className={"flex w-full items-center justify-between px-3 py-1.5 text-left text-sm hover:bg-sk-surface-muted " + (isSel ? "bg-sk-coral-soft/40" : "")}>
-                                <span>
-                                  {p.name}
-                                  {p.breed ? <span className="text-muted-foreground"> · {p.breed}</span> : p.species ? <span className="text-muted-foreground"> · {p.species}</span> : null}
-                                </span>
-                                {isSel && <Check className="h-4 w-4 text-sk-coral" />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              );
-            })()}
-          </Field>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )}
           <Field label="Plan">
             <select value={planId} onChange={(e) => setPlanId(e.target.value)}
               className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm">
