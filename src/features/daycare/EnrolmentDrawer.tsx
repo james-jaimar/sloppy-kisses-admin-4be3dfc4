@@ -69,6 +69,10 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
   const [noticeGivenAt, setNoticeGivenAt] = useState("");
   const [endReason, setEndReason] = useState("");
   const [noticeQuote, setNoticeQuote] = useState<any>(null);
+  const [leaveDate, setLeaveDate] = useState("");
+  const [endPreview, setEndPreview] = useState<any>(null);
+  const [ending, setEnding] = useState(false);
+  const qc = useQueryClient();
 
   useEffect(() => {
     if (editing) {
@@ -114,7 +118,7 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
   const capacityQ = useCapacityWarning(tenantId, startDate, days, adding);
   const fullDays = capacityQ.data ?? [];
 
-  /** Works out the earliest legal end date from the notice period in Policy settings. */
+  /** Shows the notice rule from Policy settings (informational; billing follows the actual leaving date). */
   async function checkNotice() {
     if (!editing) return;
     const { data, error } = await supabase.rpc("daycare_notice_quote" as any, {
@@ -124,7 +128,28 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
     if (error) { toast.error(error.message); return; }
     setNoticeQuote(data);
     const suggested = (data as any)?.earliest_end_date as string | undefined;
-    if (suggested) setEndDate(suggested);
+    if (suggested && !leaveDate) setLeaveDate(suggested);
+  }
+
+  async function runEnd(preview: boolean) {
+    if (!editing || !leaveDate) return;
+    setEnding(true);
+    const { data, error } = await supabase.rpc("daycare_end_enrolment" as any, {
+      p_enrolment_id: editing.id,
+      p_end_date: leaveDate,
+      p_notice_date: noticeGivenAt || null,
+      p_reason: endReason || null,
+      p_preview: preview,
+    });
+    setEnding(false);
+    if (error) { toast.error(error.message); return; }
+    if (preview) { setEndPreview(data); return; }
+    const d = data as any;
+    toast.success(Number(d?.refund_total) > 0
+      ? `Daycare ends ${leaveDate}. R${Number(d.refund_total).toFixed(2)} credited back.`
+      : `Daycare ends ${leaveDate}.`);
+    qc.invalidateQueries();
+    onOpenChange(false);
   }
 
   async function save() {
@@ -364,30 +389,65 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
 
               <div className="rounded-xl border border-border bg-sk-surface-muted/40 p-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Notice to leave
+                  Notice to leave / end daycare
                 </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  The final month is billed only up to the leaving date. Days already billed after it are credited back automatically.
+                </p>
                 <div className="mt-2 grid grid-cols-2 gap-3">
                   <Field label="Notice given on">
-                    <input type="date" value={noticeGivenAt} onChange={(e) => setNoticeGivenAt(e.target.value)}
+                    <input type="date" value={noticeGivenAt} onChange={(e) => { setNoticeGivenAt(e.target.value); setEndPreview(null); }}
                       className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
                   </Field>
-                  <Field label="Reason">
+                  <Field label="Leaving date (last day)">
+                    <input type="date" value={leaveDate} onChange={(e) => { setLeaveDate(e.target.value); setEndPreview(null); }}
+                      className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                  </Field>
+                </div>
+                <div className="mt-2">
+                  <Field label="Reason (optional)">
                     <input value={endReason} onChange={(e) => setEndReason(e.target.value)}
                       placeholder="e.g. moving away"
                       className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
                   </Field>
                 </div>
-                <button type="button" onClick={checkNotice}
-                  className="mt-1 h-9 rounded-lg border border-border bg-white px-3 text-xs font-medium hover:bg-muted">
-                  Work out earliest end date
-                </button>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button" onClick={checkNotice}
+                    className="h-9 rounded-lg border border-border bg-white px-3 text-xs font-medium hover:bg-muted">
+                    Show notice period
+                  </button>
+                  <button type="button" onClick={() => runEnd(true)} disabled={!leaveDate || ending}
+                    className="h-9 rounded-lg border border-border bg-white px-3 text-xs font-medium hover:bg-muted disabled:opacity-50">
+                    Check refund
+                  </button>
+                </div>
                 {noticeQuote && (
                   <div className="mt-2 rounded-lg border border-sk-turquoise/40 bg-sk-turquoise-soft/40 px-3 py-2 text-xs">
-                    <span className="font-semibold">
-                      Earliest end date: {noticeQuote.earliest_end_date ?? "—"}
-                    </span>
-                    {noticeQuote.notice_months != null && ` · ${noticeQuote.notice_months} month(s) notice required`}
-                    {" — set as the end date; the monthly run bills up to it."}
+                    Notice rule: {noticeQuote.notice_months ?? 1} month(s) — earliest end by the rule is{" "}
+                    <span className="font-semibold">{noticeQuote.earliest_end_date ?? "—"}</span>.
+                    {" "}They're only charged up to the leaving date you enter.
+                  </div>
+                )}
+                {endPreview && (
+                  <div className="mt-2 space-y-1 rounded-lg border border-border bg-white px-3 py-2 text-xs">
+                    {endPreview.lines.length === 0 ? (
+                      <div>Nothing billed after this date — no refund needed. Their final month will be part-billed on the monthly run.</div>
+                    ) : (
+                      <>
+                        {endPreview.lines.map((l: any, i: number) => (
+                          <div key={i}>
+                            {l.invoice_number ?? "Invoice"}: {l.unused_days} of {l.total_days} days unused —{" "}
+                            <span className="font-semibold">R{Number(l.amount).toFixed(2)}</span>{" "}
+                            {l.action === "reduce_draft" ? "(draft invoice will be reduced)" : "(credit note)"}
+                          </div>
+                        ))}
+                        <div className="font-semibold">Total back: R{Number(endPreview.refund_total).toFixed(2)}</div>
+                      </>
+                    )}
+                    <button type="button" onClick={() => runEnd(false)} disabled={ending}
+                      className="mt-1 h-9 rounded-lg bg-sk-coral px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50">
+                      End daycare on {leaveDate}
+                    </button>
                   </div>
                 )}
               </div>
