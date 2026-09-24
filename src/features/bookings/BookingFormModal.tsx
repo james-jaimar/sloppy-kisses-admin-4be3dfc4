@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Plus } from "lucide-react";
 import { PetFormModal } from "@/features/pets/PetFormModal";
 import { ModalShell } from "@/components/modals/ModalShell";
+import { emailIssuedInvoice } from "@/features/invoices/autoEmail";
 import { useCustomerPets } from "@/features/customers/queries";
 import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import { AddressSelector } from "@/features/customers/AddressSelector";
@@ -197,6 +198,23 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     return seed;
   });
   const [status, setStatus] = useState<BookingStatus>(booking?.status ?? "confirmed");
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
+
+  /** One booking confirmation for the whole batch + each visit invoice emailed once. */
+  async function sendCombinedComms(bookingIds: string[]) {
+    try {
+      const { data: rows } = await supabase.from("bookings").select("id, invoice_id").in("id", bookingIds);
+      const invoiceIds = Array.from(
+        new Set((rows ?? []).map((r: any) => r.invoice_id as string | null).filter(Boolean) as string[]),
+      );
+      for (const id of invoiceIds) await emailIssuedInvoice(id);
+      await supabase.functions.invoke("send-notifications", {
+        body: { booking_id: bookingIds[0], group_booking_ids: bookingIds },
+      });
+    } catch (err) {
+      console.warn("Combined booking emails could not be sent", err);
+    }
+  }
   const isDaycare = serviceType === "daycare" || serviceType === "daycare_assessment";
   const [startAt, setStartAt] = useState<string>(
     toLocalInput(booking?.start_at ?? prefill?.start_at ?? null),
@@ -775,33 +793,44 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         const newId = () =>
           typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now() + Math.random());
         const createdIds: string[] = [];
-        for (const day of days) {
-          const groupId = slots.length > 1 ? newId() : null;
-          for (const s of slots) {
-            const start = moveToDay(s.start, day);
-            const mins = Math.round((s.end.getTime() - s.start.getTime()) / 60000);
-            const end = new Date(start.getTime() + mins * 60000);
-            const res = await create.mutateAsync({
-              customer_id: customerId,
-              pet_ids: s.petIds,
-              service_type: serviceType,
-              status,
-              start_at: start.toISOString(),
-              end_at: end.toISOString(),
-              resource_id: s.resourceId,
-              notes_internal: notesInternalValue,
-              notes_customer: notesCustomer.trim() || null,
-              service_address_id: serviceAddressId,
-              closure_override: closureOverride,
-              booking_group_id: groupId,
-              recurring_rule_id: ruleId,
-            });
-            createdIds.push(res.id);
-            const plan = planFor(s.key);
-            await saveDetails(res.id, { packageId: plan.packageId, durationMinutes: mins });
-            await persistGroomingAddons(res.id, plan.addons);
-            await persistInstructions(res.id, plan.instructions);
+        const total = days.length * slots.length;
+        // Several appointments at once: save quietly, then send ONE confirmation
+        // listing every appointment and each visit's invoice exactly once.
+        const batch = total > 1;
+        if (batch) setBatchProgress({ done: 0, total });
+        try {
+          for (const day of days) {
+            const groupId = slots.length > 1 ? newId() : null;
+            for (const s of slots) {
+              const start = moveToDay(s.start, day);
+              const mins = Math.round((s.end.getTime() - s.start.getTime()) / 60000);
+              const end = new Date(start.getTime() + mins * 60000);
+              const res = await create.mutateAsync({
+                customer_id: customerId,
+                pet_ids: s.petIds,
+                service_type: serviceType,
+                status,
+                start_at: start.toISOString(),
+                end_at: end.toISOString(),
+                resource_id: s.resourceId,
+                notes_internal: notesInternalValue,
+                notes_customer: notesCustomer.trim() || null,
+                service_address_id: serviceAddressId,
+                closure_override: closureOverride,
+                booking_group_id: groupId,
+                recurring_rule_id: ruleId,
+              });
+              createdIds.push(res.id);
+              const plan = planFor(s.key);
+              await saveDetails(res.id, { packageId: plan.packageId, durationMinutes: mins, quiet: batch });
+              await persistGroomingAddons(res.id, plan.addons);
+              await persistInstructions(res.id, plan.instructions);
+              if (batch) setBatchProgress({ done: createdIds.length, total });
+            }
           }
+          if (batch) await sendCombinedComms(createdIds);
+        } finally {
+          setBatchProgress(null);
         }
         toast.success(
           createdIds.length === 1
@@ -867,7 +896,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
   async function saveDetails(
     bookingId: string,
-    opts?: { packageId?: string | null; durationMinutes?: number },
+    opts?: { packageId?: string | null; durationMinutes?: number; quiet?: boolean },
   ) {
     if (kind === "grooming") {
       // Source service_package label from selected rate-card package so we
@@ -879,6 +908,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       await upsertDetails.mutateAsync({
         kind: "grooming",
         bookingId,
+        quiet: opts?.quiet,
         data: {
           ...grooming,
           package_id: packageId ?? null,
@@ -1719,6 +1749,25 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           </button>
         </div>
       </form>
+      {batchProgress && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/40 p-4">
+          <div role="status" aria-live="polite" className="w-full max-w-sm rounded-2xl bg-card p-6 text-center shadow-2xl">
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
+            <div className="mt-4 text-base font-semibold">
+              {batchProgress.done < batchProgress.total
+                ? `Booking ${batchProgress.done + 1} of ${batchProgress.total}…`
+                : "Sending confirmation and invoices…"}
+            </div>
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${Math.round((batchProgress.done / batchProgress.total) * 100)}%` }}
+              />
+            </div>
+            <div className="mt-3 text-sm text-muted-foreground">Please wait — don't close this window.</div>
+          </div>
+        </div>
+      )}
     </ModalShell>
   );
 }
