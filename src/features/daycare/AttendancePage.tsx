@@ -7,6 +7,7 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useAttendanceForRange, useTenantPetsWithOwners } from "./queries";
 import { PetAvatar } from "@/features/pets/photo/PetAvatar";
 import { usePetPhotos } from "@/features/pets/photo/petPhotoQueries";
+import { useColumnTable, type ColumnDef } from "@/components/table/useColumnTable";
 
 
 function isoDate(d: Date) {
@@ -59,6 +60,23 @@ export default function AttendancePage() {
 
   const photos = usePetPhotos(rows.map((r: any) => r.pet_id));
 
+  const fmtTime = (v: string | null) =>
+    v ? new Date(v).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" }) : "";
+  const columns = useMemo<ColumnDef<any>[]>(() => [
+    { key: "date", label: "Date", get: (a) => a.attendance_date ?? "" },
+    { key: "pet", label: "Pet", get: (a) => a.pet?.name ?? "" },
+    { key: "owner", label: "Owner", get: (a) => a.customer?.full_name ?? "" },
+    { key: "status", label: "Status", filter: "select", get: (a) => String(a.status ?? "").replace(/_/g, " ") },
+    { key: "in", label: "Checked in", get: (a) => fmtTime(a.checked_in_at), sortValue: (a) => a.checked_in_at ?? "" },
+    { key: "out", label: "Checked out", get: (a) => fmtTime(a.checked_out_at), sortValue: (a) => a.checked_out_at ?? "" },
+    {
+      key: "notes", label: "Notes",
+      get: (a) => [a.notes, ...(notesByKey.get(`${a.pet_id}|${a.attendance_date}`) ?? [])].filter(Boolean).join(" "),
+    },
+  ], [notesByKey]);
+  const table = useColumnTable(rows as any[], columns, "sk.daycare.attendance", { key: "date", asc: false });
+
+
 
   return (
     <>
@@ -95,25 +113,26 @@ export default function AttendancePage() {
           </label>
         </div>
 
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>Showing {table.rows.length} of {table.total}</span>
+          {table.active && (
+            <button onClick={table.clear} className="font-medium text-sk-coral-dark hover:underline">Clear filters</button>
+          )}
+        </div>
         <div className="sk-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-sk-surface-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-5 py-3">Date</th>
-                  <th className="px-5 py-3">Pet</th>
-                  <th className="px-5 py-3">Owner</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Checked in</th>
-                  <th className="px-5 py-3">Checked out</th>
-                  <th className="px-5 py-3">Notes</th>
-                </tr>
+                <tr>{columns.map((c) => table.headerCell(c.key))}</tr>
+                <tr>{columns.map((c) => table.filterCell(c.key))}</tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {rows.length === 0 && (
-                  <tr><td colSpan={7} className="px-5 py-10 text-center text-muted-foreground">No attendance records in this range.</td></tr>
+                {table.rows.length === 0 && (
+                  <tr><td colSpan={7} className="px-5 py-10 text-center text-muted-foreground">
+                    {rows.length === 0 ? "No attendance records in this range." : "No records match these filters."}
+                  </td></tr>
                 )}
-                {rows.map((a) => (
+                {table.rows.map((a: any) => (
                   <tr key={a.id}>
                     <td className="px-5 py-3 tabular-nums">{a.attendance_date}</td>
                     <td className="px-5 py-3 font-medium">
