@@ -856,8 +856,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         await saveDetails(res.id);
         if (kind === "hotel") await persistSurcharges(res.id);
         if (kind === "hotel") await persistAccommodation(res.id);
-        if (kind === "grooming") await persistGroomingAddons(res.id);
-        if (kind === "grooming") await persistInstructions(res.id);
         toast.success(`Booking ${res.booking_number} created`);
         onSaved?.(res.id);
       }
