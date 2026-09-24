@@ -211,6 +211,8 @@ Deno.serve(async (req) => {
         pet = (bp?.[0] as any)?.pet ?? null;
       }
 
+      const isGroup = Boolean(groupSchedule) && ev.event_type === "booking_created";
+      if (isGroup && groupPets) pet = { ...(pet ?? {}), name: groupPets };
       const ctx = {
         tenant: tenantRes.data,
         customer,
@@ -220,13 +222,24 @@ Deno.serve(async (req) => {
         vaccine: ev.payload?.vaccine ?? {},
         change: buildChangeCtx(ev.payload),
         payload: ev.payload,
+        schedule: isGroup ? groupSchedule : "",
       };
 
       const tenantName = (tenantRes.data as any)?.name ?? "Sloppy Kisses";
       const fallbackSubject = `${ev.event_type} — ${tenantName}`;
-      const subject = (tpl.subject ? render(tpl.subject, ctx) : "") || fallbackSubject;
-      const rendered = render(tpl.body, ctx);
+      let subject = (tpl.subject ? render(tpl.subject, ctx) : "") || fallbackSubject;
+      if (isGroup) {
+        const n = groupSchedule.split("\n").length;
+        subject = `Your ${n} appointments are booked — ${tenantName}`;
+      }
+      let rendered = render(tpl.body, ctx);
       const isHtml = (tpl as any).body_format === "html" || looksLikeHtml(rendered);
+      if (isGroup && !/\{\{\s*schedule\s*\}\}/.test(tpl.body)) {
+        const heading = "All your appointments:";
+        rendered += isHtml
+          ? `<p><strong>${heading}</strong></p><ul>${groupSchedule.split("\n").map((l) => `<li>${l.replace(/^•\s*/, "")}</li>`).join("")}</ul><p>Your invoices for each visit follow in separate emails.</p>`
+          : `\n\n${heading}\n${groupSchedule}\n\nYour invoices for each visit follow in separate emails.`;
+      }
       // WhatsApp/SMS always get the plain-text form.
       const body = isHtml ? htmlToText(rendered) : rendered;
       const html = renderBrandedHtml(brand, tenantName, isHtml ? rendered : body, { isHtml });
