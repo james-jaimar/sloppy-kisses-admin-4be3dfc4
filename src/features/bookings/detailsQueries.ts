@@ -127,12 +127,15 @@ export function useBookingServiceDetails(
 export function useUpsertBookingDetails(tenantId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload:
+    mutationFn: async (payload: (
       | { kind: "grooming"; bookingId: string; data: Partial<GroomingDetails> }
       | { kind: "hotel"; bookingId: string; data: Partial<HotelDetails> }
       | { kind: "transport"; bookingId: string; data: Partial<TransportDetails> }
       | { kind: "none"; bookingId: string; data?: unknown }
-    ) => {
+    ) & {
+      /** Batch saves (e.g. a repeat series) send one combined email afterwards instead. */
+      quiet?: boolean;
+    }) => {
       if (payload.kind === "none") return { ok: true, money: null as null | { before: InvoiceSnapshot; after: InvoiceSnapshot } };
 
       // Snapshot the money before the write so we can tell a repriced booking
@@ -178,7 +181,7 @@ export function useUpsertBookingDetails(tenantId: string) {
     },
     onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ["booking-details", tenantId, vars.bookingId] });
-      if (vars.kind === "none") return;
+      if (vars.kind === "none" || vars.quiet) return;
 
       const money = (res as any)?.money as { before: InvoiceSnapshot; after: InvoiceSnapshot } | null;
       const priceChanged =
