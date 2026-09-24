@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Check } from "lucide-react";
@@ -88,14 +89,16 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
       setPausedTo((editing as any).paused_to ?? "");
       setNoticeGivenAt((editing as any).notice_given_at ?? "");
       setEndReason((editing as any).end_reason ?? "");
+      setLeaveDate(editing.end_date ?? "");
     } else {
       setPetId(""); setPlanId(""); setStartDate(""); setEndDate("");
       setDays([]); setNotes(""); setActive(true); setAssessmentWaived(false);
-      setPausedFrom(""); setPausedTo(""); setNoticeGivenAt(""); setEndReason("");
+      setPausedFrom(""); setPausedTo(""); setNoticeGivenAt(""); setEndReason(""); setLeaveDate("");
     }
     setCustomerId(null);
     setPetIds([]);
     setNoticeQuote(null);
+    setEndPreview(null);
   }, [editing, open]);
 
   // One dog on the account? Tick it straight away.
