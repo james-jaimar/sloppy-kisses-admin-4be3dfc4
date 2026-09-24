@@ -41,7 +41,7 @@ const STATUS_ORDER: Record<string, number> = {
 
 const STATUS_FILTERS = ["expected", "checked_in", "checked_out", "not_arrived", "walk_in"] as const;
 
-type SortCol = "pet" | "owner" | "status";
+type SortCol = "pet" | "owner" | "plan" | "status";
 
 const LS_SEARCH = "sk.daycare.list.search";
 const LS_STATUS = "sk.daycare.list.status";
@@ -53,6 +53,7 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
 
   const [search, setSearch] = useState(() => localStorage.getItem(LS_SEARCH) ?? "");
   const [statusFilter, setStatusFilter] = useState(() => localStorage.getItem(LS_STATUS) ?? "");
+  const [planFilter, setPlanFilter] = useState(() => localStorage.getItem("sk.daycare.list.plan") ?? "");
   const [sort, setSort] = useState<{ col: SortCol; asc: boolean }>(() => {
     try {
       const raw = localStorage.getItem(LS_SORT);
@@ -63,6 +64,7 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
 
   useEffect(() => { localStorage.setItem(LS_SEARCH, search); }, [search]);
   useEffect(() => { localStorage.setItem(LS_STATUS, statusFilter); }, [statusFilter]);
+  useEffect(() => { localStorage.setItem("sk.daycare.list.plan", planFilter); }, [planFilter]);
   useEffect(() => { localStorage.setItem(LS_SORT, JSON.stringify(sort)); }, [sort]);
 
   function toggleSort(col: SortCol) {
@@ -117,6 +119,7 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
     const q = search.trim().toLowerCase();
     const filtered = allRows.filter((r) => {
       if (statusFilter && r.status !== statusFilter) return false;
+      if (planFilter && (r.plan_name ?? "No plan") !== planFilter) return false;
       if (!q) return true;
       return (
         r.pet_name.toLowerCase().includes(q) || r.customer_name.toLowerCase().includes(q)
@@ -126,13 +129,14 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
     const sorted = [...filtered].sort((x, y) => {
       if (sort.col === "pet") return dir * x.pet_name.localeCompare(y.pet_name);
       if (sort.col === "owner") return dir * (x.customer_name || "").localeCompare(y.customer_name || "");
+      if (sort.col === "plan") return dir * (x.plan_name || "").localeCompare(y.plan_name || "");
       const sx = STATUS_ORDER[x.status] ?? 99;
       const sy = STATUS_ORDER[y.status] ?? 99;
       if (sx !== sy) return dir * (sx - sy);
       return x.pet_name.localeCompare(y.pet_name);
     });
     return sorted;
-  }, [allRows, search, statusFilter, sort]);
+  }, [allRows, search, statusFilter, planFilter, sort]);
 
   const photos = usePetPhotos(rows.map((r) => r.pet_id));
 
@@ -172,7 +176,8 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
   const fmtTime = (iso: string | null) =>
     iso ? new Date(iso).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" }) : "—";
 
-  const filtering = Boolean(search.trim() || statusFilter);
+  const filtering = Boolean(search.trim() || statusFilter || planFilter);
+  const planOptions = Array.from(new Set(allRows.map((r) => r.plan_name ?? "No plan"))).sort();
 
   const SortTh = ({ col, label, className = "" }: { col: SortCol; label: string; className?: string }) => (
     <th className={`px-4 py-3 text-left font-medium ${className}`}>
@@ -210,12 +215,20 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
             <option key={s} value={s}>{STATUS_META[s].label}</option>
           ))}
         </select>
+        <select
+          value={planFilter}
+          onChange={(e) => setPlanFilter(e.target.value)}
+          className="h-9 rounded-lg border border-border bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40"
+        >
+          <option value="">All plans</option>
+          {planOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+        </select>
         <div className="text-xs tabular-nums text-muted-foreground">
           Showing {rows.length} of {allRows.length}
         </div>
         {filtering && (
           <button
-            onClick={() => { setSearch(""); setStatusFilter(""); }}
+            onClick={() => { setSearch(""); setStatusFilter(""); setPlanFilter(""); }}
             className="h-9 rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted"
           >
             Clear
@@ -224,7 +237,7 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
       </div>
       {rows.length === 0 && (
         <div className="p-8 text-center text-sm text-muted-foreground">
-          No dogs match this search or status.
+          No dogs match these filters.
         </div>
       )}
       <div className={`sk-scroll-x ${rows.length === 0 ? "hidden" : ""}`}>
@@ -233,7 +246,7 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
             <tr>
               <SortTh col="pet" label="Pet" />
               <SortTh col="owner" label="Owner" />
-              <th className="px-4 py-3 text-left font-medium hidden md:table-cell">Plan</th>
+              <SortTh col="plan" label="Plan" className="hidden md:table-cell" />
               <SortTh col="status" label="Status" />
               <th className="px-4 py-3 text-left font-medium hidden sm:table-cell">In / Out</th>
               <th className="px-4 py-3 text-right font-medium">Actions</th>
