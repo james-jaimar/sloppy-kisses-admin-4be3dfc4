@@ -44,6 +44,23 @@ import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtr
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
 import { useGroomingDayAvailability } from "@/features/grooming/availabilityQueries";
 import { freeResourcesAt, layoutGroomingAppointments, type PetSlotRequest } from "@/features/grooming/multiPetSchedule";
+import {
+  applyInstructionAddons,
+  clockOf,
+  moveToDay,
+  planDogTimes,
+  EMPTY_INSTRUCTIONS,
+  type DogPlan,
+  type TimingMode,
+} from "@/features/grooming/booking/dogPlan";
+import {
+  GroomingRepeatFields,
+  DEFAULT_GROOM_REPEAT,
+  repeatDates,
+  type GroomRepeatValue,
+} from "@/features/grooming/booking/GroomingRepeatFields";
+
+const EDIT_KEY = "__booking__";
 import { effectivePetSize } from "@/features/pets/sizeUtils";
 import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries";
 import { useGroomingPackages, useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
@@ -313,15 +330,29 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   });
   const closureHit = closureQ.data ?? null;
   const setBookingSurcharges = useSetBookingHotelSurcharges(tenantId);
-  const [groomingAddons, setGroomingAddons] = useState<GroomingAddonSelection[]>([]);
   const setBookingGroomingAddons = useSetBookingGroomingAddons(tenantId);
   const addonsCatalogQ = useGroomingAddons(tenantId, { activeOnly: true });
-  const [groomingInstructions, setGroomingInstructions] = useState<GroomingInstructionsValue>({
-    selections: (!isEdit && prefill?.grooming_instructions?.selections) || {},
-    medical_flags: (!isEdit && prefill?.grooming_instructions?.medical_flags) || [],
-    notes: (!isEdit && prefill?.grooming_instructions?.notes) || "",
-    told_office_to_call: "",
-  });
+  // Per-dog grooming plan: package, extras and grooming sheet for each dog.
+  const [defaultPlan] = useState<DogPlan>(() => ({
+    packageId: (!isEdit && prefill?.grooming?.package_id) || null,
+    addons: [],
+    instructions: {
+      ...EMPTY_INSTRUCTIONS,
+      selections: (!isEdit && prefill?.grooming_instructions?.selections) || {},
+      medical_flags: (!isEdit && prefill?.grooming_instructions?.medical_flags) || [],
+      notes: (!isEdit && prefill?.grooming_instructions?.notes) || "",
+    },
+  }));
+  const [dogPlans, setDogPlans] = useState<Record<string, DogPlan>>({});
+  const planFor = (key: string): DogPlan => dogPlans[key] ?? defaultPlan;
+  function updatePlan(key: string, patch: Partial<DogPlan>) {
+    setDogPlans((prev) => ({ ...prev, [key]: { ...(prev[key] ?? defaultPlan), ...patch } }));
+  }
+  const groomCardKeys: string[] =
+    kind !== "grooming" ? [] : isEdit || petIds.length === 0 ? [EDIT_KEY] : petIds;
+  const [timingMode, setTimingMode] = useState<TimingMode>("together");
+  const [customTimes, setCustomTimes] = useState<Record<string, string>>({});
+  const [groomRepeat, setGroomRepeat] = useState<GroomRepeatValue>(DEFAULT_GROOM_REPEAT);
   const saveInstructions = useSaveBookingInstructions(tenantId);
 
   // ---- Accommodation (hotel intake) form, captured inline with the booking ----
@@ -419,62 +450,24 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   }
   const instrCatalogQ = useInstructionCatalog(tenantId);
 
-  // Auto-add priced add-ons when an instruction option carries an addon_code.
-  // Instructions are the source of truth for any add-on that has a linked
-  // instruction option: we add when triggered AND remove when un-ticked so the
-  // two panels can't disagree. Standalone add-ons (travel, pickup, Stay & Play,
-  // toothbrush purchase) are untouched here.
+  // Each dog's grooming sheet drives its own linked add-ons (e.g. tick & flea shampoo).
   useEffect(() => {
     const cat = instrCatalogQ.data;
     const addons = addonsCatalogQ.data;
     if (!cat || !addons) return;
-    const triggered = new Set<string>();
-    for (const g of cat.groups) {
-      const val = groomingInstructions.selections[g.code];
-      if (g.kind === "bool" && val) {
-        // Special-case: hand_strip boolean → hand_strip addon
-        if (g.code === "hand_strip" && addons.some((a) => a.code === "hand_strip")) {
-          triggered.add("hand_strip");
+    setDogPlans((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [k, p] of Object.entries(prev)) {
+        const a = applyInstructionAddons(p.addons, p.instructions.selections ?? {}, cat as any, addons as any);
+        if (a !== p.addons) {
+          next[k] = { ...p, addons: a };
+          changed = true;
         }
       }
-      const opts = cat.byGroup[g.id] ?? [];
-      if (g.kind === "single" && typeof val === "string") {
-        const opt = opts.find((o) => o.code === val);
-        if (opt?.addon_code) triggered.add(opt.addon_code);
-      }
-      if (g.kind === "multi" && Array.isArray(val)) {
-        for (const code of val) {
-          const opt = opts.find((o) => o.code === code);
-          if (opt?.addon_code) triggered.add(opt.addon_code);
-        }
-      }
-    }
-    // Build the full set of codes that can ever be linked to an instruction option.
-    const linkedCodes = new Set<string>();
-    for (const o of cat.options) if (o.addon_code) linkedCodes.add(o.addon_code);
-    linkedCodes.add("hand_strip");
-    // Resolve triggered codes → addon ids, and linked codes → addon ids.
-    const triggeredIds = new Set<string>();
-    for (const code of triggered) {
-      const a = addons.find((x) => x.code === code);
-      if (a) triggeredIds.add(a.id);
-    }
-    const linkedIds = new Set<string>();
-    for (const code of linkedCodes) {
-      const a = addons.find((x) => x.code === code);
-      if (a) linkedIds.add(a.id);
-    }
-    setGroomingAddons((prev) => {
-      // Drop any linked addon that is no longer triggered; keep everything else.
-      const kept = prev.filter((s) => !linkedIds.has(s.addon_id) || triggeredIds.has(s.addon_id));
-      const have = new Set(kept.map((s) => s.addon_id));
-      const additions: GroomingAddonSelection[] = [];
-      for (const id of triggeredIds) if (!have.has(id)) additions.push({ addon_id: id, qty: 1 });
-      if (kept.length === prev.length && additions.length === 0) return prev;
-      return [...kept, ...additions];
+      return changed ? next : prev;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groomingInstructions.selections, instrCatalogQ.data, addonsCatalogQ.data]);
+  }, [dogPlans, instrCatalogQ.data, addonsCatalogQ.data]);
 
   // Load existing details when editing
   const detailsQ = useBookingServiceDetails(
@@ -484,7 +477,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   );
   useEffect(() => {
     if (!isEdit || !detailsQ.data) return;
-    if (detailsQ.data.kind === "grooming" && detailsQ.data.data) setGrooming(detailsQ.data.data);
+    if (detailsQ.data.kind === "grooming" && detailsQ.data.data) {
+      setGrooming(detailsQ.data.data);
+      updatePlan(EDIT_KEY, { packageId: (detailsQ.data.data as any).package_id ?? null });
+    }
     if (detailsQ.data.kind === "hotel" && detailsQ.data.data) setHotel(detailsQ.data.data);
     if (detailsQ.data.kind === "transport" && detailsQ.data.data) setTransport(detailsQ.data.data);
   }, [isEdit, detailsQ.data]);
@@ -507,39 +503,34 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   }, [customerId, booking]);
 
   const resourceType = SERVICE_TYPES.find((s) => s.value === serviceType)?.resourceType;
-  // Grooming: the package decides the appointment length, so there is no
-  // separate Start / Duration control for it.
-  const selectedGroomingPackage = useMemo(
-    () => (packagesQ.data ?? []).find((p) => p.id === grooming.package_id) ?? null,
-    [packagesQ.data, grooming.package_id],
-  );
-  // Add-ons add their own time to the appointment (and can stand alone without a package).
-  const groomingAddonMinutes = useMemo(() => {
-    if (kind !== "grooming") return 0;
-    return groomingAddons.reduce((sum, s) => {
+  // Grooming: each dog's package + extras decide its appointment length.
+  function planMinutes(key: string): number {
+    const p = planFor(key);
+    const pkg = (packagesQ.data ?? []).find((x) => x.id === p.packageId) ?? null;
+    const addonMins = p.addons.reduce((sum, s) => {
       const a = (addonsCatalogQ.data ?? []).find((x) => x.id === s.addon_id);
       return sum + Number(a?.duration_minutes ?? 0) * (s.qty || 1);
     }, 0);
-  }, [kind, groomingAddons, addonsCatalogQ.data]);
-  const groomingHasTreatments = kind === "grooming" && groomingAddons.length > 0;
+    const total = (pkg ? Number(pkg.expected_minutes) || 60 : 0) + addonMins;
+    return total > 0 ? Math.max(15, total) : 0;
+  }
+  function planHasWork(key: string): boolean {
+    const p = planFor(key);
+    return Boolean(p.packageId) || p.addons.length > 0;
+  }
+  const allDogsReady = groomCardKeys.length > 0 && groomCardKeys.every(planHasWork);
+  const firstCardMinutes = groomCardKeys[0] ? planMinutes(groomCardKeys[0]) : 0;
   useEffect(() => {
-    if (kind !== "grooming") return;
-    if (!selectedGroomingPackage && groomingAddonMinutes === 0) return;
-    const mins =
-      (selectedGroomingPackage ? Number(selectedGroomingPackage.expected_minutes) || 60 : 0) +
-      groomingAddonMinutes;
-    const next = Math.max(15, mins);
-    setDurationMins((prev) => (prev === next ? prev : next));
-  }, [kind, selectedGroomingPackage, groomingAddonMinutes]);
+    if (kind !== "grooming" || firstCardMinutes === 0) return;
+    setDurationMins((prev) => (prev === firstCardMinutes ? prev : firstCardMinutes));
+  }, [kind, firstCardMinutes]);
   const filteredResources = (resourcesQ.data ?? []).filter(
     (r) => !resourceType || r.type === resourceType,
   );
   const confirm = useConfirm();
 
   // ---- Multi-dog grooming -------------------------------------------------
-  // Each dog is its own appointment (own package, own groomer). Dogs run in
-  // parallel when more than one groomer is free, otherwise back-to-back.
-  const [petPackages, setPetPackages] = useState<Record<string, string>>({});
+  // Each dog is its own appointment (own package, extras, sheet and groomer).
   const isMultiPetGrooming = kind === "grooming" && !isEdit && petIds.length > 1;
   // Customers can nominate a groomer they always want.
   const preferredGroomerQ = useQuery({
@@ -585,46 +576,44 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     return new Set(free.map((r) => r.id));
   }, [kind, startAt, durationMins, groomingAvailQ.data, booking?.id]);
 
-
-
-  function packageIdForPet(petId: string): string | null {
-    return petPackages[petId] || grooming.package_id || null;
-  }
-
-  function durationForPet(petId: string): number {
-    const pkg = (packagesQ.data ?? []).find((p) => p.id === packageIdForPet(petId));
-    const base = pkg ? Number(pkg.expected_minutes) || 60 : 0;
-    return Math.max(15, base + groomingAddonMinutes) || 60;
-  }
-
   const petSlotRequests: PetSlotRequest[] = useMemo(
     () =>
       kind === "grooming"
-        ? petIds.map((id) => ({ petId: id, durationMinutes: durationForPet(id) }))
+        ? petIds.map((id) => ({ petId: id, durationMinutes: planMinutes(id) || 60 }))
         : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [kind, petIds, petPackages, grooming.package_id, packagesQ.data, groomingAddonMinutes],
+    [kind, petIds, dogPlans, packagesQ.data, addonsCatalogQ.data],
   );
+  const totalMultiMinutes = petSlotRequests.reduce((s, p) => s + p.durationMinutes, 0);
 
   const groomingPlan = useMemo(() => {
     if (!isMultiPetGrooming || !startAt) return null;
-    return layoutGroomingAppointments({
+    return planDogTimes({
+      mode: timingMode,
       resources: groomingAvailQ.data?.resources ?? [],
       busy: groomingAvailQ.data?.busy ?? [],
       baseStart: new Date(startAt),
       pets: petSlotRequests,
       preferredResourceId: resourceId,
-      excludeBookingIds: booking?.id ? [booking.id] : [],
+      customTimes,
     });
-  }, [isMultiPetGrooming, startAt, groomingAvailQ.data, petSlotRequests, resourceId, booking?.id]);
+  }, [isMultiPetGrooming, startAt, groomingAvailQ.data, petSlotRequests, resourceId, timingMode, customTimes]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!customerId) return toast.error("Please select a customer");
-    if (kind === "grooming" && !grooming.package_id && groomingAddons.length === 0) {
-      return toast.error("Please choose a grooming package or at least one individual treatment");
+    if (kind === "grooming") {
+      const missing = groomCardKeys.find((k) => !planHasWork(k));
+      if (missing !== undefined) {
+        const name = petsQ.data?.find((p) => p.id === missing)?.name;
+        return toast.error(
+          name
+            ? `Pick a package or treatment for ${name}`
+            : "Please choose a grooming package or at least one individual treatment",
+        );
+      }
     }
-    if (isMultiPetGrooming && !groomingPlan) {
+    if (isMultiPetGrooming && startAt && !groomingPlan) {
       return toast.error("There isn't enough groomer time left that day for all the dogs. Pick an earlier slot.");
     }
     if (!startAt) {
@@ -732,6 +721,96 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         if (kind === "grooming") await persistInstructions(booking.id);
         toast.success("Booking updated");
         onSaved?.(booking.id);
+      } else if (kind === "grooming") {
+        // One appointment per dog, repeated on every chosen date.
+        const baseStart = new Date(startAt);
+        const autoResource =
+          resourceId ??
+          layoutGroomingAppointments({
+            resources: groomingAvailQ.data?.resources ?? [],
+            busy: groomingAvailQ.data?.busy ?? [],
+            baseStart,
+            pets: [{ petId: petIds[0] ?? "pet", durationMinutes: durationMins }],
+            preferredResourceId: preferredGroomerId,
+          })?.[0]?.resourceId ??
+          null;
+        const slots =
+          isMultiPetGrooming && groomingPlan
+            ? groomingPlan.map((s) => ({
+                key: s.petId,
+                petIds: [s.petId],
+                start: s.start,
+                end: s.end,
+                resourceId: s.resourceId ?? resourceId,
+              }))
+            : [
+                {
+                  key: groomCardKeys[0] ?? EDIT_KEY,
+                  petIds,
+                  start: baseStart,
+                  end: endComputed,
+                  resourceId: autoResource,
+                },
+              ];
+        const firstDay = startAt.slice(0, 10);
+        const days = [firstDay, ...repeatDates(groomRepeat, firstDay)];
+        let ruleId: string | null = null;
+        if (days.length > 1) {
+          const { data: ruleRow, error: ruleErr } = await supabase
+            .from("recurring_rules")
+            .insert({
+              tenant_id: tenantId,
+              frequency: "weekly",
+              interval: groomRepeat.mode === "interval" ? groomRepeat.weeks : 1,
+              days_of_week: null,
+              end_date: days[days.length - 1],
+              start_date: firstDay,
+              active: true,
+            } as any)
+            .select("id")
+            .single();
+          if (ruleErr) throw ruleErr;
+          ruleId = (ruleRow as any).id as string;
+        }
+        const newId = () =>
+          typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now() + Math.random());
+        const createdIds: string[] = [];
+        for (const day of days) {
+          const groupId = slots.length > 1 ? newId() : null;
+          for (const s of slots) {
+            const start = moveToDay(s.start, day);
+            const mins = Math.round((s.end.getTime() - s.start.getTime()) / 60000);
+            const end = new Date(start.getTime() + mins * 60000);
+            const res = await create.mutateAsync({
+              customer_id: customerId,
+              pet_ids: s.petIds,
+              service_type: serviceType,
+              status,
+              start_at: start.toISOString(),
+              end_at: end.toISOString(),
+              resource_id: s.resourceId,
+              notes_internal: notesInternalValue,
+              notes_customer: notesCustomer.trim() || null,
+              service_address_id: serviceAddressId,
+              closure_override: closureOverride,
+              booking_group_id: groupId,
+              recurring_rule_id: ruleId,
+            });
+            createdIds.push(res.id);
+            const plan = planFor(s.key);
+            await saveDetails(res.id, { packageId: plan.packageId, durationMinutes: mins });
+            await persistGroomingAddons(res.id, plan.addons);
+            await persistInstructions(res.id, plan.instructions);
+          }
+        }
+        toast.success(
+          createdIds.length === 1
+            ? "Grooming appointment booked"
+            : `Booked ${createdIds.length} grooming appointments${days.length > 1 ? ` over ${days.length} visits` : ""}`,
+        );
+        onSaved?.(createdIds[0]);
+        onClose();
+        return;
       } else {
         const rule = toRule(recurrence);
         if (rule) {
@@ -749,52 +828,14 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             service_address_id: serviceAddressId,
             closure_override: closureOverride,
           });
-          // Persist service-typed details for every occurrence.
           for (const b of res.bookings) {
             if (kind === "hotel") await persistPetAccommodations(b.id);
             await saveDetails(b.id);
             if (kind === "hotel") await persistSurcharges(b.id);
             if (kind === "hotel") await persistAccommodation(b.id);
-            if (kind === "grooming") await persistGroomingAddons(b.id);
-            if (kind === "grooming") await persistInstructions(b.id);
           }
           toast.success(`Created ${res.bookings.length} bookings in series`);
           onSaved?.(res.bookings[0]?.id);
-          onClose();
-          return;
-        }
-        if (isMultiPetGrooming && groomingPlan) {
-          // One booking per dog, all sharing a group id so they land on one invoice.
-          const groupId =
-            typeof crypto !== "undefined" && "randomUUID" in crypto
-              ? crypto.randomUUID()
-              : String(Date.now());
-          const createdIds: string[] = [];
-          for (const slot of groomingPlan) {
-            const res = await create.mutateAsync({
-              customer_id: customerId,
-              pet_ids: [slot.petId],
-              service_type: serviceType,
-              status,
-              start_at: slot.start.toISOString(),
-              end_at: slot.end.toISOString(),
-              resource_id: slot.resourceId ?? resourceId,
-              notes_internal: notesInternalValue,
-              notes_customer: notesCustomer.trim() || null,
-              service_address_id: serviceAddressId,
-              closure_override: closureOverride,
-              booking_group_id: groupId,
-            });
-            createdIds.push(res.id);
-            await saveDetails(res.id, {
-              packageId: packageIdForPet(slot.petId),
-              durationMinutes: Math.round((slot.end.getTime() - slot.start.getTime()) / 60000),
-            });
-            await persistGroomingAddons(res.id);
-            await persistInstructions(res.id);
-          }
-          toast.success(`Created ${createdIds.length} grooming appointments on one invoice`);
-          onSaved?.(createdIds[0]);
           onClose();
           return;
         }
@@ -805,17 +846,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           status,
           start_at: new Date(startAt).toISOString(),
           end_at: endComputed.toISOString(),
-          resource_id:
-            resourceId ??
-            (kind === "grooming"
-              ? layoutGroomingAppointments({
-                  resources: groomingAvailQ.data?.resources ?? [],
-                  busy: groomingAvailQ.data?.busy ?? [],
-                  baseStart: new Date(startAt),
-                  pets: [{ petId: petIds[0] ?? "pet", durationMinutes: durationMins }],
-                  preferredResourceId: preferredGroomerId,
-                })?.[0]?.resourceId ?? null
-              : null),
+          resource_id: resourceId,
           notes_internal: notesInternalValue,
           notes_customer: notesCustomer.trim() || null,
           service_address_id: serviceAddressId,
@@ -844,7 +875,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       // Source service_package label from selected rate-card package so we
       // don't double-enter it on the form. Duration lives on the booking
       // itself but we still stamp duration_minutes on the details row.
-      const packageId = opts?.packageId !== undefined ? opts.packageId : grooming.package_id;
+      const packageId =
+        opts?.packageId !== undefined ? opts.packageId : planFor(groomCardKeys[0] ?? EDIT_KEY).packageId;
       const pkg = (packagesQ.data ?? []).find((p) => p.id === packageId);
       await upsertDetails.mutateAsync({
         kind: "grooming",
@@ -908,10 +940,11 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     }
   }
 
-  async function persistGroomingAddons(bookingId: string) {
+  async function persistGroomingAddons(bookingId: string, selection?: GroomingAddonSelection[]) {
     try {
       const catalog = addonsCatalogQ.data ?? [];
-      const rows = groomingAddons.map((s) => {
+      const chosen = selection ?? planFor(groomCardKeys[0] ?? EDIT_KEY).addons;
+      const rows = chosen.map((s) => {
         const cat = catalog.find((c) => c.id === s.addon_id);
         return {
           addon_id: s.addon_id,
@@ -927,14 +960,15 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     }
   }
 
-  async function persistInstructions(bookingId: string) {
+  async function persistInstructions(bookingId: string, value?: GroomingInstructionsValue) {
     try {
+      const v = value ?? planFor(groomCardKeys[0] ?? EDIT_KEY).instructions;
       await saveInstructions.mutateAsync({
         booking_id: bookingId,
-        selections: groomingInstructions.selections,
-        medical_flags: groomingInstructions.medical_flags,
-        notes: groomingInstructions.notes?.trim() || null,
-        told_office_to_call: groomingInstructions.told_office_to_call?.trim() || null,
+        selections: v.selections,
+        medical_flags: v.medical_flags,
+        notes: v.notes?.trim() || null,
+        told_office_to_call: v.told_office_to_call?.trim() || null,
       });
     } catch (err: any) {
       toast.error("Booking saved, but failed to save instructions: " + (err?.message ?? "unknown error"));
@@ -969,6 +1003,19 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             onChange={(id) => {
               setCustomerId(id);
               setPetIds([]);
+              if (!isEdit) {
+                // Start clean for the new customer — nothing carries over.
+                setDogPlans({});
+                setGrooming({});
+                setCustomTimes({});
+                setGroomRepeat(DEFAULT_GROOM_REPEAT);
+                setRecurrence(DEFAULT_RECURRENCE);
+                setNotesInternal("");
+                setNotesCustomer("");
+                setServiceAddressId(null);
+                setAddressOverride(false);
+                setResourceId(null);
+              }
             }}
           />
         </div>
@@ -1282,70 +1329,184 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           </div>
         )}
         {kind === "grooming" && (
-          <GroomingExtrasPanel
-            tenantId={tenantId}
-            bookingId={booking?.id ?? null}
-            species={(petsQ.data?.find((p) => petIds.includes(p.id))?.species as any) === "cat" ? "cat" : "dog"}
-            mode={serviceType === "grooming_mobile" ? "mobile" : "inhouse"}
-            packageId={grooming.package_id ?? null}
-            onPackageChange={(id) => setGrooming((p) => ({ ...p, package_id: id }))}
-            addonSelection={groomingAddons}
-            onAddonChange={setGroomingAddons}
-            pensionerDiscount={grooming.pensioner_discount ?? false}
-            mattedSurchargeZar={grooming.matted_surcharge_zar ?? null}
-            sedationSurchargeZar={grooming.sedation_surcharge_zar ?? null}
-            travelFee={grooming.travel_fee ?? null}
-            onTravelFeeChange={(v) => setGrooming((p) => ({ ...p, travel_fee: v }))}
-            petSize={effectivePetSize(petsQ.data?.find((p) => petIds.includes(p.id)) as any)}
-          />
-        )}
-        {kind === "grooming" && (
-          <div className="mt-2">
-            <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
-              <div className="text-sm font-medium">Pick a day and time</div>
-              <div className="text-[11px] text-muted-foreground">
-                {selectedGroomingPackage
-                  ? `${durationMins} min — ${selectedGroomingPackage.name}`
-                  : groomingHasTreatments
-                    ? `${durationMins} min — individual treatments`
-                    : "Pick a package or treatment first"}
-              </div>
+          <div className="space-y-3">
+            <StepHeading
+              n={1}
+              title={groomCardKeys.length > 1 ? "What is each dog having?" : "What is the dog having?"}
+              hint="Package, extras and grooming sheet — one card per dog."
+            />
+            {groomCardKeys.map((key, idx) => {
+              const pet = key === EDIT_KEY ? null : petsQ.data?.find((p) => p.id === key) ?? null;
+              const plan = planFor(key);
+              const label =
+                pet?.name ??
+                (booking?.booking_pets.map((bp) => bp.pet?.name).filter(Boolean).join(", ") || "This booking");
+              const petForSize: any = pet ?? petsQ.data?.find((p) => petIds.includes(p.id)) ?? null;
+              const ready = planHasWork(key);
+              const firstKey = groomCardKeys[0];
+              const firstName = petsQ.data?.find((p) => p.id === firstKey)?.name ?? "the first dog";
+              return (
+                <div key={key} className="rounded-2xl border-2 border-sk-coral/30 bg-white p-3">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sk-coral text-sm font-bold text-white">
+                        {idx + 1}
+                      </span>
+                      <div>
+                        <div className="font-semibold">{label}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {[petForSize?.breed, effectivePetSize(petForSize)].filter(Boolean).join(" · ")}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {idx > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const src = planFor(firstKey);
+                            updatePlan(key, { packageId: src.packageId, addons: [...src.addons] });
+                          }}
+                          className="rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-muted"
+                        >
+                          Same as {firstName}
+                        </button>
+                      )}
+                      <span
+                        className={
+                          "rounded-full px-2 py-0.5 text-xs font-medium " +
+                          (ready ? "bg-sk-green-soft text-sk-green" : "bg-sk-orange-soft text-sk-orange")
+                        }
+                      >
+                        {ready ? `${planMinutes(key)} min` : "Needs a package"}
+                      </span>
+                    </div>
+                  </div>
+                  <GroomingExtrasPanel
+                    tenantId={tenantId}
+                    bookingId={isEdit ? booking?.id ?? null : null}
+                    species={petForSize?.species === "cat" ? "cat" : "dog"}
+                    mode={serviceType === "grooming_mobile" ? "mobile" : "inhouse"}
+                    packageId={plan.packageId}
+                    onPackageChange={(id) => updatePlan(key, { packageId: id })}
+                    addonSelection={plan.addons}
+                    onAddonChange={(rows) => updatePlan(key, { addons: rows })}
+                    pensionerDiscount={grooming.pensioner_discount ?? false}
+                    mattedSurchargeZar={grooming.matted_surcharge_zar ?? null}
+                    sedationSurchargeZar={grooming.sedation_surcharge_zar ?? null}
+                    travelFee={grooming.travel_fee ?? null}
+                    onTravelFeeChange={(v) => setGrooming((p) => ({ ...p, travel_fee: v }))}
+                    petSize={effectivePetSize(petForSize)}
+                  />
+                  <details open={idx === 0} className="mt-3">
+                    <summary className="cursor-pointer select-none rounded-lg bg-muted/40 px-3 py-2 text-sm font-medium">
+                      Grooming sheet for {label}
+                    </summary>
+                    <div className="mt-2">
+                      <BookingGroomingInstructionsPanel
+                        tenantId={tenantId}
+                        bookingId={isEdit ? booking?.id ?? null : null}
+                        primaryPetId={key === EDIT_KEY ? petIds[0] ?? null : key}
+                        value={plan.instructions}
+                        onChange={(v) => updatePlan(key, { instructions: v })}
+                      />
+                    </div>
+                  </details>
+                </div>
+              );
+            })}
+
+            <div className="pt-2">
+              <StepHeading
+                n={2}
+                title="Pick a day and time"
+                hint={
+                  allDogsReady
+                    ? isMultiPetGrooming
+                      ? `${petIds.length} dogs · ${totalMultiMinutes} min of grooming`
+                      : `${durationMins} min appointment`
+                    : "Pick a package or treatment for every dog first"
+                }
+              />
             </div>
-            {selectedGroomingPackage || groomingHasTreatments ? (
+            {isMultiPetGrooming && (
+              <div>
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">How should the dogs be groomed?</div>
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      ["together", "At the same time", "Different groomers"],
+                      ["back_to_back", "One after the other", "Same groomer"],
+                      ["custom", "I'll set each time", "e.g. 09:00 and 09:30"],
+                    ] as const
+                  ).map(([m, l, sub]) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setTimingMode(m)}
+                      className={
+                        "rounded-xl border px-3 py-2 text-left text-sm transition-colors " +
+                        (timingMode === m
+                          ? "border-sk-coral bg-sk-coral text-white"
+                          : "border-border bg-white hover:bg-muted")
+                      }
+                    >
+                      <div className="font-semibold">{l}</div>
+                      <div className={"text-[11px] " + (timingMode === m ? "opacity-90" : "text-muted-foreground")}>
+                        {sub}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {allDogsReady ? (
               <GroomingSlotPicker
                 tenantId={tenantId}
                 value={startAt || null}
                 kind={groomingPoolKind}
-                durationMinutes={durationMins}
+                durationMinutes={
+                  isMultiPetGrooming && timingMode === "back_to_back" ? totalMultiMinutes : durationMins
+                }
                 resourceId={resourceId}
                 excludeBookingId={booking?.id ?? null}
-                petSlots={isMultiPetGrooming ? petSlotRequests : undefined}
+                petSlots={isMultiPetGrooming && timingMode === "together" ? petSlotRequests : undefined}
                 onChange={(startLocal) => {
                   if (startLocal) setStartAt(startLocal);
                 }}
               />
             ) : (
               <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-                Choose a grooming package or an individual treatment above and the available times will show here.
+                Choose a package or treatment for every dog above and the free times will show here.
               </div>
             )}
             {isMultiPetGrooming && startAt && (
-              <div className="mt-3 rounded-xl border border-border bg-muted/30 p-3">
-                <div className="text-sm font-semibold">Running order</div>
+              <div className="rounded-xl border border-border bg-muted/30 p-3">
+                <div className="text-sm font-semibold">Who goes when</div>
                 {groomingPlan ? (
                   <>
-                    <ul className="mt-2 space-y-1 text-sm">
+                    <ul className="mt-2 space-y-2 text-sm">
                       {groomingPlan.map((s) => (
                         <li key={s.petId} className="flex flex-wrap items-center justify-between gap-2">
                           <span className="font-medium">
                             {petsQ.data?.find((p) => p.id === s.petId)?.name ?? "Pet"}
                           </span>
-                          <span className="text-muted-foreground">
-                            {s.start.toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit", hour12: false })}
-                            {" – "}
-                            {s.end.toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit", hour12: false })}
-                            {s.resourceName ? ` · ${s.resourceName}` : ""}
-                            {s.chained ? " · after the previous dog" : ""}
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            {timingMode === "custom" ? (
+                              <input
+                                type="time"
+                                step={900}
+                                value={customTimes[s.petId] ?? clockOf(s.start)}
+                                onChange={(e) =>
+                                  setCustomTimes((prev) => ({ ...prev, [s.petId]: e.target.value }))
+                                }
+                                className="h-9 rounded-lg border border-border bg-white px-2 text-sm text-foreground"
+                              />
+                            ) : (
+                              <span>{clockOf(s.start)}</span>
+                            )}
+                            <span>– {clockOf(s.end)}</span>
+                            {s.resourceName ? <span>· {s.resourceName}</span> : null}
                           </span>
                         </li>
                       ))}
@@ -1361,47 +1522,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 )}
               </div>
             )}
-            {isMultiPetGrooming && (
-              <div className="mt-3 rounded-xl border border-border bg-white p-3">
-                <div className="text-sm font-semibold">Package per dog</div>
-                <p className="mb-2 text-[11px] text-muted-foreground">
-                  Defaults to the package chosen above. Change it where a dog needs something different.
-                </p>
-                <div className="space-y-2">
-                  {petIds.map((id) => (
-                    <div key={id} className="flex flex-wrap items-center gap-2">
-                      <span className="w-28 shrink-0 text-sm font-medium">
-                        {petsQ.data?.find((p) => p.id === id)?.name ?? "Pet"}
-                      </span>
-                      <select
-                        value={petPackages[id] ?? grooming.package_id ?? ""}
-                        onChange={(e) =>
-                          setPetPackages((prev) => ({ ...prev, [id]: e.target.value }))
-                        }
-                        className={inputCls + " flex-1"}
-                      >
-                        <option value="">No package (treatments only)</option>
-                        {(packagesQ.data ?? []).map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} — R{Number(p.price_zar ?? 0).toFixed(2)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
-        )}
-        {kind === "grooming" && (
-          <BookingGroomingInstructionsPanel
-            tenantId={tenantId}
-            bookingId={booking?.id ?? null}
-            primaryPetId={petIds[0] ?? null}
-            value={groomingInstructions}
-            onChange={setGroomingInstructions}
-          />
         )}
         {kind === "hotel" && (() => {
           const inBlock = movementBlockReason(startAt ? startAt.slice(0, 10) : null, "dropoff", holidaysQ.data);
@@ -1519,7 +1640,18 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           </div>
         )}
 
-        {!isEdit && (
+        {!isEdit && kind === "grooming" && (
+          <div className="space-y-2">
+            <StepHeading n={3} title="Coming back again?" hint="Optional — book the next visits now." />
+            <GroomingRepeatFields
+              value={groomRepeat}
+              onChange={(patch) => setGroomRepeat((p) => ({ ...p, ...patch }))}
+              firstDay={startAt ? startAt.slice(0, 10) : null}
+              firstTime={startAt ? startAt.slice(11, 16) : null}
+            />
+          </div>
+        )}
+        {!isEdit && kind !== "grooming" && (
           <RecurrenceFields
             value={recurrence}
             onChange={(patch) => setRecurrence((p) => ({ ...p, ...patch }))}
@@ -1572,10 +1704,37 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             disabled={savingAny}
             className="h-10 rounded-lg bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-60"
           >
-            {savingAny ? "Saving…" : isEdit ? "Save changes" : recurrence.enabled ? "Create series" : "Create booking"}
+            {savingAny
+              ? "Saving…"
+              : isEdit
+                ? "Save changes"
+                : kind === "grooming"
+                  ? (() => {
+                      const dogs = Math.max(1, isMultiPetGrooming ? petIds.length : 1);
+                      const visits = 1 + repeatDates(groomRepeat, startAt ? startAt.slice(0, 10) : null).length;
+                      const n = dogs * visits;
+                      return n > 1 ? `Book ${n} appointments` : "Book appointment";
+                    })()
+                  : recurrence.enabled
+                    ? "Create series"
+                    : "Create booking"}
           </button>
         </div>
       </form>
     </ModalShell>
+  );
+}
+
+function StepHeading({ n, title, hint }: { n: number; title: string; hint?: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background">
+        {n}
+      </span>
+      <div>
+        <div className="text-base font-semibold">{title}</div>
+        {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
+      </div>
+    </div>
   );
 }
