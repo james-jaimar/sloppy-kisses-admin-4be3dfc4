@@ -325,7 +325,7 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
               <span className="font-semibold">Over capacity on {fullDays.length} day(s) in the next 4 weeks</span>
               <div className="mt-1 space-y-0.5 opacity-90">
                 {fullDays.slice(0, 5).map((d) => (
-                  <div key={d.day}>{d.day} — {d.expected + 1} expected vs {d.capacity} spaces</div>
+                  <div key={d.day}>{d.day} — {d.expected + adding} expected vs {d.capacity} spaces</div>
                 ))}
                 {fullDays.length > 5 && <div>…and {fullDays.length - 5} more</div>}
               </div>
@@ -411,7 +411,7 @@ export function EnrolmentDrawer({ tenantId, open, onOpenChange, editing }: Props
           <button onClick={() => onOpenChange(false)} className="h-9 rounded-lg border border-border bg-white px-3 text-sm">Cancel</button>
           <button onClick={save} disabled={create.isPending || update.isPending}
             className="h-9 rounded-lg bg-sk-coral px-3 text-sm font-semibold text-white disabled:opacity-50">
-            {editing ? "Save changes" : "Create enrolment"}
+            {editing ? "Save changes" : petIds.length > 1 ? `Create ${petIds.length} enrolments` : "Create enrolment"}
           </button>
         </SheetFooter>
       </SheetContent>
