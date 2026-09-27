@@ -789,7 +789,17 @@ function MonthView({
           const today = isSameDay(d, new Date());
           const dayBookings = bookings.filter((b) => onDay(b, d));
           return (
-            <div key={i} className={"min-h-[120px] border-b border-l border-border p-1.5 " + (dim ? "bg-sk-surface-muted/40" : "")}>
+            <div
+              key={i}
+              title="Click a day to create a booking"
+              onClick={(e) => {
+                if (clickedAnEvent(e.target)) return;
+                const start = new Date(d);
+                start.setHours(9, 0, 0, 0);
+                onSlot(start);
+              }}
+              className={"min-h-[120px] cursor-copy border-b border-l border-border p-1.5 " + (dim ? "bg-sk-surface-muted/40" : "")}
+            >
               <div className={"mb-1 text-xs " + (today ? "font-semibold text-sk-coral-dark" : "text-muted-foreground")}>
                 {format(d, "d")}
               </div>
