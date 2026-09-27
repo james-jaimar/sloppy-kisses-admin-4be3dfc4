@@ -819,6 +819,7 @@ export type Database = {
           start_at: string | null
           start_date: string | null
           status: Database["public"]["Enums"]["booking_status"]
+          suppress_initial_emails: boolean
           tenant_id: string
           updated_at: string
           updated_by: string | null
@@ -871,6 +872,7 @@ export type Database = {
           start_at?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
+          suppress_initial_emails?: boolean
           tenant_id: string
           updated_at?: string
           updated_by?: string | null
@@ -923,6 +925,7 @@ export type Database = {
           start_at?: string | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["booking_status"]
+          suppress_initial_emails?: boolean
           tenant_id?: string
           updated_at?: string
           updated_by?: string | null
