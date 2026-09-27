@@ -499,6 +499,7 @@ export default function CalendarWeekView() {
           prefill={prefill}
           onClose={() => {
             setShowNew(false);
+            setSlot(null);
             // clear query params
             if (searchParams.get("newBooking")) {
               const next = new URLSearchParams(searchParams);
