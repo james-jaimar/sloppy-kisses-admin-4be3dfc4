@@ -69,9 +69,9 @@ function rateAllowsSize(
 
 function addDays(date: string, days: number): string {
   if (!date) return "";
-  const d = new Date(`${date}T00:00:00`);
+  const d = new Date(`${date}T12:00:00`);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function nightsBetween(a: string, b: string): number {
