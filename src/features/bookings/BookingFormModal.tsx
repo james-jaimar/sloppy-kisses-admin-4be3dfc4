@@ -633,7 +633,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   }, [isMultiPetGrooming, startAt, groomingAvailQ.data, petSlotRequests, resourceId, timingMode, customTimes]);
 
   function groomingSlots() {
-    if (!startAt) return [];
+    if (!startAt) return null;
     const baseStart = new Date(startAt);
     const endComputed = new Date(baseStart.getTime() + durationMins * 60000);
     const autoResource = resourceId ?? layoutGroomingAppointments({
@@ -1783,11 +1783,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           title="Review grooming booking"
           subtitle="Check every appointment before booking and issuing invoices."
           onClose={bookingInProgress ? undefined : () => setReviewGrooming(false)}
-          className="z-[70]"
           footer={
             <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="outline" disabled={savingAny} onClick={() => setReviewGrooming(false)}>Back to edit</Button>
-              <Button type="button" disabled={savingAny} onClick={() => void saveBooking(true)}>
+              <Button type="button" disabled={savingAny || reviewCustomerQ.isLoading || reviewCustomerQ.isError} onClick={() => void saveBooking(true)}>
                 {savingAny ? "Booking…" : "Confirm & book"}
               </Button>
             </div>
@@ -1798,6 +1797,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               <div><div className="text-xs font-medium text-muted-foreground">Customer</div><div className="font-semibold">{reviewCustomerQ.data?.full_name ?? selectedCustomer?.full_name ?? "Loading customer…"}</div></div>
               <div><div className="text-xs font-medium text-muted-foreground">Contact</div><div>{reviewCustomerQ.data?.email ?? "No email on file"}</div><div className="text-muted-foreground">{reviewCustomerQ.data?.mobile ?? ""}</div></div>
             </div>
+            {reviewCustomerQ.isError && <p role="alert" className="text-sm text-destructive">Could not load the customer details. Go back and try again.</p>}
             <div>
               <h3 className="text-sm font-semibold">{reviewSchedule.days.length} {reviewSchedule.days.length === 1 ? "visit" : "visits"} · {reviewSchedule.appointments.length} {reviewSchedule.appointments.length === 1 ? "appointment" : "appointments"}</h3>
               <div className="mt-3 space-y-4">
