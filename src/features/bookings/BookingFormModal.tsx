@@ -802,7 +802,13 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           for (const day of days) {
             const groupId = slots.length > 1 ? newId() : null;
             for (const s of slots) {
-              const start = moveToDay(s.start, day);
+              let start = moveToDay(s.start, day);
+              const override = groomRepeat.times?.[day];
+              const baseClock = startAt ? startAt.slice(11, 16) : null;
+              if (override && baseClock && override !== baseClock) {
+                const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
+                start = new Date(start.getTime() + (toMin(override) - toMin(baseClock)) * 60000);
+              }
               const mins = Math.round((s.end.getTime() - s.start.getTime()) / 60000);
               const end = new Date(start.getTime() + mins * 60000);
               const res = await create.mutateAsync({
