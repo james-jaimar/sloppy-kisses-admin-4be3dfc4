@@ -191,6 +191,17 @@ export function GroomingDiary({ day }: { day: Date }) {
     }
   }
 
+  /** Click an empty spot in a groomer's lane to start a booking at that time. */
+  function handleLaneClick(groomer: ResourceRow, clientY: number, laneTop: number) {
+    const rawMin = (clientY - laneTop) / PX_PER_MIN + openMin;
+    let startMin = Math.round(rawMin / SNAP) * SNAP;
+    startMin = Math.max(openMin, Math.min(startMin, closeMin - SNAP));
+    const start = new Date(day);
+    start.setHours(0, 0, 0, 0);
+    start.setMinutes(startMin);
+    setNewSlot({ startIso: start.toISOString(), resourceId: groomer.id });
+  }
+
   if (groomersQ.isLoading || bookingsQ.isLoading) {
     return <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">Loading diary…</div>;
   }
