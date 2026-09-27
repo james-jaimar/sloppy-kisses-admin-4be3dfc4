@@ -4143,6 +4143,8 @@ export type Database = {
           check_in_window: string | null
           check_out_window: string | null
           created_at: string
+          discount_pct: number
+          discount_reason: string | null
           dropoff_required: boolean
           emergency_notes: string | null
           feeding_instructions: string | null
@@ -4164,6 +4166,8 @@ export type Database = {
           check_in_window?: string | null
           check_out_window?: string | null
           created_at?: string
+          discount_pct?: number
+          discount_reason?: string | null
           dropoff_required?: boolean
           emergency_notes?: string | null
           feeding_instructions?: string | null
@@ -4185,6 +4189,8 @@ export type Database = {
           check_in_window?: string | null
           check_out_window?: string | null
           created_at?: string
+          discount_pct?: number
+          discount_reason?: string | null
           dropoff_required?: boolean
           emergency_notes?: string | null
           feeding_instructions?: string | null
@@ -4647,6 +4653,8 @@ export type Database = {
           guidelines_version: number
           id: string
           late_checkout_fee_zar: number
+          long_stay_discount_pct: number
+          long_stay_min_nights: number | null
           min_lead_hours: number
           no_refund_early_checkout: boolean
           overbooking_mode: string
@@ -4680,6 +4688,8 @@ export type Database = {
           guidelines_version?: number
           id?: string
           late_checkout_fee_zar?: number
+          long_stay_discount_pct?: number
+          long_stay_min_nights?: number | null
           min_lead_hours?: number
           no_refund_early_checkout?: boolean
           overbooking_mode?: string
@@ -4713,6 +4723,8 @@ export type Database = {
           guidelines_version?: number
           id?: string
           late_checkout_fee_zar?: number
+          long_stay_discount_pct?: number
+          long_stay_min_nights?: number | null
           min_lead_hours?: number
           no_refund_early_checkout?: boolean
           overbooking_mode?: string
