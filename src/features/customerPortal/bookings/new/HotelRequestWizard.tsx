@@ -422,11 +422,24 @@ export default function HotelRequestWizard() {
             </div>
           </Field>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-3">
             <Field label="Check-in date">
               <input type="date" value={checkInDate} onChange={(e) => setCheckInDate(e.target.value)} className={inputCls} />
             </Field>
-            <Field label="Nights" hint={checkOutDate ? `Check-out ${checkOutDate}` : undefined}>
+            <Field label="Check-out date">
+              <input
+                type="date"
+                value={checkOutDate}
+                min={checkInDate ? addDays(checkInDate, 1) : undefined}
+                disabled={!checkInDate}
+                onChange={(e) => {
+                  if (!e.target.value || !checkInDate) return;
+                  setNights(Math.max(1, nightsBetween(checkInDate, e.target.value)));
+                }}
+                className={inputCls}
+              />
+            </Field>
+            <Field label="Nights">
               <div className="flex items-center gap-2">
                 <button type="button" onClick={() => setNights((n) => Math.max(1, n - 1))} className="grid h-10 w-10 place-items-center rounded-lg border border-border hover:bg-muted">
                   <Minus className="h-4 w-4" />
