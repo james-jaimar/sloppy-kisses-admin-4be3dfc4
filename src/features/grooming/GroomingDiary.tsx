@@ -91,6 +91,7 @@ export function GroomingDiary({ day }: { day: Date }) {
     useMemo(() => cards.map((c) => ({ id: c.id, petIds: c.pets.map((p) => p.id) })), [cards]),
   );
   const [prefsCard, setPrefsCard] = useState<GroomingBoardCard | null>(null);
+  const [newSlot, setNewSlot] = useState<{ startIso: string; resourceId: string } | null>(null);
   const [onlyMissingPrefs, setOnlyMissingPrefs] = useState(false);
   const isMissing = (c: GroomingBoardCard) =>
     !prefs.isLoading && prefs.forBooking(c.id, c.pets.map((p) => p.id)) === "missing";
