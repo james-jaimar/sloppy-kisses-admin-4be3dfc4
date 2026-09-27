@@ -603,12 +603,13 @@ function TimeDayView({
 }
 
 function ResourceDayView({
-  bookings, anchor, resources, onSelect, onReschedule,
+  bookings, anchor, resources, onSelect, onReschedule, onSlot,
 }: {
   bookings: BookingListRow[]; anchor: Date;
   resources: { id: string; name: string; type: ResourceType }[];
   onSelect: (id: string) => void;
   onReschedule: (b: BookingListRow, newStart: Date, durationMs: number, newResourceId?: string | null) => void;
+  onSlot: (start: Date, resourceId?: string | null) => void;
 }) {
   const hours = hoursRange();
   const cols = [...resources, { id: "__unassigned", name: "Unassigned", type: "inhouse_grooming" as ResourceType }];
