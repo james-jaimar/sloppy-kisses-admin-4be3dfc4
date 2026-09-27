@@ -216,6 +216,19 @@ export function GroomingDiary({ day }: { day: Date }) {
   return (
     <PaymentFlagsProvider bookingIds={cards.map((c) => c.id)}>
       <div className="space-y-4">
+        {newSlot && tenantId && (
+          <BookingFormModal
+            tenantId={tenantId}
+            prefill={{
+              service_type: "grooming_inhouse",
+              resource_id: newSlot.resourceId,
+              start_at: newSlot.startIso,
+            }}
+            onClose={() => setNewSlot(null)}
+            onSaved={() => setNewSlot(null)}
+          />
+        )}
+
         {prefsCard && tenantId && (
           <BookingGroomingPrefsDialog
             open
