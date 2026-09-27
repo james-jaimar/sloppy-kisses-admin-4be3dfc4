@@ -40,6 +40,8 @@ export default function HotelWorkflowPage() {
     peak_end_month_day: "",
     deposit_split_enabled: true,
     checkout_groom_discount_pct: 50,
+    long_stay_min_nights: 0,
+    long_stay_discount_pct: 0,
     daycare_credit_enabled: true,
     guidelines_md: "",
     extra_food_fee_zar: 0,
@@ -69,6 +71,8 @@ export default function HotelWorkflowPage() {
         peak_end_month_day: settingsQ.data.peak_end_month_day ?? "",
         deposit_split_enabled: settingsQ.data.deposit_split_enabled ?? true,
         checkout_groom_discount_pct: Number(settingsQ.data.checkout_groom_discount_pct ?? 50),
+        long_stay_min_nights: Number(settingsQ.data.long_stay_min_nights ?? 0),
+        long_stay_discount_pct: Number(settingsQ.data.long_stay_discount_pct ?? 0),
         daycare_credit_enabled: settingsQ.data.daycare_credit_enabled ?? true,
         guidelines_md: (settingsQ.data as any).guidelines_md ?? "",
         extra_food_fee_zar: Number((settingsQ.data as any).extra_food_fee_zar ?? 0),
@@ -100,6 +104,8 @@ export default function HotelWorkflowPage() {
         peak_end_month_day: form.peak_end_month_day || null,
         deposit_split_enabled: form.deposit_split_enabled,
         checkout_groom_discount_pct: form.checkout_groom_discount_pct,
+        long_stay_min_nights: form.long_stay_min_nights > 0 ? form.long_stay_min_nights : null,
+        long_stay_discount_pct: form.long_stay_discount_pct,
         daycare_credit_enabled: form.daycare_credit_enabled,
         extra_food_fee_zar: form.extra_food_fee_zar,
         no_refund_early_checkout: form.no_refund_early_checkout,
@@ -229,6 +235,19 @@ export default function HotelWorkflowPage() {
                 onChange={(e) => setForm((f) => ({ ...f, quote_validity_days: Number(e.target.value) }))}
                 className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
               />
+            </Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Long-stay discount from (nights)" hint="e.g. 30. Leave 0 to switch off.">
+              <input type="number" min={0} step={1} disabled={!canManage} value={form.long_stay_min_nights}
+                onChange={(e) => setForm((f) => ({ ...f, long_stay_min_nights: Math.max(0, Number(e.target.value) || 0) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            </Field>
+            <Field label="Long-stay discount %" hint="Taken off the stay (not add-ons) automatically.">
+              <input type="number" min={0} max={100} step={1} disabled={!canManage} value={form.long_stay_discount_pct}
+                onChange={(e) => setForm((f) => ({ ...f, long_stay_discount_pct: Math.min(100, Math.max(0, Number(e.target.value) || 0)) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
             </Field>
           </div>
 
