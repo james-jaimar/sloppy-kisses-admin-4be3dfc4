@@ -250,6 +250,8 @@ export interface CreateBookingInput {
   booking_group_id?: string | null;
   /** Links an occurrence to its repeat series. */
   recurring_rule_id?: string | null;
+  /** Staff chose not to send the initial booking confirmation or invoice emails. */
+  suppress_initial_emails?: boolean;
 }
 
 export function useCreateBooking(tenantId: string) {
@@ -333,6 +335,7 @@ export function useCreateBooking(tenantId: string) {
           requires_grooming: input.requires_grooming ?? false,
           closure_override: input.closure_override ?? false,
           booking_group_id: input.booking_group_id ?? null,
+           suppress_initial_emails: input.suppress_initial_emails ?? false,
           ...(input.recurring_rule_id ? { recurring_rule_id: input.recurring_rule_id } : {}),
           ...addressSnapshot,
         })

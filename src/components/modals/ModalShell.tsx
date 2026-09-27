@@ -15,13 +15,14 @@ interface Props {
   footer?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  overlayClassName?: string;
   wide?: boolean;
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
 }
 
 export function ModalShell({
-  title, subtitle, onClose, headerRight, footer, children, className, wide,
+  title, subtitle, onClose, headerRight, footer, children, className, overlayClassName, wide,
   closeOnBackdrop = false, closeOnEscape = true,
 }: Props) {
   useEffect(() => {
@@ -46,7 +47,7 @@ export function ModalShell({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+      className={cn("fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4", overlayClassName)}
       onClick={(e) => {
         if (closeOnBackdrop && onClose && e.target === e.currentTarget) onClose();
       }}

@@ -1,0 +1,2 @@
+Grooming booking confirmation is a pre-write review: build the review and persisted appointments from the same schedule so times cannot diverge.
+Staff email opt-out for initial grooming bookings is stored on each booking before insert; the booking notification trigger marks its initial event skipped so delayed dispatch cannot send it later, while invoices remain issued.
