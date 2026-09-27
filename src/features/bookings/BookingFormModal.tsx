@@ -163,6 +163,7 @@ interface Props {
     customer_id: string;
     pet_ids: string[];
     service_type: ServiceType;
+    resource_id: string | null;
     start_at: string;
     end_at: string;
     notes_customer: string | null;
