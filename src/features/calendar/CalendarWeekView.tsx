@@ -538,26 +538,17 @@ export default function CalendarWeekView() {
   );
 }
 
-function EmptyState({ onNew }: { onNew: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">
-      <CalendarDays className="h-10 w-10 text-muted-foreground" />
-      <div className="text-lg font-semibold">No bookings in this date range</div>
-      <div className="text-sm text-muted-foreground">Create a booking to get started.</div>
-      <div className="mt-2 flex gap-2">
-        <button onClick={onNew} className="inline-flex items-center gap-2 rounded-xl bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark">
-          <Plus className="h-4 w-4" /> New booking
-        </button>
-      </div>
-    </div>
-  );
+/** True when the click landed on an appointment card rather than an empty part of the grid. */
+function clickedAnEvent(target: EventTarget | null) {
+  return Boolean((target as HTMLElement | null)?.closest("button"));
 }
 
 function TimeDayView({
-  bookings, anchor, onSelect, onReschedule,
+  bookings, anchor, onSelect, onReschedule, onSlot,
 }: {
   bookings: BookingListRow[]; anchor: Date; onSelect: (id: string) => void;
   onReschedule: (b: BookingListRow, newStart: Date, durationMs: number, newResourceId?: string | null) => void;
+  onSlot: (start: Date, resourceId?: string | null) => void;
 }) {
   const hours = hoursRange();
   const dayBookings = bookings.filter((b) => onDay(b, anchor));
@@ -571,7 +562,12 @@ function TimeDayView({
         ))}
       </div>
       <div
-        className="relative border-l border-border"
+        className="relative cursor-copy border-l border-border"
+        title="Click an empty slot to create a booking"
+        onClick={(e) => {
+          if (clickedAnEvent(e.target)) return;
+          onSlot(dropToStart(e.clientY, e.currentTarget as HTMLElement, anchor, 0));
+        }}
         onDragOver={(e) => {
           if (e.dataTransfer.types.includes(DRAG_MIME)) {
             e.preventDefault();
