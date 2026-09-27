@@ -113,7 +113,9 @@ function positionFor(start: Date, end: Date, dayAnchor: Date) {
   const dayStart = new Date(dayAnchor); dayStart.setHours(HOUR_START, 0, 0, 0);
   const dayEnd = new Date(dayAnchor); dayEnd.setHours(HOUR_END + 1, 0, 0, 0);
   const s = start < dayStart ? dayStart : start;
-  const e = end > dayEnd ? dayEnd : end;
+  // Continuing stays show as a slim bar at the top so they don't cover the day's appointments.
+  const cap = start < dayStart ? new Date(dayStart.getTime() + 45 * 60000) : dayEnd;
+  const e = end > cap ? cap : end;
   const top = Math.max(0, offsetFor(s, dayAnchor));
   const rawH = offsetFor(e, dayAnchor) - offsetFor(s, dayAnchor);
   // gap = 4px total (2 top + 2 bottom); ensures a 60-min slot lands exactly inside its row.
