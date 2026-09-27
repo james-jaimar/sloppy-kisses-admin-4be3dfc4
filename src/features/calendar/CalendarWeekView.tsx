@@ -252,6 +252,13 @@ export default function CalendarWeekView() {
   const [selectedResources, setSelectedResources] = useState<Set<string>>(new Set());
   const [showNew, setShowNew] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  /** Slot clicked directly on the grid: seeds day, time and (where known) the groomer/resource. */
+  const [slot, setSlot] = useState<{ start: Date; resourceId: string | null } | null>(null);
+
+  function openSlot(start: Date, resourceId: string | null = null) {
+    setSlot({ start, resourceId });
+    setShowNew(true);
+  }
 
   const resourcesQ = useResources(tenantId);
 
@@ -274,6 +281,15 @@ export default function CalendarWeekView() {
         start_at: searchParams.get("start") ?? undefined,
       };
     }
+    // Clicked straight on a slot in the grid.
+    if (slot) {
+      const filtered = SERVICE_FILTERS.find((f) => f.key === serviceKey)?.types ?? [];
+      return {
+        start_at: slot.start.toISOString(),
+        resource_id: slot.resourceId,
+        service_type: filtered.length === 1 ? filtered[0] : undefined,
+      };
+    }
     // From the calendar itself: seed start_at from the currently viewed day.
     // If today, round up to the next 15 min; otherwise default to 09:00.
     const now = new Date();
@@ -289,7 +305,7 @@ export default function CalendarWeekView() {
       seed.setHours(9, 0, 0, 0);
     }
     return { start_at: seed.toISOString() };
-  }, [showNew, searchParams, anchor]);
+  }, [showNew, searchParams, anchor, slot, serviceKey]);
 
   const range = useMemo(() => {
     if (view === "day") return { from: startOfDay(anchor), to: endOfDay(anchor) };
@@ -471,27 +487,24 @@ export default function CalendarWeekView() {
             <div className="p-6 text-sm text-destructive">Failed to load bookings.</div>
           )}
 
-          {!bookingsQ.isLoading && !bookingsQ.isError && bookings.length === 0 && (
-            <EmptyState onNew={() => setShowNew(true)} />
-          )}
-
-          {!bookingsQ.isLoading && bookings.length > 0 && view === "day" && dayLayout === "resource" && (
+          {!bookingsQ.isLoading && !bookingsQ.isError && view === "day" && dayLayout === "resource" && (
             <ResourceDayView
               bookings={bookings}
               anchor={anchor}
               resources={resourcesQ.data ?? []}
               onSelect={setDetailId}
               onReschedule={handleReschedule}
+              onSlot={openSlot}
             />
           )}
-          {!bookingsQ.isLoading && bookings.length > 0 && view === "day" && dayLayout === "time" && (
-            <TimeDayView bookings={bookings} anchor={anchor} onSelect={setDetailId} onReschedule={handleReschedule} />
+          {!bookingsQ.isLoading && !bookingsQ.isError && view === "day" && dayLayout === "time" && (
+            <TimeDayView bookings={bookings} anchor={anchor} onSelect={setDetailId} onReschedule={handleReschedule} onSlot={openSlot} />
           )}
-          {!bookingsQ.isLoading && bookings.length > 0 && view === "week" && (
-            <WeekView bookings={bookings} anchor={range.from} onSelect={setDetailId} onReschedule={handleReschedule} />
+          {!bookingsQ.isLoading && !bookingsQ.isError && view === "week" && (
+            <WeekView bookings={bookings} anchor={range.from} onSelect={setDetailId} onReschedule={handleReschedule} onSlot={openSlot} />
           )}
-          {!bookingsQ.isLoading && bookings.length > 0 && view === "month" && (
-            <MonthView bookings={bookings} anchor={anchor} rangeStart={range.from} onSelect={setDetailId} />
+          {!bookingsQ.isLoading && !bookingsQ.isError && view === "month" && (
+            <MonthView bookings={bookings} anchor={anchor} rangeStart={range.from} onSelect={setDetailId} onSlot={openSlot} />
           )}
         </div>
       </div>
@@ -502,6 +515,7 @@ export default function CalendarWeekView() {
           prefill={prefill}
           onClose={() => {
             setShowNew(false);
+            setSlot(null);
             // clear query params
             if (searchParams.get("newBooking")) {
               const next = new URLSearchParams(searchParams);
@@ -524,26 +538,17 @@ export default function CalendarWeekView() {
   );
 }
 
-function EmptyState({ onNew }: { onNew: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 p-12 text-center">
-      <CalendarDays className="h-10 w-10 text-muted-foreground" />
-      <div className="text-lg font-semibold">No bookings in this date range</div>
-      <div className="text-sm text-muted-foreground">Create a booking to get started.</div>
-      <div className="mt-2 flex gap-2">
-        <button onClick={onNew} className="inline-flex items-center gap-2 rounded-xl bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark">
-          <Plus className="h-4 w-4" /> New booking
-        </button>
-      </div>
-    </div>
-  );
+/** True when the click landed on an appointment card rather than an empty part of the grid. */
+function clickedAnEvent(target: EventTarget | null) {
+  return Boolean((target as HTMLElement | null)?.closest("button"));
 }
 
 function TimeDayView({
-  bookings, anchor, onSelect, onReschedule,
+  bookings, anchor, onSelect, onReschedule, onSlot,
 }: {
   bookings: BookingListRow[]; anchor: Date; onSelect: (id: string) => void;
   onReschedule: (b: BookingListRow, newStart: Date, durationMs: number, newResourceId?: string | null) => void;
+  onSlot: (start: Date, resourceId?: string | null) => void;
 }) {
   const hours = hoursRange();
   const dayBookings = bookings.filter((b) => onDay(b, anchor));
@@ -557,7 +562,12 @@ function TimeDayView({
         ))}
       </div>
       <div
-        className="relative border-l border-border"
+        className="relative cursor-copy border-l border-border"
+        title="Click an empty slot to create a booking"
+        onClick={(e) => {
+          if (clickedAnEvent(e.target)) return;
+          onSlot(dropToStart(e.clientY, e.currentTarget as HTMLElement, anchor, 0));
+        }}
         onDragOver={(e) => {
           if (e.dataTransfer.types.includes(DRAG_MIME)) {
             e.preventDefault();
@@ -593,12 +603,13 @@ function TimeDayView({
 }
 
 function ResourceDayView({
-  bookings, anchor, resources, onSelect, onReschedule,
+  bookings, anchor, resources, onSelect, onReschedule, onSlot,
 }: {
   bookings: BookingListRow[]; anchor: Date;
   resources: { id: string; name: string; type: ResourceType }[];
   onSelect: (id: string) => void;
   onReschedule: (b: BookingListRow, newStart: Date, durationMs: number, newResourceId?: string | null) => void;
+  onSlot: (start: Date, resourceId?: string | null) => void;
 }) {
   const hours = hoursRange();
   const cols = [...resources, { id: "__unassigned", name: "Unassigned", type: "inhouse_grooming" as ResourceType }];
@@ -632,7 +643,15 @@ function ResourceDayView({
             return (
               <div
                 key={c.id}
-                className="relative border-l border-border"
+                className="relative cursor-copy border-l border-border"
+                title={`Click an empty slot to book with ${c.name}`}
+                onClick={(e) => {
+                  if (clickedAnEvent(e.target)) return;
+                  onSlot(
+                    dropToStart(e.clientY, e.currentTarget as HTMLElement, anchor, 0),
+                    c.id === "__unassigned" ? null : c.id,
+                  );
+                }}
                 onDragOver={(e) => {
                   if (e.dataTransfer.types.includes(DRAG_MIME)) {
                     e.preventDefault();
@@ -672,10 +691,11 @@ function ResourceDayView({
 }
 
 function WeekView({
-  bookings, anchor, onSelect, onReschedule,
+  bookings, anchor, onSelect, onReschedule, onSlot,
 }: {
   bookings: BookingListRow[]; anchor: Date; onSelect: (id: string) => void;
   onReschedule: (b: BookingListRow, newStart: Date, durationMs: number, newResourceId?: string | null) => void;
+  onSlot: (start: Date, resourceId?: string | null) => void;
 }) {
   const hours = hoursRange();
   const days = Array.from({ length: 7 }, (_, i) => addDays(anchor, i));
@@ -706,7 +726,12 @@ function WeekView({
           return (
             <div
               key={i}
-              className="relative border-l border-border"
+              className="relative cursor-copy border-l border-border"
+              title="Click an empty slot to create a booking"
+              onClick={(e) => {
+                if (clickedAnEvent(e.target)) return;
+                onSlot(dropToStart(e.clientY, e.currentTarget as HTMLElement, d, 0));
+              }}
               onDragOver={(e) => {
                 if (e.dataTransfer.types.includes(DRAG_MIME)) {
                   e.preventDefault();
@@ -745,8 +770,11 @@ function WeekView({
 }
 
 function MonthView({
-  bookings, anchor, rangeStart, onSelect,
-}: { bookings: BookingListRow[]; anchor: Date; rangeStart: Date; onSelect: (id: string) => void }) {
+  bookings, anchor, rangeStart, onSelect, onSlot,
+}: {
+  bookings: BookingListRow[]; anchor: Date; rangeStart: Date; onSelect: (id: string) => void;
+  onSlot: (start: Date, resourceId?: string | null) => void;
+}) {
   const cells = Array.from({ length: 42 }, (_, i) => addDays(rangeStart, i));
   return (
     <div>
@@ -761,7 +789,17 @@ function MonthView({
           const today = isSameDay(d, new Date());
           const dayBookings = bookings.filter((b) => onDay(b, d));
           return (
-            <div key={i} className={"min-h-[120px] border-b border-l border-border p-1.5 " + (dim ? "bg-sk-surface-muted/40" : "")}>
+            <div
+              key={i}
+              title="Click a day to create a booking"
+              onClick={(e) => {
+                if (clickedAnEvent(e.target)) return;
+                const start = new Date(d);
+                start.setHours(9, 0, 0, 0);
+                onSlot(start);
+              }}
+              className={"min-h-[120px] cursor-copy border-b border-l border-border p-1.5 " + (dim ? "bg-sk-surface-muted/40" : "")}
+            >
               <div className={"mb-1 text-xs " + (today ? "font-semibold text-sk-coral-dark" : "text-muted-foreground")}>
                 {format(d, "d")}
               </div>

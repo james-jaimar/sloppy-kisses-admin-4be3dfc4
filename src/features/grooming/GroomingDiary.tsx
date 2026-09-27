@@ -15,6 +15,7 @@ import { useGroomingPackages } from "@/features/settings/groomingRateCardQueries
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { PaymentChip, PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
+import { BookingFormModal } from "@/features/bookings/BookingFormModal";
 import { useGroomingBoardBookings, useRescheduleGrooming, type GroomingBoardCard } from "./queries";
 import { useGroomingPrefsStates } from "./instructions/prefsQueries";
 import { GroomingPrefsChip } from "./instructions/GroomingPrefsChip";
@@ -90,6 +91,7 @@ export function GroomingDiary({ day }: { day: Date }) {
     useMemo(() => cards.map((c) => ({ id: c.id, petIds: c.pets.map((p) => p.id) })), [cards]),
   );
   const [prefsCard, setPrefsCard] = useState<GroomingBoardCard | null>(null);
+  const [newSlot, setNewSlot] = useState<{ startIso: string; resourceId: string } | null>(null);
   const [onlyMissingPrefs, setOnlyMissingPrefs] = useState(false);
   const isMissing = (c: GroomingBoardCard) =>
     !prefs.isLoading && prefs.forBooking(c.id, c.pets.map((p) => p.id)) === "missing";
@@ -189,6 +191,17 @@ export function GroomingDiary({ day }: { day: Date }) {
     }
   }
 
+  /** Click an empty spot in a groomer's lane to start a booking at that time. */
+  function handleLaneClick(groomer: ResourceRow, clientY: number, laneTop: number) {
+    const rawMin = (clientY - laneTop) / PX_PER_MIN + openMin;
+    let startMin = Math.round(rawMin / SNAP) * SNAP;
+    startMin = Math.max(openMin, Math.min(startMin, closeMin - SNAP));
+    const start = new Date(day);
+    start.setHours(0, 0, 0, 0);
+    start.setMinutes(startMin);
+    setNewSlot({ startIso: start.toISOString(), resourceId: groomer.id });
+  }
+
   if (groomersQ.isLoading || bookingsQ.isLoading) {
     return <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">Loading diary…</div>;
   }
@@ -203,6 +216,19 @@ export function GroomingDiary({ day }: { day: Date }) {
   return (
     <PaymentFlagsProvider bookingIds={cards.map((c) => c.id)}>
       <div className="space-y-4">
+        {newSlot && tenantId && (
+          <BookingFormModal
+            tenantId={tenantId}
+            prefill={{
+              service_type: "grooming_inhouse",
+              resource_id: newSlot.resourceId,
+              start_at: newSlot.startIso,
+            }}
+            onClose={() => setNewSlot(null)}
+            onSaved={() => setNewSlot(null)}
+          />
+        )}
+
         {prefsCard && tenantId && (
           <BookingGroomingPrefsDialog
             open
@@ -307,8 +333,14 @@ export function GroomingDiary({ day }: { day: Date }) {
                   </div>
 
                   <div
-                    className="relative rounded-lg border border-border bg-sk-surface-muted/50"
+                    className="relative cursor-copy rounded-lg border border-border bg-sk-surface-muted/50 hover:bg-sk-surface-muted"
+                    title={`Click an empty slot to book with ${g.name}`}
                     style={{ height: gridHeight }}
+                    onClick={(e) => {
+                      if (e.target !== e.currentTarget) return;
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      handleLaneClick(g, e.clientY, rect.top);
+                    }}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => {
                       e.preventDefault();
