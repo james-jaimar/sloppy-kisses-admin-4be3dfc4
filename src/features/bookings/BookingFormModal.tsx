@@ -803,7 +803,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       } else if (kind === "grooming") {
         // One appointment per dog, repeated on every chosen date.
         const schedule = groomingSlots();
-        if (!schedule) return;
+        if (!schedule) throw new Error("Choose a grooming date and time first.");
         const { days, appointments } = schedule;
         const firstDay = days[0];
         let ruleId: string | null = null;
@@ -1783,6 +1783,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           title="Review grooming booking"
           subtitle="Check every appointment before booking and issuing invoices."
           onClose={bookingInProgress ? undefined : () => setReviewGrooming(false)}
+          overlayClassName="z-[70]"
           footer={
             <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="outline" disabled={savingAny} onClick={() => setReviewGrooming(false)}>Back to edit</Button>
