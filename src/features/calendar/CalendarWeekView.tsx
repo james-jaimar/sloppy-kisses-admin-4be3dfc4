@@ -109,8 +109,13 @@ function offsetFor(when: Date, dayAnchor: Date) {
 
 /** Position + height for an event, clamped inside the visible grid. */
 function positionFor(start: Date, end: Date, dayAnchor: Date) {
-  const top = Math.max(0, offsetFor(start, dayAnchor));
-  const rawH = offsetFor(end, dayAnchor) - offsetFor(start, dayAnchor);
+  // Multi-day stays: clamp to the part of this day that is visible.
+  const dayStart = new Date(dayAnchor); dayStart.setHours(HOUR_START, 0, 0, 0);
+  const dayEnd = new Date(dayAnchor); dayEnd.setHours(HOUR_END + 1, 0, 0, 0);
+  const s = start < dayStart ? dayStart : start;
+  const e = end > dayEnd ? dayEnd : end;
+  const top = Math.max(0, offsetFor(s, dayAnchor));
+  const rawH = offsetFor(e, dayAnchor) - offsetFor(s, dayAnchor);
   // gap = 4px total (2 top + 2 bottom); ensures a 60-min slot lands exactly inside its row.
   const height = Math.max(20, rawH - 4);
   return { top, height };
