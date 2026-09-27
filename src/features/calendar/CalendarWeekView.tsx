@@ -726,7 +726,12 @@ function WeekView({
           return (
             <div
               key={i}
-              className="relative border-l border-border"
+              className="relative cursor-copy border-l border-border"
+              title="Click an empty slot to create a booking"
+              onClick={(e) => {
+                if (clickedAnEvent(e.target)) return;
+                onSlot(dropToStart(e.clientY, e.currentTarget as HTMLElement, d, 0));
+              }}
               onDragOver={(e) => {
                 if (e.dataTransfer.types.includes(DRAG_MIME)) {
                   e.preventDefault();
