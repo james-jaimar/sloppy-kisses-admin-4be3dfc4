@@ -252,6 +252,13 @@ export default function CalendarWeekView() {
   const [selectedResources, setSelectedResources] = useState<Set<string>>(new Set());
   const [showNew, setShowNew] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  /** Slot clicked directly on the grid: seeds day, time and (where known) the groomer/resource. */
+  const [slot, setSlot] = useState<{ start: Date; resourceId: string | null } | null>(null);
+
+  function openSlot(start: Date, resourceId: string | null = null) {
+    setSlot({ start, resourceId });
+    setShowNew(true);
+  }
 
   const resourcesQ = useResources(tenantId);
 
