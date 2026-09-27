@@ -1049,7 +1049,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       wide
       title={isEdit ? `Edit booking ${booking?.booking_number ?? ""}` : "New booking"}
       subtitle={isEdit ? "Update booking details" : "Create a confirmed booking on behalf of a customer"}
-      onClose={onClose}
+      onClose={bookingInProgress ? undefined : onClose}
     >
       <form onSubmit={(e) => { e.preventDefault(); void saveBooking(); }} className="space-y-6 p-6">
         {/* Customer */}
@@ -1758,7 +1758,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         </div>
 
         <div className="flex items-center justify-end gap-2 border-t border-border pt-4">
-          <button type="button" onClick={onClose} className="h-10 rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted">
+          <button type="button" onClick={onClose} disabled={savingAny} className="h-10 rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted disabled:opacity-50">
             Cancel
           </button>
           <button
