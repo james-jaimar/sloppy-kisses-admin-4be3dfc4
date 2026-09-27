@@ -236,7 +236,9 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     const presets = DURATION_PRESETS[st] ?? [];
     return presets.length > 0 && !presets.some((p) => p.mins === initialDurationMins);
   });
-  const [resourceId, setResourceId] = useState<string | null>(booking?.resource_id ?? null);
+  const [resourceId, setResourceId] = useState<string | null>(
+    booking?.resource_id ?? prefill?.resource_id ?? null,
+  );
   const [notesInternal, setNotesInternal] = useState(booking?.notes_internal ?? "");
   const [notesCustomer, setNotesCustomer] = useState(
     booking?.notes_customer ?? prefill?.notes_customer ?? "",
