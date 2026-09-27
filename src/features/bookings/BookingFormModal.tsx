@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AlertTriangle, Plus } from "lucide-react";
@@ -805,6 +806,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         const schedule = groomingSlots();
         if (!schedule) throw new Error("Choose a grooming date and time first.");
         const { days, appointments } = schedule;
+        const total = appointments.length;
+        setBatchProgress({ done: 0, total });
         const firstDay = days[0];
         let ruleId: string | null = null;
         if (days.length > 1) {
@@ -827,12 +830,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         const newId = () =>
           typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now() + Math.random());
         const createdIds: string[] = [];
-        const total = appointments.length;
         // Several appointments at once: save quietly, then send ONE confirmation
         // listing every appointment and each visit's invoice exactly once.
-        const batch = total > 1;
-        if (batch) setBatchProgress({ done: 0, total });
-        try {
           for (const day of days) {
             const groupId = petIds.length > 1 ? newId() : null;
             for (const s of appointments.filter((appointment) => appointment.day === day)) {
@@ -857,13 +856,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               await saveDetails(res.id, { packageId: plan.packageId, durationMinutes: s.mins, quiet: true });
               await persistGroomingAddons(res.id, plan.addons);
               await persistInstructions(res.id, plan.instructions);
-              if (batch) setBatchProgress({ done: createdIds.length, total });
+              setBatchProgress({ done: createdIds.length, total });
             }
           }
           if (sendGroomingEmails) await sendCombinedComms(createdIds);
-        } finally {
-          setBatchProgress(null);
-        }
         toast.success(
           createdIds.length === 1
             ? "Grooming appointment booked"
@@ -924,6 +920,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to save booking");
     } finally {
+      setBatchProgress(null);
       setBookingInProgress(false);
     }
   }
@@ -1832,7 +1829,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           </div>
         </ModalShell>
       )}
-      {batchProgress && (
+      {batchProgress && createPortal(
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/40 p-4">
           <div role="status" aria-live="polite" className="w-full max-w-sm rounded-2xl bg-card p-6 text-center shadow-2xl">
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-muted border-t-primary" />
@@ -1850,7 +1847,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             <div className="mt-3 text-sm text-muted-foreground">Please wait — don't close this window.</div>
           </div>
         </div>
-      )}
+      , document.body)}
     </ModalShell>
   );
 }
