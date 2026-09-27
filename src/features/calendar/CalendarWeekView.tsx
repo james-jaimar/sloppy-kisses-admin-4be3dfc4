@@ -770,8 +770,11 @@ function WeekView({
 }
 
 function MonthView({
-  bookings, anchor, rangeStart, onSelect,
-}: { bookings: BookingListRow[]; anchor: Date; rangeStart: Date; onSelect: (id: string) => void }) {
+  bookings, anchor, rangeStart, onSelect, onSlot,
+}: {
+  bookings: BookingListRow[]; anchor: Date; rangeStart: Date; onSelect: (id: string) => void;
+  onSlot: (start: Date, resourceId?: string | null) => void;
+}) {
   const cells = Array.from({ length: 42 }, (_, i) => addDays(rangeStart, i));
   return (
     <div>
