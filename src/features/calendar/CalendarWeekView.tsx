@@ -471,27 +471,24 @@ export default function CalendarWeekView() {
             <div className="p-6 text-sm text-destructive">Failed to load bookings.</div>
           )}
 
-          {!bookingsQ.isLoading && !bookingsQ.isError && bookings.length === 0 && (
-            <EmptyState onNew={() => setShowNew(true)} />
-          )}
-
-          {!bookingsQ.isLoading && bookings.length > 0 && view === "day" && dayLayout === "resource" && (
+          {!bookingsQ.isLoading && !bookingsQ.isError && view === "day" && dayLayout === "resource" && (
             <ResourceDayView
               bookings={bookings}
               anchor={anchor}
               resources={resourcesQ.data ?? []}
               onSelect={setDetailId}
               onReschedule={handleReschedule}
+              onSlot={openSlot}
             />
           )}
-          {!bookingsQ.isLoading && bookings.length > 0 && view === "day" && dayLayout === "time" && (
-            <TimeDayView bookings={bookings} anchor={anchor} onSelect={setDetailId} onReschedule={handleReschedule} />
+          {!bookingsQ.isLoading && !bookingsQ.isError && view === "day" && dayLayout === "time" && (
+            <TimeDayView bookings={bookings} anchor={anchor} onSelect={setDetailId} onReschedule={handleReschedule} onSlot={openSlot} />
           )}
-          {!bookingsQ.isLoading && bookings.length > 0 && view === "week" && (
-            <WeekView bookings={bookings} anchor={range.from} onSelect={setDetailId} onReschedule={handleReschedule} />
+          {!bookingsQ.isLoading && !bookingsQ.isError && view === "week" && (
+            <WeekView bookings={bookings} anchor={range.from} onSelect={setDetailId} onReschedule={handleReschedule} onSlot={openSlot} />
           )}
-          {!bookingsQ.isLoading && bookings.length > 0 && view === "month" && (
-            <MonthView bookings={bookings} anchor={anchor} rangeStart={range.from} onSelect={setDetailId} />
+          {!bookingsQ.isLoading && !bookingsQ.isError && view === "month" && (
+            <MonthView bookings={bookings} anchor={anchor} rangeStart={range.from} onSelect={setDetailId} onSlot={openSlot} />
           )}
         </div>
       </div>
