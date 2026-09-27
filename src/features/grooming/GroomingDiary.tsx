@@ -15,6 +15,7 @@ import { useGroomingPackages } from "@/features/settings/groomingRateCardQueries
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { PaymentChip, PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
+import { BookingFormModal } from "@/features/bookings/BookingFormModal";
 import { useGroomingBoardBookings, useRescheduleGrooming, type GroomingBoardCard } from "./queries";
 import { useGroomingPrefsStates } from "./instructions/prefsQueries";
 import { GroomingPrefsChip } from "./instructions/GroomingPrefsChip";
