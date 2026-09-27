@@ -320,8 +320,14 @@ export function GroomingDiary({ day }: { day: Date }) {
                   </div>
 
                   <div
-                    className="relative rounded-lg border border-border bg-sk-surface-muted/50"
+                    className="relative cursor-copy rounded-lg border border-border bg-sk-surface-muted/50 hover:bg-sk-surface-muted"
+                    title={`Click an empty slot to book with ${g.name}`}
                     style={{ height: gridHeight }}
+                    onClick={(e) => {
+                      if (e.target !== e.currentTarget) return;
+                      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                      handleLaneClick(g, e.clientY, rect.top);
+                    }}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => {
                       e.preventDefault();
