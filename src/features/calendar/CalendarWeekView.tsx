@@ -281,6 +281,15 @@ export default function CalendarWeekView() {
         start_at: searchParams.get("start") ?? undefined,
       };
     }
+    // Clicked straight on a slot in the grid.
+    if (slot) {
+      const filtered = SERVICE_FILTERS.find((f) => f.key === serviceKey)?.types ?? [];
+      return {
+        start_at: slot.start.toISOString(),
+        resource_id: slot.resourceId,
+        service_type: filtered.length === 1 ? filtered[0] : undefined,
+      };
+    }
     // From the calendar itself: seed start_at from the currently viewed day.
     // If today, round up to the next 15 min; otherwise default to 09:00.
     const now = new Date();
