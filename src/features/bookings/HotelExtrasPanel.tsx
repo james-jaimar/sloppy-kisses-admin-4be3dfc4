@@ -305,15 +305,11 @@ export function HotelExtrasPanel({
                     </span>
                   </label>
                   {sel && (
-                    <input
-                      type="number"
-                      min={0.1}
-                      step={0.1}
-                      value={sel.quantity}
-                      onChange={(e) => setQty(s.id, Number(e.target.value))}
-                      className="h-8 w-20 rounded-md border border-border bg-white px-2 text-sm"
-                      title="Quantity"
-                    />
+                    <div className="flex items-center gap-1" title="Number of dogs / times">
+                      <button type="button" onClick={() => setQty(s.id, sel.quantity - 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">−</button>
+                      <span className="w-8 text-center text-sm tabular-nums">{Math.round(sel.quantity)}</span>
+                      <button type="button" onClick={() => setQty(s.id, sel.quantity + 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">+</button>
+                    </div>
                   )}
                 </div>
               );
@@ -321,6 +317,36 @@ export function HotelExtrasPanel({
           </div>
         )}
       </div>
+
+      {onDiscountChange && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)]">
+          <div>
+            <div className="mb-1 text-xs font-medium">Discount on stay %</div>
+            <input
+              type="number" min={0} max={100} step={1}
+              value={discountPct || ""}
+              placeholder="0"
+              onChange={(e) => onDiscountChange(Math.min(100, Math.max(0, Number(e.target.value) || 0)), discountReason)}
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+            />
+          </div>
+          <div>
+            <div className="mb-1 text-xs font-medium">Reason (shown to staff)</div>
+            <input
+              type="text"
+              value={discountReason}
+              placeholder="e.g. loyal customer, second dog"
+              onChange={(e) => onDiscountChange(discountPct, e.target.value)}
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+            />
+          </div>
+          {preview && preview.lsPct > 0 && (
+            <div className="sm:col-span-2 text-[11px] font-medium text-sk-coral-dark">
+              Long-stay discount applies automatically: {preview.lsPct}% off for {preview.lsMin}+ nights.
+            </div>
+          )}
+        </div>
+      )}
 
       {preview && (
         <div className="mt-4 rounded-lg border border-border bg-sk-surface-muted p-3 text-sm">
@@ -332,6 +358,9 @@ export function HotelExtrasPanel({
             {preview.surchargeRows.map((r, i) => (
               <Row key={i} label={`${r.name}${r.per_night ? ` · ${preview.nights} night` : ""}`} value={fmtZar(r.total)} />
             ))}
+            {preview.discountTotal > 0 && (
+              <Row label={`Discount on stay · ${preview.totalPct}%`} value={`−${fmtZar(preview.discountTotal)}`} />
+            )}
             <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm font-semibold">
               <span>Total (excl. VAT changes)</span>
               <span>{fmtZar(preview.grand)}</span>
