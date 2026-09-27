@@ -11,6 +11,8 @@ export interface GroomRepeatValue {
   dates: string[]; // yyyy-mm-dd, extra visits only
   /** Dates the staff member removed from an interval series. */
   skipped: string[];
+  /** Per-date clock overrides (HH:mm); missing = same time as the first visit. */
+  times?: Record<string, string>;
 }
 
 export const DEFAULT_GROOM_REPEAT: GroomRepeatValue = {
@@ -20,6 +22,7 @@ export const DEFAULT_GROOM_REPEAT: GroomRepeatValue = {
   visits: 3,
   dates: [],
   skipped: [],
+  times: {},
 };
 
 const WEEK_OPTIONS = [2, 3, 4, 5, 6, 8, 10, 12];
@@ -147,16 +150,31 @@ export function GroomingRepeatFields({
 
           <div className="rounded-lg border border-border bg-white p-3">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              {upcoming.length + 1} visits will be booked{firstTime ? ` at ${firstTime}` : ""}
+              {upcoming.length + 1} visits will be booked
             </div>
             <ul className="space-y-1 text-sm">
               <li className="flex items-center justify-between">
                 <span className="font-medium">{prettyDay(firstDay)}</span>
-                <span className="text-xs text-muted-foreground">first visit</span>
+                <span className="text-xs text-muted-foreground">{firstTime ? `${firstTime} · ` : ""}first visit</span>
               </li>
               {upcoming.map((d) => (
                 <li key={d} className="flex items-center justify-between">
                   <span>{prettyDay(d)}</span>
+                  <span className="ml-auto mr-2 flex items-center gap-1">
+                    <input
+                      type="time"
+                      step={900}
+                      aria-label={`Time on ${prettyDay(d)}`}
+                      value={value.times?.[d] ?? firstTime ?? ""}
+                      onChange={(e) => {
+                        const next = { ...(value.times ?? {}) };
+                        if (!e.target.value || e.target.value === firstTime) delete next[d];
+                        else next[d] = e.target.value;
+                        onChange({ times: next });
+                      }}
+                      className="h-8 rounded-md border border-border bg-white px-2 text-sm"
+                    />
+                  </span>
                   <button
                     type="button"
                     title="Remove this date"
@@ -176,7 +194,7 @@ export function GroomingRepeatFields({
               )}
             </ul>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              Every dog gets its own appointment on each date, with the same package, extras and grooming sheet.
+              Every dog gets its own appointment on each date, with the same package, extras and grooming sheet. Change a date's time if needed — with several dogs, the whole group moves together.
             </p>
           </div>
         </div>
