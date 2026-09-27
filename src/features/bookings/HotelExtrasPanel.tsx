@@ -52,6 +52,9 @@ export function HotelExtrasPanel({
   onSelectionChange,
   petAccommodations,
   onPetAccommodationChange,
+  discountPct = 0,
+  discountReason = "",
+  onDiscountChange,
 }: {
   tenantId: string;
   bookingId: string | null;
@@ -67,6 +70,9 @@ export function HotelExtrasPanel({
   /** petId -> accommodation type, so dogs of different sizes get their own area & rate. */
   petAccommodations?: Record<string, string>;
   onPetAccommodationChange?: (petId: string, accommodation: string) => void;
+  discountPct?: number;
+  discountReason?: string;
+  onDiscountChange?: (pct: number, reason: string) => void;
 }) {
   const ratesQ = useHotelRateCards(tenantId, { activeOnly: true });
   const surchargesQ = useHotelSurcharges(tenantId, { activeOnly: true });
