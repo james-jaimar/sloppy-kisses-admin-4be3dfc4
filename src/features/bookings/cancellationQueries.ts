@@ -66,6 +66,10 @@ export function useCancelBookingWithFee(tenantId: string) {
         note: (data as any)?.cancellation_fee_note as string | null,
       };
     },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["credit-notes"] });
+      qc.invalidateQueries({ queryKey: ["credit_notes"] });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["bookings"] });
       qc.invalidateQueries({ queryKey: ["invoices"] });

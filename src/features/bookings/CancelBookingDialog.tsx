@@ -30,7 +30,7 @@ export function CancelBookingDialog({ tenantId, bookingId, bookingNumber, onClos
   async function submit() {
     try {
       const res = await cancelM.mutateAsync({ bookingId, waive, reason });
-      toast.success(res.fee > 0 ? `Cancelled — ${zar(res.fee)} fee charged` : "Booking cancelled — no fee");
+      toast.success(res.note ? `Booking cancelled — ${res.note}` : res.fee > 0 ? `Cancelled — ${zar(res.fee)} fee charged` : "Booking cancelled — no fee");
       onCancelled?.();
       onClose();
     } catch (err: any) {
@@ -94,8 +94,10 @@ export function CancelBookingDialog({ tenantId, bookingId, bookingNumber, onClos
         )}
 
         <p className="text-xs text-muted-foreground">
-          The booking's charges are removed from its invoice. If a fee applies it replaces them. Invoices that
-          have already been sent or paid are left alone — use a credit note or refund for those.
+          If the invoice is still a draft, the booking's charges are removed from it (and replaced by the fee, if
+          one applies). If the invoice has already been issued, it stays as is and a credit note is issued
+          automatically for the booking value less any fee. Money already paid stays on that credit note, ready to
+          refund or use later.
         </p>
 
         {q?.applies && canWaive && (
