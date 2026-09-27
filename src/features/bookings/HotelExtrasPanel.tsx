@@ -52,6 +52,9 @@ export function HotelExtrasPanel({
   onSelectionChange,
   petAccommodations,
   onPetAccommodationChange,
+  discountPct = 0,
+  discountReason = "",
+  onDiscountChange,
 }: {
   tenantId: string;
   bookingId: string | null;
@@ -67,6 +70,9 @@ export function HotelExtrasPanel({
   /** petId -> accommodation type, so dogs of different sizes get their own area & rate. */
   petAccommodations?: Record<string, string>;
   onPetAccommodationChange?: (petId: string, accommodation: string) => void;
+  discountPct?: number;
+  discountReason?: string;
+  onDiscountChange?: (pct: number, reason: string) => void;
 }) {
   const ratesQ = useHotelRateCards(tenantId, { activeOnly: true });
   const surchargesQ = useHotelSurcharges(tenantId, { activeOnly: true });
@@ -170,19 +176,25 @@ export function HotelExtrasPanel({
       .filter(Boolean) as { name: string; qty: number; unit: number; total: number; per_night: boolean }[];
 
     const surchargeTotal = surchargeRows.reduce((sum, r) => sum + r.total, 0);
-    const grand = stayTotal + surchargeTotal;
-    return { nights, stayRows, stayTotal, surchargeRows, surchargeTotal, grand, peak };
+    const lsMin = wfQ.data?.long_stay_min_nights ?? null;
+    const lsPct = lsMin && nights >= lsMin ? Number(wfQ.data?.long_stay_discount_pct ?? 0) : 0;
+    const totalPct = Math.min(100, lsPct + (Number(discountPct) || 0));
+    const discountTotal = Math.round(stayTotal * totalPct) / 100;
+    const grand = stayTotal + surchargeTotal - discountTotal;
+    return { nights, stayRows, stayTotal, surchargeRows, surchargeTotal, grand, peak, lsPct, lsMin, totalPct, discountTotal };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeRate, nights, peak, petCount, pets, petAccommodations, accommodationType, selection, surchargesQ.data]);
+  }, [activeRate, nights, peak, petCount, pets, petAccommodations, accommodationType, selection, surchargesQ.data, wfQ.data, discountPct]);
+
+  const defaultQty = Math.max(1, pets.length || petCount || 1);
 
   function toggleSurcharge(id: string) {
     const exists = selection.find((s) => s.surcharge_id === id);
     if (exists) onSelectionChange(selection.filter((s) => s.surcharge_id !== id));
-    else onSelectionChange([...selection, { surcharge_id: id, quantity: 1 }]);
+    else onSelectionChange([...selection, { surcharge_id: id, quantity: defaultQty }]);
   }
 
   function setQty(id: string, qty: number) {
-    onSelectionChange(selection.map((s) => (s.surcharge_id === id ? { ...s, quantity: Math.max(0.1, qty) } : s)));
+    onSelectionChange(selection.map((s) => (s.surcharge_id === id ? { ...s, quantity: Math.max(1, Math.round(qty) || 1) } : s)));
   }
 
   return (
@@ -293,15 +305,11 @@ export function HotelExtrasPanel({
                     </span>
                   </label>
                   {sel && (
-                    <input
-                      type="number"
-                      min={0.1}
-                      step={0.1}
-                      value={sel.quantity}
-                      onChange={(e) => setQty(s.id, Number(e.target.value))}
-                      className="h-8 w-20 rounded-md border border-border bg-white px-2 text-sm"
-                      title="Quantity"
-                    />
+                    <div className="flex items-center gap-1" title="Number of dogs / times">
+                      <button type="button" onClick={() => setQty(s.id, sel.quantity - 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">−</button>
+                      <span className="w-8 text-center text-sm tabular-nums">{Math.round(sel.quantity)}</span>
+                      <button type="button" onClick={() => setQty(s.id, sel.quantity + 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">+</button>
+                    </div>
                   )}
                 </div>
               );
@@ -309,6 +317,36 @@ export function HotelExtrasPanel({
           </div>
         )}
       </div>
+
+      {onDiscountChange && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-[8rem_minmax(0,1fr)]">
+          <div>
+            <div className="mb-1 text-xs font-medium">Discount on stay %</div>
+            <input
+              type="number" min={0} max={100} step={1}
+              value={discountPct || ""}
+              placeholder="0"
+              onChange={(e) => onDiscountChange(Math.min(100, Math.max(0, Number(e.target.value) || 0)), discountReason)}
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+            />
+          </div>
+          <div>
+            <div className="mb-1 text-xs font-medium">Reason (shown to staff)</div>
+            <input
+              type="text"
+              value={discountReason}
+              placeholder="e.g. loyal customer, second dog"
+              onChange={(e) => onDiscountChange(discountPct, e.target.value)}
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+            />
+          </div>
+          {preview && preview.lsPct > 0 && (
+            <div className="sm:col-span-2 text-[11px] font-medium text-sk-coral-dark">
+              Long-stay discount applies automatically: {preview.lsPct}% off for {preview.lsMin}+ nights.
+            </div>
+          )}
+        </div>
+      )}
 
       {preview && (
         <div className="mt-4 rounded-lg border border-border bg-sk-surface-muted p-3 text-sm">
@@ -320,6 +358,9 @@ export function HotelExtrasPanel({
             {preview.surchargeRows.map((r, i) => (
               <Row key={i} label={`${r.name}${r.per_night ? ` · ${preview.nights} night` : ""}`} value={fmtZar(r.total)} />
             ))}
+            {preview.discountTotal > 0 && (
+              <Row label={`Discount on stay · ${preview.totalPct}%`} value={`−${fmtZar(preview.discountTotal)}`} />
+            )}
             <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-sm font-semibold">
               <span>Total (excl. VAT changes)</span>
               <span>{fmtZar(preview.grand)}</span>

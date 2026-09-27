@@ -123,8 +123,8 @@ export function useBookingsByRange(params: {
         .from("bookings")
         .select(BOOKING_SELECT)
         .eq("tenant_id", tenantId as string)
-        .gte("start_at", from)
         .lt("start_at", to)
+        .or(`end_at.gt.${from},and(end_at.is.null,start_at.gte.${from})`)
         .order("start_at", { ascending: true })
         .limit(1000);
       if (serviceTypes?.length) q = q.in("service_type", serviceTypes as any);

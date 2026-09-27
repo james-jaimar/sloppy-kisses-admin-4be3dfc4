@@ -45,6 +45,8 @@ export interface HotelDetails {
   dropoff_required: boolean;
   belongings_notes: string | null;
   emergency_notes: string | null;
+  discount_pct?: number;
+  discount_reason?: string | null;
 }
 
 // ---------- Transport ----------

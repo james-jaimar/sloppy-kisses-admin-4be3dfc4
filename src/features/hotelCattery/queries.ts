@@ -273,6 +273,8 @@ export interface HotelWorkflowSettings {
   peak_end_month_day: string | null;
   deposit_split_enabled: boolean;
   checkout_groom_discount_pct: number;
+  long_stay_min_nights?: number | null;
+  long_stay_discount_pct?: number;
   daycare_credit_enabled: boolean;
   guidelines_md: string | null;
   guidelines_version: number;

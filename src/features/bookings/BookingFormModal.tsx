@@ -1209,23 +1209,49 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           {kind !== "grooming" && (
           <div>
             <div className="mb-1 text-sm font-medium">
-              {kind === "hotel" ? "Nights" : isDaycare ? "How long?" : "Duration"}
+              {kind === "hotel" ? "Check-out" : isDaycare ? "How long?" : "Duration"}
             </div>
-            {kind === "hotel" ? (
-              <input
-                type="number"
-                min={1}
-                step={1}
-                value={Math.max(1, Math.floor(durationMins / 1440))}
-                onChange={(e) =>
-                  setDurationMins(
-                    Math.max(1, Number(e.target.value)) * 1440 +
-                      (isStayPlayWindow(accom.check_out_window) ? 7 * 60 : 0),
-                  )
-                }
-                className={inputCls}
-              />
-            ) : customDuration ? (
+            {kind === "hotel" ? (() => {
+              const nights = Math.max(1, Math.floor(durationMins / 1440));
+              const inDay = startAt ? startAt.slice(0, 10) : "";
+              const setNights = (n: number) =>
+                setDurationMins(Math.max(1, n) * 1440 + (isStayPlayWindow(accom.check_out_window) ? 7 * 60 : 0));
+              let outDay = "";
+              if (inDay) {
+                const d = new Date(`${inDay}T12:00:00`);
+                d.setDate(d.getDate() + nights);
+                outDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+              }
+              const minOut = (() => {
+                if (!inDay) return undefined;
+                const d = new Date(`${inDay}T12:00:00`);
+                d.setDate(d.getDate() + 1);
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+              })();
+              return (
+                <>
+                  <input
+                    type="date"
+                    value={outDay}
+                    min={minOut}
+                    disabled={!inDay}
+                    onChange={(e) => {
+                      if (!e.target.value || !inDay) return;
+                      const diff = Math.round(
+                        (new Date(`${e.target.value}T12:00:00`).getTime() - new Date(`${inDay}T12:00:00`).getTime()) / 86400000,
+                      );
+                      setNights(diff);
+                    }}
+                    className={inputCls}
+                  />
+                  <div className="mt-1 flex items-center gap-2 text-xs">
+                    <button type="button" onClick={() => setNights(nights - 1)} className="h-7 w-7 rounded-md border border-border hover:bg-muted">−</button>
+                    <span className="font-semibold tabular-nums">{nights} night{nights === 1 ? "" : "s"}</span>
+                    <button type="button" onClick={() => setNights(nights + 1)} className="h-7 w-7 rounded-md border border-border hover:bg-muted">+</button>
+                  </div>
+                </>
+              );
+            })() : customDuration ? (
               <div className="flex gap-2">
                 <input
                   type="number"
@@ -1611,6 +1637,9 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             petIds={petIds}
             selection={hotelSurcharges}
             onSelectionChange={setHotelSurcharges}
+            discountPct={Number(hotel.discount_pct ?? 0)}
+            discountReason={hotel.discount_reason ?? ""}
+            onDiscountChange={(pct, reason) => setHotel((p) => ({ ...p, discount_pct: pct, discount_reason: reason || null }))}
           />
         )}
         {kind === "hotel" && (
