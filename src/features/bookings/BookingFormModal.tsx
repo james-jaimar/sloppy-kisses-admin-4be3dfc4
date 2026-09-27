@@ -832,34 +832,34 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         const createdIds: string[] = [];
         // Several appointments at once: save quietly, then send ONE confirmation
         // listing every appointment and each visit's invoice exactly once.
-          for (const day of days) {
-            const groupId = petIds.length > 1 ? newId() : null;
-            for (const s of appointments.filter((appointment) => appointment.day === day)) {
-              const res = await create.mutateAsync({
-                customer_id: customerId,
-                pet_ids: s.petIds,
-                service_type: serviceType,
-                status,
-                start_at: s.start.toISOString(),
-                end_at: s.end.toISOString(),
-                resource_id: s.resourceId,
-                notes_internal: notesInternalValue,
-                notes_customer: notesCustomer.trim() || null,
-                service_address_id: serviceAddressId,
-                closure_override: closureOverride,
-                booking_group_id: groupId,
-                recurring_rule_id: ruleId,
-                suppress_initial_emails: !sendGroomingEmails,
-              });
-              createdIds.push(res.id);
-              const plan = planFor(s.key);
-              await saveDetails(res.id, { packageId: plan.packageId, durationMinutes: s.mins, quiet: true });
-              await persistGroomingAddons(res.id, plan.addons);
-              await persistInstructions(res.id, plan.instructions);
-              setBatchProgress({ done: createdIds.length, total });
-            }
+        for (const day of days) {
+          const groupId = petIds.length > 1 ? newId() : null;
+          for (const s of appointments.filter((appointment) => appointment.day === day)) {
+            const res = await create.mutateAsync({
+              customer_id: customerId,
+              pet_ids: s.petIds,
+              service_type: serviceType,
+              status,
+              start_at: s.start.toISOString(),
+              end_at: s.end.toISOString(),
+              resource_id: s.resourceId,
+              notes_internal: notesInternalValue,
+              notes_customer: notesCustomer.trim() || null,
+              service_address_id: serviceAddressId,
+              closure_override: closureOverride,
+              booking_group_id: groupId,
+              recurring_rule_id: ruleId,
+              suppress_initial_emails: !sendGroomingEmails,
+            });
+            createdIds.push(res.id);
+            const plan = planFor(s.key);
+            await saveDetails(res.id, { packageId: plan.packageId, durationMinutes: s.mins, quiet: true });
+            await persistGroomingAddons(res.id, plan.addons);
+            await persistInstructions(res.id, plan.instructions);
+            setBatchProgress({ done: createdIds.length, total });
           }
-          if (sendGroomingEmails) await sendCombinedComms(createdIds);
+        }
+        if (sendGroomingEmails) await sendCombinedComms(createdIds);
         toast.success(
           createdIds.length === 1
             ? "Grooming appointment booked"
@@ -1846,8 +1846,9 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             </div>
             <div className="mt-3 text-sm text-muted-foreground">Please wait — don't close this window.</div>
           </div>
-        </div>
-      , document.body)}
+        </div>,
+        document.body,
+      )}
     </ModalShell>
   );
 }
