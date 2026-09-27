@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Plus } from "lucide-react";
 import { PetFormModal } from "@/features/pets/PetFormModal";
 import { ModalShell } from "@/components/modals/ModalShell";
+import { Button } from "@/components/ui/button";
 import { emailIssuedInvoice } from "@/features/invoices/autoEmail";
 import { useCustomerPets } from "@/features/customers/queries";
 import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
@@ -199,6 +200,9 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   });
   const [status, setStatus] = useState<BookingStatus>(booking?.status ?? "confirmed");
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
+  const [reviewGrooming, setReviewGrooming] = useState(false);
+  const [sendGroomingEmails, setSendGroomingEmails] = useState(true);
+  const [bookingInProgress, setBookingInProgress] = useState(false);
 
   /** One booking confirmation for the whole batch + each visit invoice emailed once. */
   async function sendCombinedComms(bookingIds: string[]) {
@@ -519,6 +523,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     if (booking?.customer && booking.customer.id === customerId) return booking.customer;
     return null;
   }, [customerId, booking]);
+  const reviewCustomerQ = useQuery({
+    queryKey: ["grooming-review-customer", customerId],
+    enabled: Boolean(customerId && kind === "grooming" && !isEdit),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("customers")
+        .select("full_name, email, mobile, notify_email")
+        .eq("id", customerId as string).eq("tenant_id", tenantId).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const resourceType = SERVICE_TYPES.find((s) => s.value === serviceType)?.resourceType;
   // Grooming: each dog's package + extras decide its appointment length.
@@ -617,8 +632,48 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     });
   }, [isMultiPetGrooming, startAt, groomingAvailQ.data, petSlotRequests, resourceId, timingMode, customTimes]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function groomingSlots() {
+    if (!startAt) return [];
+    const baseStart = new Date(startAt);
+    const endComputed = new Date(baseStart.getTime() + durationMins * 60000);
+    const autoResource = resourceId ?? layoutGroomingAppointments({
+      resources: groomingAvailQ.data?.resources ?? [],
+      busy: groomingAvailQ.data?.busy ?? [],
+      baseStart,
+      pets: [{ petId: petIds[0] ?? "pet", durationMinutes: durationMins }],
+      preferredResourceId: preferredGroomerId,
+    })?.[0]?.resourceId ?? null;
+    const slots = isMultiPetGrooming && groomingPlan
+      ? groomingPlan.map((s) => ({ key: s.petId, petIds: [s.petId], start: s.start, end: s.end, resourceId: s.resourceId ?? resourceId }))
+      : [{ key: groomCardKeys[0] ?? EDIT_KEY, petIds, start: baseStart, end: endComputed, resourceId: autoResource }];
+    const firstDay = startAt.slice(0, 10);
+    const days = [firstDay, ...repeatDates(groomRepeat, firstDay)];
+    const appointments = days.flatMap((day) => slots.map((s) => {
+      let start = moveToDay(s.start, day);
+      const override = groomRepeat.times?.[day];
+      const baseClock = startAt.slice(11, 16);
+      if (override && override !== baseClock) {
+        const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
+        start = new Date(start.getTime() + (toMin(override) - toMin(baseClock)) * 60000);
+      }
+      const mins = Math.round((s.end.getTime() - s.start.getTime()) / 60000);
+      return { ...s, day, start, end: new Date(start.getTime() + mins * 60000), mins };
+    }));
+    return { days, appointments };
+  }
+
+  const reviewSchedule = kind === "grooming" && !isEdit && startAt ? groomingSlots() : null;
+  const estimatePerVisit = petIds.reduce((total, id) => {
+    const plan = planFor(isMultiPetGrooming ? id : groomCardKeys[0] ?? EDIT_KEY);
+    const pkg = packagesQ.data?.find((p) => p.id === plan.packageId);
+    return total + Number(pkg?.price_zar ?? 0) + plan.addons.reduce((sum, selection) => {
+      const addon = addonsCatalogQ.data?.find((a) => a.id === selection.addon_id);
+      return sum + Number(addon?.price_zar ?? 0) * selection.qty;
+    }, 0);
+  }, 0) + (serviceType === "grooming_mobile" ? Number(grooming.travel_fee ?? 0) * (isMultiPetGrooming ? petIds.length : 1) : 0);
+
+  async function saveBooking(confirmed = false) {
+    if (bookingInProgress) return;
     if (!customerId) return toast.error("Please select a customer");
     if (kind === "grooming") {
       const missing = groomCardKeys.find((k) => !planHasWork(k));
@@ -714,6 +769,12 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     const notesInternalValue =
       [notesInternal.trim(), overrideNote].filter(Boolean).join("\n") || null;
 
+    if (!isEdit && kind === "grooming" && !confirmed) {
+      setReviewGrooming(true);
+      return;
+    }
+
+    setBookingInProgress(true);
     try {
       if (isEdit && booking) {
         await update.mutateAsync({
@@ -741,37 +802,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         onSaved?.(booking.id);
       } else if (kind === "grooming") {
         // One appointment per dog, repeated on every chosen date.
-        const baseStart = new Date(startAt);
-        const autoResource =
-          resourceId ??
-          layoutGroomingAppointments({
-            resources: groomingAvailQ.data?.resources ?? [],
-            busy: groomingAvailQ.data?.busy ?? [],
-            baseStart,
-            pets: [{ petId: petIds[0] ?? "pet", durationMinutes: durationMins }],
-            preferredResourceId: preferredGroomerId,
-          })?.[0]?.resourceId ??
-          null;
-        const slots =
-          isMultiPetGrooming && groomingPlan
-            ? groomingPlan.map((s) => ({
-                key: s.petId,
-                petIds: [s.petId],
-                start: s.start,
-                end: s.end,
-                resourceId: s.resourceId ?? resourceId,
-              }))
-            : [
-                {
-                  key: groomCardKeys[0] ?? EDIT_KEY,
-                  petIds,
-                  start: baseStart,
-                  end: endComputed,
-                  resourceId: autoResource,
-                },
-              ];
-        const firstDay = startAt.slice(0, 10);
-        const days = [firstDay, ...repeatDates(groomRepeat, firstDay)];
+        const schedule = groomingSlots();
+        if (!schedule) return;
+        const { days, appointments } = schedule;
+        const firstDay = days[0];
         let ruleId: string | null = null;
         if (days.length > 1) {
           const { data: ruleRow, error: ruleErr } = await supabase
@@ -793,31 +827,22 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         const newId = () =>
           typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now() + Math.random());
         const createdIds: string[] = [];
-        const total = days.length * slots.length;
+        const total = appointments.length;
         // Several appointments at once: save quietly, then send ONE confirmation
         // listing every appointment and each visit's invoice exactly once.
         const batch = total > 1;
         if (batch) setBatchProgress({ done: 0, total });
         try {
           for (const day of days) {
-            const groupId = slots.length > 1 ? newId() : null;
-            for (const s of slots) {
-              let start = moveToDay(s.start, day);
-              const override = groomRepeat.times?.[day];
-              const baseClock = startAt ? startAt.slice(11, 16) : null;
-              if (override && baseClock && override !== baseClock) {
-                const toMin = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
-                start = new Date(start.getTime() + (toMin(override) - toMin(baseClock)) * 60000);
-              }
-              const mins = Math.round((s.end.getTime() - s.start.getTime()) / 60000);
-              const end = new Date(start.getTime() + mins * 60000);
+            const groupId = petIds.length > 1 ? newId() : null;
+            for (const s of appointments.filter((appointment) => appointment.day === day)) {
               const res = await create.mutateAsync({
                 customer_id: customerId,
                 pet_ids: s.petIds,
                 service_type: serviceType,
                 status,
-                start_at: start.toISOString(),
-                end_at: end.toISOString(),
+                start_at: s.start.toISOString(),
+                end_at: s.end.toISOString(),
                 resource_id: s.resourceId,
                 notes_internal: notesInternalValue,
                 notes_customer: notesCustomer.trim() || null,
@@ -825,16 +850,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 closure_override: closureOverride,
                 booking_group_id: groupId,
                 recurring_rule_id: ruleId,
+                suppress_initial_emails: !sendGroomingEmails,
               });
               createdIds.push(res.id);
               const plan = planFor(s.key);
-              await saveDetails(res.id, { packageId: plan.packageId, durationMinutes: mins, quiet: batch });
+              await saveDetails(res.id, { packageId: plan.packageId, durationMinutes: s.mins, quiet: true });
               await persistGroomingAddons(res.id, plan.addons);
               await persistInstructions(res.id, plan.instructions);
               if (batch) setBatchProgress({ done: createdIds.length, total });
             }
           }
-          if (batch) await sendCombinedComms(createdIds);
+          if (sendGroomingEmails) await sendCombinedComms(createdIds);
         } finally {
           setBatchProgress(null);
         }
@@ -897,6 +923,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       onClose();
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to save booking");
+    } finally {
+      setBookingInProgress(false);
     }
   }
 
@@ -1014,7 +1042,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   }
 
   const saving = create.isPending || update.isPending;
-  const savingAny = saving || createRecurring.isPending;
+  const savingAny = saving || createRecurring.isPending || bookingInProgress;
 
   return (
     <ModalShell
@@ -1023,7 +1051,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       subtitle={isEdit ? "Update booking details" : "Create a confirmed booking on behalf of a customer"}
       onClose={onClose}
     >
-      <form onSubmit={handleSubmit} className="space-y-6 p-6">
+      <form onSubmit={(e) => { e.preventDefault(); void saveBooking(); }} className="space-y-6 p-6">
         {/* Customer */}
         <div>
           <div className="mb-1 text-sm font-medium">Customer</div>
@@ -1743,18 +1771,66 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               : isEdit
                 ? "Save changes"
                 : kind === "grooming"
-                  ? (() => {
-                      const dogs = Math.max(1, isMultiPetGrooming ? petIds.length : 1);
-                      const visits = 1 + repeatDates(groomRepeat, startAt ? startAt.slice(0, 10) : null).length;
-                      const n = dogs * visits;
-                      return n > 1 ? `Book ${n} appointments` : "Book appointment";
-                    })()
+                   ? "Review booking"
                   : recurrence.enabled
                     ? "Create series"
                     : "Create booking"}
           </button>
         </div>
       </form>
+      {reviewGrooming && reviewSchedule && (
+        <ModalShell
+          title="Review grooming booking"
+          subtitle="Check every appointment before booking and issuing invoices."
+          onClose={bookingInProgress ? undefined : () => setReviewGrooming(false)}
+          className="z-[70]"
+          footer={
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="outline" disabled={savingAny} onClick={() => setReviewGrooming(false)}>Back to edit</Button>
+              <Button type="button" disabled={savingAny} onClick={() => void saveBooking(true)}>
+                {savingAny ? "Booking…" : "Confirm & book"}
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-5 p-5 sm:p-6">
+            <div className="grid gap-3 border-b border-border pb-4 text-sm sm:grid-cols-2">
+              <div><div className="text-xs font-medium text-muted-foreground">Customer</div><div className="font-semibold">{reviewCustomerQ.data?.full_name ?? selectedCustomer?.full_name ?? "Loading customer…"}</div></div>
+              <div><div className="text-xs font-medium text-muted-foreground">Contact</div><div>{reviewCustomerQ.data?.email ?? "No email on file"}</div><div className="text-muted-foreground">{reviewCustomerQ.data?.mobile ?? ""}</div></div>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">{reviewSchedule.days.length} {reviewSchedule.days.length === 1 ? "visit" : "visits"} · {reviewSchedule.appointments.length} {reviewSchedule.appointments.length === 1 ? "appointment" : "appointments"}</h3>
+              <div className="mt-3 space-y-4">
+                {reviewSchedule.days.map((day, index) => (
+                  <div key={day} className="border-l-2 border-primary pl-3">
+                    <div className="text-sm font-semibold">Visit {index + 1} · {new Date(`${day}T12:00:00`).toLocaleDateString("en-ZA", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}</div>
+                    {reviewSchedule.appointments.filter((s) => s.day === day).map((s, petIndex) => {
+                      const pet = petsQ.data?.find((p) => p.id === s.petIds[0]);
+                      const selectedPlan = planFor(s.key);
+                      const pkg = packagesQ.data?.find((p) => p.id === selectedPlan.packageId);
+                      const extras = selectedPlan.addons.map((a) => addonsCatalogQ.data?.find((x) => x.id === a.addon_id)?.name).filter(Boolean);
+                      const groomer = resourcesQ.data?.find((r) => r.id === s.resourceId)?.name;
+                      return <div key={`${s.key}-${petIndex}`} className="mt-1 text-sm text-muted-foreground">
+                        <span className="font-medium text-foreground">{pet?.name ?? "Pet"}</span> · {pkg?.name ?? "Individual treatment"}
+                        {extras.length > 0 ? ` + ${extras.join(", ")}` : ""} · {clockOf(s.start)}–{clockOf(s.end)}{groomer ? ` · ${groomer}` : " · Unassigned"}
+                      </div>;
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="border-t border-border pt-4 text-sm">
+              <div className="flex justify-between gap-4"><span>Estimated per visit</span><span>R{estimatePerVisit.toFixed(2)}</span></div>
+              <div className="mt-1 flex justify-between gap-4 font-semibold"><span>Estimated series total</span><span>R{(estimatePerVisit * reviewSchedule.days.length).toFixed(2)}</span></div>
+              <p className="mt-1 text-xs text-muted-foreground">Final invoices may differ if discounts or other charges apply.</p>
+            </div>
+            <label className="flex items-start gap-3 border-t border-border pt-4 text-sm">
+              <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" checked={sendGroomingEmails} onChange={(e) => setSendGroomingEmails(e.target.checked)} />
+              <span><span className="font-medium">Send email confirmation and invoices to customer</span><span className="block text-xs text-muted-foreground">{reviewCustomerQ.data?.email ? `To ${reviewCustomerQ.data.email}` : "No email on file — invoices will still be created."}</span></span>
+            </label>
+          </div>
+        </ModalShell>
+      )}
       {batchProgress && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/40 p-4">
           <div role="status" aria-live="polite" className="w-full max-w-sm rounded-2xl bg-card p-6 text-center shadow-2xl">
@@ -1762,7 +1838,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             <div className="mt-4 text-base font-semibold">
               {batchProgress.done < batchProgress.total
                 ? `Booking ${batchProgress.done + 1} of ${batchProgress.total}…`
-                : "Sending confirmation and invoices…"}
+                : sendGroomingEmails ? "Sending confirmation and invoices…" : "Finishing bookings…"}
             </div>
             <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
