@@ -305,7 +305,7 @@ export default function CalendarWeekView() {
       seed.setHours(9, 0, 0, 0);
     }
     return { start_at: seed.toISOString() };
-  }, [showNew, searchParams, anchor]);
+  }, [showNew, searchParams, anchor, slot, serviceKey]);
 
   const range = useMemo(() => {
     if (view === "day") return { from: startOfDay(anchor), to: endOfDay(anchor) };
