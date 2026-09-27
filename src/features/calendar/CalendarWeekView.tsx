@@ -691,10 +691,11 @@ function ResourceDayView({
 }
 
 function WeekView({
-  bookings, anchor, onSelect, onReschedule,
+  bookings, anchor, onSelect, onReschedule, onSlot,
 }: {
   bookings: BookingListRow[]; anchor: Date; onSelect: (id: string) => void;
   onReschedule: (b: BookingListRow, newStart: Date, durationMs: number, newResourceId?: string | null) => void;
+  onSlot: (start: Date, resourceId?: string | null) => void;
 }) {
   const hours = hoursRange();
   const days = Array.from({ length: 7 }, (_, i) => addDays(anchor, i));
