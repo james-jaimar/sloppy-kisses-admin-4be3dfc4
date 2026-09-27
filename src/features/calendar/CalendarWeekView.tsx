@@ -643,7 +643,15 @@ function ResourceDayView({
             return (
               <div
                 key={c.id}
-                className="relative border-l border-border"
+                className="relative cursor-copy border-l border-border"
+                title={`Click an empty slot to book with ${c.name}`}
+                onClick={(e) => {
+                  if (clickedAnEvent(e.target)) return;
+                  onSlot(
+                    dropToStart(e.clientY, e.currentTarget as HTMLElement, anchor, 0),
+                    c.id === "__unassigned" ? null : c.id,
+                  );
+                }}
                 onDragOver={(e) => {
                   if (e.dataTransfer.types.includes(DRAG_MIME)) {
                     e.preventDefault();
