@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { fmtTime, useHotelSheet, usePetAlerts } from "./queries";
 import { AlertChips, EmptyState, Sheet, TABLE, TD, TH, Tick } from "./sheetUi";
+import { addonLabel, isWalk, useHotelBookingAddons } from "@/features/hotelCattery/bookingAddons";
 
 /** Hotel & cattery care sheet: every occupied room with AM/PM rounds to tick. */
 export function HotelDailySheet({
@@ -21,6 +22,7 @@ export function HotelDailySheet({
   );
   const petIds = useMemo(() => stays.flatMap((s) => s.pets.map((p) => p.id)), [stays]);
   const alerts = usePetAlerts(tenantId, petIds).data ?? {};
+  const addons = useHotelBookingAddons(stays.map((s) => s.id)).data ?? {};
 
   const arrivals = stays.filter((s) => s.arrivingToday);
   const departures = stays.filter((s) => s.leavingToday);
@@ -78,6 +80,11 @@ export function HotelDailySheet({
                       : "open"}
                   </td>
                   <td className={TD}>
+                    {(addons[s.id] ?? []).length > 0 && (
+                      <div className="font-black">
+                        PAID EXTRAS: {(addons[s.id] ?? []).map(addonLabel).join(" · ")}
+                      </div>
+                    )}
                     {s.feeding && <div><span className="font-semibold">Food:</span> {s.feeding}</div>}
                     {s.medication && <div className="font-bold">Meds: {s.medication}</div>}
                     {s.notes && <div>{s.notes}</div>}
@@ -91,12 +98,12 @@ export function HotelDailySheet({
                   <td className={TD}>
                     <div className="flex flex-wrap gap-2">
                       <Tick label="Fed AM" />
-                      <Tick label="Walk" />
                       <Tick label="Meds" />
+                      {(addons[s.id] ?? []).some(isWalk) &&
+                        s.pets.map((p) => <Tick key={p.id} label={`Walk ${p.name}`} />)}
                     </div>
                     <div className="mt-1.5 flex flex-wrap gap-2">
                       <Tick label="Fed PM" />
-                      <Tick label="Walk" />
                       <Tick label="Clean" />
                     </div>
                   </td>
