@@ -11,6 +11,7 @@ import {
   CARE_ROUNDS, isoDay, useCareRounds, useSetJobStatus, useToggleCareRound, useWorkJobs,
   type CareRoundKind,
 } from "./queries";
+import { addonLabel, isWalk, useHotelBookingAddons } from "@/features/hotelCattery/bookingAddons";
 
 type Tab = "in_house" | "arrivals" | "departures";
 
@@ -26,6 +27,7 @@ export default function HotelRoundsPage() {
   const setStatus = useSetJobStatus(tenantId ?? "");
 
   const jobs = jobsQ.data ?? [];
+  const addons = useHotelBookingAddons(jobs.map((j) => j.id)).data ?? {};
   const arrivals = jobs.filter((j) => j.start_at?.slice(0, 10) === dayIso);
   const departures = jobs.filter((j) => j.end_at?.slice(0, 10) === dayIso);
   const inHouse = jobs.filter((j) => ["checked_in", "in_progress", "ready"].includes(j.status));
@@ -88,6 +90,20 @@ export default function HotelRoundsPage() {
                   <div className="truncate text-sm text-muted-foreground">
                     {job.customer?.full_name ?? "—"} · {job.resource?.name ?? "Unassigned run"}
                   </div>
+                  {(addons[job.id] ?? []).length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {(addons[job.id] ?? []).map((a, i) => (
+                        <span
+                          key={i}
+                          className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                            isWalk(a) ? "bg-sk-orange-soft text-sk-orange" : "bg-muted text-foreground"
+                          }`}
+                        >
+                          {addonLabel(a)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="text-xs text-muted-foreground">
                     {job.start_at ? format(new Date(job.start_at), "d MMM") : "—"} →{" "}
                     {job.end_at ? format(new Date(job.end_at), "d MMM") : "—"}
