@@ -9856,6 +9856,19 @@ export type Database = {
         Returns: undefined
       }
       portal_service_gates: { Args: { p_tenant_id: string }; Returns: Json }
+      preview_monthly_daycare_breakdown: {
+        Args: { p_period_start: string; p_tenant_id: string }
+        Returns: {
+          amount: number
+          customer_email: string
+          customer_id: string
+          customer_name: string
+          end_date: string
+          enrolment_id: string
+          pet_name: string
+          plan_name: string
+        }[]
+      }
       recompute_invoice_payments: {
         Args: { p_invoice_id: string }
         Returns: undefined
