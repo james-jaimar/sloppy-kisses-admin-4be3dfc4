@@ -1,3 +1,5 @@
+import { daycareTabs } from "./DaycareBillingPage";
+import { useHasPermission } from "@/lib/permissions/permissions";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
@@ -20,6 +22,7 @@ export default function AttendancePage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const navigate = useNavigate();
+  const canBill = useHasPermission("invoicing.run_monthly");
   const [from, setFrom] = useState(isoDate(addDays(new Date(), -14)));
   const [to, setTo] = useState(isoDate(new Date()));
   const [petId, setPetId] = useState<string>("");
@@ -83,11 +86,7 @@ export default function AttendancePage() {
       <AppHeader
         title="Daycare"
         subtitle="Attendance history."
-        tabs={[
-          { label: "Board", onClick: () => navigate("/admin/daycare") },
-          { label: "Enrolments", onClick: () => navigate("/admin/daycare/enrolments") },
-          { label: "Attendance", active: true },
-        ]}
+        tabs={daycareTabs(navigate, "Attendance", canBill)}
       />
       <div className="flex-1 space-y-4 p-6">
         <div className="sk-card flex flex-wrap items-end gap-3 p-4">

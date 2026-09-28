@@ -1,3 +1,5 @@
+import { daycareTabs } from "./DaycareBillingPage";
+import { useHasPermission } from "@/lib/permissions/permissions";
 import { useMemo, useState } from "react";
 import { Plus, ArrowLeftRight, Pencil, Trash2, FileText } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -30,6 +32,7 @@ export default function EnrolmentsPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const navigate = useNavigate();
+  const canBill = useHasPermission("invoicing.run_monthly");
   const confirm = useConfirm();
   const [showInactive, setShowInactive] = useState(false);
   const listQ = useDaycareEnrolments(tenantId, { activeOnly: !showInactive });
@@ -57,11 +60,7 @@ export default function EnrolmentsPage() {
       <AppHeader
         title="Daycare"
         subtitle="Ongoing enrolments and per-day swaps."
-        tabs={[
-          { label: "Board", onClick: () => navigate("/admin/daycare") },
-          { label: "Enrolments", active: true },
-          { label: "Attendance", onClick: () => navigate("/admin/daycare/attendance") },
-        ]}
+        tabs={daycareTabs(navigate, "Enrolments", canBill)}
         actions={
           <div className="flex items-center gap-2">
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
