@@ -24,6 +24,7 @@ export default {
           "coral-dark": "hsl(var(--sk-coral-dark))",
           "coral-soft": "hsl(var(--sk-coral-soft))",
           turquoise: "hsl(var(--sk-turquoise))",
+          teal: "hsl(var(--sk-turquoise-dark))",
           "turquoise-dark": "hsl(var(--sk-turquoise-dark))",
           "turquoise-soft": "hsl(var(--sk-turquoise-soft))",
           green: "hsl(var(--sk-green))",

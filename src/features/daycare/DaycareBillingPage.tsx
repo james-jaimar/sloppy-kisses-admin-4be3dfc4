@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Play, Search, CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
@@ -263,7 +262,6 @@ export default function DaycareBillingPage() {
                 </label>
               </>
             )}
-            {(stage === "creating" || stage === "emailing") && createPortal(null, document.body)}
             {(stage === "creating" || stage === "emailing") && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 rounded-lg bg-sk-orange-soft p-3 text-xs font-medium"><AlertTriangle className="h-4 w-4" /> Please keep this window open until it finishes.</div>
