@@ -31,12 +31,6 @@ export default function InvoicingSettingsPage() {
     daycare_prorata_enabled: true,
     estimate_prefix: "QUO", next_estimate_number: 1,
   });
-  const nextMonth = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + 1); return d.toISOString().slice(0, 10); })();
-  const [runPeriod, setRunPeriod] = useState<string>(nextMonth);
-  const [running, setRunning] = useState(false);
-  const [preview, setPreview] = useState<{ customers: number; lines: number; total: number; period_label: string } | null>(null);
-  const [creditPreview, setCreditPreview] = useState<{ lines: number; total: number } | null>(null);
-  const [lastRun, setLastRun] = useState<string | null>(null);
   const [interestRunning, setInterestRunning] = useState(false);
   const [interestPreview, setInterestPreview] = useState<{ customers: number; total: number; percent: number } | null>(null);
   const [lastInterestRun, setLastInterestRun] = useState<string | null>(null);
@@ -99,60 +93,6 @@ export default function InvoicingSettingsPage() {
       } as any);
       toast.success("Invoicing settings saved");
     } catch (err: any) { toast.error(err?.message ?? "Failed"); }
-  }
-
-  async function runMonthly() {
-    if (!tenantId) return;
-    setRunning(true);
-    try {
-      const { data, error } = await supabase.rpc("generate_monthly_daycare_invoices" as any, {
-        p_tenant_id: tenantId, p_period_start: runPeriod, p_preview: false, p_issue: true,
-      });
-      if (error) throw error;
-      const r: any = data ?? {};
-      const ids: string[] = Array.isArray(r.invoice_ids) ? r.invoice_ids : [];
-      let emailed = 0;
-      for (const id of ids) {
-        if (await emailIssuedInvoice(id)) emailed += 1;
-      }
-      setPreview(null);
-      setLastRun(
-        `${r.invoices ?? 0} invoice(s) created · ${r.lines ?? 0} line(s) · ${r.issued ?? 0} issued · ${emailed} emailed`,
-      );
-      toast.success(
-        `Monthly run complete — ${r.invoices ?? 0} invoice(s), ${r.issued ?? 0} issued, ${emailed} emailed.`,
-      );
-    } catch (err: any) {
-      toast.error(err?.message ?? "Monthly run failed");
-    } finally {
-      setRunning(false);
-    }
-  }
-
-  async function previewMonthly() {
-    if (!tenantId) return;
-    setRunning(true);
-    try {
-      const { data, error } = await supabase.rpc("generate_monthly_daycare_invoices" as any, {
-        p_tenant_id: tenantId, p_period_start: runPeriod, p_preview: true, p_issue: false,
-      });
-      if (error) throw error;
-      const r: any = data ?? {};
-      setPreview({
-        customers: Number(r.customers ?? 0),
-        lines: Number(r.lines ?? 0),
-        total: Number(r.total ?? 0),
-        period_label: r.period_label ?? "",
-      });
-      setCreditPreview({
-        lines: Number(r.hotel_credit_lines ?? 0),
-        total: Number(r.hotel_credit_total ?? 0),
-      });
-    } catch (err: any) {
-      toast.error(err?.message ?? "Preview failed");
-    } finally {
-      setRunning(false);
-    }
   }
 
   async function runInterest(previewOnly: boolean) {
