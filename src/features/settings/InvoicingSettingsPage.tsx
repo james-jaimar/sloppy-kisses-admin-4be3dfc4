@@ -341,52 +341,11 @@ export default function InvoicingSettingsPage() {
                 onChange={(e) => setForm({ ...form, daycare_prorata_enabled: e.target.checked })} />
             </label>
 
-            <div className="mt-5 rounded-lg border border-dashed border-border bg-sk-surface-muted/30 p-4">
-              <div className="mb-2 text-sm font-semibold">Run monthly daycare billing</div>
-              <p className="mb-3 text-xs text-muted-foreground">
-                Daycare is the only service billed this way — every other booking invoices itself when it is made.
-                This raises one invoice per customer for the chosen month, issues it and emails it. Preview first to
-                check the totals. Safe to click twice — duplicate lines are skipped.
+            <div className="mt-5 rounded-lg border border-dashed border-border bg-sk-surface-muted/30 p-4 text-sm">
+              <div className="mb-1 font-semibold">Run monthly daycare billing</div>
+              <p className="text-xs text-muted-foreground">
+                The monthly run now lives in <a href="/admin/daycare/billing" className="font-semibold text-sk-coral underline">Daycare → Monthly billing</a>, with a full preview and confirmation steps.
               </p>
-              <div className="flex flex-wrap items-end gap-3">
-                <Field label="Billing period start" className="min-w-[180px]">
-                  <input type="date" value={runPeriod}
-                    onChange={(e) => { setRunPeriod(e.target.value); setPreview(null); }}
-                    className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
-                </Field>
-                <button type="button" onClick={() => { setRunPeriod(nextMonth); setPreview(null); }}
-                  className="inline-flex h-10 items-center rounded-lg border border-border bg-white px-3 text-sm hover:bg-muted">
-                  Coming month
-                </button>
-                <button disabled={!canRun || running || !runPeriod} onClick={previewMonthly}
-                  className="inline-flex h-10 items-center gap-2 rounded-lg border border-sk-teal px-4 text-sm font-semibold text-sk-teal hover:bg-sk-teal/10 disabled:opacity-50">
-                  {running ? "Working…" : "Preview"}
-                </button>
-                <button disabled={!canRun || running || !runPeriod} onClick={runMonthly}
-                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-sk-teal px-4 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
-                  <Play className="h-4 w-4" /> {running ? "Running…" : "Run, issue & email"}
-                </button>
-                {!canRun && (
-                  <span className="text-xs text-muted-foreground">Requires the "Run monthly billing" permission.</span>
-                )}
-              </div>
-              {preview && (
-                <div className="mt-3 rounded-lg border border-border bg-white px-3 py-2 text-xs">
-                  <span className="font-semibold">{preview.period_label}</span> — {preview.customers} customer(s),{" "}
-                  {preview.lines} line(s), total{" "}
-                  <span className="font-semibold">R{preview.total.toFixed(2)}</span>. Nothing has been created yet.
-                  {creditPreview && creditPreview.lines > 0 && (
-                    <div className="mt-1 text-sk-teal">
-                      Includes {creditPreview.lines} hotel-stay credit line(s) worth −R{creditPreview.total.toFixed(2)}.
-                    </div>
-                  )}
-                </div>
-              )}
-              {lastRun && (
-                <div className="mt-3 rounded-lg border border-sk-teal/40 bg-sk-teal/5 px-3 py-2 text-xs text-sk-teal">
-                  Last run: {lastRun}
-                </div>
-              )}
             </div>
           </Section>
 
