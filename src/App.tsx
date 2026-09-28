@@ -77,6 +77,7 @@ import MissingAddressPage from "@/features/bookings/MissingAddressPage";
 import DaycareBoardPage from "@/features/daycare/DaycareBoardPage";
 import EnrolmentsPage from "@/features/daycare/EnrolmentsPage";
 import AttendancePage from "@/features/daycare/AttendancePage";
+import DaycareBillingPage from "@/features/daycare/DaycareBillingPage";
 import DaycarePlansPage from "@/features/settings/DaycarePlansPage";
 import DaycareWorkflowPage from "@/features/settings/DaycareWorkflowPage";
 import DaycareImportPage from "@/features/settings/DaycareImportPage";
@@ -213,6 +214,7 @@ const App = () => (
                 <Route path="/admin/daycare" element={<DaycareBoardPage />} />
                 <Route path="/admin/daycare/enrolments" element={<EnrolmentsPage />} />
                 <Route path="/admin/daycare/attendance" element={<AttendancePage />} />
+                <Route path="/admin/daycare/billing" element={<DaycareBillingPage />} />
                 <Route path="/admin/hotel-cattery" element={<HotelBoardPage />} />
                 <Route path="/admin/hotel-cattery/grooms" element={<HotelGroomQueuePage />} />
                 <Route path="/admin/grooming" element={<GroomingBoardPage />} />

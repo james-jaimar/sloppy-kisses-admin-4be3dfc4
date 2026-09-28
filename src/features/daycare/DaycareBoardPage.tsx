@@ -1,3 +1,5 @@
+import { daycareTabs } from "./DaycareBillingPage";
+import { useHasPermission } from "@/lib/permissions/permissions";
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, List, Users, UserPlus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -27,6 +29,7 @@ export default function DaycareBoardPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const navigate = useNavigate();
+  const canBill = useHasPermission("invoicing.run_monthly");
   const [day, setDay] = useState<Date>(() => startOfDay(new Date()));
   const dateIso = isoDate(day);
   const [walkInOpen, setWalkInOpen] = useState(false);
@@ -74,11 +77,7 @@ export default function DaycareBoardPage() {
       <AppHeader
         title="Daycare"
         subtitle="Today's attendance across enrolments and walk-ins."
-        tabs={[
-          { label: "Board", active: true },
-          { label: "Enrolments", onClick: () => navigate("/admin/daycare/enrolments") },
-          { label: "Attendance", onClick: () => navigate("/admin/daycare/attendance") },
-        ]}
+        tabs={daycareTabs(navigate, "Board", canBill)}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Can code="daycare.checkin">
