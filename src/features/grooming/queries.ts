@@ -76,6 +76,8 @@ export function useGroomingBoardBookings(params: { tenantId: string | null | und
         `)
         .eq("tenant_id", tenantId as string)
         .in("service_type", GROOMING_SERVICE_TYPES as any)
+        // Cancelled / no-show appointments must not occupy slots on the diary or board.
+        .not("status", "in", '("cancelled","no_show")')
         .gte("start_at", dayStartIso)
         .lt("start_at", dayEndIso)
         .order("start_at", { ascending: true });
