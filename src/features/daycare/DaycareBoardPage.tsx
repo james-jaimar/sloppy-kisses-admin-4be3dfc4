@@ -18,7 +18,6 @@ import { useDaycareWorkflowSettings } from "./queries";
 import { useStayPlayForDay, overdueMinutes } from "./stayPlayQueries";
 import { WalkInDialog } from "./WalkInDialog";
 import { Can } from "@/components/auth/Can";
-import { useHasPermission as useCan } from "@/lib/permissions/permissions";
 import { BookingFormModal } from "@/features/bookings/BookingFormModal";
 import { suggestedGroomStart, useGroomsByPetForDay } from "@/features/grooming/daycareLink";
 
@@ -37,7 +36,7 @@ export default function DaycareBoardPage() {
   const dateIso = isoDate(day);
   const [walkInOpen, setWalkInOpen] = useState(false);
   const groomsByPet = useGroomsByPetForDay(tenantId, day);
-  const canBook = useCan("bookings.create");
+  const canBook = useHasPermission("bookings.create");
   const [addGroomFor, setAddGroomFor] = useState<{ petId: string; customerId: string } | null>(null);
   const onAddGroom = canBook ? (petId: string, customerId: string) => setAddGroomFor({ petId, customerId }) : undefined;
 
