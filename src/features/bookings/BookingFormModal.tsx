@@ -539,6 +539,40 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     },
   });
 
+  // Puppy / daycare-member / pensioner discount preview for the review screen —
+  // mirrors the invoicing rule (best single discount on the package price).
+  const reviewDiscountQ = useQuery({
+    queryKey: ["grooming-review-discounts", tenantId, petIds.join(","), startAt?.slice(0, 10)],
+    enabled: Boolean(kind === "grooming" && !isEdit && petIds.length && startAt),
+    queryFn: async () => {
+      const day = (startAt as string).slice(0, 10);
+      const [wf, pets, enr] = await Promise.all([
+        supabase.from("grooming_workflow_settings" as any).select("*").eq("tenant_id", tenantId).maybeSingle(),
+        supabase.from("pets").select("id, date_of_birth").in("id", petIds),
+        supabase.from("daycare_enrolments").select("pet_id, end_date, paused_from, paused_to")
+          .in("pet_id", petIds).eq("active", true).lte("start_date", day),
+      ]);
+      const w: any = wf.data ?? {};
+      const out: Record<string, number> = {};
+      for (const id of petIds) {
+        const opts: number[] = [];
+        if (grooming.pensioner_discount) opts.push(Number(w.pensioner_discount_pct ?? 0));
+        const dob = (pets.data ?? []).find((p: any) => p.id === id)?.date_of_birth;
+        if (dob) {
+          const lim = new Date(dob);
+          lim.setMonth(lim.getMonth() + Number(w.puppy_half_price_max_months ?? 6));
+          if (new Date(day) < lim) opts.push(Number(w.puppy_discount_pct ?? 50));
+        }
+        const enrolled = ((enr.data ?? []) as any[]).some((e) => e.pet_id === id &&
+          (!e.end_date || e.end_date >= day) &&
+          !(e.paused_from && day >= e.paused_from && day <= (e.paused_to ?? day)));
+        if (enrolled) opts.push(Number(w.daycare_enrolled_discount_pct ?? 0));
+        out[id] = Math.max(0, ...opts);
+      }
+      return out;
+    },
+  });
+
   const resourceType = SERVICE_TYPES.find((s) => s.value === serviceType)?.resourceType;
   // Grooming: each dog's package + extras decide its appointment length.
   function planMinutes(key: string): number {
@@ -670,7 +704,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const estimatePerVisit = petIds.reduce((total, id) => {
     const plan = planFor(isMultiPetGrooming ? id : groomCardKeys[0] ?? EDIT_KEY);
     const pkg = packagesQ.data?.find((p) => p.id === plan.packageId);
-    return total + Number(pkg?.price_zar ?? 0) + plan.addons.reduce((sum, selection) => {
+    const pct = reviewDiscountQ.data?.[id] ?? 0;
+    return total + Number(pkg?.price_zar ?? 0) * (1 - pct / 100) + plan.addons.reduce((sum, selection) => {
       const addon = addonsCatalogQ.data?.find((a) => a.id === selection.addon_id);
       return sum + Number(addon?.price_zar ?? 0) * selection.qty;
     }, 0);
@@ -1485,6 +1520,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                     travelFee={grooming.travel_fee ?? null}
                     onTravelFeeChange={(v) => setGrooming((p) => ({ ...p, travel_fee: v }))}
                     petSize={effectivePetSize(petForSize)}
+                    petId={petForSize?.id ?? null}
+                    visitDate={startAt || null}
                   />
                   <details open={idx === 0} className="mt-3">
                     <summary className="cursor-pointer select-none rounded-lg bg-muted/40 px-3 py-2 text-sm font-medium">

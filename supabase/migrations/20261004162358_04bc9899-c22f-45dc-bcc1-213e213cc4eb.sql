@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.grooming_auto_discount(uuid) FROM authenticated;
