@@ -1,0 +1,1 @@
+UPDATE public.resources SET name = regexp_replace(name, '^Groomer (\d+)$', 'Station \1') WHERE type = 'inhouse_grooming' AND name ~ '^Groomer \d+$';
