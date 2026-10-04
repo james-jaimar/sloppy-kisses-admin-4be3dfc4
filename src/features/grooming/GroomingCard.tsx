@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { PaymentChip } from "@/features/shared/payments/paymentFlags";
 import { StayPlayBadge } from "@/features/daycare/StayPlayBadge";
+import { InDaycareChip } from "./daycareLink";
 import type { StayPlaySession } from "@/features/daycare/stayPlayQueries";
 import type { GroomingBoardCard } from "./queries";
 import { GroomingPrefsChip } from "./instructions/GroomingPrefsChip";
@@ -48,6 +49,7 @@ export function GroomingCard({
   onDragStart,
   prefsState,
   onSetPrefs,
+  inDaycare,
 }: {
   card: GroomingBoardCard;
   expectedMinutes: number | null;
@@ -57,6 +59,7 @@ export function GroomingCard({
   onDragStart?: (e: React.DragEvent) => void;
   prefsState?: PrefsState;
   onSetPrefs?: () => void;
+  inDaycare?: boolean;
 }) {
   const pet = card.pets[0];
   const otherPets = card.pets.length - 1;
@@ -111,6 +114,7 @@ export function GroomingCard({
             {card.resource.name}
           </span>
         )}
+        {inDaycare && <InDaycareChip status={card.status} />}
         <PaymentChip bookingId={card.id} />
         {prefsState && <GroomingPrefsChip state={prefsState} onClick={onSetPrefs} compact />}
         <StayPlayBadge sessions={stayPlay} graceMinutes={stayPlayGraceMinutes} />

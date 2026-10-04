@@ -16,6 +16,7 @@ import {
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 import { useStayPlayFlags } from "@/features/daycare/stayPlayQueries";
+import { useDaycarePetIdsForDay } from "./daycareLink";
 import { useGroomingPrefsStates } from "./instructions/prefsQueries";
 import { BookingGroomingPrefsDialog } from "./instructions/BookingGroomingPrefsDialog";
 
@@ -29,6 +30,8 @@ export function GroomingBoard({ day }: { day: Date }) {
   const updateStatus = useUpdateGroomingStatus(tenantId ?? "");
   const bookingIds = useMemo(() => (bookingsQ.data ?? []).map((c) => c.id), [bookingsQ.data]);
   const stayPlay = useStayPlayFlags(tenantId, bookingIds);
+  const daycarePetIds = useDaycarePetIdsForDay(tenantId, day);
+  const isInDaycare = (c: GroomingBoardCard) => c.pets.some((p) => daycarePetIds.has(p.id));
   const prefs = useGroomingPrefsStates(
     useMemo(
       () => (bookingsQ.data ?? []).map((c) => ({ id: c.id, petIds: c.pets.map((p) => p.id) })),
@@ -83,7 +86,14 @@ export function GroomingBoard({ day }: { day: Date }) {
 
     try {
       await updateStatus.mutateAsync({ bookingId: card.id, status: target.targetStatus });
-      toast.success(`Moved to ${target.label}`);
+      if (toCol === "ready" && isInDaycare(card)) {
+        toast.success(`${card.pets[0]?.name ?? "Dog"} is ready — return to daycare`, {
+          description: "This dog is in daycare today. Take it back to the daycare floor; no need to call the owner.",
+          duration: 8000,
+        });
+      } else {
+        toast.success(`Moved to ${target.label}`);
+      }
     } catch (err: any) {
       toast.error(err?.message ?? "Failed to update status");
     }
@@ -150,6 +160,7 @@ export function GroomingBoard({ day }: { day: Date }) {
                   stayPlayGraceMinutes={stayPlay.graceMinutes}
                   prefsState={prefs.isLoading ? undefined : prefs.forBooking(c.id, c.pets.map((p) => p.id))}
                   onSetPrefs={() => setPrefsCard(c)}
+                  inDaycare={isInDaycare(c)}
                   draggable
                   onDragStart={(e) => {
                     setDragId(c.id);
