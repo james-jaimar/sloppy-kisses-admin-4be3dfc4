@@ -1,4 +1,6 @@
 import { useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase/client";
 import { petSizeToBand } from "@/features/pets/sizeUtils";
 import type { GroomingSizeBand } from "@/features/settings/groomingRateCardQueries";
 import { useGroomingPackages, useGroomingAddons, type GroomingAddon, type GroomingPackage } from "@/features/settings/groomingRateCardQueries";
@@ -28,6 +30,8 @@ export function GroomingExtrasPanel({
   travelFee,
   onTravelFeeChange,
   petSize,
+  petId,
+  visitDate,
 }: {
   tenantId: string;
   bookingId: string | null;
@@ -45,6 +49,9 @@ export function GroomingExtrasPanel({
   onTravelFeeChange?: (v: number) => void;
   /** Effective grooming size of the primary pet — filters packages to matching band. */
   petSize?: string | null;
+  /** Primary pet + visit date — used to preview puppy / daycare member discounts. */
+  petId?: string | null;
+  visitDate?: string | null;
 }) {
   const packagesQ = useGroomingPackages(tenantId, { activeOnly: true });
   const addonsQ = useGroomingAddons(tenantId, { activeOnly: true });
@@ -111,7 +118,44 @@ export function GroomingExtrasPanel({
 
   const speciesPackages = filteredBySize;
   const activePkg = activePkgEarly;
-  const discountPct = Number(wfQ.data?.pensioner_discount_pct ?? 0);
+  const pensionerPct = Number(wfQ.data?.pensioner_discount_pct ?? 0);
+  const visitDay = (visitDate ? new Date(visitDate) : new Date());
+  const visitIso = `${visitDay.getFullYear()}-${String(visitDay.getMonth() + 1).padStart(2, "0")}-${String(visitDay.getDate()).padStart(2, "0")}`;
+  const eligQ = useQuery({
+    queryKey: ["grooming_discount_eligibility", petId, visitIso],
+    enabled: Boolean(petId),
+    queryFn: async () => {
+      const [petRes, enrRes] = await Promise.all([
+        supabase.from("pets").select("date_of_birth").eq("id", petId as string).maybeSingle(),
+        supabase.from("daycare_enrolments")
+          .select("id, start_date, end_date, paused_from, paused_to")
+          .eq("pet_id", petId as string).eq("active", true)
+          .lte("start_date", visitIso),
+      ]);
+      const enrolled = ((enrRes.data ?? []) as any[]).some((e) =>
+        (!e.end_date || e.end_date >= visitIso) &&
+        !(e.paused_from && visitIso >= e.paused_from && visitIso <= (e.paused_to ?? visitIso)));
+      return { dob: (petRes.data as any)?.date_of_birth as string | null, enrolled };
+    },
+  });
+  // Mirrors the invoicing rule: the single best discount applies (no stacking).
+  const discount = useMemo(() => {
+    const opts: { label: string; pct: number }[] = [];
+    if (pensionerDiscount && pensionerPct > 0) opts.push({ label: "Pensioner discount", pct: pensionerPct });
+    const puppyPct = Number((wfQ.data as any)?.puppy_discount_pct ?? 50);
+    const cutoff = Number(wfQ.data?.puppy_half_price_max_months ?? 6);
+    const dob = eligQ.data?.dob;
+    if (dob && puppyPct > 0) {
+      const limit = new Date(dob);
+      limit.setMonth(limit.getMonth() + cutoff);
+      if (visitDay < limit) opts.push({ label: "Puppy discount", pct: puppyPct });
+    }
+    const dcPct = Number((wfQ.data as any)?.daycare_enrolled_discount_pct ?? 0);
+    if (eligQ.data?.enrolled && dcPct > 0) opts.push({ label: "Daycare member discount", pct: dcPct });
+    return opts.sort((a, b) => b.pct - a.pct)[0] ?? null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pensionerDiscount, pensionerPct, wfQ.data, eligQ.data, visitIso]);
+  const discountPct = discount?.pct ?? 0;
   // Mobile grooming always carries the travel fee: fall back to the tenant default
   // when the booking hasn't got an explicit amount yet (the DB enforces the same rule).
   const defaultTravel = Number(wfQ.data?.default_mobile_travel_fee_zar ?? 0);
@@ -130,7 +174,7 @@ export function GroomingExtrasPanel({
     const matted = Number(mattedSurchargeZar ?? 0);
     const sedation = Number(sedationSurchargeZar ?? 0);
     const travel = mode === "mobile" ? effectiveTravel : 0;
-    const discountAmt = pensionerDiscount ? (base * discountPct) / 100 : 0;
+    const discountAmt = (base * discountPct) / 100;
     const total = base - discountAmt + addonTotal + matted + sedation + travel;
     const addonMinutes = addonSelection.reduce((sum, s) => {
       const a = (addonsQ.data ?? []).find((x: GroomingAddon) => x.id === s.addon_id);
@@ -138,7 +182,7 @@ export function GroomingExtrasPanel({
     }, 0);
     const minutes = Number(activePkg?.expected_minutes ?? 0) + addonMinutes;
     return { base, addonRows, addonTotal, matted, sedation, travel, discountAmt, total, addonMinutes, minutes };
-  }, [activePkg, addonSelection, addonsQ.data, mode, effectiveTravel, mattedSurchargeZar, sedationSurchargeZar, pensionerDiscount, discountPct]);
+  }, [activePkg, addonSelection, addonsQ.data, mode, effectiveTravel, mattedSurchargeZar, sedationSurchargeZar, discountPct]);
 
   function toggleAddon(id: string) {
     const exists = addonSelection.find((s) => s.addon_id === id);
@@ -299,7 +343,7 @@ export function GroomingExtrasPanel({
               <Row label="Individual treatments only" value={fmtZar(0)} />
             )}
             {preview.discountAmt > 0 && (
-              <Row label={`Pensioner discount (${discountPct}%)`} value={"− " + fmtZar(preview.discountAmt)} />
+              <Row label={`${discount?.label ?? "Discount"} (${discountPct}%)`} value={"− " + fmtZar(preview.discountAmt)} />
             )}
             {preview.addonRows.map((r, i) => (
               <Row key={i} label={`${r.name}${r.qty > 1 ? ` × ${r.qty}` : ""}`} value={fmtZar(r.total)} />

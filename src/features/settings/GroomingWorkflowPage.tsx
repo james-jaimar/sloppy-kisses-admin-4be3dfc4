@@ -31,6 +31,8 @@ export default function GroomingWorkflowPage() {
     after_grooming_stay_play_zar: 250,
     pickup_dropoff_fee_zar: 140,
     puppy_half_price_max_months: 6,
+    puppy_discount_pct: 50,
+    daycare_enrolled_discount_pct: 0,
     pensioner_discount_days: [1, 3] as number[],
     cancellation_fee_pct: 100,
     cancellation_notice_hours: 24,
@@ -61,6 +63,8 @@ export default function GroomingWorkflowPage() {
         after_grooming_stay_play_zar: Number(d.after_grooming_stay_play_zar ?? 250),
         pickup_dropoff_fee_zar: Number(d.pickup_dropoff_fee_zar ?? 140),
         puppy_half_price_max_months: Number(d.puppy_half_price_max_months ?? 6),
+        puppy_discount_pct: Number((d as any).puppy_discount_pct ?? 50),
+        daycare_enrolled_discount_pct: Number((d as any).daycare_enrolled_discount_pct ?? 0),
         pensioner_discount_days: (d.pensioner_discount_days ?? [1, 3]) as number[],
         cancellation_fee_pct: Number(d.cancellation_fee_pct ?? 100),
         cancellation_notice_hours: Number(d.cancellation_notice_hours ?? 24),
@@ -194,7 +198,19 @@ export default function GroomingWorkflowPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Puppy half-price cutoff (months)" hint="Pets under this age pay 50% of the package.">
+            <Field label="Puppy discount (%)" hint="Off the grooming package for pets under the cutoff age. 0 turns it off.">
+              <input type="number" min={0} max={100} disabled={!canManage}
+                value={form.puppy_discount_pct}
+                onChange={(e) => setForm((f) => ({ ...f, puppy_discount_pct: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            </Field>
+            <Field label="Daycare member grooming discount (%)" hint="Off the package when the dog has an active daycare enrolment on the groom date. Best single discount applies — they don't stack.">
+              <input type="number" min={0} max={100} disabled={!canManage}
+                value={form.daycare_enrolled_discount_pct}
+                onChange={(e) => setForm((f) => ({ ...f, daycare_enrolled_discount_pct: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+            </Field>
+            <Field label="Puppy discount cutoff (months)" hint="Pets younger than this on the groom date get the puppy discount.">
               <input type="number" min={0} max={24} disabled={!canManage}
                 value={form.puppy_half_price_max_months}
                 onChange={(e) => setForm((f) => ({ ...f, puppy_half_price_max_months: Number(e.target.value) }))}
