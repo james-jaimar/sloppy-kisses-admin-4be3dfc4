@@ -23,10 +23,10 @@ function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
-/** Short lane label: "Groomer 3" -> "G3", "Mobile Van 1" -> "V1". */
+/** Short lane label: "Station 3" -> "S3", "Mobile Van 1" -> "V1". */
 function shortLabel(r: GroomerResource, idx: number) {
   const num = /(\d+)\s*$/.exec(r.name)?.[1] ?? String(idx + 1);
-  const prefix = /van/i.test(r.name) ? "V" : "G";
+  const prefix = /van/i.test(r.name) ? "V" : /station/i.test(r.name) ? "S" : "G";
   return `${prefix}${num}`;
 }
 
@@ -233,7 +233,7 @@ export function GroomingSlotPicker({
                     disabled={st.disabled}
                     title={
                       st.disabled
-                        ? "No groomer free"
+                        ? "No station free"
                         : freeNames
                           ? `Free: ${freeNames}`
                           : undefined
@@ -301,8 +301,8 @@ export function GroomingSlotPicker({
             <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-sk-coral" /> Selected</span>
             <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-muted" /> No one free</span>
             {resourceId
-              ? <span>Times shown for the selected groomer; dots show the rest of the team.</span>
-              : <span>Auto-assign — first free groomer takes the slot.</span>}
+              ? <span>Times shown for the selected station; dots show the other stations.</span>
+              : <span>Auto-assign — first free station takes the slot.</span>}
             {multiPet && <span>{petSlots!.length} dogs — parallel or back-to-back</span>}
           </div>
         </div>

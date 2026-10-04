@@ -23,29 +23,29 @@ export default function GroomersPage() {
   async function handleDeactivate(g: ResourceRow) {
     if (!(await confirm({
       title: `Remove ${g.name} from the diary?`,
-      description: "Existing appointments keep their groomer. New bookings won't be assigned to them.",
+      description: "Existing appointments keep their station. New bookings won't be assigned to it.",
       confirmLabel: "Remove",
       tone: "destructive",
     }))) return;
     try {
       await deactivate.mutateAsync(g.id);
-      toast.success("Groomer removed from the diary");
+      toast.success("Station removed from the diary");
     } catch (err: any) {
-      toast.error(err?.message ?? "Failed to update groomer");
+      toast.error(err?.message ?? "Failed to update station");
     }
   }
 
   return (
     <>
       <AppHeader
-        title="Groomers"
-        subtitle="Who is on the floor, their hours and their diary colour. Bookings can be auto-assigned to the next free groomer."
+        title="Grooming stations"
+        subtitle="Parlour tables (Station 1, 2, 3…) — capacity, not named staff. Any groomer can take the next dog at any free station."
         actions={
           <button
             onClick={() => setCreating(true)}
             className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark"
           >
-            <Plus className="h-4 w-4" /> Add groomer
+            <Plus className="h-4 w-4" /> Add station
           </button>
         }
       />

@@ -18,7 +18,7 @@ const SECTIONS = [
   {
     to: "/admin/settings/resources",
     label: "Resources",
-    description: "Groomers, mobile vans, kennels, runs, daycare areas.",
+    description: "Grooming stations, mobile vans, kennels, runs, daycare areas.",
     icon: Sliders,
     ready: true,
   },
@@ -31,8 +31,8 @@ const SECTIONS = [
   },
   {
     to: "/admin/settings/groomers",
-    label: "Groomers",
-    description: "Who is on the floor, their hours and diary colour. Used for auto-assign and preferred groomers.",
+    label: "Grooming stations",
+    description: "Parlour tables (Station 1–4): hours and diary colour. Used for auto-assign.",
     icon: Scissors,
     ready: true,
   },

@@ -28,7 +28,7 @@ export default function GroomingBoardPage() {
         title="Grooming board"
         subtitle={
           view === "diary"
-            ? "One lane per groomer — drag to change groomer or time."
+            ? "One lane per station — drag to change station or time. First groomer free takes the next dog."
             : "Drag cards across columns as pets move through the salon."
         }
         actions={

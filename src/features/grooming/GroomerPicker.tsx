@@ -40,22 +40,22 @@ export function GroomerPicker({
 
   async function onPick(next: string) {
     if (!start || !end) {
-      toast.error("Set a start time before assigning a groomer");
+      toast.error("Set a start time before assigning a station");
       return;
     }
     const id = next || null;
     if (id) {
       const clash = busyFor(id);
       if (clash) {
-        toast.error(`That groomer already has ${clash.pets[0]?.name ?? clash.booking_number} at this time`);
+        toast.error(`That station already has ${clash.pets[0]?.name ?? clash.booking_number} at this time`);
         return;
       }
     }
     try {
       await reschedule.mutateAsync({ bookingId, resourceId: id, start, end });
-      toast.success(id ? "Groomer updated" : "Groomer cleared");
+      toast.success(id ? "Station updated" : "Station cleared");
     } catch (err: any) {
-      toast.error(err?.message ?? "Could not update the groomer");
+      toast.error(err?.message ?? "Could not update the station");
     }
   }
 
