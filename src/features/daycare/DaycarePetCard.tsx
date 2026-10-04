@@ -4,6 +4,7 @@ import { CheckCircle2, LogOut, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AttendanceRow, AttendanceStatus, useUpsertAttendance } from "./queries";
 import { PetAvatar } from "@/features/pets/photo/PetAvatar";
+import { AddGroomButton, GroomTodayChip, type PetGroomToday } from "@/features/grooming/daycareLink";
 
 
 interface Props {
@@ -17,6 +18,8 @@ interface Props {
   badge?: string;
   attendance?: AttendanceRow | null;
   mode: "expected" | "checked_in";
+  groom?: PetGroomToday | null;
+  onAddGroom?: () => void;
 }
 
 export function DaycarePetCard(p: Props) {
@@ -75,6 +78,9 @@ export function DaycarePetCard(p: Props) {
           </span>
         )}
       </div>
+      {p.groom && (
+        <div><GroomTodayChip groom={p.groom} /></div>
+      )}
       {p.plan_name && (
         <div className="text-xs text-muted-foreground">Plan: {p.plan_name}</div>
       )}
@@ -112,6 +118,7 @@ export function DaycarePetCard(p: Props) {
             <LogOut className="h-3.5 w-3.5" /> Check out
           </button>
         )}
+        {!p.groom && p.onAddGroom && <AddGroomButton onClick={p.onAddGroom} />}
       </div>
     </div>
   );

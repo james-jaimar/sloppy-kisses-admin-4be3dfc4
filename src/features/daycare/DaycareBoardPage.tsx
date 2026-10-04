@@ -18,6 +18,8 @@ import { useDaycareWorkflowSettings } from "./queries";
 import { useStayPlayForDay, overdueMinutes } from "./stayPlayQueries";
 import { WalkInDialog } from "./WalkInDialog";
 import { Can } from "@/components/auth/Can";
+import { BookingFormModal } from "@/features/bookings/BookingFormModal";
+import { suggestedGroomStart, useGroomsByPetForDay } from "@/features/grooming/daycareLink";
 
 function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
 function addDays(d: Date, n: number) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
@@ -33,6 +35,10 @@ export default function DaycareBoardPage() {
   const [day, setDay] = useState<Date>(() => startOfDay(new Date()));
   const dateIso = isoDate(day);
   const [walkInOpen, setWalkInOpen] = useState(false);
+  const groomsByPet = useGroomsByPetForDay(tenantId, day);
+  const canBook = useHasPermission("bookings.create");
+  const [addGroomFor, setAddGroomFor] = useState<{ petId: string; customerId: string } | null>(null);
+  const onAddGroom = canBook ? (petId: string, customerId: string) => setAddGroomFor({ petId, customerId }) : undefined;
 
   const expected = useExpectedForDay(tenantId, day);
   const attendanceQ = useAttendanceForDay(tenantId, day);
@@ -170,6 +176,8 @@ export default function DaycareBoardPage() {
             attendanceDate={dateIso}
             expectedItems={expected.items}
             attendance={attendance}
+            groomsByPet={groomsByPet}
+            onAddGroom={onAddGroom}
           />
         )}
 
@@ -200,6 +208,8 @@ export default function DaycareBoardPage() {
                       plan_name={it.plan_name}
                       badge={it.source === "swap-in" ? "Swap-in" : undefined}
                       attendance={attendanceByPet.get(it.pet_id) ?? null}
+                      groom={groomsByPet.get(it.pet_id) ?? null}
+                      onAddGroom={onAddGroom ? () => onAddGroom(it.pet_id, it.customer_id) : undefined}
                       mode="expected"
                     />
                   ))}
@@ -230,6 +240,8 @@ export default function DaycareBoardPage() {
                       pet_name={a.pet?.name ?? "Unknown"}
                       customer_name={a.customer?.full_name ?? ""}
                       attendance={a}
+                      groom={groomsByPet.get(a.pet_id) ?? null}
+                      onAddGroom={onAddGroom ? () => onAddGroom(a.pet_id, a.customer_id) : undefined}
                       mode="checked_in"
                     />
                   ))}
@@ -241,6 +253,19 @@ export default function DaycareBoardPage() {
       </div>
       {walkInOpen && tenantId && (
         <WalkInDialog tenantId={tenantId} day={day} onClose={() => setWalkInOpen(false)} />
+      )}
+      {addGroomFor && tenantId && (
+        <BookingFormModal
+          tenantId={tenantId}
+          prefill={{
+            service_type: "grooming_inhouse",
+            customer_id: addGroomFor.customerId,
+            pet_ids: [addGroomFor.petId],
+            start_at: suggestedGroomStart(day),
+          }}
+          onClose={() => setAddGroomFor(null)}
+          onSaved={() => setAddGroomFor(null)}
+        />
       )}
     </>
   );

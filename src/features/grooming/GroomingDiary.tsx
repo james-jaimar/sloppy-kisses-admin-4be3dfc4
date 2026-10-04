@@ -17,6 +17,7 @@ import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { PaymentChip, PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 import { BookingFormModal } from "@/features/bookings/BookingFormModal";
 import { useGroomingBoardBookings, useRescheduleGrooming, type GroomingBoardCard } from "./queries";
+import { InDaycareChip, useDaycarePetIdsForDay } from "./daycareLink";
 import { useGroomingPrefsStates } from "./instructions/prefsQueries";
 import { GroomingPrefsChip } from "./instructions/GroomingPrefsChip";
 import { BookingGroomingPrefsDialog } from "./instructions/BookingGroomingPrefsDialog";
@@ -61,6 +62,7 @@ export function GroomingDiary({ day }: { day: Date }) {
   const confirm = useConfirm();
 
   const bookingsQ = useGroomingBoardBookings({ tenantId, day });
+  const daycarePetIds = useDaycarePetIdsForDay(tenantId, day);
   const groomersQ = useGroomers(tenantId, { activeOnly: true });
   const packagesQ = useGroomingPackages(tenantId, { activeOnly: true });
   const reschedule = useRescheduleGrooming(tenantId ?? "");
@@ -384,6 +386,7 @@ export function GroomingDiary({ day }: { day: Date }) {
                           <div className="flex items-center gap-1 font-semibold">
                             <span className="truncate">{c.pets[0]?.name ?? "Pet"}</span>
                             {c.booking_group_id && <Link2 className="h-3 w-3 shrink-0 text-muted-foreground" />}
+                            {c.pets.some((p) => daycarePetIds.has(p.id)) && <InDaycareChip status={c.status} />}
                           </div>
                           <div className="truncate text-muted-foreground">
                             {minutesToLabel(startMin)}–{minutesToLabel(startMin + dur)}

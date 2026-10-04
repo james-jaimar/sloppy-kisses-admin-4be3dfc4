@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AttendanceRow, AttendanceStatus, ExpectedItem, useUpsertAttendance } from "./queries";
 import { PetAvatar } from "@/features/pets/photo/PetAvatar";
 import { usePetPhotos } from "@/features/pets/photo/petPhotoQueries";
+import { AddGroomButton, GroomTodayChip, type PetGroomToday } from "@/features/grooming/daycareLink";
 
 
 interface Props {
@@ -12,6 +13,8 @@ interface Props {
   attendanceDate: string;
   expectedItems: ExpectedItem[];
   attendance: AttendanceRow[];
+  groomsByPet?: Map<string, PetGroomToday>;
+  onAddGroom?: (petId: string, customerId: string) => void;
 }
 
 type Row = {
@@ -47,7 +50,7 @@ const LS_SEARCH = "sk.daycare.list.search";
 const LS_STATUS = "sk.daycare.list.status";
 const LS_SORT = "sk.daycare.list.sort";
 
-export function DaycareListView({ tenantId, attendanceDate, expectedItems, attendance }: Props) {
+export function DaycareListView({ tenantId, attendanceDate, expectedItems, attendance, groomsByPet, onAddGroom }: Props) {
   const upsert = useUpsertAttendance(tenantId);
   const [busyKey, setBusyKey] = useState<string | null>(null);
 
@@ -273,6 +276,7 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
                           {r.badge}
                         </span>
                       )}
+                      {groomsByPet?.get(r.pet_id) && <GroomTodayChip groom={groomsByPet.get(r.pet_id)!} />}
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -322,6 +326,9 @@ export function DaycareListView({ tenantId, attendanceDate, expectedItems, atten
                         >
                           <LogOut className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Check out</span>
                         </button>
+                      )}
+                      {r.mode !== "history" && onAddGroom && !groomsByPet?.get(r.pet_id) && (
+                        <AddGroomButton compact onClick={() => onAddGroom(r.pet_id, r.customer_id)} />
                       )}
                     </div>
                   </td>

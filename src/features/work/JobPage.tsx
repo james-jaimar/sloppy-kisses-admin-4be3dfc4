@@ -1,3 +1,4 @@
+import { useDaycarePetIdsForDay } from "@/features/grooming/daycareLink";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
@@ -61,6 +62,8 @@ export default function JobPage() {
   const toggleItem = useToggleChecklistItem();
 
   const checklistQ = useJobChecklist({ tenantId, bookingId, serviceType: job?.service_type });
+  const jobDay = useMemo(() => { const d = job?.start_at ? new Date(job.start_at) : new Date(); d.setHours(0, 0, 0, 0); return d; }, [job?.start_at]);
+  const daycarePetIds = useDaycarePetIdsForDay(tenantId, jobDay);
   const eventsQ = useJobEvents(bookingId);
   const signoffQ = useJobSignoff(bookingId);
 
@@ -110,7 +113,11 @@ export default function JobPage() {
   }
 
   const meta = BOOKING_STATUS_META[job.status];
-  const step = nextStep(job.status, job.service_type);
+  const rawStep = nextStep(job.status, job.service_type);
+  const inDaycare = isGroomingService(job.service_type) && job.pets.some((p: any) => daycarePetIds.has(p.id));
+  const step = rawStep && rawStep.status === "ready" && inDaycare
+    ? { ...rawStep, label: "Ready — return to daycare" }
+    : rawStep;
   const items = checklistQ.data ?? [];
   const doneCount = items.filter((i) => i.done).length;
   const signedOff = Boolean(signoffQ.data);
