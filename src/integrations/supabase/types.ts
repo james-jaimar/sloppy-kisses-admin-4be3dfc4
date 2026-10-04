@@ -4033,6 +4033,7 @@ export type Database = {
           cancellation_fee_pct: number
           cancellation_notice_hours: number
           created_at: string
+          daycare_enrolled_discount_pct: number
           default_mobile_travel_fee_zar: number
           id: string
           matted_rate_per_15min_zar: number
@@ -4043,6 +4044,7 @@ export type Database = {
           pensioner_discount_pct: number
           photo_gate_mode: string
           pickup_dropoff_fee_zar: number
+          puppy_discount_pct: number
           puppy_half_price_max_months: number
           rebook_nudge_enabled: boolean
           rebook_weeks_max: number
@@ -4065,6 +4067,7 @@ export type Database = {
           cancellation_fee_pct?: number
           cancellation_notice_hours?: number
           created_at?: string
+          daycare_enrolled_discount_pct?: number
           default_mobile_travel_fee_zar?: number
           id?: string
           matted_rate_per_15min_zar?: number
@@ -4075,6 +4078,7 @@ export type Database = {
           pensioner_discount_pct?: number
           photo_gate_mode?: string
           pickup_dropoff_fee_zar?: number
+          puppy_discount_pct?: number
           puppy_half_price_max_months?: number
           rebook_nudge_enabled?: boolean
           rebook_weeks_max?: number
@@ -4097,6 +4101,7 @@ export type Database = {
           cancellation_fee_pct?: number
           cancellation_notice_hours?: number
           created_at?: string
+          daycare_enrolled_discount_pct?: number
           default_mobile_travel_fee_zar?: number
           id?: string
           matted_rate_per_15min_zar?: number
@@ -4107,6 +4112,7 @@ export type Database = {
           pensioner_discount_pct?: number
           photo_gate_mode?: string
           pickup_dropoff_fee_zar?: number
+          puppy_discount_pct?: number
           puppy_half_price_max_months?: number
           rebook_nudge_enabled?: boolean
           rebook_weeks_max?: number
@@ -9615,6 +9621,13 @@ export type Database = {
       }
       get_public_invoice: { Args: { p_token: string }; Returns: Json }
       get_public_quote: { Args: { p_token: string }; Returns: Json }
+      grooming_auto_discount: {
+        Args: { p_booking_id: string }
+        Returns: {
+          daycare_pct: number
+          puppy_pct: number
+        }[]
+      }
       grooming_can_confirm_booking: {
         Args: { p_booking_id: string }
         Returns: {
