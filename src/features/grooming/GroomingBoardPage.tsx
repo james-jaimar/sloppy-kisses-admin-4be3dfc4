@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, RefreshCw, Tablet, Tv } from "lucide-react";
+import { Link } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { GroomingBoard } from "./GroomingBoard";
 import { GroomingDiary } from "./GroomingDiary";
@@ -32,7 +33,9 @@ export default function GroomingBoardPage() {
             : "Drag cards across columns as pets move through the salon."
         }
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Link to="/kiosk/grooming" title="Parlour tablet" className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-white hover:bg-sk-surface-muted"><Tablet className="h-4 w-4" /></Link>
+            <Link to="/kiosk/grooming/tv" title="Parlour TV" className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-white hover:bg-sk-surface-muted"><Tv className="h-4 w-4" /></Link>
             <div className="inline-flex overflow-hidden rounded-lg border border-border bg-white">
               {(["diary", "board"] as View[]).map((v) => (
                 <button

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Sliders, Users, KeyRound, Building2, ChevronRight, Scissors, PlusCircle, Hotel, Truck, ArrowLeftRight, CalendarDays, Sun, Receipt, CreditCard, MessageSquare, Send, Syringe, Package, Warehouse, ShoppingBag, ShieldCheck, Palette, Server, FileUp, Dog, FileText, Gavel, Search, MapPin } from "lucide-react";
-import { Archive, Link2, ListChecks } from "lucide-react";
+import { Archive, Link2, ListChecks, Tablet } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFeature } from "@/lib/features/useFeature";
@@ -48,6 +48,13 @@ const SECTIONS = [
     label: "Grooming workflow",
     description: "Vaccination gate, pensioner discount, default mobile travel fee.",
     icon: Scissors,
+    ready: true,
+  },
+  {
+    to: "/admin/settings/grooming-kiosk",
+    label: "Parlour tablet & TV",
+    description: "Groomer names and 4-digit PINs for the parlour tablet; links to the TV board.",
+    icon: Tablet,
     ready: true,
   },
   {
