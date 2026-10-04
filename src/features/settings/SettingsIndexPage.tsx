@@ -32,7 +32,7 @@ const SECTIONS = [
   {
     to: "/admin/settings/groomers",
     label: "Grooming stations",
-    description: "Who is on the floor, their hours and diary colour. Used for auto-assign and preferred groomers.",
+    description: "Parlour tables (Station 1–4): hours and diary colour. Used for auto-assign.",
     icon: Scissors,
     ready: true,
   },
