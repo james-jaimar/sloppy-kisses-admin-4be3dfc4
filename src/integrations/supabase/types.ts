@@ -3555,6 +3555,7 @@ export type Database = {
           cancellation_waive_reason: string | null
           created_at: string
           duration_minutes: number | null
+          finished_by_kiosk_staff_id: string | null
           groomer_name: string | null
           grooming_mode: string
           grooming_notes: string | null
@@ -3573,6 +3574,7 @@ export type Database = {
           sedation_consent_state: string
           sedation_surcharge_zar: number | null
           service_package: string | null
+          started_by_kiosk_staff_id: string | null
           stay_and_play_after: boolean
           surcharge_amount: number
           tenant_id: string
@@ -3588,6 +3590,7 @@ export type Database = {
           cancellation_waive_reason?: string | null
           created_at?: string
           duration_minutes?: number | null
+          finished_by_kiosk_staff_id?: string | null
           groomer_name?: string | null
           grooming_mode: string
           grooming_notes?: string | null
@@ -3606,6 +3609,7 @@ export type Database = {
           sedation_consent_state?: string
           sedation_surcharge_zar?: number | null
           service_package?: string | null
+          started_by_kiosk_staff_id?: string | null
           stay_and_play_after?: boolean
           surcharge_amount?: number
           tenant_id: string
@@ -3621,6 +3625,7 @@ export type Database = {
           cancellation_waive_reason?: string | null
           created_at?: string
           duration_minutes?: number | null
+          finished_by_kiosk_staff_id?: string | null
           groomer_name?: string | null
           grooming_mode?: string
           grooming_notes?: string | null
@@ -3639,6 +3644,7 @@ export type Database = {
           sedation_consent_state?: string
           sedation_surcharge_zar?: number | null
           service_package?: string | null
+          started_by_kiosk_staff_id?: string | null
           stay_and_play_after?: boolean
           surcharge_amount?: number
           tenant_id?: string
@@ -3654,10 +3660,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "grooming_booking_details_finished_by_kiosk_staff_id_fkey"
+            columns: ["finished_by_kiosk_staff_id"]
+            isOneToOne: false
+            referencedRelation: "grooming_kiosk_staff"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "grooming_booking_details_package_id_fkey"
             columns: ["package_id"]
             isOneToOne: false
             referencedRelation: "grooming_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grooming_booking_details_started_by_kiosk_staff_id_fkey"
+            columns: ["started_by_kiosk_staff_id"]
+            isOneToOne: false
+            referencedRelation: "grooming_kiosk_staff"
             referencedColumns: ["id"]
           },
           {
@@ -3823,6 +3843,44 @@ export type Database = {
           },
           {
             foreignKeyName: "grooming_instruction_options_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grooming_kiosk_staff: {
+        Row: {
+          active: boolean
+          created_at: string
+          display_name: string
+          id: string
+          pin_hash: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          display_name: string
+          id?: string
+          pin_hash?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          display_name?: string
+          id?: string
+          pin_hash?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grooming_kiosk_staff_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -9294,6 +9352,10 @@ export type Database = {
         Args: { p_days: string[]; p_from: string; p_to: string }
         Returns: number
       }
+      _grooming_kiosk_find: {
+        Args: { p_pin: string; p_tenant: string }
+        Returns: string
+      }
       _invoice_locked: { Args: { p_invoice_id: string }; Returns: boolean }
       _period_bounds: {
         Args: { p_anchor: string }
@@ -9645,6 +9707,33 @@ export type Database = {
       grooming_day_availability: {
         Args: { p_day: string; p_tenant_id: string }
         Returns: Json
+      }
+      grooming_kiosk_action: {
+        Args: {
+          p_action: string
+          p_booking_id: string
+          p_notes?: string
+          p_pin: string
+        }
+        Returns: string
+      }
+      grooming_kiosk_has_pin: {
+        Args: { p_tenant: string }
+        Returns: {
+          has_pin: boolean
+          id: string
+        }[]
+      }
+      grooming_kiosk_set_pin: {
+        Args: { p_pin: string; p_staff_id: string }
+        Returns: undefined
+      }
+      grooming_kiosk_verify_pin: {
+        Args: { p_pin: string; p_tenant: string }
+        Returns: {
+          display_name: string
+          id: string
+        }[]
       }
       grooming_pick_resource: {
         Args: {
