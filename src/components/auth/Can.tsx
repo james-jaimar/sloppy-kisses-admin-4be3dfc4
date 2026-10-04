@@ -70,3 +70,6 @@ export function RequirePermission({ code, any }: RequirePermissionProps) {
 
   return <Outlet />;
 }
+export function useCan(code: string | string[], any?: boolean) {
+  return useCheck(code, any);
+}

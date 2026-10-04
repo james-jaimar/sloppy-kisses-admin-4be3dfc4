@@ -52,6 +52,9 @@ import GroomingPackagesPage from "@/features/settings/GroomingPackagesPage";
 import DogBreedsPage from "@/features/settings/DogBreedsPage";
 import GroomingAddonsPage from "@/features/settings/GroomingAddonsPage";
 import GroomingBoardPage from "@/features/grooming/GroomingBoardPage";
+import GroomingKioskPage from "@/features/grooming/kiosk/GroomingKioskPage";
+import GroomingTvPage from "@/features/grooming/kiosk/GroomingTvPage";
+import GroomingKioskStaffPage from "@/features/settings/GroomingKioskStaffPage";
 import HotelBoardPage from "@/features/hotelCattery/HotelBoardPage";
 import HotelGroomQueuePage from "@/features/hotelGrooming/HotelGroomQueuePage";
 import HotelWorkflowPage from "@/features/settings/HotelWorkflowPage";
@@ -199,6 +202,8 @@ const App = () => (
 
 
               <Route element={<RequireAdmin />}>
+              <Route path="/kiosk/grooming" element={<GroomingKioskPage />} />
+              <Route path="/kiosk/grooming/tv" element={<GroomingTvPage />} />
               <Route element={<AdminLayout />}>
                 <Route path="/admin/home" element={<HomePage />} />
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -265,6 +270,7 @@ const App = () => (
                 <Route path="/admin/settings/hotel-rates" element={<HotelRatesPage />} />
                 <Route path="/admin/settings/public-holidays" element={<PublicHolidaysPage />} />
                 <Route path="/admin/settings/grooming-workflow" element={<GroomingWorkflowPage />} />
+                <Route path="/admin/settings/grooming-kiosk" element={<GroomingKioskStaffPage />} />
                 <Route path="/admin/settings/grooming-instructions" element={<GroomingInstructionsPage />} />
                 <Route path="/admin/settings/van-workflow" element={<VanWorkflowPage />} />
                 <Route path="/admin/settings/transport-workflow" element={<TransportWorkflowPage />} />
