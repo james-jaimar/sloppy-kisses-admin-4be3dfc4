@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { fmtTime, useHotelSheet, usePetAlerts } from "./queries";
 import { AlertChips, EmptyState, Sheet, TABLE, TD, TH, Tick } from "./sheetUi";
-import { addonLabel, isWalk, useHotelBookingAddons } from "@/features/hotelCattery/bookingAddons";
+import { addonLabel, walksPerDay, useHotelBookingAddons } from "@/features/hotelCattery/bookingAddons";
 
 /** Hotel & cattery care sheet: every occupied room with AM/PM rounds to tick. */
 export function HotelDailySheet({
@@ -99,8 +99,9 @@ export function HotelDailySheet({
                     <div className="flex flex-wrap gap-2">
                       <Tick label="Fed AM" />
                       <Tick label="Meds" />
-                      {(addons[s.id] ?? []).some(isWalk) &&
-                        s.pets.map((p) => <Tick key={p.id} label={`Walk ${p.name}`} />)}
+                      {Array.from({ length: walksPerDay(addons[s.id] ?? []) }, (_, i) => (
+                        <Tick key={i} label={`Walk ${i + 1}`} />
+                      ))}
                     </div>
                     <div className="mt-1.5 flex flex-wrap gap-2">
                       <Tick label="Fed PM" />

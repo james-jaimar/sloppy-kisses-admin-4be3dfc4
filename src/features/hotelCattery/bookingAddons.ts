@@ -37,8 +37,14 @@ export function useHotelBookingAddons(bookingIds: string[]) {
 
 export const isWalk = (a: BookingAddon) => /walk/i.test(a.name) || /walk/i.test(a.code ?? "");
 
-/** "Walk · 2 dogs daily" / "Grooming · 1" */
+/** Total walks owed each day across the stay. */
+export function walksPerDay(addons: BookingAddon[]) {
+  return addons.filter((a) => isWalk(a) && a.per_night).reduce((n, a) => n + a.quantity, 0)
+    || (addons.some(isWalk) ? 1 : 0);
+}
+
+/** "Walk · 2 per day" / "Grooming · 1" */
 export function addonLabel(a: BookingAddon) {
-  if (a.per_night) return `${a.name} · ${a.quantity} ${a.quantity === 1 ? "dog" : "dogs"} daily`;
+  if (a.per_night) return `${a.name} · ${a.quantity} per day`;
   return `${a.name} × ${a.quantity}`;
 }

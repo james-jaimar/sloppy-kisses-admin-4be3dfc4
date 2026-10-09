@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Plus } from "lucide-react";
 import { PetFormModal } from "@/features/pets/PetFormModal";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { Button } from "@/components/ui/button";
@@ -385,6 +385,23 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [accom, setAccom] = useState<AccommodationFormPayload>(emptyAccommodationForm());
   const [accomSeeded, setAccomSeeded] = useState(false);
   const [accomTouched, setAccomTouched] = useState(false);
+  // Hotel stays with van collection / return: check address + van capacity.
+  const hotelNeedsVan = kind === "hotel" && Boolean(accom.pickup_required || accom.dropoff_required);
+  const hotelAddressesQ = useCustomerAddresses(hotelNeedsVan ? customerId || null : null, tenantId);
+  const hotelAddress = (hotelAddressesQ.data ?? []).find((a) => a.id === serviceAddressId) ?? null;
+  const hotelAddressVerified = Boolean(hotelAddress?.google_place_id);
+  const hotelVanSettingsQ = useTransportWorkflowSettings(hotelNeedsVan ? tenantId : null);
+  const hotelPickupLoadQ = useTransportDayLoad({
+    tenantId,
+    date: kind === "hotel" && accom.pickup_required && startAt ? startAt.slice(0, 10) : null,
+  });
+  const hotelDropoffLoadQ = useTransportDayLoad({
+    tenantId,
+    date: kind === "hotel" && accom.dropoff_required && endAtLocal ? endAtLocal.slice(0, 10) : null,
+  });
+  const hotelVanMode = ((hotelVanSettingsQ.data as any)?.overbooking_mode ?? "warn") as "warn" | "block";
+  const hotelPickupFull = Boolean(accom.pickup_required) && isRunFull(hotelPickupLoadQ.data);
+  const hotelDropoffFull = Boolean(accom.dropoff_required) && isRunFull(hotelDropoffLoadQ.data);
   const accomCustomerQ = useAccommodationCustomer(kind === "hotel" ? customerId || null : null);
   const accomPetsQ = useAccommodationPets(kind === "hotel" ? petIds : []);
   const existingAccomQ = useAccommodationForm(kind === "hotel" && isEdit ? booking?.id ?? null : null);
@@ -737,8 +754,24 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       return toast.error("Select at least one pet for this booking");
     }
 
-    if (kind === "hotel" && (accom.pickup_required || accom.dropoff_required) && !serviceAddressId) {
+    if (hotelNeedsVan && !serviceAddressId) {
       return toast.error("Pick the collection / drop-off address — the van needs somewhere to go.");
+    }
+    if (hotelNeedsVan && !addressOverride && hotelAddress && !hotelAddressVerified) {
+      return toast.error("Confirm this address on Google Maps before saving — the driver needs a pinned address.");
+    }
+    if (hotelPickupFull || hotelDropoffFull) {
+      const which = [hotelPickupFull && "collection (check-in day)", hotelDropoffFull && "drop-off (check-out day)"]
+        .filter(Boolean).join(" and ");
+      if (hotelVanMode === "block") {
+        return toast.error(`Every van is full for the ${which}. Pick other dates or raise the stop limit.`);
+      }
+      const ok = await confirm({
+        title: "Vans are full",
+        description: `Every van has hit its stop limit for the ${which}. Save anyway?`,
+        confirmLabel: "Save anyway",
+      });
+      if (!ok) return;
     }
 
     if (needsVanAddress && !addressOverride) {
@@ -1701,6 +1734,45 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               addressId={serviceAddressId}
               onAddressChange={setServiceAddressId}
             />
+            {hotelNeedsVan && (
+              <div className="space-y-2">
+                {accom.pickup_required && (
+                  <div>
+                    <div className="text-xs font-semibold">Van collection · check-in day</div>
+                    <VanLoadNotice rows={hotelPickupLoadQ.data} mode={hotelVanMode} loading={hotelPickupLoadQ.isLoading} />
+                  </div>
+                )}
+                {accom.dropoff_required && (
+                  <div>
+                    <div className="text-xs font-semibold">Van drop-off · check-out day</div>
+                    <VanLoadNotice rows={hotelDropoffLoadQ.data} mode={hotelVanMode} loading={hotelDropoffLoadQ.isLoading} />
+                  </div>
+                )}
+                {serviceAddressId && hotelAddress && hotelAddressVerified && (
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-sk-turquoise-dark">
+                    <BadgeCheck className="h-3.5 w-3.5" /> Google Maps verified address
+                  </div>
+                )}
+                {(!serviceAddressId || (hotelAddress && !hotelAddressVerified)) && (
+                  <div className="rounded-lg border-2 border-destructive bg-destructive/10 p-3 text-xs font-semibold text-destructive">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <div>
+                        {!serviceAddressId
+                          ? "No collection address yet. Add one in “Arrival & collection” above using the Google search."
+                          : "This address isn't verified on Google Maps. Use “Verify with Google” or re-pick it from the Google search so the driver can navigate."}
+                        {serviceAddressId && canOverrideAddress && (
+                          <label className="mt-2 flex items-center gap-2 font-medium">
+                            <input type="checkbox" checked={addressOverride} onChange={(e) => setAddressOverride(e.target.checked)} />
+                            Save anyway (admin override)
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <PetSections form={accom} setForm={patchAccom} collapsible tenantId={tenantId} uploadedVia="admin" />
             <CareSection form={accom} setForm={patchAccom} collapsible />
             <AttachmentsSection form={accom} setForm={patchAccom} collapsible />
