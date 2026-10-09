@@ -305,10 +305,15 @@ export function HotelExtrasPanel({
                     </span>
                   </label>
                   {sel && (
-                    <div className="flex items-center gap-1" title="Number of dogs / times">
+                    <div className="flex items-center gap-1" title={s.per_night ? "How many per day (all dogs)" : "Number of dogs / times"}>
                       <button type="button" onClick={() => setQty(s.id, sel.quantity - 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">−</button>
                       <span className="w-8 text-center text-sm tabular-nums">{Math.round(sel.quantity)}</span>
                       <button type="button" onClick={() => setQty(s.id, sel.quantity + 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">+</button>
+                      {s.per_night && (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          per day{preview ? ` = ${Math.round(sel.quantity) * preview.nights} total` : ""}
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
