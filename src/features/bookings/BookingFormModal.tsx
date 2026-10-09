@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { AlertTriangle, Plus } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Plus } from "lucide-react";
 import { PetFormModal } from "@/features/pets/PetFormModal";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { Button } from "@/components/ui/button";
@@ -1749,7 +1749,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                   </div>
                 )}
                 {serviceAddressId && hotelAddress && hotelAddressVerified && (
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-sk-teal-dark">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-sk-turquoise-dark">
                     <BadgeCheck className="h-3.5 w-3.5" /> Google Maps verified address
                   </div>
                 )}
