@@ -165,6 +165,7 @@ import PublicIntakeForm from "@/features/forms/PublicIntakeForm";
 import PublicBookPage from "@/features/publicBooking/PublicBookPage";
 import PublicHotelPage from "@/features/publicBooking/PublicHotelPage";
 import PublicGroomingPage from "@/features/publicBooking/PublicGroomingPage";
+import PublicServicePage from "@/features/publicBooking/PublicServicePage";
 import PublicInvoicePage from "@/features/invoices/PublicInvoicePage";
 import PublicQuotePage from "@/features/quotes/PublicQuotePage";
 import { PaySuccessPage, PayCancelPage } from "@/features/invoices/PayResultPages";
@@ -368,6 +369,8 @@ const App = () => (
                 <Route path="/book/hotel" element={<PublicHotelPage />} />
                 <Route path="/book/grooming" element={<PublicGroomingPage kind="inhouse" />} />
                 <Route path="/book/mobile" element={<PublicGroomingPage kind="mobile" />} />
+                <Route path="/book/daycare" element={<PublicServicePage service="daycare" />} />
+                <Route path="/book/transport" element={<PublicServicePage service="transport" />} />
                 <Route path="/forms/daycare-registration" element={<PublicIntakeForm title="Daycare registration" subtitle="Tell us about you and your dog to join Sloppy Kisses daycare." />} />
                 <Route path="/forms/dog-accommodation" element={<PublicIntakeForm title="Dog hotel booking request" subtitle="Request an overnight stay for your dog." />} />
                 <Route path="/forms/cattery" element={<PublicIntakeForm title="Cattery booking request" subtitle="Request a stay for your cat." />} />
