@@ -5,6 +5,7 @@ import { ArrowLeft, BedDouble, CheckCircle2, Loader2, Minus, Plus } from "lucide
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { usePublicTenant, usePublicHotelRates, type PublicRate } from "./publicBookingQueries";
+import { AccountBar, DoneHandoff } from "./AccountHandoff";
 import { useHotelHouseAvailability, fullNights, HouseCapacityNotice } from "@/features/hotelCattery/HouseCapacityNotice";
 import { SIZE_BAND_ORDER, SIZE_BAND_LABEL, type PetSizeBand } from "@/features/settings/hotelRateCardQueries";
 
@@ -191,11 +192,7 @@ export default function PublicHotelPage() {
           {new Date(`${checkOut}T00:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}.
           Our team will confirm your booking by email shortly.
         </p>
-        <p className="text-xs text-muted-foreground">
-          Already have an account with us?{" "}
-          <Link to="/login" className="font-semibold text-sk-coral hover:text-sk-coral-dark">Sign in</Link>{" "}
-          to track this booking, upload vaccination records and manage your pets.
-        </p>
+        <DoneHandoff contact={contact} tenantSlug={tenantSlug} />
       </div>
     );
   }
@@ -213,6 +210,8 @@ export default function PublicHotelPage() {
           Pick your dates to see live space and an instant price. We'll confirm by email.
         </p>
       </div>
+
+      <AccountBar service="hotel" />
 
       {/* Dates */}
       <section className="space-y-3 rounded-2xl border border-border bg-sk-surface p-5">
@@ -422,11 +421,6 @@ export default function PublicHotelPage() {
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
           Request booking
         </button>
-        <p className="text-center text-xs text-muted-foreground">
-          Already a customer?{" "}
-          <Link to="/login" className="font-semibold text-sk-coral hover:text-sk-coral-dark">Sign in</Link>{" "}
-          to book from your account.
-        </p>
       </section>
     </div>
   );

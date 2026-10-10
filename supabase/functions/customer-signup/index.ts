@@ -6,6 +6,7 @@
 // - Records a customer_signup_pending notification event for staff.
 // - Returns { ok: true } (or { error } on failure). Never leaks tenant data.
 
+import { sendAuthEmail, generateTenantActionUrl, resolveTenantAppUrl } from "../_shared/auth-email.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -61,18 +62,42 @@ Deno.serve(async (req) => {
   // Reject if a customer row already exists with this email in the tenant.
   const { data: existingCustomer } = await admin
     .from("customers")
-    .select("id")
+    .select("id, linked_profile_id")
     .eq("tenant_id", tenant.id)
     .ilike("email", email)
     .neq("status", "archived")
     .limit(1)
     .maybeSingle();
-  if (existingCustomer) return json({ error: "email_already_registered" }, 409);
+  if (existingCustomer?.linked_profile_id) return json({ error: "email_already_registered" }, 409);
 
   // Refuse if email already has an auth user (avoid hijack)
   const { data: existingUsers } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
   const found = existingUsers?.users?.find((u) => (u.email ?? "").toLowerCase() === email);
   if (found) return json({ error: "email_already_registered" }, 409);
+
+  // Customer already on file without a login (e.g. booked via /book). We can't
+  // trust the typed password yet: create the login with a random password, link
+  // it, and email a set-password link so only the real inbox owner gets in.
+  if (existingCustomer) {
+    const fullName0 = `${firstName} ${lastName}`.trim();
+    const { data: u, error: uErr } = await admin.auth.admin.createUser({
+      email, password: crypto.randomUUID() + crypto.randomUUID(), email_confirm: true,
+      user_metadata: { full_name: fullName0, source: "public_booking_claim" },
+    });
+    if (uErr || !u?.user) return json({ error: "create_user_failed" }, 500);
+    const { data: prof, error: prErr } = await admin.from("profiles")
+      .upsert({ auth_user_id: u.user.id, email, full_name: fullName0, user_type: "customer" }, { onConflict: "auth_user_id" })
+      .select("id").maybeSingle();
+    if (prErr || !prof) { await admin.auth.admin.deleteUser(u.user.id).catch(() => {}); return json({ error: "profile_failed" }, 500); }
+    await admin.from("customers").update({ linked_profile_id: prof.id, portal_access_enabled: true } as any).eq("id", existingCustomer.id);
+    try {
+      const origin = req.headers.get("origin") ?? req.headers.get("referer") ?? null;
+      const appUrl = await resolveTenantAppUrl(admin, tenant.id, origin);
+      const actionUrl = await generateTenantActionUrl(admin, "recovery", email, appUrl, "/reset-password");
+      await sendAuthEmail({ admin, tenantId: tenant.id, action: "recovery", recipient: email, actionUrl });
+    } catch (e) { console.error("customer-signup claim email:", (e as Error).message); }
+    return json({ ok: true, verify_email: true });
+  }
 
   // Create auth user, email pre-confirmed so they can sign in immediately.
   const fullName = `${firstName} ${lastName}`.trim();

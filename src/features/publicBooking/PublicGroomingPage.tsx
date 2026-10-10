@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Car, CheckCircle2, Loader2, Scissors } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
+import { AccountBar, DoneHandoff } from "./AccountHandoff";
 import { usePublicTenant } from "./publicBookingQueries";
 import { PET_SIZE_LABEL, petSizeToBand, type PetSize } from "@/features/pets/sizeUtils";
 
@@ -128,9 +129,7 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
           {new Date(`${date}T00:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })} at {time}.
           Our team will confirm by email shortly.
         </p>
-        <p className="text-xs text-muted-foreground">
-          Already have an account? <Link to="/login" className="font-semibold text-sk-coral hover:text-sk-coral-dark">Sign in</Link> to track your bookings.
-        </p>
+        <DoneHandoff contact={contact} tenantSlug={tenantSlug} />
       </div>
     );
   }
@@ -146,6 +145,8 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
           {kind === "mobile" ? "Our grooming van comes to you." : "Groomed at our parlour."} Choose the treatment, then pick a live time slot.
         </p>
       </div>
+
+      <AccountBar service={kind === "mobile" ? "mobile" : "grooming"} />
 
       <section className="space-y-3 rounded-2xl border border-border bg-sk-surface p-5">
         <div className="flex items-center justify-between">
@@ -261,9 +262,6 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
           className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-sk-coral text-sm font-semibold text-primary-foreground hover:bg-sk-coral-dark disabled:opacity-50">
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />} Request booking
         </button>
-        <p className="text-center text-xs text-muted-foreground">
-          Already a customer? <Link to="/login" className="font-semibold text-sk-coral hover:text-sk-coral-dark">Sign in</Link> to book from your account.
-        </p>
       </section>
     </div>
   );

@@ -104,7 +104,7 @@ export default function PublicBookPage() {
 
       <p className="text-center text-xs text-muted-foreground">
         Already a customer?{" "}
-        <Link to="/login" className="font-semibold text-sk-coral hover:text-sk-coral-dark">
+        <Link to="/login" state={{ from: "/customer/bookings/new" }} className="font-semibold text-sk-coral hover:text-sk-coral-dark">
           Sign in
         </Link>{" "}
         to book from your account and track your bookings.

@@ -9,7 +9,11 @@ export default function CustomerSignup() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const tenantSlug = params.get("tenant") ?? "";
-  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", mobile: "", password: "" });
+  const [form, setForm] = useState({
+    first_name: params.get("first") ?? "", last_name: params.get("last") ?? "",
+    email: params.get("email") ?? "", mobile: params.get("mobile") ?? "", password: "",
+  });
+  const [checkEmail, setCheckEmail] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +35,14 @@ export default function CustomerSignup() {
         : msg === "name_required" ? "Please enter your first and last name."
         : msg;
       setError(friendly);
+      return;
+    }
+
+    // We already had this person on file (e.g. from a /book request): they must
+    // prove the email is theirs, so a set-password link was emailed instead.
+    if ((data as any)?.verify_email) {
+      setSubmitting(false);
+      setCheckEmail(true);
       return;
     }
 
@@ -62,6 +74,15 @@ export default function CustomerSignup() {
           </div>
         </div>
 
+        {checkEmail ? (
+          <div className="space-y-3 text-center text-sm">
+            <p className="font-semibold">Check your email</p>
+            <p className="text-muted-foreground">
+              We've sent a link to {form.email}. Open it to choose your password and finish setting up your account.
+            </p>
+            <Link to="/login" className="text-xs font-semibold text-sk-coral hover:text-sk-coral-dark">Back to sign in</Link>
+          </div>
+        ) : (
         <form onSubmit={onSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <Field label="First name" value={form.first_name} onChange={(v) => setForm({ ...form, first_name: v })} required />
@@ -85,6 +106,7 @@ export default function CustomerSignup() {
               Already have an account? Sign in
             </Link>
         </form>
+        )}
       </div>
     </div>
   );
