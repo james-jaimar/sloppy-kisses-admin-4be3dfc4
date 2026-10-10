@@ -15,14 +15,14 @@ const SERVICES = [
     icon: Scissors,
     title: "In-house Grooming",
     blurb: "Full grooms, baths and tidy-ups at the parlour.",
-    ready: false,
+    ready: true,
   },
   {
     key: "mobile",
     icon: Car,
     title: "Mobile Grooming",
     blurb: "The grooming van comes to your home.",
-    ready: false,
+    ready: true,
   },
   {
     key: "daycare",
