@@ -5,6 +5,7 @@ import { ArrowLeft, BedDouble, CheckCircle2, Loader2, Minus, Plus } from "lucide
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { usePublicTenant, usePublicHotelRates, type PublicRate } from "./publicBookingQueries";
+import { AccountBar, DoneHandoff } from "./AccountHandoff";
 import { useHotelHouseAvailability, fullNights, HouseCapacityNotice } from "@/features/hotelCattery/HouseCapacityNotice";
 import { SIZE_BAND_ORDER, SIZE_BAND_LABEL, type PetSizeBand } from "@/features/settings/hotelRateCardQueries";
 
