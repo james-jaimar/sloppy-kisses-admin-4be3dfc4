@@ -9,7 +9,11 @@ export default function CustomerSignup() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const tenantSlug = params.get("tenant") ?? "";
-  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", mobile: "", password: "" });
+  const [form, setForm] = useState({
+    first_name: params.get("first") ?? "", last_name: params.get("last") ?? "",
+    email: params.get("email") ?? "", mobile: params.get("mobile") ?? "", password: "",
+  });
+  const [checkEmail, setCheckEmail] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +35,14 @@ export default function CustomerSignup() {
         : msg === "name_required" ? "Please enter your first and last name."
         : msg;
       setError(friendly);
+      return;
+    }
+
+    // We already had this person on file (e.g. from a /book request): they must
+    // prove the email is theirs, so a set-password link was emailed instead.
+    if ((data as any)?.verify_email) {
+      setSubmitting(false);
+      setCheckEmail(true);
       return;
     }
 

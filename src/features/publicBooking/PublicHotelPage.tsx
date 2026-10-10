@@ -210,6 +210,8 @@ export default function PublicHotelPage() {
         </p>
       </div>
 
+      <AccountBar service="hotel" />
+
       {/* Dates */}
       <section className="space-y-3 rounded-2xl border border-border bg-sk-surface p-5">
         <h2 className="text-sm font-semibold">Your dates</h2>
