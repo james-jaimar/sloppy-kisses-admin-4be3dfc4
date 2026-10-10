@@ -9971,6 +9971,16 @@ export type Database = {
           plan_name: string
         }[]
       }
+      public_grooming_catalog: { Args: { p_tenant_id: string }; Returns: Json }
+      public_grooming_slots: {
+        Args: {
+          p_day: string
+          p_kind: string
+          p_minutes: number
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       public_hotel_rates: { Args: { p_tenant_id: string }; Returns: Json }
       public_tenant_info: { Args: { p_slug?: string }; Returns: Json }
       recompute_invoice_payments: {
