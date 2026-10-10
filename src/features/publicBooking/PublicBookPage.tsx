@@ -29,14 +29,14 @@ const SERVICES = [
     icon: Sun,
     title: "Doggy Daycare",
     blurb: "Daily play, socialising and supervision.",
-    ready: false,
+    ready: true,
   },
   {
     key: "transport",
     icon: Truck,
     title: "Pick up & Drop off",
     blurb: "Pet taxi to and from any of our services.",
-    ready: false,
+    ready: true,
   },
 ];
 
