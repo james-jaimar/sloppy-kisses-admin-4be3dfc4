@@ -14,6 +14,9 @@ verify_jwt = false
 [functions.public-hotel-booking]
 verify_jwt = false
 
+[functions.public-grooming-booking]
+verify_jwt = false
+
 [functions.public-brand-logo]
 verify_jwt = false
 
