@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, Sun, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
+import { AccountBar, DoneHandoff } from "./AccountHandoff";
 import { usePublicTenant } from "./publicBookingQueries";
 import { PET_SIZE_LABEL, type PetSize } from "@/features/pets/sizeUtils";
 
@@ -127,9 +128,7 @@ export default function PublicServicePage({ service }: { service: Service }) {
           Thanks {contact.first_name} — we've got your {isDaycare ? (assessment ? "daycare assessment" : "daycare") : "pet taxi"} request for {fmtDay(day)}.
           Our team will confirm by email shortly.
         </p>
-        <p className="text-xs text-muted-foreground">
-          Already have an account? <Link to="/login" className="font-semibold text-sk-coral hover:text-sk-coral-dark">Sign in</Link> to track your bookings.
-        </p>
+        <DoneHandoff contact={contact} tenantSlug={tenantSlug} />
       </div>
     );
   }
@@ -145,6 +144,8 @@ export default function PublicServicePage({ service }: { service: Service }) {
           {isDaycare ? "New dogs start with an assessment day so we can make sure they settle in happily." : "Our pet taxi collects and delivers your pet. Live van space is checked for the day you pick."}
         </p>
       </div>
+
+      <AccountBar service={service} />
 
       <section className="space-y-3 rounded-2xl border border-border bg-sk-surface p-5">
         <div className="flex items-center justify-between">
