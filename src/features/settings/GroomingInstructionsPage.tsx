@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { BoutiqueStylesManager } from "./BoutiqueStylesManager";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
@@ -82,6 +83,7 @@ export default function GroomingInstructionsPage() {
               Read-only — requires "Manage grooming rate card" permission.
             </div>
           )}
+          {tenantId && <BoutiqueStylesManager tenantId={tenantId} canManage={canManage} />}
           <div className="flex justify-end">
             <button disabled={!canManage} onClick={addGroup}
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-sk-coral px-3 text-sm font-semibold text-white disabled:opacity-50">
