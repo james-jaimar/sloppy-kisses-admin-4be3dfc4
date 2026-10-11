@@ -1,5 +1,7 @@
 import { usePublicAddress, addressPayload, PublicAddressField } from "./publicAddress";
 import { useMemo, useState } from "react";
+import { useBoutiqueStyles, useGroomingRefUrl } from "@/features/grooming/instructions/styleQueries";
+import { Sparkles } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Car, CheckCircle2, Loader2, Scissors } from "lucide-react";
@@ -19,7 +21,7 @@ const fmtZar = (n: number) => new Intl.NumberFormat("en-ZA", { style: "currency"
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const SIZES = Object.keys(PET_SIZE_LABEL) as PetSize[];
 
-interface PetDraft { name: string; species: "dog" | "cat"; size: PetSize | ""; breed: string; pkg: string; addons: string[] }
+interface PetDraft { name: string; species: "dog" | "cat"; size: PetSize | ""; breed: string; pkg: string; addons: string[]; style?: string }
 const emptyPet = (): PetDraft => ({ name: "", species: "dog", size: "", breed: "", pkg: "", addons: [] });
 
 export default function PublicGroomingPage({ kind }: { kind: Kind }) {
@@ -42,6 +44,7 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
     },
   });
 
+  const stylesQ = useBoutiqueStyles(tenantId);
   const [pets, setPets] = useState<PetDraft[]>([emptyPet()]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -97,7 +100,10 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
         body: {
           kind, tenant_slug: tenantSlug || undefined, ...contact, date, time,
           ...(kind === "mobile" ? addressPayload(addr) : {}),
-          notes: notes.trim() || undefined,
+          notes: [
+            ...pets.filter((p) => p.style).map((p) => `Boutique style for ${p.name.trim() || "pet"}: ${p.style}`),
+            notes.trim(),
+          ].filter(Boolean).join("\n") || undefined,
           pets: pets.map((p) => ({ name: p.name.trim(), species: p.species, size: p.size, breed: p.breed.trim() || undefined, package_code: p.pkg || undefined, addon_codes: p.addons })),
         },
       });
@@ -185,6 +191,23 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
                   <option value="">{p.size ? "Extras only (no groom)" : "Select a size first"}</option>
                   {pkgs.map((x) => <option key={x.code} value={x.code}>{x.name} · {fmtZar(Number(x.price_zar))}</option>)}
                 </select></label>
+              {(stylesQ.data?.length ?? 0) > 0 && (
+                <div>
+                  <span className="mb-1 block text-xs font-medium text-muted-foreground">Boutique style (optional)</span>
+                  <div className="flex flex-wrap gap-2">
+                    {stylesQ.data!.map((st) => {
+                      const on = p.style === st.name;
+                      return (
+                        <button key={st.id} type="button" title={st.description ?? undefined}
+                          onClick={() => setPet(i, { style: on ? undefined : st.name })}
+                          className={"flex items-center gap-2 rounded-full border py-1 pl-1 pr-3 text-xs " + (on ? "border-sk-coral bg-sk-coral-soft font-semibold" : "border-border hover:bg-muted")}>
+                          <PublicStyleThumb path={st.image_path} />{st.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {p.size && extrasAllowed.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {extrasAllowed.map((a) => {
@@ -265,4 +288,11 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
       </section>
     </div>
   );
+}
+
+function PublicStyleThumb({ path }: { path: string | null }) {
+  const url = useGroomingRefUrl(path);
+  return url
+    ? <img src={url} alt="" className="h-7 w-7 rounded-full object-cover" />
+    : <span className="grid h-7 w-7 place-items-center rounded-full bg-sk-coral-soft text-sk-coral"><Sparkles className="h-3.5 w-3.5" /></span>;
 }
