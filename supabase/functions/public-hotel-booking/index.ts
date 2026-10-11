@@ -1,3 +1,4 @@
+import { cleanPublicAddress } from "../_shared/publicAddress.ts";
 // Public (anonymous) Hotel & Cattery booking request.
 // - Accepts stay dates, pets, accommodation choices, add-ons and contact details.
 // - Finds or creates the customer by email (never reveals which happened).
@@ -201,6 +202,7 @@ Deno.serve(async (req) => {
       pickup_required: Boolean(body.pickup_required),
       dropoff_required: Boolean(body.dropoff_required),
       address_text: (body.address_text ?? "").trim() || null,
+      address: cleanPublicAddress((body as any).address),
       estimate_zar: typeof body.estimate_zar === "number" ? Math.round(body.estimate_zar * 100) / 100 : null,
     },
   } as any);

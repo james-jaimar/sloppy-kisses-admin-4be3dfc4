@@ -1,3 +1,4 @@
+import { usePublicAddress, addressPayload, PublicAddressField } from "./publicAddress";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -45,7 +46,7 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [contact, setContact] = useState({ first_name: "", last_name: "", email: "", mobile: "" });
-  const [address, setAddress] = useState("");
+  const addr = usePublicAddress();
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -81,7 +82,7 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
   const slots = (slotsQ.data?.slots ?? []).filter((s) => s.free >= needed);
 
   const contactReady = contact.first_name.trim() && contact.last_name.trim() && /.+@.+\..+/.test(contact.email);
-  const canSubmit = servicesReady && date && time && contactReady && (kind !== "mobile" || address.trim().length > 5) && !submitting;
+  const canSubmit = servicesReady && date && time && contactReady && (kind !== "mobile" || addr.ready) && !submitting;
 
   function packagesFor(p: PetDraft) {
     const band = petSizeToBand(p.size || null);
@@ -95,7 +96,7 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
       const { data, error } = await supabase.functions.invoke("public-grooming-booking", {
         body: {
           kind, tenant_slug: tenantSlug || undefined, ...contact, date, time,
-          address_text: kind === "mobile" ? address.trim() : undefined,
+          ...(kind === "mobile" ? addressPayload(addr) : {}),
           notes: notes.trim() || undefined,
           pets: pets.map((p) => ({ name: p.name.trim(), species: p.species, size: p.size, breed: p.breed.trim() || undefined, package_code: p.pkg || undefined, addon_codes: p.addons })),
         },
@@ -236,8 +237,7 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
           <input value={contact.mobile} onChange={(e) => setContact((c) => ({ ...c, mobile: e.target.value }))} className={inputCls} placeholder="Mobile (+27…)" autoComplete="tel" />
         </div>
         {kind === "mobile" && (
-          <label className="block"><span className="mb-1 block text-xs font-medium text-muted-foreground">Where should the van come?</span>
-            <input value={address} onChange={(e) => setAddress(e.target.value)} className={inputCls} placeholder="Street address, suburb, city" /></label>
+          <PublicAddressField a={addr} label="Where should the van come?" />
         )}
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40" placeholder="Style preferences, sensitivities, anything else (optional)" />
       </section>

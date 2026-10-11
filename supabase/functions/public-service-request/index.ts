@@ -1,3 +1,4 @@
+import { cleanPublicAddress } from "../_shared/publicAddress.ts";
 // Public (anonymous) request for Daycare or Pick up & Drop off.
 // Capacity and prices are re-checked server-side, then a pending-review
 // booking_requests row is created for staff. Nothing is confirmed or invoiced.
@@ -100,6 +101,7 @@ Deno.serve(async (req) => {
     endAt = new Date(Date.parse(startAt) + 60 * 60000).toISOString();
     payload = {
       date: day, time, direction, address_text: address, suburb: suburb || null,
+      address: cleanPublicAddress((body as any).address),
       destination: clip(body.destination, 120) || null,
       return_date: isDay(clip(body.return_date, 10)) ? clip(body.return_date, 10) : null,
       return_time: /^\d{2}:\d{2}$/.test(clip(body.return_time, 5)) ? clip(body.return_time, 5) : null,

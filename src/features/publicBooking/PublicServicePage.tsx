@@ -1,3 +1,4 @@
+import { usePublicAddress, addressPayload, PublicAddressField } from "./publicAddress";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -47,7 +48,7 @@ export default function PublicServicePage({ service }: { service: Service }) {
   const [time, setTime] = useState("08:00");
   const [returnDate, setReturnDate] = useState("");
   const [returnTime, setReturnTime] = useState("16:00");
-  const [address, setAddress] = useState("");
+  const addr = usePublicAddress();
   const [suburb, setSuburb] = useState("");
   const [destination, setDestination] = useState("");
 
@@ -80,7 +81,7 @@ export default function PublicServicePage({ service }: { service: Service }) {
   const contactReady = contact.first_name.trim() && contact.last_name.trim() && /.+@.+\..+/.test(contact.email);
   const serviceReady = isDaycare
     ? Boolean(startDate && (assessment || planId))
-    : Boolean(date && time && address.trim().length > 5);
+    : Boolean(date && time && addr.ready);
   const canSubmit = petsReady && contactReady && serviceReady && !dayBlocked && !submitting;
 
   const setPet = (i: number, patch: Partial<PetDraft>) => setPets((prev) => prev.map((p, j) => (j === i ? { ...p, ...patch } : p)));
@@ -95,7 +96,7 @@ export default function PublicServicePage({ service }: { service: Service }) {
           pets: pets.map((p) => ({ name: p.name.trim(), species: p.species, size: p.size, breed: p.breed.trim() || undefined })),
           ...(isDaycare
             ? { assessment, assessment_date: startDate, start_date: startDate, plan_id: planId || undefined, days }
-            : { date, time, direction, address_text: address.trim(), suburb: suburb.trim(), destination: destination.trim(),
+            : { date, time, direction, ...addressPayload(addr), suburb: (suburb.trim() || addr.value.suburb || ""), destination: destination.trim(),
                 return_date: direction === "round_trip" ? returnDate || undefined : undefined,
                 return_time: direction === "round_trip" ? returnTime : undefined }),
         },
@@ -224,11 +225,11 @@ export default function PublicServicePage({ service }: { service: Service }) {
               <Lbl t="Return date"><input type="date" min={date || todayKey()} value={returnDate} onChange={(e) => setReturnDate(e.target.value)} className={inputCls} /></Lbl>
               <Lbl t="Return time"><input type="time" value={returnTime} onChange={(e) => setReturnTime(e.target.value)} className={inputCls} /></Lbl>
             </>)}
-            <div className="sm:col-span-2"><Lbl t="Home address"><input value={address} onChange={(e) => setAddress(e.target.value)} className={inputCls} placeholder="12 Main Road, Bryanston" /></Lbl></div>
+            <div className="sm:col-span-2"><PublicAddressField a={addr} label="Home address" /></div>
             <Lbl t="Suburb"><input value={suburb} onChange={(e) => setSuburb(e.target.value)} className={inputCls} placeholder="Bryanston" /></Lbl>
             <Lbl t="Going to (optional)"><input value={destination} onChange={(e) => setDestination(e.target.value)} className={inputCls} placeholder="Daycare, grooming, hotel…" /></Lbl>
           </div>
-          <p className="text-[11px] text-muted-foreground">Our team will confirm your exact address on a map before the trip.</p>
+          
         </section>
       )}
 

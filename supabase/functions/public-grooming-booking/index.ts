@@ -1,3 +1,4 @@
+import { cleanPublicAddress } from "../_shared/publicAddress.ts";
 // Public (anonymous) grooming booking request — in-house parlour or mobile van.
 // Prices and durations are re-derived server-side from the live price list, the
 // chosen slot is re-checked against live availability, and a pending-review
@@ -132,6 +133,7 @@ Deno.serve(async (req) => {
       contact: { first_name: firstName, last_name: lastName, email, mobile: mobile || null },
       date: day, time, duration_minutes: longest,
       address_text: kind === "mobile" ? address : null,
+      address: kind === "mobile" ? cleanPublicAddress((body as any).address) : null,
       pets: pets.map((p, i) => ({
         id: petIds[i], name: clip(p.name, 60), species: p.species ?? "dog", size: p.size ?? null,
         breed: clip(p.breed, 80) || null,

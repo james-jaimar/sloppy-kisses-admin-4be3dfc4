@@ -1,3 +1,4 @@
+import { usePublicAddress, addressPayload, PublicAddressField } from "./publicAddress";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -59,7 +60,7 @@ export default function PublicHotelPage() {
   const [addons, setAddons] = useState<Record<string, number>>({});
   const [contact, setContact] = useState({ first_name: "", last_name: "", email: "", mobile: "" });
   const [transport, setTransport] = useState({ pickup: false, dropoff: false });
-  const [addressText, setAddressText] = useState("");
+  const addr = usePublicAddress();
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -119,7 +120,7 @@ export default function PublicHotelPage() {
   }, [pets, speciesRates, addons, nights, rates.data]);
 
   const petsReady = pets.every((p) => p.name.trim() && p.accommodation);
-  const transportReady = !transport.pickup && !transport.dropoff ? true : addressText.trim().length > 5;
+  const transportReady = !transport.pickup && !transport.dropoff ? true : addr.ready;
   const contactReady =
     contact.first_name.trim() && contact.last_name.trim() && /.+@.+\..+/.test(contact.email);
   const canSubmit =
@@ -148,7 +149,7 @@ export default function PublicHotelPage() {
             .map(([code, quantity]) => ({ code, quantity })),
           pickup_required: transport.pickup,
           dropoff_required: transport.dropoff,
-          address_text: addressText.trim() || undefined,
+          ...((transport.pickup || transport.dropoff) ? addressPayload(addr) : {}),
           notes: notes.trim() || undefined,
           estimate_zar: estimate?.grand,
         },
@@ -358,10 +359,7 @@ export default function PublicHotelPage() {
           </label>
         </div>
         {(transport.pickup || transport.dropoff) && (
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium text-muted-foreground">Collection / drop-off address</span>
-            <input value={addressText} onChange={(e) => setAddressText(e.target.value)} className={inputCls} placeholder="Street address, suburb, city" />
-          </label>
+          <PublicAddressField a={addr} label="Collection / drop-off address" />
         )}
       </section>
 
