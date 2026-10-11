@@ -3695,7 +3695,9 @@ export type Database = {
           created_at: string
           medical_flags: string[]
           notes: string | null
+          reference_photo_path: string | null
           selections: Json
+          style_id: string | null
           tenant_id: string
           told_office_to_call: string | null
           updated_at: string
@@ -3705,7 +3707,9 @@ export type Database = {
           created_at?: string
           medical_flags?: string[]
           notes?: string | null
+          reference_photo_path?: string | null
           selections?: Json
+          style_id?: string | null
           tenant_id: string
           told_office_to_call?: string | null
           updated_at?: string
@@ -3715,7 +3719,9 @@ export type Database = {
           created_at?: string
           medical_flags?: string[]
           notes?: string | null
+          reference_photo_path?: string | null
           selections?: Json
+          style_id?: string | null
           tenant_id?: string
           told_office_to_call?: string | null
           updated_at?: string
@@ -3729,7 +3735,67 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "grooming_booking_instructions_style_id_fkey"
+            columns: ["style_id"]
+            isOneToOne: false
+            referencedRelation: "grooming_boutique_styles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "grooming_booking_instructions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grooming_boutique_styles: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          id: string
+          image_path: string | null
+          medical_flags: string[]
+          name: string
+          notes: string | null
+          selections: Json
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_path?: string | null
+          medical_flags?: string[]
+          name: string
+          notes?: string | null
+          selections?: Json
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_path?: string | null
+          medical_flags?: string[]
+          name?: string
+          notes?: string | null
+          selections?: Json
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grooming_boutique_styles_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -6330,7 +6396,9 @@ export type Database = {
           medical_flags: string[]
           notes: string | null
           pet_id: string
+          reference_photo_path: string | null
           selections: Json
+          style_id: string | null
           tenant_id: string
           updated_at: string
           updated_by: string | null
@@ -6340,7 +6408,9 @@ export type Database = {
           medical_flags?: string[]
           notes?: string | null
           pet_id: string
+          reference_photo_path?: string | null
           selections?: Json
+          style_id?: string | null
           tenant_id: string
           updated_at?: string
           updated_by?: string | null
@@ -6350,7 +6420,9 @@ export type Database = {
           medical_flags?: string[]
           notes?: string | null
           pet_id?: string
+          reference_photo_path?: string | null
           selections?: Json
+          style_id?: string | null
           tenant_id?: string
           updated_at?: string
           updated_by?: string | null
@@ -6361,6 +6433,13 @@ export type Database = {
             columns: ["pet_id"]
             isOneToOne: true
             referencedRelation: "pets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pet_grooming_defaults_style_id_fkey"
+            columns: ["style_id"]
+            isOneToOne: false
+            referencedRelation: "grooming_boutique_styles"
             referencedColumns: ["id"]
           },
           {
