@@ -120,7 +120,7 @@ export function BoutiqueStylesManager({ tenantId, canManage }: { tenantId: strin
       )}
 
       {draft && (
-        <ModalShell open onClose={() => setDraft(null)} title={draft.id ? `Edit ${draft.name || "style"}` : "New boutique style"}
+        <ModalShell wide onClose={() => setDraft(null)} title={draft.id ? `Edit ${draft.name || "style"}` : "New boutique style"}
           footer={
             <div className="flex justify-end gap-2">
               <button onClick={() => setDraft(null)} className="h-9 rounded-lg border border-border px-3 text-sm">Cancel</button>
