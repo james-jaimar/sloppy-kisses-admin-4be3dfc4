@@ -64,6 +64,8 @@ const BodySchema = z.object({
           selections: z.record(z.any()).default({}),
           medical_flags: z.array(z.string()).default([]),
           notes: z.string().max(2000).nullable().optional(),
+          style_id: z.string().uuid().nullable().optional(),
+          reference_photo_path: z.string().max(300).nullable().optional(),
         })
         .optional(),
       service_address: z
