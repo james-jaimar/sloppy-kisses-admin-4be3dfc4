@@ -56,6 +56,8 @@ export function BookingGroomingPrefsDialog({
       medical_flags: (src as any)?.medical_flags ?? [],
       notes: (src as any)?.notes ?? "",
       told_office_to_call: (existingQ.data as any)?.told_office_to_call ?? "",
+      style_id: (src as any)?.style_id ?? null,
+      reference_photo_path: (src as any)?.reference_photo_path ?? null,
     });
     setSeeded(true);
   }, [open, seeded, existingQ.isLoading, existingQ.data, defaultsQ.isLoading, defaultsQ.data]);
@@ -69,6 +71,8 @@ export function BookingGroomingPrefsDialog({
         medical_flags: value.medical_flags,
         notes: value.notes || null,
         told_office_to_call: value.told_office_to_call || null,
+        style_id: value.style_id ?? null,
+        reference_photo_path: value.reference_photo_path ?? null,
       });
       if (alsoDefaults && petId) {
         await saveDefaults.mutateAsync({
@@ -76,6 +80,8 @@ export function BookingGroomingPrefsDialog({
           selections: value.selections,
           medical_flags: value.medical_flags,
           notes: value.notes || null,
+          style_id: value.style_id ?? null,
+          reference_photo_path: value.reference_photo_path ?? null,
         });
       }
       qc.invalidateQueries({ queryKey: ["grooming_prefs_states"] });

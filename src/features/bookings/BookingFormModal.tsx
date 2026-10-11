@@ -1099,6 +1099,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         medical_flags: v.medical_flags,
         notes: v.notes?.trim() || null,
         told_office_to_call: v.told_office_to_call?.trim() || null,
+        style_id: v.style_id ?? null,
+        reference_photo_path: v.reference_photo_path ?? null,
       });
     } catch (err: any) {
       toast.error("Booking saved, but failed to save instructions: " + (err?.message ?? "unknown error"));

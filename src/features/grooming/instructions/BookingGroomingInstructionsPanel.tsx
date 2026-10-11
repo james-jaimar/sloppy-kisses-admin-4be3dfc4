@@ -39,6 +39,8 @@ export function BookingGroomingInstructionsPanel({
       medical_flags: existingQ.data.medical_flags ?? [],
       notes: existingQ.data.notes ?? "",
       told_office_to_call: existingQ.data.told_office_to_call ?? "",
+      style_id: existingQ.data.style_id ?? null,
+      reference_photo_path: existingQ.data.reference_photo_path ?? null,
     });
     seeded.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,6 +60,8 @@ export function BookingGroomingInstructionsPanel({
       selections: defaultsQ.data.selections ?? {},
       medical_flags: defaultsQ.data.medical_flags ?? [],
       notes: defaultsQ.data.notes ?? "",
+      style_id: defaultsQ.data.style_id ?? null,
+      reference_photo_path: defaultsQ.data.reference_photo_path ?? null,
     });
     seeded.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { useInstructionCatalog, type Selections } from "./queries";
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
+import { BoutiqueStylePicker, CutReferencePhoto } from "./BoutiqueStylePicker";
 
 export interface GroomingInstructionsValue {
   selections: Selections;
   medical_flags: string[];
   notes: string;
   told_office_to_call?: string;
+  /** Boutique style preset last applied (for display; selections remain editable). */
+  style_id?: string | null;
+  /** Owner's "make it look like this" picture. */
+  reference_photo_path?: string | null;
 }
 
 interface Props {
@@ -15,9 +20,11 @@ interface Props {
   onChange: (v: GroomingInstructionsValue) => void;
   disabled?: boolean;
   compact?: boolean;
+  /** Defining a boutique style: hide style buttons + reference photo. */
+  presetMode?: boolean;
 }
 
-export function GroomingInstructionsForm({ tenantId, value, onChange, disabled, compact }: Props) {
+export function GroomingInstructionsForm({ tenantId, value, onChange, disabled, compact, presetMode }: Props) {
   const catalog = useInstructionCatalog(tenantId);
   const addonsQ = useGroomingAddons(tenantId ?? undefined, { activeOnly: true });
   const [local, setLocal] = useState<GroomingInstructionsValue>(value);
@@ -47,6 +54,13 @@ export function GroomingInstructionsForm({ tenantId, value, onChange, disabled, 
 
   return (
     <div className={compact ? "space-y-3" : "space-y-4"}>
+      {!presetMode && (
+        <>
+          <BoutiqueStylePicker tenantId={tenantId} value={local} disabled={disabled} onApply={update} />
+          <CutReferencePhoto tenantId={tenantId} path={local.reference_photo_path ?? null} disabled={disabled}
+            onChange={(p) => update({ reference_photo_path: p })} />
+        </>
+      )}
       {groups.map((g) => {
         const opts = byGroup[g.id] ?? [];
         const val = local.selections[g.code];

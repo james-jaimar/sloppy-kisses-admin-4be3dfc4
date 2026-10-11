@@ -1,3 +1,4 @@
+import { BoutiqueStylePicker, CutReferencePhoto } from "@/features/grooming/instructions/BoutiqueStylePicker";
 import { AlertTriangle, MapPin, Navigation, Scissors, ShieldAlert, Sparkles } from "lucide-react";
 import { addressLines } from "@/lib/address/format";
 import { PET_SIZE_LABEL, type PetSize } from "@/features/pets/sizeUtils";
@@ -168,7 +169,12 @@ export function JobGroomingBrief({
   const notes = source?.notes ?? "";
   const toldOffice = bookingHas ? (bookingQ.data as any)?.told_office_to_call ?? "" : "";
 
-  const anything = rows.length > 0 || flags.length > 0 || Boolean(notes?.trim());
+  const styleValue = {
+    selections: {}, medical_flags: [], notes: "",
+    style_id: (source as any)?.style_id ?? (petQ.data as any)?.style_id ?? null,
+    reference_photo_path: (source as any)?.reference_photo_path ?? (petQ.data as any)?.reference_photo_path ?? null,
+  };
+  const anything = rows.length > 0 || flags.length > 0 || Boolean(notes?.trim()) || Boolean(styleValue.style_id || styleValue.reference_photo_path);
 
   if (bookingQ.isLoading || catalogQ.isLoading) {
     return (
@@ -200,6 +206,12 @@ export function JobGroomingBrief({
     <Card title="Grooming brief" icon={Scissors}>
       {!bookingHas && (
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">From pet profile</p>
+      )}
+      {(styleValue.style_id || styleValue.reference_photo_path) && (
+        <div className="mb-3 space-y-2">
+          <BoutiqueStylePicker tenantId={tenantId} value={styleValue} disabled onApply={() => {}} />
+          <CutReferencePhoto tenantId={tenantId} path={styleValue.reference_photo_path} disabled onChange={() => {}} />
+        </div>
       )}
       {rows.length > 0 && (
         <BriefChecklist

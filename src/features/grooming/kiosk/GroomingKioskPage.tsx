@@ -200,6 +200,8 @@ function KioskBrief({
     medical_flags: src?.medical_flags ?? [],
     notes: src?.notes ?? "",
     told_office_to_call: src?.told_office_to_call ?? "",
+    style_id: src?.style_id ?? null,
+    reference_photo_path: src?.reference_photo_path ?? null,
   };
   return (
     <div className="space-y-4">

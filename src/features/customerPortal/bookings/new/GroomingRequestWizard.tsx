@@ -86,6 +86,8 @@ export default function GroomingRequestWizard({ mode }: Props) {
         selections: defaultsQ.data.selections ?? {},
         medical_flags: defaultsQ.data.medical_flags ?? [],
         notes: defaultsQ.data.notes ?? "",
+        style_id: defaultsQ.data.style_id ?? null,
+        reference_photo_path: defaultsQ.data.reference_photo_path ?? null,
       });
     } else if (defaultsQ.isFetched) {
       setInstructions({ selections: {}, medical_flags: [], notes: "" });
@@ -184,6 +186,8 @@ export default function GroomingRequestWizard({ mode }: Props) {
         selections: instructions.selections,
         medical_flags: instructions.medical_flags,
         notes: instructions.notes,
+        style_id: instructions.style_id ?? null,
+        reference_photo_path: instructions.reference_photo_path ?? null,
       },
       ...(mode === "mobile" ? { access_notes: accessNotes || null } : {}),
       ...(mode === "inhouse" ? { stay_play: stayPlay, stay_play_collect_time: stayPlay ? collectTime : null } : {}),
