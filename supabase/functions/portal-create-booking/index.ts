@@ -439,6 +439,8 @@ Deno.serve(async (req) => {
           selections: g.instructions.selections ?? {},
           medical_flags: g.instructions.medical_flags ?? [],
           notes: g.instructions.notes ?? null,
+          style_id: g.instructions.style_id ?? null,
+          reference_photo_path: typeof g.instructions.reference_photo_path === "string" && g.instructions.reference_photo_path.startsWith(`${tenantId}/`) ? g.instructions.reference_photo_path : null,
         });
       }
 
@@ -641,6 +643,8 @@ Deno.serve(async (req) => {
         selections: g.instructions.selections ?? {},
         medical_flags: g.instructions.medical_flags ?? [],
         notes: g.instructions.notes ?? null,
+          style_id: g.instructions.style_id ?? null,
+          reference_photo_path: typeof g.instructions.reference_photo_path === "string" && g.instructions.reference_photo_path.startsWith(`${tenantId}/`) ? g.instructions.reference_photo_path : null,
       });
     }
 

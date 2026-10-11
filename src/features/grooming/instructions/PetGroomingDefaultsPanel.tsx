@@ -32,6 +32,8 @@ export function PetGroomingDefaultsPanel({ tenantId, petId, variant = "admin", p
         selections: q.data.selections ?? {},
         medical_flags: q.data.medical_flags ?? [],
         notes: q.data.notes ?? "",
+        style_id: q.data.style_id ?? null,
+        reference_photo_path: q.data.reference_photo_path ?? null,
       });
     } else if (q.data === null) {
       setValue(EMPTY);
@@ -46,6 +48,8 @@ export function PetGroomingDefaultsPanel({ tenantId, petId, variant = "admin", p
         selections: value.selections,
         medical_flags: value.medical_flags,
         notes: value.notes?.trim() || null,
+        style_id: value.style_id ?? null,
+        reference_photo_path: value.reference_photo_path ?? null,
       });
       toast.success("Grooming defaults saved");
       setDirty(false);

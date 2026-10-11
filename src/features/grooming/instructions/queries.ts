@@ -142,6 +142,8 @@ export interface PetGroomingDefaults {
   selections: Selections;
   medical_flags: string[];
   notes: string | null;
+  style_id?: string | null;
+  reference_photo_path?: string | null;
 }
 
 export function usePetGroomingDefaults(petId: string | null | undefined) {
@@ -159,7 +161,7 @@ export function usePetGroomingDefaults(petId: string | null | undefined) {
 export function useSavePetGroomingDefaults(tenantId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (row: { pet_id: string; selections: Selections; medical_flags: string[]; notes?: string | null }) => {
+    mutationFn: async (row: { pet_id: string; selections: Selections; medical_flags: string[]; notes?: string | null; style_id?: string | null; reference_photo_path?: string | null }) => {
       const payload: any = { tenant_id: tenantId, ...row };
       const { error } = await supabase.from("pet_grooming_defaults" as any).upsert(payload, { onConflict: "pet_id" });
       if (error) throw error;
@@ -176,6 +178,8 @@ export interface BookingInstructions {
   medical_flags: string[];
   notes: string | null;
   told_office_to_call: string | null;
+  style_id?: string | null;
+  reference_photo_path?: string | null;
 }
 
 export function useBookingInstructions(bookingId: string | null | undefined) {
@@ -193,7 +197,7 @@ export function useBookingInstructions(bookingId: string | null | undefined) {
 export function useSaveBookingInstructions(tenantId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (row: { booking_id: string; selections: Selections; medical_flags: string[]; notes?: string | null; told_office_to_call?: string | null }) => {
+    mutationFn: async (row: { booking_id: string; selections: Selections; medical_flags: string[]; notes?: string | null; told_office_to_call?: string | null; style_id?: string | null; reference_photo_path?: string | null }) => {
       const payload: any = { tenant_id: tenantId, ...row };
       const { error } = await supabase.from("grooming_booking_instructions" as any).upsert(payload, { onConflict: "booking_id" });
       if (error) throw error;
