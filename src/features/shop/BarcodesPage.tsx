@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { Barcode, Check, Loader2, Search, Smartphone, Trash2, X } from "lucide-react";
+import { Barcode, Check, Wand2, Loader2, Search, Smartphone, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useHasPermission } from "@/lib/permissions/permissions";
-import { useProducts, type Product } from "@/features/shop/queries";
+import { useProducts, useStockOnHand, type Product } from "@/features/shop/queries";
+import { BarcodeGeneratorDialog } from "@/features/shop/BarcodeGeneratorDialog";
 import { StudioSnapDialog } from "@/features/uploads/StudioSnapDialog";
 import { useBarcodeScanner, playTone } from "@/features/pos/useBarcodeScanner";
 import {
@@ -24,6 +25,9 @@ export default function BarcodesPage() {
   const [search, setSearch] = useState("");
   const [missingOnly, setMissingOnly] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [genFor, setGenFor] = useState<Product | null>(null);
+  const sohQ = useStockOnHand(tenantId);
+  const soh = useMemo(() => { const m: Record<string, number> = {}; for (const r of (sohQ.data ?? []) as any[]) m[r.product_id] = (m[r.product_id] ?? 0) + Number(r.qty_on_hand ?? 0); return m; }, [sohQ.data]);
 
   const productsQ = useProducts(tenantId, { activeOnly: true });
   const coverage = useBarcodeCoverage(tenantId);
@@ -189,6 +193,12 @@ export default function BarcodesPage() {
                       )}
                     </div>
                     <button
+                      onClick={() => setGenFor({ ...p, stock_on_hand: soh[p.id] ?? 1 } as any)}
+                      className="inline-flex h-10 items-center gap-2 rounded-xl border border-border px-3 text-sm font-semibold"
+                    >
+                      <Wand2 className="h-4 w-4" /> {p.barcode ? "Labels" : "Make code"}
+                    </button>
+                    <button
                       onClick={() => link(p)}
                       disabled={!code.trim() || savingId === p.id}
                       className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white disabled:opacity-40"
@@ -206,6 +216,7 @@ export default function BarcodesPage() {
           </>
         )}
       </div>
+      {genFor && <BarcodeGeneratorDialog tenantId={tenantId} product={genFor} onClose={() => setGenFor(null)} />}
     </>
   );
 }
