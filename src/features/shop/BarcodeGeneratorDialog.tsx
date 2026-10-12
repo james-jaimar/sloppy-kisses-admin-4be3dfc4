@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/features/shop/queries";
+import { useRetailSettings } from "@/features/shop/queries";
 import { useSaveProductBarcode } from "@/features/shop/barcodeLinks";
 import { useBarcodeScanner, playTone } from "@/features/pos/useBarcodeScanner";
 import { ean13Svg, isValidEan13, randomInternalEan13 } from "@/features/shop/ean13";
@@ -29,8 +30,8 @@ function printLabels(p: Product, code: string, count: number, widthMm: number, h
   w.document.write(`<!doctype html><html><head><title>${code}</title><style>
     @page { size: ${widthMm}mm ${heightMm}mm; margin: 0; }
     html,body{margin:0;padding:0;background:#fff}
-    .l{width:${widthMm}mm;height:${heightMm}mm;box-sizing:border-box;padding:1.5mm 3mm;display:flex;flex-direction:column;justify-content:center;page-break-after:always;overflow:hidden}
-    .n{font:600 8pt sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;margin-bottom:1mm}
+    .l{width:${widthMm}mm;height:${heightMm}mm;box-sizing:border-box;padding:${(heightMm*0.05).toFixed(1)}mm ${(widthMm*0.05).toFixed(1)}mm;display:flex;flex-direction:column;justify-content:center;page-break-after:always;overflow:hidden}
+    .n{font:600 ${Math.max(5, Math.min(12, heightMm * 0.22)).toFixed(1)}pt sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;margin-bottom:1mm}
     svg{width:100%;flex:1;min-height:0}
   </style></head><body>${label.repeat(count)}<script>onload=()=>{print();}</script></body></html>`);
   w.document.close();
@@ -44,12 +45,16 @@ export function BarcodeGeneratorDialog({ tenantId, product, onClose }: { tenantI
   const [busy, setBusy] = useState(false);
   const stock = Math.max(1, Math.round(Number((product as any).stock_on_hand ?? (product as any).stock_qty ?? 1)) || 1);
   const [count, setCount] = useState(stock);
-  const [widthMm, setWidthMm] = useState(Number(localStorage.getItem("sk.labelW")) || 62);
-  const [heightMm, setHeightMm] = useState(Number(localStorage.getItem("sk.labelH")) || 30);
+  const settingsQ = useRetailSettings(tenantId);
+  const [widthMm, setWidthMm] = useState(62);
+  const [heightMm, setHeightMm] = useState(30);
+  useEffect(() => {
+    const d: any = settingsQ.data;
+    if (d) { setWidthMm(Number(d.label_width_mm ?? 62)); setHeightMm(Number(d.label_height_mm ?? 30)); }
+  }, [settingsQ.data]);
   const [test, setTest] = useState<"idle" | "ok" | "bad">("idle");
   const [testInput, setTestInput] = useState("");
 
-  useEffect(() => { localStorage.setItem("sk.labelW", String(widthMm)); localStorage.setItem("sk.labelH", String(heightMm)); }, [widthMm, heightMm]);
   useEffect(() => { if (!code) generate(); /* eslint-disable-next-line */ }, []);
 
   function check(v: string) {
