@@ -1,0 +1,1 @@
+ALTER TABLE public.retail_settings ADD COLUMN IF NOT EXISTS label_width_mm numeric NOT NULL DEFAULT 62, ADD COLUMN IF NOT EXISTS label_height_mm numeric NOT NULL DEFAULT 30;
