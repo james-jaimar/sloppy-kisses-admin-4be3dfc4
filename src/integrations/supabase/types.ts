@@ -7661,6 +7661,8 @@ export type Database = {
           allow_negative_stock: boolean
           created_at: string
           default_vat_rate: number
+          label_height_mm: number
+          label_width_mm: number
           low_stock_notify_emails: string | null
           pos_location_id: string | null
           pos_page_size: number
@@ -7679,6 +7681,8 @@ export type Database = {
           allow_negative_stock?: boolean
           created_at?: string
           default_vat_rate?: number
+          label_height_mm?: number
+          label_width_mm?: number
           low_stock_notify_emails?: string | null
           pos_location_id?: string | null
           pos_page_size?: number
@@ -7697,6 +7701,8 @@ export type Database = {
           allow_negative_stock?: boolean
           created_at?: string
           default_vat_rate?: number
+          label_height_mm?: number
+          label_width_mm?: number
           low_stock_notify_emails?: string | null
           pos_location_id?: string | null
           pos_page_size?: number

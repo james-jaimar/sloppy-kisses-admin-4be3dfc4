@@ -15,7 +15,7 @@ export default function RetailSettingsPage() {
   const resourcesQ = useResources(tenantId);
   const tills = (resourcesQ.data ?? []).filter((r) => String(r.type) === "retail_till");
 
-  const [form, setForm] = useState({ default_vat_rate: 15, allow_negative_stock: false, low_stock_notify_emails: "", till_name: "", receipt_footer: "", pos_location_id: "", pos_page_size: 24, unknown_barcode_action: "link" as "link" | "warn", scan_beep: true, allow_multi_barcode: false, till_resource_id: "" });
+  const [form, setForm] = useState({ default_vat_rate: 15, allow_negative_stock: false, low_stock_notify_emails: "", till_name: "", receipt_footer: "", pos_location_id: "", pos_page_size: 24, unknown_barcode_action: "link" as "link" | "warn", scan_beep: true, allow_multi_barcode: false, till_resource_id: "", label_width_mm: 62, label_height_mm: 30 });
 
   useEffect(() => {
     const d = settingsQ.data;
@@ -31,6 +31,8 @@ export default function RetailSettingsPage() {
       scan_beep: d.scan_beep !== false,
       allow_multi_barcode: !!(d as any).allow_multi_barcode,
       till_resource_id: d.till_resource_id ?? "",
+      label_width_mm: Number((d as any).label_width_mm ?? 62),
+      label_height_mm: Number((d as any).label_height_mm ?? 30),
     });
   }, [settingsQ.data]);
 
@@ -48,7 +50,9 @@ export default function RetailSettingsPage() {
         scan_beep: form.scan_beep,
         allow_multi_barcode: form.allow_multi_barcode,
         till_resource_id: form.till_resource_id || null,
-      });
+        label_width_mm: form.label_width_mm,
+        label_height_mm: form.label_height_mm,
+      } as any);
       toast.success("Retail settings saved");
     } catch (err: any) { toast.error(err?.message ?? "Failed"); }
   }
@@ -139,6 +143,24 @@ export default function RetailSettingsPage() {
               </select>
               <div className="mt-1 text-[11px] text-muted-foreground">Only staff with the “link barcodes” permission can save a match; everyone else can flag it.</div>
             </label>
+            <div className="block">
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Barcode label size (mm)</div>
+              <div className="flex flex-wrap items-center gap-2">
+                <input type="number" min={20} max={150} value={form.label_width_mm} aria-label="Label width mm"
+                  onChange={(e) => setForm({ ...form, label_width_mm: Number(e.target.value) })}
+                  className="h-10 w-24 rounded-lg border border-border bg-white px-3 text-sm" />
+                <span className="text-sm text-muted-foreground">wide ×</span>
+                <input type="number" min={10} max={150} value={form.label_height_mm} aria-label="Label height mm"
+                  onChange={(e) => setForm({ ...form, label_height_mm: Number(e.target.value) })}
+                  className="h-10 w-24 rounded-lg border border-border bg-white px-3 text-sm" />
+                <span className="text-sm text-muted-foreground">tall</span>
+                {[[62,30],[60,40],[70,40],[50,25],[40,30]].map(([w,h]) => (
+                  <button key={`${w}x${h}`} type="button" onClick={() => setForm({ ...form, label_width_mm: w, label_height_mm: h })}
+                    className="h-8 rounded-full border border-border px-3 text-xs font-medium hover:bg-sk-surface-muted">{w}×{h}</button>
+                ))}
+              </div>
+              <div className="mt-1 text-[11px] text-muted-foreground">Match your label roll exactly. Printed barcodes scale to fit this size on every device.</div>
+            </div>
             <label className="block">
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Receipt footer</div>
               <textarea value={form.receipt_footer} rows={3}
