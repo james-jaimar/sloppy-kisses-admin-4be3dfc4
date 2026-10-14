@@ -7,7 +7,7 @@ import { useInvoices, useAllPayments, useIssueInvoice, useVoidInvoice, useUpdate
 import { InvoiceStatusChip, fmtZar } from "./status";
 import { NewInvoiceDrawer } from "./NewInvoiceDrawer";
 import { format, parseISO } from "date-fns";
-import { Can } from "@/components/auth/Can";
+import { Can, useCan } from "@/components/auth/Can";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 
@@ -46,6 +46,9 @@ export default function InvoicesListPage() {
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const navigate = useNavigate();
+  // Aggregate totals + exports are business-level figures: owners/accounts only.
+  const canSeeTotals = useCan("reports.view");
+  const canInvoiceSettings = useCan("settings.invoicing.manage");
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") ?? "invoices";
   const confirm = useConfirm();
@@ -348,7 +351,7 @@ export default function InvoicesListPage() {
         tabs={[
           { label: "Invoices", active: tab === "invoices", onClick: () => setParams({}) },
           { label: "Payments", active: tab === "payments", onClick: () => setParams({ tab: "payments" }) },
-          { label: "Settings", onClick: () => navigate("/admin/settings/invoicing") },
+          ...(canInvoiceSettings ? [{ label: "Settings", onClick: () => navigate("/admin/settings/invoicing") }] : []),
         ]}
         actions={
           tab === "invoices" && (
@@ -366,7 +369,7 @@ export default function InvoicesListPage() {
       <div className="flex-1 space-y-6 p-6">
         {tab === "invoices" ? (
           <>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+            {canSeeTotals && <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
               <Stat label="Outstanding" value={fmtZar(stats.outstanding)} tone="text-sk-coral-dark" />
               <div className="sk-card p-5">
                 <div className="text-2xl font-semibold text-sk-orange">{fmtZar(stats.overdueAmount)}</div>
@@ -376,7 +379,7 @@ export default function InvoicesListPage() {
               <Stat label="Paid this month" value={fmtZar(stats.paidThisMonth)} tone="text-sk-green" />
               <Stat label={`Drafts · ${stats.drafts}`} value={fmtZar(stats.draftValue)} tone="text-foreground" />
               <Stat label="Avg days to pay" value={stats.dso == null ? "—" : `${stats.dso} d`} tone="text-sk-turquoise-dark" />
-            </div>
+            </div>}
 
             <div className="sk-card space-y-3 p-4">
               <div className="flex flex-wrap items-center gap-3">
@@ -416,10 +419,10 @@ export default function InvoicesListPage() {
                     <option value="month">By month</option>
                   </select>
                 </div>
-                <button onClick={exportCsv}
+                {canSeeTotals && <button onClick={exportCsv}
                   className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-white px-3 text-sm hover:bg-sk-surface-muted">
                   <Download className="h-4 w-4" /> Export CSV
-                </button>
+                </button>}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs uppercase tracking-wide text-muted-foreground">Status</span>
@@ -510,7 +513,7 @@ export default function InvoicesListPage() {
                         {groupBy !== "flat" && g.rows.length > 0 && (
                           <tr key={"h-" + g.key} className="bg-sk-surface-muted/60">
                             <td colSpan={9} className="px-5 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                              {g.label} · {g.rows.length} · Balance {fmtZar(g.rows.reduce((s, r) => s + Number(r.balance_due ?? 0), 0))}
+                              {g.label} · {g.rows.length}{canSeeTotals && <> · Balance {fmtZar(g.rows.reduce((s, r) => s + Number(r.balance_due ?? 0), 0))}</>}
                             </td>
                           </tr>
                         )}
@@ -550,11 +553,11 @@ export default function InvoicesListPage() {
           </>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {canSeeTotals && <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
               <Stat label="Payments (filtered)" value={String(paymentsFiltered.length)} tone="text-foreground" />
               <Stat label="Total collected" value={fmtZar(paymentsTotal)} tone="text-sk-green" />
               <Stat label="Average payment" value={fmtZar(paymentsFiltered.length ? paymentsTotal / paymentsFiltered.length : 0)} tone="text-sk-turquoise-dark" />
-            </div>
+            </div>}
             <div className="sk-card flex flex-wrap items-center gap-3 p-4">
               <div className="relative min-w-[220px] flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -580,10 +583,10 @@ export default function InvoicesListPage() {
                 <input type="date" value={pTo} onChange={(e) => setP({ pTo: e.target.value || null })}
                   className="h-8 rounded-md border-none bg-transparent text-xs" />
               </div>
-              <button onClick={exportPaymentsCsv}
+              {canSeeTotals && <button onClick={exportPaymentsCsv}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-white px-3 text-sm hover:bg-sk-surface-muted">
                 <Download className="h-4 w-4" /> Export CSV
-              </button>
+              </button>}
             </div>
             <div className="sk-card overflow-hidden">
               <div className="overflow-x-auto">
