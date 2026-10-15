@@ -128,6 +128,16 @@ async function knownItemCodes(ctx: { tenantId: string }): Promise<Set<string>> {
   return set;
 }
 
+const normCode = (c: string) => c.trim().replace(/\.+$/, "").replace(/^0+(?=.)/, "").toUpperCase();
+/** Exact Xero item code, else one that matches ignoring leading zeroes / trailing dots. */
+function matchItemCode(valid: Set<string>, wanted: string): string | undefined {
+  const w = wanted.trim();
+  if (valid.has(w)) return w;
+  const n = normCode(w);
+  for (const c of valid) if (normCode(c) === n) return c;
+  return undefined;
+}
+
 /** Create/update Xero Items from the tenant's billing item codes. */
 async function pushItemCodes(s: Settings, actor: string | null) {
   const ctx = { tenantId: s.xero_tenant_id! };
@@ -157,7 +167,7 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
   const ctx = { tenantId: s.xero_tenant_id! };
   const { data: inv, error } = await admin
     .from("invoices")
-    .select("id, tenant_id, invoice_number, status, issue_date, due_date, notes, customer_id, xero_invoice_id, invoice_items(id, description, quantity, unit_price, line_total, xero_account_code, item_code, vat_rate, sort_order, booking_id)")
+    .select("id, tenant_id, invoice_number, status, issue_date, due_date, notes, customer_id, xero_invoice_id, invoice_items(id, description, quantity, unit_price, line_total, xero_account_code, item_code, vat_rate, sort_order, booking_id, product:products(external_code, xero_account_code))")
     .eq("id", invoiceId).single();
   if (error || !inv) throw new Error(error?.message ?? "Invoice not found");
   if (!PUSHABLE_INVOICE_STATUSES.includes(String(inv.status))) {
@@ -196,15 +206,17 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
     .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     .map((l: any) => {
       const wanted = l.item_code
+        || l.product?.external_code
         || (l.booking_id ? serviceItemCode[serviceByBooking[l.booking_id]] : null)
         || undefined;
-      const itemCode = wanted && validCodes.has(String(wanted)) ? String(wanted) : undefined;
+      const itemCode = wanted ? matchItemCode(validCodes, String(wanted)) : undefined;
       return {
         Description: l.description || "Service",
         Quantity: Number(l.quantity ?? 1),
         UnitAmount: Number(l.unit_price ?? 0),
         ItemCode: itemCode,
         AccountCode: l.xero_account_code
+          || l.product?.xero_account_code
           || (l.booking_id ? s.service_account_codes?.[serviceByBooking[l.booking_id]] : null)
           || s.default_sales_account,
         TaxType: Number(l.vat_rate ?? 0) > 0 ? s.default_tax_type : s.zero_rated_tax_type,
