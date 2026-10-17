@@ -31,6 +31,7 @@
     --sk-text: 240 4% 14%;
     --sk-text-muted: 220 9% 46%;
     --sk-text-soft: 220 9% 64%;
+    --booking-photo-scrim: 180 12% 10%;
 
     /* shadcn semantic tokens mapped to SK palette */
     --background: var(--sk-bg);
@@ -235,6 +236,10 @@
 }
 
 /* Rich-text template editor + preview (mirrors the email look) */
+.booking-photo-shade { background: linear-gradient(0deg, hsl(var(--booking-photo-scrim) / .85), hsl(var(--booking-photo-scrim) / .1) 85%); }
+.booking-section { border-top: 1px solid hsl(var(--border)); padding-top: 1.5rem; }
+.booking-summary { box-shadow: var(--shadow-ios); }
+
 .sk-rte h2 { font-size: 1.05rem; font-weight: 700; margin: 1rem 0 .4rem; }
 .sk-rte h3 { font-size: .95rem; font-weight: 600; margin: .9rem 0 .35rem; }
 .sk-rte p { margin: 0 0 .7rem; }
