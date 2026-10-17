@@ -1,5 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { BedDouble, Scissors, Car, Sun, Truck, Loader2 } from "lucide-react";
+import { BedDouble, Scissors, Car, Sun, Truck, Loader2, ArrowUpRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AwardPlaceholder, BookingPhotos } from "./BookingPhotos";
 import { usePublicTenant } from "./publicBookingQueries";
 
 const SERVICES = [
@@ -59,26 +61,23 @@ export default function PublicBookPage() {
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold">Book with {tenant.data.name}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Choose a service to check live availability and prices — no account needed.
-        </p>
-      </div>
+      <BookingPhotos title={tenant.data.name} subtitle="A stay, a play day, or a fresh new look. Find the right care for your pet." />
+      <AwardPlaceholder />
+      <div className="flex flex-wrap items-end justify-between gap-2"><h2 className="text-xl font-bold">What are we booking?</h2><span className="text-xs text-muted-foreground">No account needed · Requests confirmed by our team</span></div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {SERVICES.map((s) => {
           const Icon = s.icon;
           const inner = (
             <div
               className={
-                "flex h-full items-start gap-3 rounded-2xl border p-5 transition " +
+                "flex h-full min-h-40 items-start gap-3 rounded-lg border p-5 transition " +
                 (s.ready
-                  ? "border-border bg-sk-surface hover:border-sk-coral hover:shadow-md"
+                  ? "border-border bg-sk-surface hover:border-sk-coral"
                   : "border-border bg-muted/40 opacity-70")
               }
             >
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-sk-coral-soft text-sk-coral">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-sk-coral-soft text-sk-coral">
                 <Icon className="h-5 w-5" />
               </div>
               <div className="min-w-0">
@@ -90,12 +89,13 @@ export default function PublicBookPage() {
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 text-xs text-muted-foreground">{s.blurb}</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.blurb}</p>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">Choose service <ArrowUpRight className="h-3.5 w-3.5" /></span>
               </div>
             </div>
           );
           return s.ready ? (
-            <Link key={s.key} to={`/book/${s.key}${suffix}`}>{inner}</Link>
+            <Button asChild key={s.key} variant="ghost" className="h-auto whitespace-normal p-0 text-left font-normal hover:bg-transparent"><Link to={`/book/${s.key}${suffix}`}>{inner}</Link></Button>
           ) : (
             <div key={s.key}>{inner}</div>
           );

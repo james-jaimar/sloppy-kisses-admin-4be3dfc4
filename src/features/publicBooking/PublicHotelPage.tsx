@@ -1,8 +1,9 @@
 import { usePublicAddress, addressPayload, PublicAddressField } from "./publicAddress";
 import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, BedDouble, CheckCircle2, Loader2, Minus, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AwardPlaceholder, BookingPhotos, bookingPhotos } from "./BookingPhotos";
+import { ArrowLeft, BedDouble, CheckCircle2, Loader2, Minus, Plus, Check, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { usePublicTenant, usePublicHotelRates, type PublicRate } from "./publicBookingQueries";
@@ -11,7 +12,7 @@ import { useHotelHouseAvailability, fullNights, HouseCapacityNotice } from "@/fe
 import { SIZE_BAND_ORDER, SIZE_BAND_LABEL, type PetSizeBand } from "@/features/settings/hotelRateCardQueries";
 
 const inputCls =
-  "h-10 w-full rounded-xl border border-border bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40";
+  "h-11 w-full rounded-md border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40";
 const selectCls = inputCls;
 
 const fmtZar = (n: number) =>
@@ -204,19 +205,15 @@ export default function PublicHotelPage() {
         <Link to={`/book${tenantSlug ? `?tenant=${tenantSlug}` : ""}`} className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> All services
         </Link>
-        <h1 className="mt-2 flex items-center gap-2 text-2xl font-bold">
-          <BedDouble className="h-6 w-6 text-sk-coral" /> Hotel & Cattery
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Pick your dates to see live space and an instant price. We'll confirm by email.
-        </p>
       </div>
-
+      <BookingPhotos title="Hotel & Cattery" subtitle="A little holiday for your best friend. Choose their dates and accommodation, with prices from our current rate card." />
+      <AwardPlaceholder />
       <AccountBar service="hotel" />
-
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="min-w-0 space-y-6">
       {/* Dates */}
-      <section className="space-y-3 rounded-2xl border border-border bg-sk-surface p-5">
-        <h2 className="text-sm font-semibold">Your dates</h2>
+      <section className="booking-section space-y-3">
+        <h2 className="flex items-center gap-2 text-lg font-semibold"><CalendarDays className="h-5 w-5 text-primary" /> Your stay</h2>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Check-in</span>
@@ -236,13 +233,13 @@ export default function PublicHotelPage() {
           <div>
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Nights</span>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setNights((n) => Math.max(1, n - 1))} className="grid h-10 w-10 place-items-center rounded-lg border border-border hover:bg-muted">
+              <Button variant="outline" size="icon" aria-label="Fewer nights" type="button" onClick={() => setNights((n) => Math.max(1, n - 1))} className="shrink-0">
                 <Minus className="h-4 w-4" />
-              </button>
+              </Button>
               <span className="w-8 text-center text-sm font-semibold">{nights}</span>
-              <button type="button" onClick={() => setNights((n) => n + 1)} className="grid h-10 w-10 place-items-center rounded-lg border border-border hover:bg-muted">
+              <Button variant="outline" size="icon" aria-label="More nights" type="button" onClick={() => setNights((n) => n + 1)} className="shrink-0">
                 <Plus className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -250,23 +247,23 @@ export default function PublicHotelPage() {
       </section>
 
       {/* Pets */}
-      <section className="space-y-3 rounded-2xl border border-border bg-sk-surface p-5">
+      <section className="booking-section space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Who's staying?</h2>
+          <h2 className="text-lg font-semibold">Who's staying?</h2>
           {pets.length < 6 && (
-            <button type="button" onClick={() => setPets((p) => [...p, emptyPet()])} className="text-xs font-semibold text-sk-coral hover:text-sk-coral-dark">
+            <Button variant="ghost" size="sm" type="button" onClick={() => setPets((p) => [...p, emptyPet()])} className="text-xs font-semibold text-sk-coral hover:text-sk-coral-dark">
               + Add another pet
-            </button>
+            </Button>
           )}
         </div>
         {pets.map((p, i) => (
-          <div key={i} className="space-y-3 rounded-xl border border-border bg-white p-4">
+          <div key={i} className="space-y-3 rounded-lg border border-border bg-card p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground">Pet {i + 1}</span>
               {pets.length > 1 && (
-                <button type="button" onClick={() => setPets((prev) => prev.filter((_, j) => j !== i))} className="text-xs text-muted-foreground hover:text-destructive">
+                <Button variant="ghost" size="sm" type="button" onClick={() => setPets((prev) => prev.filter((_, j) => j !== i))} className="text-xs text-muted-foreground hover:text-destructive">
                   Remove
-                </button>
+                </Button>
               )}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -293,20 +290,25 @@ export default function PublicHotelPage() {
                 <input value={p.breed} onChange={(e) => setPet(i, { breed: e.target.value })} className={inputCls} placeholder="Labrador" />
               </label>
             </div>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-muted-foreground">Accommodation</span>
-              <select value={p.accommodation} onChange={(e) => setPet(i, { accommodation: e.target.value })} className={selectCls}>
-                <option value="">— Select accommodation —</option>
-                {(p.species === "cat" ? rates.data?.rates.filter((r) => r.species === "cat") : rates.data?.rates.filter((r) => r.species === "dog"))?.map((r) => {
+            <fieldset className="space-y-3">
+              <legend className="text-sm font-semibold">Choose accommodation for {p.name || `Pet ${i + 1}`}</legend>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(rates.data?.rates ?? []).filter(r => r.species === p.species).map((r, index) => {
                   const blocked = !rateAllowsSize(r, p.size);
-                  return (
-                    <option key={r.accommodation_type} value={r.accommodation_type} disabled={blocked}>
-                      {r.display_name} · {fmtZar(Number(r.nightly_rate_zar))}/night{blocked ? " — not available for this size" : ""}
-                    </option>
-                  );
+                  const selected = p.accommodation === r.accommodation_type;
+                  const photo = bookingPhotos[index % bookingPhotos.length];
+                  return <Button key={r.accommodation_type} type="button" variant="outline" disabled={blocked} aria-pressed={selected} onClick={() => setPet(i, { accommodation: r.accommodation_type })} className={`relative h-auto flex-col items-stretch overflow-hidden whitespace-normal p-0 text-left hover:bg-card ${selected ? "border-primary ring-1 ring-primary" : "border-border"}`}>
+                    {p.species === "dog" ? <img src={photo.url} alt={photo.alt} loading="lazy" className="h-32 w-full object-cover" /> : <div className="flex h-32 items-center justify-center bg-accent text-sm text-accent-foreground">Cattery photos coming soon</div>}
+                    <div className="space-y-2 p-3">
+                      <div className="flex items-center justify-between gap-2"><span className="font-semibold">{r.display_name}</span>{selected && <Check className="h-4 w-4 text-primary" />}</div>
+                      <p className="text-xs font-normal text-muted-foreground">{p.species === "dog" ? "Illustrative photo · accommodation photos to follow" : "For our feline guests"}</p>
+                      <p className="text-base font-bold">{fmtZar(Number(r.nightly_rate_zar))}<span className="text-xs font-normal text-muted-foreground"> / night</span></p>
+                      {blocked && <p className="text-xs font-normal text-muted-foreground">{!p.size ? "Select your pet’s size to check suitability" : "Not available for this size"}</p>}
+                    </div>
+                  </Button>;
                 })}
-              </select>
-            </label>
+              </div>
+            </fieldset>
           </div>
         ))}
         {speciesRates.length === 0 && !rates.isLoading && (
@@ -316,13 +318,13 @@ export default function PublicHotelPage() {
 
       {/* Add-ons */}
       {(rates.data?.surcharges.length ?? 0) > 0 && (
-        <section className="space-y-3 rounded-2xl border border-border bg-sk-surface p-5">
+        <section className="booking-section space-y-3">
           <h2 className="text-sm font-semibold">Extras</h2>
           <div className="grid gap-2 sm:grid-cols-2">
-            {rates.data!.surcharges.map((s) => {
+            {rates.data?.surcharges.map((s) => {
               const qty = addons[s.code] ?? 0;
               return (
-                <div key={s.code} className={"flex items-center justify-between gap-3 rounded-xl border p-3 " + (qty > 0 ? "border-sk-coral bg-sk-coral-soft" : "border-border bg-white")}>
+                <div key={s.code} className={"flex items-center justify-between gap-3 rounded-xl border p-3 " + (qty > 0 ? "border-sk-coral bg-sk-coral-soft" : "border-border bg-card")}>
                   <div>
                     <div className="text-sm font-medium">{s.name}</div>
                     <div className="text-xs text-muted-foreground">
@@ -330,13 +332,13 @@ export default function PublicHotelPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => setAddons((a) => ({ ...a, [s.code]: Math.max(0, (a[s.code] ?? 0) - 1) }))} className="grid h-8 w-8 place-items-center rounded-lg border border-border hover:bg-muted">
+                    <Button variant="outline" size="icon" aria-label={`Fewer ${s.name}`} type="button" onClick={() => setAddons((a) => ({ ...a, [s.code]: Math.max(0, (a[s.code] ?? 0) - 1) }))} className="h-8 w-8 shrink-0">
                       <Minus className="h-3.5 w-3.5" />
-                    </button>
+                    </Button>
                     <span className="w-5 text-center text-sm font-semibold">{qty}</span>
-                    <button type="button" onClick={() => setAddons((a) => ({ ...a, [s.code]: (a[s.code] ?? 0) + 1 }))} className="grid h-8 w-8 place-items-center rounded-lg border border-border hover:bg-muted">
+                    <Button variant="outline" size="icon" aria-label={`More ${s.name}`} type="button" onClick={() => setAddons((a) => ({ ...a, [s.code]: (a[s.code] ?? 0) + 1 }))} className="h-8 w-8 shrink-0">
                       <Plus className="h-3.5 w-3.5" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               );
@@ -346,7 +348,7 @@ export default function PublicHotelPage() {
       )}
 
       {/* Transport */}
-      <section className="space-y-3 rounded-2xl border border-border bg-sk-surface p-5">
+      <section className="booking-section space-y-3">
         <h2 className="text-sm font-semibold">Collection & drop-off (optional)</h2>
         <div className="flex flex-wrap gap-4 text-sm">
           <label className="flex items-center gap-2">
@@ -364,7 +366,7 @@ export default function PublicHotelPage() {
       </section>
 
       {/* Contact */}
-      <section className="space-y-3 rounded-2xl border border-border bg-sk-surface p-5">
+      <section className="booking-section space-y-3">
         <h2 className="text-sm font-semibold">Your details</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
@@ -386,19 +388,26 @@ export default function PublicHotelPage() {
         </div>
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-muted-foreground">Anything we should know? (optional)</span>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40" placeholder="Feeding, medication, anxieties…" />
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40" placeholder="Feeding, medication, anxieties…" />
         </label>
       </section>
 
+      </div>
       {/* Estimate + submit */}
-      <section className="space-y-3 rounded-2xl border border-border bg-sk-surface p-5">
-        <h2 className="text-sm font-semibold">Estimated total</h2>
+      <aside className="booking-summary space-y-4 rounded-lg border border-border bg-card p-5 lg:sticky lg:top-6">
+        <div className="flex items-center gap-2 text-xs font-medium text-sk-turquoise-dark"><CheckCircle2 className="h-4 w-4" /> Request now · Team confirmation follows</div>
+        <h2 className="text-lg font-semibold">Your stay at a glance</h2>
+        <div className="space-y-2 border-y border-border py-3 text-sm">
+          <div className="flex justify-between gap-3"><span className="text-muted-foreground">Dates</span><span className="text-right font-medium">{checkIn ? new Date(`${checkIn}T00:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "Choose dates"}{checkOut && <> — {new Date(`${checkOut}T00:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}</>}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Guests</span><span>{pets.length} pet{pets.length === 1 ? "" : "s"} · {nights} night{nights === 1 ? "" : "s"}</span></div>
+        </div>
+        <h3 className="text-sm font-semibold">Estimated total</h3>
         {estimate ? (
           <div className="space-y-1 text-sm">
             {estimate.lines.map((l, i) => (
               <div key={i} className="flex justify-between gap-4">
                 <span className="text-muted-foreground">{l.label}</span>
-                <span className="font-medium">{fmtZar(l.amount)}</span>
+                <span className="shrink-0 font-medium">{fmtZar(l.amount)}</span>
               </div>
             ))}
             <div className="mt-2 flex justify-between border-t border-border pt-2 text-base font-bold">
@@ -410,16 +419,18 @@ export default function PublicHotelPage() {
         ) : (
           <p className="text-xs text-muted-foreground">Pick dates, pets and accommodation to see your price.</p>
         )}
-        <button
+        <Button
           type="button"
           onClick={onSubmit}
           disabled={!canSubmit}
-          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-sk-coral text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50"
+          className="h-11 w-full"
         >
           {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
           Request booking
-        </button>
-      </section>
+        </Button>
+        <p className="text-center text-xs leading-relaxed text-muted-foreground">Your booking is only confirmed once our team has reviewed your request.</p>
+      </aside>
+      </div>
     </div>
   );
 }
