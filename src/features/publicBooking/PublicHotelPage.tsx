@@ -233,11 +233,11 @@ export default function PublicHotelPage() {
           <div>
             <span className="mb-1 block text-xs font-medium text-muted-foreground">Nights</span>
             <div className="flex items-center gap-2">
-              <Button type="button" onClick={() => setNights((n) => Math.max(1, n - 1))} className="grid h-10 w-10 place-items-center rounded-lg border border-border hover:bg-muted">
+              <Button variant="outline" size="icon" aria-label="Fewer nights" type="button" onClick={() => setNights((n) => Math.max(1, n - 1))} className="shrink-0">
                 <Minus className="h-4 w-4" />
               </Button>
               <span className="w-8 text-center text-sm font-semibold">{nights}</span>
-              <Button type="button" onClick={() => setNights((n) => n + 1)} className="grid h-10 w-10 place-items-center rounded-lg border border-border hover:bg-muted">
+              <Button variant="outline" size="icon" aria-label="More nights" type="button" onClick={() => setNights((n) => n + 1)} className="shrink-0">
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
@@ -251,7 +251,7 @@ export default function PublicHotelPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Who's staying?</h2>
           {pets.length < 6 && (
-            <Button type="button" onClick={() => setPets((p) => [...p, emptyPet()])} className="text-xs font-semibold text-sk-coral hover:text-sk-coral-dark">
+            <Button variant="ghost" size="sm" type="button" onClick={() => setPets((p) => [...p, emptyPet()])} className="text-xs font-semibold text-sk-coral hover:text-sk-coral-dark">
               + Add another pet
             </Button>
           )}
@@ -261,7 +261,7 @@ export default function PublicHotelPage() {
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground">Pet {i + 1}</span>
               {pets.length > 1 && (
-                <Button type="button" onClick={() => setPets((prev) => prev.filter((_, j) => j !== i))} className="text-xs text-muted-foreground hover:text-destructive">
+                <Button variant="ghost" size="sm" type="button" onClick={() => setPets((prev) => prev.filter((_, j) => j !== i))} className="text-xs text-muted-foreground hover:text-destructive">
                   Remove
                 </Button>
               )}
@@ -332,11 +332,11 @@ export default function PublicHotelPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button type="button" onClick={() => setAddons((a) => ({ ...a, [s.code]: Math.max(0, (a[s.code] ?? 0) - 1) }))} className="grid h-8 w-8 place-items-center rounded-lg border border-border hover:bg-muted">
+                    <Button variant="outline" size="icon" aria-label={`Fewer ${s.name}`} type="button" onClick={() => setAddons((a) => ({ ...a, [s.code]: Math.max(0, (a[s.code] ?? 0) - 1) }))} className="h-8 w-8 shrink-0">
                       <Minus className="h-3.5 w-3.5" />
                     </Button>
                     <span className="w-5 text-center text-sm font-semibold">{qty}</span>
-                    <Button type="button" onClick={() => setAddons((a) => ({ ...a, [s.code]: (a[s.code] ?? 0) + 1 }))} className="grid h-8 w-8 place-items-center rounded-lg border border-border hover:bg-muted">
+                    <Button variant="outline" size="icon" aria-label={`More ${s.name}`} type="button" onClick={() => setAddons((a) => ({ ...a, [s.code]: (a[s.code] ?? 0) + 1 }))} className="h-8 w-8 shrink-0">
                       <Plus className="h-3.5 w-3.5" />
                     </Button>
                   </div>
