@@ -97,23 +97,29 @@ export default function PublicHotelPage() {
       const rate = speciesRates.find((r) => r.accommodation_type === acc);
       if (!rate) return null;
       lines.push({
-        label: `${rate.display_name} (${group[0].name || "Pet 1"}) · ${fmtZar(Number(rate.nightly_rate_zar))} × ${nights} night${nights === 1 ? "" : "s"}`,
+        label: `${rate.display_name} (${group[0].name || `Pet ${pets.indexOf(group[0]) + 1}`}) · ${fmtZar(Number(rate.nightly_rate_zar))} × ${nights} night${nights === 1 ? "" : "s"}`,
         amount: Number(rate.nightly_rate_zar) * nights,
       });
       const extras = group.length - 1;
       if (extras > 0 && Number(rate.extra_pet_rate_zar) > 0) {
+        const names = group.slice(1).map((p) => p.name || `Pet ${pets.indexOf(p) + 1}`).join(", ");
         lines.push({
-          label: `Extra pet${extras === 1 ? "" : "s"} sharing × ${nights} night${nights === 1 ? "" : "s"}`,
+          label: `Extra pet${extras === 1 ? "" : "s"} sharing (${names}) × ${nights} night${nights === 1 ? "" : "s"}`,
           amount: Number(rate.extra_pet_rate_zar) * extras * nights,
         });
       }
     }
+    // Extras are charged per pet: Walk per pet per day, Stay & Play once per pet.
+    const petCount = pets.length;
+    const petWord = `${petCount} pet${petCount === 1 ? "" : "s"}`;
     for (const s of rates.data?.surcharges ?? []) {
       const qty = addons[s.code] ?? 0;
       if (qty <= 0) continue;
-      const total = s.per_night ? Number(s.price_zar) * qty * nights : Number(s.price_zar) * qty;
+      const total = s.per_night
+        ? Number(s.price_zar) * qty * nights * petCount
+        : Number(s.price_zar) * qty * petCount;
       lines.push({
-        label: `${s.name}${s.per_night ? ` · ${qty}/day × ${nights} nights` : qty > 1 ? ` × ${qty}` : ""}`,
+        label: `${s.name}${s.per_night ? ` · ${qty}/day × ${nights} night${nights === 1 ? "" : "s"}` : qty > 1 ? ` × ${qty}` : ""} × ${petWord}`,
         amount: total,
       });
     }
@@ -328,7 +334,7 @@ export default function PublicHotelPage() {
                   <div>
                     <div className="text-sm font-medium">{s.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {fmtZar(Number(s.price_zar))}{s.per_night ? " per pet per day" : " once-off"}
+                      {fmtZar(Number(s.price_zar))}{s.per_night ? " per pet per day" : " per pet"}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
