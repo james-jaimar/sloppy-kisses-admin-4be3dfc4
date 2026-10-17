@@ -1,0 +1,1 @@
+UPDATE public.tenant_features SET enabled = true, updated_at = now() WHERE feature_key = 'integrations.xero' AND tenant_id = '75cc6a9e-9d17-4268-92ee-8b595c842dee';
