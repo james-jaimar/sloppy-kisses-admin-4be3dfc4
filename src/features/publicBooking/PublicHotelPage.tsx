@@ -64,7 +64,7 @@ export default function PublicHotelPage() {
   const [nights, setNights] = useState(draft?.nights ?? 1);
   const [pets, setPets] = useState<PetDraft[]>(draft?.pets ?? [emptyPet()]);
   const [addons, setAddons] = useState<Record<string, number>>(draft?.addons ?? {});
-  const [contact, setContact] = useState({ first_name: "", last_name: "", email: "", mobile: "" });
+  const [contact, setContact] = useState(draft?.contact ?? { first_name: "", last_name: "", email: "", mobile: "" });
   const [transport, setTransport] = useState(draft?.transport ?? { pickup: false, dropoff: false });
   const addr = usePublicAddress();
   const [notes, setNotes] = useState(draft?.notes ?? "");
@@ -72,9 +72,15 @@ export default function PublicHotelPage() {
   const [done, setDone] = useState(false);
 
   useEffect(() => {
+    if (draft?.address) addr.onChange(draft.address);
+    // Restore only on mount; subsequent address changes belong to the customer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
+
+  useEffect(() => {
     if (!tenant.data || done) return;
-    saveHotelDraft({ version: 1, tenantId: tenant.data.id, checkIn, nights, pets, addons, transport, notes });
-  }, [tenant.data, checkIn, nights, pets, addons, transport, notes, done]);
+    saveHotelDraft({ version: 1, tenantId: tenant.data.id, checkIn, nights, pets, addons, transport, notes, contact, address: addr.value });
+  }, [tenant.data, checkIn, nights, pets, addons, transport, notes, contact, addr.value, done]);
 
   const checkOut = useMemo(() => (checkIn ? addDays(checkIn, nights) : ""), [checkIn, nights]);
   const allCats = pets.length > 0 && pets.every((p) => p.species === "cat");
