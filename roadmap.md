@@ -4,7 +4,8 @@
 - [x] Keep the award explicitly unconfirmed and check accommodation selection, totals and gallery at desktop and phone widths (no test booking submitted).
 
 # Unified hotel booking
-- [ ] Share hotel photographs, accommodation choices and stay summary with the customer portal.
-- [ ] Retain public hotel choices through sign-in and safely match saved pets.
-- [ ] Preserve portal care, consent, quote and booking workflows.
-- [ ] Test draft handoff, pricing and public layouts; verify authenticated flow where access permits.
+- [x] Share hotel photographs, accommodation choices and stay summary with the customer portal.
+- [x] Retain public hotel choices through sign-in and safely match saved pets.
+- [x] Preserve portal care, consent, quote and booking workflows; carried extras remain explicitly staff-confirmation requests, not billed extras.
+- [x] Test draft retention, tenant scoping, pet matching and public layouts.
+- [ ] Verify signed-in portal booking end-to-end — blocked by external/unmanaged Supabase session access.
