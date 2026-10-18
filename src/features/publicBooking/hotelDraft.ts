@@ -1,4 +1,5 @@
 import type { PetSizeBand } from "@/features/settings/hotelRateCardQueries";
+import type { AddressValue } from "@/components/address/AddressField";
 
 export interface HotelDraftPet {
   name: string;
@@ -17,13 +18,15 @@ export interface HotelDraft {
   addons: Record<string, number>;
   transport: { pickup: boolean; dropoff: boolean };
   notes: string;
+  contact?: { first_name: string; last_name: string; email: string; mobile: string };
+  address?: AddressValue;
 }
 
 const KEY = "sk.hotelBookingDraft.v1";
 export const HOTEL_PORTAL_PATH = "/customer/bookings/new/hotel";
 
 export function saveHotelDraft(draft: HotelDraft) {
-  try { sessionStorage.setItem(KEY, JSON.stringify(draft)); } catch { /* Storage may be disabled. */ }
+  try { sessionStorage.setItem(KEY, JSON.stringify({ ...draft, expiresAt: Date.now() + 2 * 60 * 60 * 1000 })); } catch { /* Storage may be disabled. */ }
 }
 
 export function readHotelDraft(tenantId?: string): HotelDraft | null {
@@ -31,9 +34,12 @@ export function readHotelDraft(tenantId?: string): HotelDraft | null {
     const raw = sessionStorage.getItem(KEY);
     if (!raw) return null;
     const d = JSON.parse(raw);
-    if (d.version !== 1 || !Array.isArray(d.pets) || typeof d.checkIn !== "string" ||
+    if (d.version !== 1 || typeof d.expiresAt !== "number" || d.expiresAt <= Date.now() || !Array.isArray(d.pets) || typeof d.checkIn !== "string" ||
         !Number.isInteger(d.nights) || d.nights < 1 || typeof d.notes !== "string" ||
-        !d.transport || !d.addons || (tenantId && d.tenantId !== tenantId)) return null;
+        !d.transport || typeof d.transport.pickup !== "boolean" || typeof d.transport.dropoff !== "boolean" || !d.addons ||
+        !d.pets.every((p: any) => typeof p.name === "string" && ["dog", "cat"].includes(p.species) && typeof p.accommodation === "string") ||
+        !Object.values(d.addons).every(q => typeof q === "number" && Number.isInteger(q) && q >= 0) ||
+        (tenantId && d.tenantId !== tenantId)) return null;
     return d as HotelDraft;
   } catch { return null; }
 }
