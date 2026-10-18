@@ -9,3 +9,8 @@
 - [x] Preserve portal care, consent, quote and booking workflows; carried extras remain explicitly staff-confirmation requests, not billed extras.
 - [x] Test draft retention, tenant scoping, pet matching and public layouts.
 - [ ] Verify signed-in portal booking end-to-end — blocked by external/unmanaged Supabase session access.
+
+# Portal hotel extras
+- [ ] Restore interactive extras and per-pet quantities in the hotel portal summary.
+- [ ] Save selected extras with bookings and quotes using current configured prices.
+- [ ] Verify pricing, persistence logic, and layouts; report authenticated-check limitations.
