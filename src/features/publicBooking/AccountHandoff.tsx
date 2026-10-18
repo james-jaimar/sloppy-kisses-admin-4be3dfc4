@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowRight, UserCheck } from "lucide-react";
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 /** Public service key → matching booking wizard inside the customer portal. */
@@ -17,7 +18,9 @@ const linkCls = "font-semibold text-sk-coral hover:text-sk-coral-dark";
 /** Top-of-page bar: signed-in visitors jump to their portal; others get a sign-in link that returns them to this service. */
 export function AccountBar({ service }: { service: keyof typeof PORTAL_PATH }) {
   const { authUser } = useAuth();
-  const to = PORTAL_PATH[service];
+  const { profile } = useCurrentUser();
+  const to = PORTAL_PATH[service] + (service === "hotel" ? "?from=public" : "");
+  if (authUser && profile?.user_type !== "customer") return null;
   if (authUser) {
     return (
       <Link to={to} className="flex items-center justify-between gap-3 rounded-2xl border border-sk-turquoise/40 bg-sk-turquoise/5 p-4 text-sm hover:border-sk-turquoise">

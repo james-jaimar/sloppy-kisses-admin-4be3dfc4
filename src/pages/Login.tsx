@@ -6,11 +6,12 @@ import { landingFor } from "@/lib/auth/landing";
 import { useWorkDepts } from "@/features/work/useWorkDepts";
 import { Logo } from "@/components/layout/Logo";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import loginBg from "@/assets/login-dogs.jpg.asset.json";
 
 export default function Login() {
   const { authUser, loading, signIn } = useAuth();
-  const { profile, hasPermission } = useCurrentUser();
+  const { profile, hasPermission, loading: profileLoading, error: profileError, refresh } = useCurrentUser();
   const { depts } = useWorkDepts();
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,8 +36,8 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && authUser) navigate(from, { replace: true });
-  }, [loading, authUser, from, navigate]);
+    if (!loading && !profileLoading && profile && authUser) navigate(from, { replace: true });
+  }, [loading, profileLoading, profile, authUser, from, navigate]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -47,7 +48,11 @@ export default function Login() {
     if (err) setError(err);
   }
 
-  if (loading) {
+  if (authUser && !profileLoading && profileError) {
+    return <div className="grid min-h-screen place-items-center bg-background p-6"><div className="space-y-3 text-center text-sm"><p>We couldn’t load your account. Please try again.</p><Button variant="outline" onClick={() => void refresh()}>Try again</Button></div></div>;
+  }
+
+  if (loading || (authUser && (profileLoading || !profile))) {
     return (
       <div className="grid min-h-screen place-items-center bg-sk-bg text-sm text-muted-foreground">
         <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading session…</div>
