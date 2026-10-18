@@ -1,11 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { useCurrentCustomer } from "../../hooks";
-import { WizardShell, Field, inputCls, selectCls } from "./WizardShell";
+import { Button } from "@/components/ui/button";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { BookingPhotos, AwardPlaceholder } from "@/features/publicBooking/BookingPhotos";
+import { HotelAccommodationChoices, HotelStaySummary } from "@/features/publicBooking/HotelBookingPresentation";
+import { readHotelDraft, clearHotelDraft, matchDraftPets } from "@/features/publicBooking/hotelDraft";
+import { usePublicHotelRates } from "@/features/publicBooking/publicBookingQueries";
+import { Field, inputCls, selectCls } from "./WizardShell";
 import { PetsVaccinationGate, usePetsVaxBlocked } from "@/features/bookings/VaccinationGatePanel";
 import { usePortalServiceGates } from "@/features/customerPortal/gatesQueries";
 import { HouseCapacityNotice, useHotelHouseAvailability, fullNights } from "@/features/hotelCattery/HouseCapacityNotice";
@@ -87,6 +93,26 @@ export default function HotelRequestWizard() {
   const submit = useCreatePortalBooking();
   const nav = useNavigate();
   const [savingQuote, setSavingQuote] = useState(false);
+  const [params] = useSearchParams();
+  const [draft] = useState(() => params.get("from") === "public" ? readHotelDraft() : null);
+  const [draftImported, setDraftImported] = useState(false);
+  const [unmatchedPets, setUnmatchedPets] = useState<string[]>([]);
+  const [requestedExtras, setRequestedExtras] = useState<Record<string, number>>({});
+  const extrasCatalog = usePublicHotelRates(cust.data?.tenant_id);
+
+  useEffect(() => {
+    if (draftImported || !draft || !cust.data || !pets.data) return;
+    setDraftImported(true);
+    if (draft.tenantId !== cust.data.tenant_id) return;
+    const { matches, unmatched } = matchDraftPets(draft.pets, pets.data);
+    setCheckInDate(draft.checkIn);
+    setNights(draft.nights);
+    setPetIds(matches.map(m => m.id));
+    setPetAcc(Object.fromEntries(matches.map(m => [m.id, m.accommodation])));
+    setUnmatchedPets(unmatched);
+    setRequestedExtras(draft.addons);
+    setForm(f => ({ ...f, pickup_required: draft.transport.pickup, dropoff_required: draft.transport.dropoff, additional_notes: draft.notes }));
+  }, [draft, draftImported, cust.data, pets.data]);
 
   // Whether the tenant lets customers save their own quotes, and for how long.
   const quoteSettings = useQuery({
@@ -94,7 +120,7 @@ export default function HotelRequestWizard() {
     enabled: Boolean(cust.data?.tenant_id),
     queryFn: async () => {
       const { data, error } = await supabase.rpc("portal_hotel_quote_settings" as any, {
-        p_tenant_id: cust.data!.tenant_id,
+        p_tenant_id: cust.data?.tenant_id,
       });
       if (error) throw error;
       return (data ?? { enabled: true, hold_hours: 48 }) as { enabled: boolean; hold_hours: number };
@@ -132,7 +158,7 @@ export default function HotelRequestWizard() {
   // Seed the form from the customer record once it loads.
   useEffect(() => {
     if (seeded || !detailCustomer.data) return;
-    setForm((f) => buildAccommodationForm({ customer: detailCustomer.data, saved: f.owner.full_name ? f : null }));
+    setForm((f) => ({ ...buildAccommodationForm({ customer: detailCustomer.data, saved: f.owner.full_name ? f : null }), pickup_required: f.pickup_required, dropoff_required: f.dropoff_required, additional_notes: f.additional_notes }));
     setSeeded(true);
   }, [seeded, detailCustomer.data]);
 
@@ -225,7 +251,10 @@ export default function HotelRequestWizard() {
   const stayReady =
     petIds.length > 0 && !!checkInDate && nights >= 1 &&
     transportAddressReady && !capacityBlocked &&
-    selectedPets.every((p: any) => Boolean(accFor(p.id)));
+    selectedPets.every((p: any) => {
+      const r = speciesRates.find(r => r.accommodation_type === accFor(p.id));
+      return r && rateAllowsSize(r, (p.size_override ?? p.size ?? null) as PetSizeBand | null);
+    });
 
 
 
@@ -245,6 +274,9 @@ export default function HotelRequestWizard() {
   const canSubmit =
     stayReady && transportAddressReady && !photoBlocked && !vax.blocked && form.acknowledgement.accepted &&
     form.acknowledgement.signed_name.trim().length > 1 && !submit.isPending;
+
+  const extraRequests = (extrasCatalog.data?.surcharges ?? []).filter(s => (requestedExtras[s.code] ?? 0) > 0);
+  const extrasNote = extraRequests.map(s => `${s.name}: ${requestedExtras[s.code]}${s.per_night ? " per pet per day" : " per pet"}`).join("; ");
 
   /** Saves the priced stay as a quote that holds the dates for a short while. */
   async function onSaveQuote() {
@@ -298,7 +330,7 @@ export default function HotelRequestWizard() {
       .map((p) => [p.name, p.medication_instructions].filter(Boolean).join(": "))
       .filter(Boolean)
       .join("\n");
-    const notes = [payload.additional_notes || null, roomPref ? `Room preference: ${roomPref}` : null]
+    const notes = [payload.additional_notes || null, roomPref ? `Room preference: ${roomPref}` : null, extrasNote ? `Requested extras (staff to confirm and price): ${extrasNote}` : null]
       .filter(Boolean)
       .join("\n");
     submit.mutate({
@@ -321,6 +353,7 @@ export default function HotelRequestWizard() {
       },
       afterCreate: async (res) => {
         if (!res.booking_id) return;
+        clearHotelDraft();
         const { error } = await supabase.rpc("submit_accommodation_form", {
           p_booking_id: res.booking_id,
           p_payload: payload as unknown as never,
@@ -330,7 +363,7 @@ export default function HotelRequestWizard() {
           return;
         }
         try {
-          await writeBack.mutateAsync({ customerId: cust.data!.id, form: payload });
+          await writeBack.mutateAsync({ customerId: cust.data?.id ?? "", form: payload });
         } catch {
           /* non-fatal */
         }
@@ -342,48 +375,24 @@ export default function HotelRequestWizard() {
     return <div className="grid flex-1 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
   }
 
+  if (cust.isError || !cust.data) return <div className="p-6 text-sm text-muted-foreground">We couldn’t load your customer account. Please try again or contact Sloppy Kisses.</div>;
+
   const isLast = step === STEPS.length - 1;
 
   return (
-    <WizardShell
-      title="Book Hotel & Cattery"
-      subtitle="Your stay details and accommodation form, all in one go."
-      footer={
-        <>
-          {step > 0 && (
-            <button onClick={() => setStep((s) => s - 1)} className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted">
-              Back
-            </button>
-          )}
-          {step === 0 && quoteSettings.data?.enabled !== false && (
-            <button
-              onClick={onSaveQuote}
-              disabled={!stayReady || !estimate || savingQuote}
-              className="rounded-lg border border-sk-coral px-4 py-2 text-sm font-semibold text-sk-coral hover:bg-sk-coral-soft disabled:opacity-50"
-            >
-              {savingQuote ? "Saving…" : "Save as quote"}
-            </button>
-          )}
-          {!isLast ? (
-            <button
-              onClick={() => setStep((s) => s + 1)}
-              disabled={step === 0 && !stayReady}
-              className="rounded-lg bg-sk-coral px-5 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50"
-            >
-              Continue
-            </button>
-          ) : (
-            <button
-              onClick={onSubmit}
-              disabled={!canSubmit}
-              className="rounded-lg bg-sk-coral px-5 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50"
-            >
-              {submit.isPending ? "Booking…" : "Confirm booking"}
-            </button>
-          )}
-        </>
-      }
-    >
+    <>
+      <AppHeader title="Book Hotel & Cattery" />
+      <div className="mx-auto w-full max-w-6xl space-y-6 p-4 md:p-6">
+        <Link to="/customer/bookings/new" className="inline-flex items-center gap-1 text-xs text-muted-foreground">← All services</Link>
+        <BookingPhotos title="Hotel & Cattery" subtitle="A little holiday for your best friend. Choose their dates and accommodation, with prices from our current rate card." />
+        <AwardPlaceholder />
+        {draftImported && draft?.tenantId === cust.data.tenant_id && <div className="border-l-2 border-primary pl-3 text-sm">
+          Your stay choices have been brought across. Please confirm which pets are staying.
+          {unmatchedPets.length > 0 && <p className="mt-1 text-xs text-muted-foreground">Please select or add: {unmatchedPets.join(", ")}. <Link to="/customer/pets" className="font-semibold text-primary">My pets</Link></p>}
+          {(form.pickup_required || form.dropoff_required) && <p className="mt-1 text-xs text-muted-foreground">Choose a saved, verified collection address below.</p>}
+        </div>}
+        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="min-w-0 space-y-5">
       {petIds.length > 0 && (
         <PetsVaccinationGate petIds={petIds} serviceType={serviceType} onDate={checkInDate || null} mode="portal" />
       )}
@@ -393,7 +402,7 @@ export default function HotelRequestWizard() {
             key={s}
             className={
               "rounded-full px-3 py-1 font-medium " +
-              (i === step ? "bg-sk-coral text-white" : i < step ? "bg-sk-coral-soft text-sk-coral-dark" : "bg-muted text-muted-foreground")
+              (i === step ? "bg-sk-coral text-primary-foreground" : i < step ? "bg-sk-coral-soft text-sk-coral-dark" : "bg-muted text-muted-foreground")
             }
           >
             {i + 1}. {s}
@@ -408,14 +417,16 @@ export default function HotelRequestWizard() {
               {(pets.data ?? []).map((p: any) => {
                 const active = petIds.includes(p.id);
                 return (
-                  <button
+                  <Button
                     key={p.id}
+                    variant="outline"
+                    aria-pressed={active}
                     type="button"
                     onClick={() => togglePet(p.id)}
                     className={"rounded-full border px-3 py-1.5 text-sm " + (active ? "border-sk-coral bg-sk-coral-soft text-sk-coral-dark" : "border-border bg-white hover:bg-muted")}
                   >
                     {p.name} <span className="text-xs text-muted-foreground">· {p.species ?? "—"}</span>
-                  </button>
+                  </Button>
                 );
               })}
               {(pets.data ?? []).length === 0 && <span className="text-xs text-muted-foreground">Add a pet under My Pets first.</span>}
@@ -441,9 +452,9 @@ export default function HotelRequestWizard() {
             </Field>
             <Field label="Nights">
               <div className="flex items-center gap-2">
-                <button type="button" onClick={() => setNights((n) => Math.max(1, n - 1))} className="grid h-10 w-10 place-items-center rounded-lg border border-border hover:bg-muted">
+                <Button variant="outline" size="icon" aria-label="Fewer nights" type="button" onClick={() => setNights((n) => Math.max(1, n - 1))} className="grid h-10 w-10 place-items-center rounded-lg border border-border hover:bg-muted">
                   <Minus className="h-4 w-4" />
-                </button>
+                </Button>
                 <input
                   type="number"
                   min={1}
@@ -451,9 +462,9 @@ export default function HotelRequestWizard() {
                   onChange={(e) => setNights(Math.max(1, Number(e.target.value) || 1))}
                   className={inputCls + " text-center"}
                 />
-                <button type="button" onClick={() => setNights((n) => n + 1)} className="grid h-10 w-10 place-items-center rounded-lg border border-border hover:bg-muted">
+                <Button variant="outline" size="icon" aria-label="More nights" type="button" onClick={() => setNights((n) => n + 1)} className="grid h-10 w-10 place-items-center rounded-lg border border-border hover:bg-muted">
                   <Plus className="h-4 w-4" />
-                </button>
+                </Button>
               </div>
             </Field>
           </div>
@@ -467,32 +478,12 @@ export default function HotelRequestWizard() {
 
 
 
-          <Field
-            label={selectedPets.length > 1 ? "Accommodation (default for all pets)" : "Accommodation"}
-            hint="This sets the nightly rate. Final room allocation is confirmed by our team."
-          >
-            <select
-              value={accommodationType}
-              onChange={(e) => setAccommodationType(e.target.value)}
-              className={selectCls}
-            >
-              <option value="">— Select accommodation —</option>
-              {speciesRates.map((r) => {
-                const blocked = rateBlockReason(r);
-                return (
-                  <option key={r.id} value={r.accommodation_type} disabled={!!blocked}>
-                    {r.display_name} · {fmtZar(Number(r.nightly_rate_zar))}/night
-                    {blocked ? ` — ${blocked}` : ""}
-                  </option>
-                );
-              })}
-            </select>
-            {speciesRates.length === 0 && !ratesQ.isLoading && (
-              <p className="mt-1 text-xs text-sk-coral-dark">
-                No rates are set up yet — please contact us to book.
-              </p>
-            )}
-          </Field>
+          <section className="booking-section space-y-3">
+            <h2 className="text-lg font-semibold">Accommodation{selectedPets.length > 1 ? " · default for all pets" : ""}</h2>
+            <HotelAccommodationChoices rates={speciesRates} species={isCat ? "cat" : "dog"} value={accommodationType}
+              onChange={setAccommodationType} blocked={rateBlockReason} />
+            <p className="text-xs text-muted-foreground">Final room allocation is confirmed by our team.</p>
+          </section>
 
           {selectedPets.length > 1 && (
             <Field
@@ -531,26 +522,14 @@ export default function HotelRequestWizard() {
             </Field>
           )}
 
-          {estimate && (
-            <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Estimated cost
-              </div>
-              {estimate.lines.map((l) => (
-                <div key={l.label} className="flex justify-between gap-3">
-                  <span>{l.label}</span>
-                  <span>{fmtZar(l.amount)}</span>
-                </div>
-              ))}
-              <div className="mt-2 flex justify-between border-t border-border pt-2 font-semibold">
-                <span>Estimated total</span>
-                <span>{fmtZar(estimate.grand)}</span>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Excludes any extras and peak-season adjustments; your invoice confirms the final amount.
-              </p>
-            </div>
-          )}
+          {extraRequests.length > 0 && <section className="booking-section space-y-3">
+            <h2 className="text-sm font-semibold">Requested extras from your public booking</h2>
+            {extraRequests.map(s => <div key={s.code} className="flex items-center justify-between gap-3 text-sm">
+              <span>{s.name} · {requestedExtras[s.code]}{s.per_night ? " per pet per day" : " per pet"}</span>
+              <Button variant="ghost" size="sm" onClick={() => setRequestedExtras(a => ({ ...a, [s.code]: 0 }))}>Remove</Button>
+            </div>)}
+            <p className="text-xs text-muted-foreground">These requests will accompany your booking for staff to confirm and price. They are not included in this estimate or a saved quote.</p>
+          </section>}
 
           <Field label="Room preference (optional)" hint="A request only — we'll do our best.">
             <select value={roomPref} onChange={(e) => setRoomPref(e.target.value)} className={selectCls}>
@@ -623,6 +602,18 @@ export default function HotelRequestWizard() {
           <AcknowledgementSection form={form} setForm={setForm} />
         </div>
       )}
-    </WizardShell>
+        </div>
+        <HotelStaySummary checkIn={checkInDate} checkOut={checkOutDate} nights={nights} petCount={petIds.length} estimate={estimate}
+          status={`Step ${step + 1} of ${STEPS.length} · ${STEPS[step]}`}
+          disclaimer="Accommodation estimate only. Extras, late collection, peak dates and discounts may adjust the final invoice.">
+          <div className="flex flex-col gap-2">
+            {step > 0 && <Button variant="outline" onClick={() => setStep(s => s - 1)}>Back</Button>}
+            {step === 0 && quoteSettings.data?.enabled !== false && <Button variant="outline" onClick={onSaveQuote} disabled={!stayReady || !estimate || savingQuote}>{savingQuote ? "Saving…" : "Save as quote"}</Button>}
+            {!isLast ? <Button onClick={() => setStep(s => s + 1)} disabled={step === 0 && !stayReady}>Continue</Button> : <Button onClick={onSubmit} disabled={!canSubmit}>{submit.isPending ? "Booking…" : "Confirm booking"}</Button>}
+          </div>
+        </HotelStaySummary>
+        </div>
+      </div>
+    </>
   );
 }
