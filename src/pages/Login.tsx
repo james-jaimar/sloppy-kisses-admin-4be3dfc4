@@ -6,11 +6,12 @@ import { landingFor } from "@/lib/auth/landing";
 import { useWorkDepts } from "@/features/work/useWorkDepts";
 import { Logo } from "@/components/layout/Logo";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import loginBg from "@/assets/login-dogs.jpg.asset.json";
 
 export default function Login() {
   const { authUser, loading, signIn } = useAuth();
-  const { profile, hasPermission, loading: profileLoading } = useCurrentUser();
+  const { profile, hasPermission, loading: profileLoading, error: profileError, refresh } = useCurrentUser();
   const { depts } = useWorkDepts();
   const navigate = useNavigate();
   const location = useLocation();
@@ -45,6 +46,10 @@ export default function Login() {
     const { error: err } = await signIn(email.trim(), password);
     setSubmitting(false);
     if (err) setError(err);
+  }
+
+  if (authUser && !profileLoading && profileError) {
+    return <div className="grid min-h-screen place-items-center bg-background p-6"><div className="space-y-3 text-center text-sm"><p>We couldn’t load your account. Please try again.</p><Button variant="outline" onClick={() => void refresh()}>Try again</Button></div></div>;
   }
 
   if (loading || (authUser && (profileLoading || !profile))) {
