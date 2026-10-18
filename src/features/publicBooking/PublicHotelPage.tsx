@@ -1,12 +1,15 @@
 import { usePublicAddress, addressPayload, PublicAddressField } from "./publicAddress";
-import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { AwardPlaceholder, BookingPhotos, bookingPhotos } from "./BookingPhotos";
+import { AwardPlaceholder, BookingPhotos } from "./BookingPhotos";
 import { ArrowLeft, BedDouble, CheckCircle2, Loader2, Minus, Plus, Check, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { usePublicTenant, usePublicHotelRates, type PublicRate } from "./publicBookingQueries";
+import { HotelAccommodationChoices, HotelStaySummary } from "./HotelBookingPresentation";
+import { clearHotelDraft, readHotelDraft, saveHotelDraft, HOTEL_PORTAL_PATH } from "./hotelDraft";
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { AccountBar, DoneHandoff } from "./AccountHandoff";
 import { useHotelHouseAvailability, fullNights, HouseCapacityNotice } from "@/features/hotelCattery/HouseCapacityNotice";
 import { SIZE_BAND_ORDER, SIZE_BAND_LABEL, type PetSizeBand } from "@/features/settings/hotelRateCardQueries";
@@ -55,16 +58,23 @@ export default function PublicHotelPage() {
   const tenant = usePublicTenant(tenantSlug);
   const rates = usePublicHotelRates(tenant.data?.id);
 
-  const [checkIn, setCheckIn] = useState("");
-  const [nights, setNights] = useState(1);
-  const [pets, setPets] = useState<PetDraft[]>([emptyPet()]);
-  const [addons, setAddons] = useState<Record<string, number>>({});
+  const { profile, loading: profileLoading } = useCurrentUser();
+  const [draft] = useState(() => readHotelDraft());
+  const [checkIn, setCheckIn] = useState(draft?.checkIn ?? "");
+  const [nights, setNights] = useState(draft?.nights ?? 1);
+  const [pets, setPets] = useState<PetDraft[]>(draft?.pets ?? [emptyPet()]);
+  const [addons, setAddons] = useState<Record<string, number>>(draft?.addons ?? {});
   const [contact, setContact] = useState({ first_name: "", last_name: "", email: "", mobile: "" });
-  const [transport, setTransport] = useState({ pickup: false, dropoff: false });
+  const [transport, setTransport] = useState(draft?.transport ?? { pickup: false, dropoff: false });
   const addr = usePublicAddress();
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(draft?.notes ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!tenant.data || done) return;
+    saveHotelDraft({ version: 1, tenantId: tenant.data.id, checkIn, nights, pets, addons, transport, notes });
+  }, [tenant.data, checkIn, nights, pets, addons, transport, notes, done]);
 
   const checkOut = useMemo(() => (checkIn ? addDays(checkIn, nights) : ""), [checkIn, nights]);
   const allCats = pets.length > 0 && pets.every((p) => p.species === "cat");
@@ -169,6 +179,7 @@ export default function PublicHotelPage() {
         return;
       }
       if (err) throw new Error(err);
+      clearHotelDraft();
       setDone(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e: any) {
@@ -187,6 +198,10 @@ export default function PublicHotelPage() {
         We couldn't find that business. Please check the link and try again.
       </div>
     );
+  }
+
+  if (!profileLoading && profile?.user_type === "customer" && !done) {
+    return <Navigate to={`${HOTEL_PORTAL_PATH}?from=public`} replace />;
   }
 
   if (done) {
@@ -298,22 +313,12 @@ export default function PublicHotelPage() {
             </div>
             <fieldset className="space-y-3">
               <legend className="text-sm font-semibold">Choose accommodation for {p.name || `Pet ${i + 1}`}</legend>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {(rates.data?.rates ?? []).filter(r => r.species === p.species).map((r, index) => {
-                  const blocked = !rateAllowsSize(r, p.size);
-                  const selected = p.accommodation === r.accommodation_type;
-                  const photo = bookingPhotos[index % bookingPhotos.length];
-                  return <Button key={r.accommodation_type} type="button" variant="outline" disabled={blocked} aria-pressed={selected} onClick={() => setPet(i, { accommodation: r.accommodation_type })} className={`relative h-auto flex-col items-stretch overflow-hidden whitespace-normal p-0 text-left hover:bg-card ${selected ? "border-primary ring-1 ring-primary" : "border-border"}`}>
-                    {p.species === "dog" ? <img src={photo.url} alt={photo.alt} loading="lazy" className="h-32 w-full object-cover" /> : <div className="flex h-32 items-center justify-center bg-accent text-sm text-accent-foreground">Cattery photos coming soon</div>}
-                    <div className="space-y-2 p-3">
-                      <div className="flex items-center justify-between gap-2"><span className="font-semibold">{r.display_name}</span>{selected && <Check className="h-4 w-4 text-primary" />}</div>
-                      <p className="text-xs font-normal text-muted-foreground">{p.species === "dog" ? "Illustrative photo · accommodation photos to follow" : "For our feline guests"}</p>
-                      <p className="text-base font-bold">{fmtZar(Number(r.nightly_rate_zar))}<span className="text-xs font-normal text-muted-foreground"> / night</span></p>
-                      {blocked && <p className="text-xs font-normal text-muted-foreground">{!p.size ? "Select your pet’s size to check suitability" : "Not available for this size"}</p>}
-                    </div>
-                  </Button>;
-                })}
-              </div>
+              <HotelAccommodationChoices
+                rates={(rates.data?.rates ?? []).filter(r => r.species === p.species)}
+                species={p.species} value={p.accommodation}
+                onChange={accommodation => setPet(i, { accommodation })}
+                blocked={r => rateAllowsSize(r, p.size) ? null : !p.size ? "Select your pet’s size to check suitability" : "Not available for this size"}
+              />
             </fieldset>
           </div>
         ))}
@@ -400,42 +405,14 @@ export default function PublicHotelPage() {
 
       </div>
       {/* Estimate + submit */}
-      <aside className="booking-summary space-y-4 rounded-lg border border-border bg-card p-5 lg:sticky lg:top-6">
-        <div className="flex items-center gap-2 text-xs font-medium text-sk-turquoise-dark"><CheckCircle2 className="h-4 w-4" /> Request now · Team confirmation follows</div>
-        <h2 className="text-lg font-semibold">Your stay at a glance</h2>
-        <div className="space-y-2 border-y border-border py-3 text-sm">
-          <div className="flex justify-between gap-3"><span className="text-muted-foreground">Dates</span><span className="text-right font-medium">{checkIn ? new Date(`${checkIn}T00:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" }) : "Choose dates"}{checkOut && <> — {new Date(`${checkOut}T00:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}</>}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Guests</span><span>{pets.length} pet{pets.length === 1 ? "" : "s"} · {nights} night{nights === 1 ? "" : "s"}</span></div>
-        </div>
-        <h3 className="text-sm font-semibold">Estimated total</h3>
-        {estimate ? (
-          <div className="space-y-1 text-sm">
-            {estimate.lines.map((l, i) => (
-              <div key={i} className="flex justify-between gap-4">
-                <span className="text-muted-foreground">{l.label}</span>
-                <span className="shrink-0 font-medium">{fmtZar(l.amount)}</span>
-              </div>
-            ))}
-            <div className="mt-2 flex justify-between border-t border-border pt-2 text-base font-bold">
-              <span>Total (incl. VAT)</span>
-              <span>{fmtZar(estimate.grand)}</span>
-            </div>
-            <p className="text-xs text-muted-foreground">Final quote is confirmed by our team — peak dates and discounts may adjust the total.</p>
-          </div>
-        ) : (
-          <p className="text-xs text-muted-foreground">Pick dates, pets and accommodation to see your price.</p>
-        )}
-        <Button
-          type="button"
-          onClick={onSubmit}
-          disabled={!canSubmit}
-          className="h-11 w-full"
-        >
-          {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-          Request booking
+      <HotelStaySummary checkIn={checkIn} checkOut={checkOut} nights={nights} petCount={pets.length} estimate={estimate}
+        status="Request now · Team confirmation follows"
+        disclaimer="Final quote is confirmed by our team — peak dates and discounts may adjust the total.">
+        <Button type="button" onClick={onSubmit} disabled={!canSubmit} className="h-11 w-full">
+          {submitting && <Loader2 className="h-4 w-4 animate-spin" />} Request booking
         </Button>
         <p className="text-center text-xs leading-relaxed text-muted-foreground">Your booking is only confirmed once our team has reviewed your request.</p>
-      </aside>
+      </HotelStaySummary>
       </div>
     </div>
   );
