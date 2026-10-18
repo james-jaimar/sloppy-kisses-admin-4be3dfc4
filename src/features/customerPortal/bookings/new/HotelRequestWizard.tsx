@@ -11,6 +11,8 @@ import { BookingPhotos, AwardPlaceholder } from "@/features/publicBooking/Bookin
 import { HotelAccommodationChoices, HotelStaySummary } from "@/features/publicBooking/HotelBookingPresentation";
 import { readHotelDraft, clearHotelDraft, matchDraftPets } from "@/features/publicBooking/hotelDraft";
 import { usePublicHotelRates } from "@/features/publicBooking/publicBookingQueries";
+import { HotelExtrasChoices } from "@/features/publicBooking/HotelExtrasChoices";
+import { priceHotelExtras } from "../../../../../supabase/functions/_shared/hotel-extras";
 import { Field, inputCls, selectCls } from "./WizardShell";
 import { PetsVaccinationGate, usePetsVaxBlocked } from "@/features/bookings/VaccinationGatePanel";
 import { usePortalServiceGates } from "@/features/customerPortal/gatesQueries";
@@ -38,6 +40,9 @@ import {
 } from "@/features/hotelForm/prefillQueries";
 import {
   CHECK_IN_TIME,
+  CHECK_OUT_STANDARD,
+  CHECK_OUT_STAY_PLAY,
+  isStayPlayWindow,
   checkOutTimeFor,
   checkOutWindowsFor,
   type AccommodationFormPayload,
@@ -111,7 +116,7 @@ export default function HotelRequestWizard() {
     setPetAcc(Object.fromEntries(matches.map(m => [m.id, m.accommodation])));
     setUnmatchedPets(unmatched);
     setRequestedExtras(draft.addons);
-    setForm(f => ({ ...f, pickup_required: draft.transport.pickup, dropoff_required: draft.transport.dropoff, additional_notes: draft.notes }));
+    setForm(f => ({ ...f, check_out_window: draft.addons.late_checkout > 0 ? CHECK_OUT_STAY_PLAY : f.check_out_window, pickup_required: draft.transport.pickup, dropoff_required: draft.transport.dropoff, additional_notes: draft.notes }));
   }, [draft, draftImported, cust.data, pets.data]);
 
   // Whether the tenant lets customers save their own quotes, and for how long.
@@ -194,6 +199,16 @@ export default function HotelRequestWizard() {
   const activeRate = speciesRates.find((r) => r.accommodation_type === accommodationType) ?? null;
   const accFor = (petId: string) => petAcc[petId] || accommodationType;
 
+  const extraQuantities = { ...requestedExtras, late_checkout: isStayPlayWindow(form.check_out_window) ? 1 : 0 };
+  const extraSelections = (extrasCatalog.data?.surcharges ?? [])
+    .filter(s => (extraQuantities[s.code] ?? 0) > 0)
+    .map(s => ({ code: s.code, quantity: extraQuantities[s.code] }));
+  const pricedExtras = priceHotelExtras(extrasCatalog.data?.surcharges ?? [], extraSelections, selectedPets.length, nights);
+  function changeExtra(code: string, quantity: number) {
+    setRequestedExtras(a => ({ ...a, [code]: quantity }));
+    if (code === "late_checkout") setForm(f => ({ ...f, check_out_window: quantity > 0 ? CHECK_OUT_STAY_PLAY : CHECK_OUT_STANDARD }));
+  }
+
   // Clear a choice that no longer fits the selected pets / species.
   useEffect(() => {
     if (!accommodationType) return;
@@ -228,9 +243,13 @@ export default function HotelRequestWizard() {
         });
       }
     }
+    for (const extra of pricedExtras) lines.push({
+      label: `${extra.name} · ${extra.perPet} per pet${extra.per_night ? ` per day × ${nights} nights` : ""} (${selectedPets.map(p => p.name).join(", ")})`,
+      amount: extra.total,
+    });
     return { lines, grand: lines.reduce((s, l) => s + l.amount, 0) };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPets, petAcc, accommodationType, speciesRates, nights]);
+  }, [selectedPets, petAcc, accommodationType, speciesRates, nights, requestedExtras, extrasCatalog.data, form.check_out_window]);
 
   const transportNeeded = form.pickup_required || form.dropoff_required;
   const transportAddressReady = !transportNeeded || Boolean(serviceAddressId);
@@ -250,7 +269,7 @@ export default function HotelRequestWizard() {
 
   const stayReady =
     petIds.length > 0 && !!checkInDate && nights >= 1 &&
-    transportAddressReady && !capacityBlocked &&
+    transportAddressReady && !capacityBlocked && !extrasCatalog.isLoading && !extrasCatalog.isError &&
     selectedPets.every((p: any) => {
       const r = speciesRates.find(r => r.accommodation_type === accFor(p.id));
       return r && rateAllowsSize(r, (p.size_override ?? p.size ?? null) as PetSizeBand | null);
@@ -275,9 +294,6 @@ export default function HotelRequestWizard() {
     stayReady && transportAddressReady && !photoBlocked && !vax.blocked && form.acknowledgement.accepted &&
     form.acknowledgement.signed_name.trim().length > 1 && !submit.isPending;
 
-  const extraRequests = (extrasCatalog.data?.surcharges ?? []).filter(s => (requestedExtras[s.code] ?? 0) > 0);
-  const extrasNote = extraRequests.map(s => `${s.name}: ${requestedExtras[s.code]}${s.per_night ? " per pet per day" : " per pet"}`).join("; ");
-
   /** Saves the priced stay as a quote that holds the dates for a short while. */
   async function onSaveQuote() {
     if (!cust.data || !checkInDate) return;
@@ -293,6 +309,7 @@ export default function HotelRequestWizard() {
           notes: roomPref ? `Room preference: ${roomPref}` : null,
           check_in_window: form.check_in_window || null,
           check_out_window: form.check_out_window || null,
+          extras: extraSelections,
         },
       });
       if (error) throw new Error(error.message);
@@ -330,7 +347,7 @@ export default function HotelRequestWizard() {
       .map((p) => [p.name, p.medication_instructions].filter(Boolean).join(": "))
       .filter(Boolean)
       .join("\n");
-    const notes = [payload.additional_notes || null, roomPref ? `Room preference: ${roomPref}` : null, extrasNote ? `Requested extras (staff to confirm and price): ${extrasNote}` : null]
+    const notes = [payload.additional_notes || null, roomPref ? `Room preference: ${roomPref}` : null]
       .filter(Boolean)
       .join("\n");
     submit.mutate({
@@ -350,6 +367,7 @@ export default function HotelRequestWizard() {
         belongings_notes: payload.belongings_notes || null,
         pickup_required: payload.pickup_required,
         dropoff_required: payload.dropoff_required,
+        extras: extraSelections,
       },
       afterCreate: async (res) => {
         if (!res.booking_id) return;
@@ -522,14 +540,7 @@ export default function HotelRequestWizard() {
             </Field>
           )}
 
-          {extraRequests.length > 0 && <section className="booking-section space-y-3">
-            <h2 className="text-sm font-semibold">Requested extras from your public booking</h2>
-            {extraRequests.map(s => <div key={s.code} className="flex items-center justify-between gap-3 text-sm">
-              <span>{s.name} · {requestedExtras[s.code]}{s.per_night ? " per pet per day" : " per pet"}</span>
-              <Button variant="ghost" size="sm" onClick={() => setRequestedExtras(a => ({ ...a, [s.code]: 0 }))}>Remove</Button>
-            </div>)}
-            <p className="text-xs text-muted-foreground">These requests will accompany your booking for staff to confirm and price. They are not included in this estimate or a saved quote.</p>
-          </section>}
+          {extrasCatalog.isLoading ? <p className="text-sm text-muted-foreground">Loading extras…</p> : extrasCatalog.isError ? <p className="text-sm text-destructive">We couldn’t load the extras. Please refresh before continuing.</p> : <HotelExtrasChoices catalog={extrasCatalog.data?.surcharges ?? []} quantities={extraQuantities} onChange={changeExtra} petCount={selectedPets.length} />}
 
           <Field label="Room preference (optional)" hint="A request only — we'll do our best.">
             <select value={roomPref} onChange={(e) => setRoomPref(e.target.value)} className={selectCls}>
@@ -605,7 +616,7 @@ export default function HotelRequestWizard() {
         </div>
         <HotelStaySummary checkIn={checkInDate} checkOut={checkOutDate} nights={nights} petCount={petIds.length} estimate={estimate}
           status={`Step ${step + 1} of ${STEPS.length} · ${STEPS[step]}`}
-          disclaimer="Accommodation estimate only. Extras, late collection, peak dates and discounts may adjust the final invoice.">
+          disclaimer="Includes selected extras per pet. Peak dates, discounts and transport may adjust the final invoice.">
           <div className="flex flex-col gap-2">
             {step > 0 && <Button variant="outline" onClick={() => setStep(s => s - 1)}>Back</Button>}
             {step === 0 && quoteSettings.data?.enabled !== false && <Button variant="outline" onClick={onSaveQuote} disabled={!stayReady || !estimate || savingQuote}>{savingQuote ? "Saving…" : "Save as quote"}</Button>}
