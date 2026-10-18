@@ -3,6 +3,7 @@
 // triggers, so the client can never dictate an amount.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
+import { priceHotelExtras, type HotelExtraRate } from "../_shared/hotel-extras.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -92,6 +93,7 @@ const BodySchema = z.object({
       dropoff_required: z.boolean().optional(),
       check_in_window: z.string().max(60).nullable().optional(),
       check_out_window: z.string().max(60).nullable().optional(),
+      extras: z.array(z.object({ code: z.string().min(1).max(60), quantity: z.number().int().min(1).max(100) })).max(30).optional(),
     })
     .optional(),
   transport: z
@@ -529,6 +531,18 @@ Deno.serve(async (req) => {
     }
   }
 
+  let hotelExtras: ReturnType<typeof priceHotelExtras> = [];
+  if (group === "hotel") {
+    const { data: catalog, error: catalogError } = await admin.from("hotel_surcharges")
+      .select("id, code, name, price_zar, per_night").eq("tenant_id", tenantId).eq("active", true);
+    if (catalogError) return json({ error: "Could not load hotel extras. Please try again." }, 500);
+    try {
+      hotelExtras = priceHotelExtras((catalog ?? []) as HotelExtraRate[], body.hotel?.extras ?? [], body.pet_ids.length, 1, body.hotel?.check_out_window ?? null);
+    } catch (error) {
+      return json({ error: error instanceof Error ? error.message : "Invalid hotel extras" }, 400);
+    }
+  }
+
   const { data: numRes, error: numErr } = await admin.rpc("next_booking_number", {
     target_tenant_id: tenantId,
   });
@@ -721,6 +735,12 @@ Deno.serve(async (req) => {
       check_out_window: h.check_out_window ?? null,
     });
     if (error) return cleanup(error.message);
+    if (hotelExtras.length) {
+      const { error: extrasError } = await admin.from("hotel_booking_surcharges").insert(hotelExtras.map(extra => ({
+        tenant_id: tenantId, booking_id: bookingId, surcharge_id: extra.id, quantity: extra.quantity,
+      })));
+      if (extrasError) return cleanup(extrasError.message);
+    }
   } else {
     const t = body.transport ?? { direction: "pickup" as const };
     const { error } = await admin.from("transport_details").insert({

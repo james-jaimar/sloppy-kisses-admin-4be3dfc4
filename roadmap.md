@@ -6,6 +6,11 @@
 # Unified hotel booking
 - [x] Share hotel photographs, accommodation choices and stay summary with the customer portal.
 - [x] Retain public hotel choices through sign-in and safely match saved pets.
-- [x] Preserve portal care, consent, quote and booking workflows; carried extras remain explicitly staff-confirmation requests, not billed extras.
+- [x] Preserve portal care, consent, quote and booking workflows; carried extras now save as priced surcharge selections.
 - [x] Test draft retention, tenant scoping, pet matching and public layouts.
 - [ ] Verify signed-in portal booking end-to-end — blocked by external/unmanaged Supabase session access.
+
+# Portal hotel extras
+- [x] Restore interactive extras and per-pet quantities in the hotel portal summary.
+- [x] Save selected extras with bookings and quotes using current configured prices; both endpoints deployed.
+- [x] Verify pricing and persisted quantity rules (13 tests passed), public controls and mobile layout; authenticated portal save remains blocked as noted above.

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { usePublicTenant, usePublicHotelRates, type PublicRate } from "./publicBookingQueries";
 import { HotelAccommodationChoices, HotelStaySummary } from "./HotelBookingPresentation";
+import { HotelExtrasChoices } from "./HotelExtrasChoices";
 import { clearHotelDraft, readHotelDraft, saveHotelDraft, HOTEL_PORTAL_PATH } from "./hotelDraft";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { AccountBar, DoneHandoff } from "./AccountHandoff";
@@ -334,35 +335,7 @@ export default function PublicHotelPage() {
       </section>
 
       {/* Add-ons */}
-      {(rates.data?.surcharges.length ?? 0) > 0 && (
-        <section className="booking-section space-y-3">
-          <h2 className="text-sm font-semibold">Extras</h2>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {rates.data?.surcharges.map((s) => {
-              const qty = addons[s.code] ?? 0;
-              return (
-                <div key={s.code} className={"flex items-center justify-between gap-3 rounded-xl border p-3 " + (qty > 0 ? "border-sk-coral bg-sk-coral-soft" : "border-border bg-card")}>
-                  <div>
-                    <div className="text-sm font-medium">{s.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {fmtZar(Number(s.price_zar))}{s.per_night ? " per pet per day" : " per pet"}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon" aria-label={`Fewer ${s.name}`} type="button" onClick={() => setAddons((a) => ({ ...a, [s.code]: Math.max(0, (a[s.code] ?? 0) - 1) }))} className="h-8 w-8 shrink-0">
-                      <Minus className="h-3.5 w-3.5" />
-                    </Button>
-                    <span className="w-5 text-center text-sm font-semibold">{qty}</span>
-                    <Button variant="outline" size="icon" aria-label={`More ${s.name}`} type="button" onClick={() => setAddons((a) => ({ ...a, [s.code]: (a[s.code] ?? 0) + 1 }))} className="h-8 w-8 shrink-0">
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      <HotelExtrasChoices catalog={rates.data?.surcharges ?? []} quantities={addons} onChange={(code, quantity) => setAddons(a => ({ ...a, [code]: quantity }))} petCount={pets.length} />
 
       {/* Transport */}
       <section className="booking-section space-y-3">

@@ -3,6 +3,7 @@
 // the dates for a configurable number of hours before it expires automatically.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { z } from "https://esm.sh/zod@3.23.8";
+import { priceHotelExtras, type HotelExtraRate } from "../_shared/hotel-extras.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,7 @@ const BodySchema = z.object({
   notes: z.string().max(2000).nullable().optional(),
   check_in_window: z.string().max(60).nullable().optional(),
   check_out_window: z.string().max(60).nullable().optional(),
+  extras: z.array(z.object({ code: z.string().min(1).max(60), quantity: z.number().int().min(1).max(100) })).max(30).optional(),
 });
 
 function nights(startAt: string, endAt: string) {
@@ -145,6 +147,19 @@ Deno.serve(async (req) => {
       });
     }
   }
+  const { data: catalog, error: catalogError } = await admin.from("hotel_surcharges")
+    .select("id, code, name, price_zar, per_night").eq("tenant_id", tenantId).eq("active", true);
+  if (catalogError) return j(500, { error: "Could not load hotel extras. Please try again." });
+  let hotelExtras: ReturnType<typeof priceHotelExtras>;
+  try {
+    hotelExtras = priceHotelExtras((catalog ?? []) as HotelExtraRate[], body.extras ?? [], body.pet_ids.length, n, body.check_out_window ?? null);
+  } catch (error) {
+    return j(400, { error: error instanceof Error ? error.message : "Invalid hotel extras" });
+  }
+  for (const extra of hotelExtras) items.push({
+    description: `${extra.name} — ${pets.map(p => p.name).join(", ")}${extra.per_night ? ` · ${extra.perPet} per pet per day` : ""}`,
+    quantity: extra.billedQuantity, unit_price: Number(extra.price_zar),
+  });
   const subtotal = Math.round(items.reduce((s, i) => s + i.quantity * i.unit_price, 0) * 100) / 100;
 
   // --- Create the quote, holding the dates ------------------------------
@@ -178,6 +193,8 @@ Deno.serve(async (req) => {
         check_in_window: body.check_in_window ?? null,
         check_out_window: body.check_out_window ?? null,
         pet_accommodations: body.pet_accommodations,
+        pets: body.pet_ids.map(id => ({ pet_id: id, accommodation_type: body.pet_accommodations[id] })),
+        surcharges: hotelExtras.map(extra => ({ surcharge_id: extra.id, quantity: extra.quantity })),
         notes: body.notes ?? null,
       },
       subtotal,
