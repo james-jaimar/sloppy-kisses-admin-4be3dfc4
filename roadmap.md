@@ -1,4 +1,11 @@
 # Public booking refresh
+# October price-list updates
+- [ ] Add missing grooming treatments using existing editable Settings catalogs; retain Full/Express inclusions.
+- [ ] Add Saturday daycare pricing and eligibility; enforce no weekend trials.
+- [ ] Implement five-day daycare monthly free-groom allowance.
+- [ ] Add weekday birthday package and party-pack pricing.
+- [ ] Verify rules and current settings; Xero catalog updates depend on an authorised connection.
+
 - [x] Find and inspect genuine Sloppy Kisses imagery.
 - [x] Refresh /book and /book/hotel with photo-led presentation, accommodation choices and a clear price summary.
 - [x] Keep the award explicitly unconfirmed and check accommodation selection, totals and gallery at desktop and phone widths (no test booking submitted).
