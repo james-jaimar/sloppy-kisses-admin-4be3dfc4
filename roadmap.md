@@ -3,7 +3,7 @@
 - [ ] Add missing grooming treatments using existing editable Settings catalogs; retain Full/Express inclusions.
 - [ ] Add Saturday daycare pricing and eligibility; enforce no weekend trials.
 - [ ] Implement five-day daycare monthly free-groom allowance.
-- [ ] Add weekday birthday package and party-pack pricing.
+- Birthday parties and party packs deferred by the owner; excluded from this update.
 - [ ] Verify rules and current settings; Xero catalog updates depend on an authorised connection.
 
 - [x] Find and inspect genuine Sloppy Kisses imagery.
