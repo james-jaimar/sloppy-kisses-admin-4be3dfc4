@@ -1,4 +1,5 @@
 import { cleanPublicAddress } from "../_shared/publicAddress.ts";
+import { groomingAddonPrice } from "../_shared/grooming-price-list.ts";
 // Public (anonymous) grooming booking request — in-house parlour or mobile van.
 // Prices and durations are re-derived server-side from the live price list, the
 // chosen slot is re-checked against live availability, and a pending-review
@@ -74,7 +75,7 @@ Deno.serve(async (req) => {
     if (!pkg && extras.some((a: any) => !a.bookable_standalone)) return json({ error: "extra_needs_package" }, 400);
     const mins = Number(pkg?.expected_minutes ?? 0) + extras.reduce((s: number, a: any) => s + Number(a.duration_minutes ?? 0), 0);
     longest = Math.max(longest, mins || 30);
-    const price = Number(pkg?.price_zar ?? 0) + extras.reduce((s: number, a: any) => s + Number(a.price_zar), 0);
+    const price = Number(pkg?.price_zar ?? 0) + extras.reduce((s: number, a: any) => s + groomingAddonPrice(a.code, Number(a.price_zar), pkg?.package_type), 0);
     estimate += price;
     lines.push({ pkg, extras, mins, price });
   }

@@ -45,6 +45,7 @@ import { HotelCapacityNotice, type CapacityIssue } from "@/features/hotelCattery
 import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQueries";
 import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtrasPanel";
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
+import { groomingAddonPrice, pensionerEligible } from "@/features/grooming/priceListRules";
 import { useGroomingDayAvailability } from "@/features/grooming/availabilityQueries";
 import { freeResourcesAt, layoutGroomingAppointments, type PetSlotRequest } from "@/features/grooming/multiPetSchedule";
 import {
@@ -573,7 +574,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       const out: Record<string, number> = {};
       for (const id of petIds) {
         const opts: number[] = [];
-        if (grooming.pensioner_discount) opts.push(Number(w.pensioner_discount_pct ?? 0));
+        if (grooming.pensioner_discount && pensionerEligible(new Date(day + "T12:00:00"), w.pensioner_discount_days)) opts.push(Number(w.pensioner_discount_pct ?? 0));
         const dob = (pets.data ?? []).find((p: any) => p.id === id)?.date_of_birth;
         if (dob) {
           const lim = new Date(dob);
@@ -724,7 +725,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     const pct = reviewDiscountQ.data?.[id] ?? 0;
     return total + Number(pkg?.price_zar ?? 0) * (1 - pct / 100) + plan.addons.reduce((sum, selection) => {
       const addon = addonsCatalogQ.data?.find((a) => a.id === selection.addon_id);
-      return sum + Number(addon?.price_zar ?? 0) * selection.qty;
+      return sum + groomingAddonPrice(addon?.code ?? "", Number(addon?.price_zar ?? 0), pkg?.package_type) * selection.qty;
     }, 0);
   }, 0) + (serviceType === "grooming_mobile" ? Number(grooming.travel_fee ?? 0) * (isMultiPetGrooming ? petIds.length : 1) : 0);
 
@@ -1568,6 +1569,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                         bookingId={isEdit ? booking?.id ?? null : null}
                         primaryPetId={key === EDIT_KEY ? petIds[0] ?? null : key}
                         value={plan.instructions}
+                        packageType={packagesQ.data?.find(p => p.id === plan.packageId)?.package_type}
                         onChange={(v) => updatePlan(key, { instructions: v })}
                       />
                     </div>

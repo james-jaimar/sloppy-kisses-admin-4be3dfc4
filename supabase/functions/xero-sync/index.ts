@@ -142,16 +142,18 @@ function matchItemCode(valid: Set<string>, wanted: string): string | undefined {
 async function pushItemCodes(s: Settings, actor: string | null) {
   const ctx = { tenantId: s.xero_tenant_id! };
   const { data: rows } = await admin
-    .from("billing_item_codes").select("id, code, label, ref_key")
+    .from("billing_item_codes").select("id, code, label, kind, ref_key")
     .eq("tenant_id", s.tenant_id).eq("active", true);
   const wanted = (rows ?? []).filter((r) => r.code);
   if (!wanted.length) return { pushed: 0 };
 
   const existing = await knownItemCodes(ctx);
+  const { data: addonRates } = await admin.from("grooming_addons").select("code,price_zar").eq("tenant_id",s.tenant_id);
   const items = wanted.map((r) => ({
     Code: r.code,
     Name: (r.label ?? r.code).slice(0, 50),
-    SalesDetails: { AccountCode: s.default_sales_account, TaxType: s.default_tax_type },
+    SalesDetails: { AccountCode: r.kind === "addon" ? (s.service_account_codes?.grooming_inhouse || s.default_sales_account) : (s.service_account_codes?.[r.ref_key] || s.default_sales_account), TaxType: s.default_tax_type,
+      ...(r.kind === "addon" ? { UnitPrice: Number(addonRates?.find(a => a.code === r.ref_key)?.price_zar ?? 0) } : {}) },
     IsSold: true,
   }));
   await xero(ctx, "Items", { method: "POST", body: { Items: items } });
@@ -167,7 +169,7 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
   const ctx = { tenantId: s.xero_tenant_id! };
   const { data: inv, error } = await admin
     .from("invoices")
-    .select("id, tenant_id, invoice_number, status, issue_date, due_date, notes, customer_id, xero_invoice_id, invoice_items(id, description, quantity, unit_price, line_total, xero_account_code, item_code, vat_rate, sort_order, booking_id, product:products(external_code, xero_account_code))")
+    .select("id, tenant_id, invoice_number, status, issue_date, due_date, notes, customer_id, xero_invoice_id, invoice_items(id, description, quantity, unit_price, discount_pct, line_total, xero_account_code, item_code, vat_rate, sort_order, booking_id, product:products(external_code, xero_account_code))")
     .eq("id", invoiceId).single();
   if (error || !inv) throw new Error(error?.message ?? "Invoice not found");
   if (!PUSHABLE_INVOICE_STATUSES.includes(String(inv.status))) {
@@ -198,14 +200,16 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
     .from("billing_item_codes").select("kind, ref_key, code")
     .eq("tenant_id", s.tenant_id).eq("active", true);
   const serviceItemCode: Record<string, string> = {};
+  const addonItemCode: Record<string, string> = {};
   for (const r of codeRows ?? []) if (r.kind === "service" && r.code) serviceItemCode[r.ref_key] = r.code;
+  for (const r of codeRows ?? []) if (r.kind === "addon" && r.code) addonItemCode[r.ref_key] = r.code;
 
   const validCodes = await knownItemCodes(ctx);
 
   const lines = (inv.invoice_items ?? [])
     .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
     .map((l: any) => {
-      const wanted = l.item_code
+      const wanted = (l.item_code?.startsWith("GROOM_ADDON:") ? addonItemCode[l.item_code.slice(12)] : l.item_code)
         || l.product?.external_code
         || (l.booking_id ? serviceItemCode[serviceByBooking[l.booking_id]] : null)
         || undefined;
@@ -214,6 +218,7 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
         Description: l.description || "Service",
         Quantity: Number(l.quantity ?? 1),
         UnitAmount: Number(l.unit_price ?? 0),
+        DiscountRate: Number(l.discount_pct ?? 0),
         ItemCode: itemCode,
         AccountCode: l.xero_account_code
           || l.product?.xero_account_code

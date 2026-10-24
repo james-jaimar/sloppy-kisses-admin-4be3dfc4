@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
@@ -34,6 +35,9 @@ export default function DaycareWorkflowPage() {
     daily_capacity: "" as string,
     stay_play_default_collect_time: "16:30",
     stay_play_grace_minutes: 15,
+    saturday_price_zar: 350,
+    saturday_existing_clients_only: true,
+    trials_weekdays_only: true,
   });
 
   useEffect(() => {
@@ -49,6 +53,9 @@ export default function DaycareWorkflowPage() {
         daily_capacity: settingsQ.data.daily_capacity == null ? "" : String(settingsQ.data.daily_capacity),
         stay_play_default_collect_time: trimTime(settingsQ.data.stay_play_default_collect_time) || "16:30",
         stay_play_grace_minutes: Number(settingsQ.data.stay_play_grace_minutes ?? 15),
+        saturday_price_zar: Number(settingsQ.data.saturday_price_zar ?? 350),
+        saturday_existing_clients_only: settingsQ.data.saturday_existing_clients_only ?? true,
+        trials_weekdays_only: settingsQ.data.trials_weekdays_only ?? true,
       });
     }
   }, [settingsQ.data]);
@@ -150,11 +157,28 @@ export default function DaycareWorkflowPage() {
             </div>
           </div>
 
+          <div className="space-y-4 border-t border-border pt-5">
+            <div className="text-sm font-semibold">Saturday daycare & trials</div>
+            <Field label="Saturday price per dog (ZAR)">
+              <input aria-label="Saturday price per dog" type="number" min={0} step="0.01" disabled={!canManage}
+                value={form.saturday_price_zar} onChange={(e) => setForm((f) => ({ ...f, saturday_price_zar: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm" />
+            </Field>
+            <label className="flex items-center gap-3 text-sm">
+              <input type="checkbox" disabled={!canManage} checked={form.saturday_existing_clients_only}
+                onChange={(e) => setForm((f) => ({ ...f, saturday_existing_clients_only: e.target.checked }))} />
+              Saturday daycare: existing enrolled clients only
+            </label>
+            <label className="flex items-center gap-3 text-sm">
+              <input type="checkbox" disabled={!canManage} checked={form.trials_weekdays_only}
+                onChange={(e) => setForm((f) => ({ ...f, trials_weekdays_only: e.target.checked }))} />
+              Trial and assessment days: Monday to Friday only
+            </label>
+          </div>
           <div className="flex justify-end">
-            <button disabled={!canManage || update.isPending} onClick={save}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral/90 disabled:opacity-50">
+            <Button disabled={!canManage || update.isPending} onClick={save}>
               <Save className="h-4 w-4" /> Save changes
-            </button>
+            </Button>
           </div>
         </div>
       </div>
