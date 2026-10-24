@@ -157,6 +157,24 @@ export default function DaycareWorkflowPage() {
             </div>
           </div>
 
+          <div className="space-y-4 border-t border-border pt-5">
+            <div className="text-sm font-semibold">Saturday daycare & trials</div>
+            <Field label="Saturday price per dog (ZAR)">
+              <input aria-label="Saturday price per dog" type="number" min={0} step="0.01" disabled={!canManage}
+                value={form.saturday_price_zar} onChange={(e) => setForm((f) => ({ ...f, saturday_price_zar: Number(e.target.value) }))}
+                className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm" />
+            </Field>
+            <label className="flex items-center gap-3 text-sm">
+              <input type="checkbox" disabled={!canManage} checked={form.saturday_existing_clients_only}
+                onChange={(e) => setForm((f) => ({ ...f, saturday_existing_clients_only: e.target.checked }))} />
+              Saturday daycare: existing enrolled clients only
+            </label>
+            <label className="flex items-center gap-3 text-sm">
+              <input type="checkbox" disabled={!canManage} checked={form.trials_weekdays_only}
+                onChange={(e) => setForm((f) => ({ ...f, trials_weekdays_only: e.target.checked }))} />
+              Trial and assessment days: Monday to Friday only
+            </label>
+          </div>
           <div className="flex justify-end">
             <Button disabled={!canManage || update.isPending} onClick={save}>
               <Save className="h-4 w-4" /> Save changes

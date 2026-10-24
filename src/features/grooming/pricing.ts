@@ -1,4 +1,5 @@
 import type { GroomingAddon, GroomingPackage } from "@/features/settings/groomingRateCardQueries";
+import { groomingAddonPrice } from "./priceListRules";
 
 export interface GroomingPricingInput {
   pkg: GroomingPackage | null;
@@ -47,7 +48,7 @@ function isPensionerEligibleDay(d: Date) {
 export function computeGroomingPrice(input: GroomingPricingInput): GroomingPriceBreakdown {
   const notes: string[] = [];
   const base = input.pkg?.price_zar ?? 0;
-  const addons = input.addons.reduce((sum, a) => sum + a.addon.price_zar * (a.qty || 1), 0);
+  const addons = input.addons.reduce((sum, a) => sum + groomingAddonPrice(a.addon.code, a.addon.price_zar, input.pkg?.package_type) * (a.qty || 1), 0);
   const overtimeBlocks = Math.max(0, Math.ceil((input.overtimeMinutes ?? 0) / 15));
   const overtime = overtimeBlocks * OVERTIME_RATE_ZAR_PER_15;
   const matted = Number(input.mattedSurchargeZar ?? 0);
