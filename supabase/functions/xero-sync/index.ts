@@ -169,7 +169,7 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
   const ctx = { tenantId: s.xero_tenant_id! };
   const { data: inv, error } = await admin
     .from("invoices")
-    .select("id, tenant_id, invoice_number, status, issue_date, due_date, notes, customer_id, xero_invoice_id, invoice_items(id, description, quantity, unit_price, line_total, xero_account_code, item_code, vat_rate, sort_order, booking_id, product:products(external_code, xero_account_code))")
+    .select("id, tenant_id, invoice_number, status, issue_date, due_date, notes, customer_id, xero_invoice_id, invoice_items(id, description, quantity, unit_price, discount_pct, line_total, xero_account_code, item_code, vat_rate, sort_order, booking_id, product:products(external_code, xero_account_code))")
     .eq("id", invoiceId).single();
   if (error || !inv) throw new Error(error?.message ?? "Invoice not found");
   if (!PUSHABLE_INVOICE_STATUSES.includes(String(inv.status))) {
@@ -218,6 +218,7 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
         Description: l.description || "Service",
         Quantity: Number(l.quantity ?? 1),
         UnitAmount: Number(l.unit_price ?? 0),
+        DiscountRate: Number(l.discount_pct ?? 0),
         ItemCode: itemCode,
         AccountCode: l.xero_account_code
           || l.product?.xero_account_code
