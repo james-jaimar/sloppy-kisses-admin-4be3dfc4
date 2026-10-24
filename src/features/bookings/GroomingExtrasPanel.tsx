@@ -6,6 +6,7 @@ import type { GroomingSizeBand } from "@/features/settings/groomingRateCardQueri
 import { useGroomingPackages, useGroomingAddons, type GroomingAddon, type GroomingPackage } from "@/features/settings/groomingRateCardQueries";
 import { useGroomingWorkflowSettings, useBookingGroomingAddons } from "@/features/grooming/workflowQueries";
 import { useInstructionCatalog } from "@/features/grooming/instructions/queries";
+import { FULL_GROOM_INCLUDED_CODES, groomingAddonPrice, pensionerEligible } from "@/features/grooming/priceListRules";
 
 export interface GroomingAddonSelection {
   addon_id: string;
@@ -79,7 +80,7 @@ export function GroomingExtrasPanel({
   // teeth cleaning (gel), nail trimming, ear cleaning, anal gland express.
   // Hide these from Extras when the customer picks a Full package so we don't
   // double-charge. They stay available for Express or "no package" bookings.
-  const BUNDLED_IN_FULL = new Set(["teeth_gel", "nails_trim", "ear_clean", "anal_gland"]);
+  const BUNDLED_IN_FULL = FULL_GROOM_INCLUDED_CODES;
 
   const speciesPackagesAll = (packagesQ.data ?? []).filter((p: GroomingPackage) => p.species === species);
   const petBand: GroomingSizeBand | null = petSizeToBand(petSize);
@@ -125,23 +126,25 @@ export function GroomingExtrasPanel({
     queryKey: ["grooming_discount_eligibility", petId, visitIso],
     enabled: Boolean(petId),
     queryFn: async () => {
-      const [petRes, enrRes] = await Promise.all([
+      const [petRes, enrRes, freeRes] = await Promise.all([
         supabase.from("pets").select("date_of_birth").eq("id", petId as string).maybeSingle(),
         supabase.from("daycare_enrolments")
           .select("id, start_date, end_date, paused_from, paused_to")
           .eq("pet_id", petId as string).eq("active", true)
           .lte("start_date", visitIso),
+        supabase.rpc("preview_daycare_free_groom", { p_tenant: tenantId, p_pet: petId as string, p_day: visitIso, p_exclude_booking: bookingId }),
       ]);
       const enrolled = ((enrRes.data ?? []) as any[]).some((e) =>
         (!e.end_date || e.end_date >= visitIso) &&
         !(e.paused_from && visitIso >= e.paused_from && visitIso <= (e.paused_to ?? visitIso)));
-      return { dob: (petRes.data as any)?.date_of_birth as string | null, enrolled };
+      return { dob: (petRes.data as any)?.date_of_birth as string | null, enrolled, free: freeRes.data === true };
     },
   });
   // Mirrors the invoicing rule: the single best discount applies (no stacking).
   const discount = useMemo(() => {
     const opts: { label: string; pct: number }[] = [];
-    if (pensionerDiscount && pensionerPct > 0) opts.push({ label: "Pensioner discount", pct: pensionerPct });
+    if (pensionerDiscount && pensionerPct > 0 && pensionerEligible(visitDay, wfQ.data?.pensioner_discount_days)) opts.push({ label: "Pensioner discount", pct: pensionerPct });
+    if (mode === "inhouse" && activePkg && eligQ.data?.free) opts.push({ label: "Monthly daycare free groom", pct: 100 });
     const puppyPct = Number((wfQ.data as any)?.puppy_discount_pct ?? 50);
     const cutoff = Number(wfQ.data?.puppy_half_price_max_months ?? 6);
     const dob = eligQ.data?.dob;
@@ -154,7 +157,7 @@ export function GroomingExtrasPanel({
     if (eligQ.data?.enrolled && dcPct > 0) opts.push({ label: "Daycare member discount", pct: dcPct });
     return opts.sort((a, b) => b.pct - a.pct)[0] ?? null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pensionerDiscount, pensionerPct, wfQ.data, eligQ.data, visitIso]);
+  }, [pensionerDiscount, pensionerPct, wfQ.data, eligQ.data, visitIso, mode, activePkg]);
   const discountPct = discount?.pct ?? 0;
   // Mobile grooming always carries the travel fee: fall back to the tenant default
   // when the booking hasn't got an explicit amount yet (the DB enforces the same rule).
@@ -167,7 +170,8 @@ export function GroomingExtrasPanel({
       .map((s) => {
         const a = (addonsQ.data ?? []).find((x: GroomingAddon) => x.id === s.addon_id);
         if (!a) return null;
-        return { name: a.name, qty: s.qty, unit: Number(a.price_zar), total: Number(a.price_zar) * s.qty };
+        const unit = groomingAddonPrice(a.code, Number(a.price_zar), activePkg?.package_type);
+        return { name: a.name, qty: s.qty, unit, total: unit * s.qty };
       })
       .filter(Boolean) as { name: string; qty: number; unit: number; total: number }[];
     const addonTotal = addonRows.reduce((s, r) => s + r.total, 0);

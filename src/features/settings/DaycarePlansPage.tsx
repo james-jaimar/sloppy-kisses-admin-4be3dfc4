@@ -192,6 +192,12 @@ function DraftRow({ draft, setDraft, onCancel, onSave, pending }: {
       <td className="px-5 py-3">
         <input type="checkbox" checked={draft.active ?? true} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />
       </td>
+      <td className="px-5 py-3">
+        <input aria-label="Free grooms per month" type="number" min={0} max={31} step={1}
+          value={draft.free_grooms_per_month ?? 0}
+          onChange={(e) => setDraft({ ...draft, free_grooms_per_month: Number(e.target.value) })}
+          className="h-9 w-20 rounded border border-border bg-background px-2 text-sm" />
+      </td>
       <td className="px-5 py-3 text-right">
         <div className="inline-flex gap-2">
           <button onClick={onSave} disabled={pending}
