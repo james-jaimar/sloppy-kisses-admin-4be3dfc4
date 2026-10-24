@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useInstructionCatalog, type Selections } from "./queries";
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { BoutiqueStylePicker, CutReferencePhoto } from "./BoutiqueStylePicker";
+import { FULL_GROOM_INCLUDED_CODES } from "@/features/grooming/priceListRules";
 
 export interface GroomingInstructionsValue {
   selections: Selections;
@@ -22,9 +23,10 @@ interface Props {
   compact?: boolean;
   /** Defining a boutique style: hide style buttons + reference photo. */
   presetMode?: boolean;
+  packageType?: string | null;
 }
 
-export function GroomingInstructionsForm({ tenantId, value, onChange, disabled, compact, presetMode }: Props) {
+export function GroomingInstructionsForm({ tenantId, value, onChange, disabled, compact, presetMode, packageType }: Props) {
   const catalog = useInstructionCatalog(tenantId);
   const addonsQ = useGroomingAddons(tenantId ?? undefined, { activeOnly: true });
   const [local, setLocal] = useState<GroomingInstructionsValue>(value);
@@ -43,11 +45,13 @@ export function GroomingInstructionsForm({ tenantId, value, onChange, disabled, 
 
   if (catalog.isLoading) return <div className="text-sm text-muted-foreground">Loading instructions…</div>;
   if (catalog.isError) return <div className="text-sm text-destructive">Failed to load instructions.</div>;
-  const { groups, byGroup } = catalog.data!;
+  if (!catalog.data) return null;
+  const { groups, byGroup } = catalog.data;
   const addonPrice = new Map<string, number>();
   for (const a of addonsQ.data ?? []) addonPrice.set(a.code, Number(a.price_zar));
   const priceHint = (code: string | null | undefined) => {
     if (!code) return "";
+    if (packageType === "full" && FULL_GROOM_INCLUDED_CODES.has(code)) return " · Included";
     const p = addonPrice.get(code);
     return p ? ` +R${Math.round(p)}` : "";
   };

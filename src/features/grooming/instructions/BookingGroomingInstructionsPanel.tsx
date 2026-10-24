@@ -18,12 +18,14 @@ export function BookingGroomingInstructionsPanel({
   primaryPetId,
   value,
   onChange,
+  packageType,
 }: {
   tenantId: string;
   bookingId: string | null;
   primaryPetId: string | null;
   value: GroomingInstructionsValue;
   onChange: (v: GroomingInstructionsValue) => void;
+  packageType?: string | null;
 }) {
   const existingQ = useBookingInstructions(bookingId);
   const defaultsQ = usePetGroomingDefaults(bookingId ? null : primaryPetId);
@@ -79,7 +81,7 @@ export function BookingGroomingInstructionsPanel({
           )}
         </div>
       </div>
-      <GroomingInstructionsForm tenantId={tenantId} value={value} onChange={onChange} />
+      <GroomingInstructionsForm tenantId={tenantId} value={value} onChange={onChange} packageType={packageType} />
       <label className="mt-3 block">
         <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Told office to call

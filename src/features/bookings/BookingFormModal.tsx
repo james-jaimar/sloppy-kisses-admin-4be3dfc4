@@ -1569,6 +1569,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                         bookingId={isEdit ? booking?.id ?? null : null}
                         primaryPetId={key === EDIT_KEY ? petIds[0] ?? null : key}
                         value={plan.instructions}
+                        packageType={packagesQ.data?.find(p => p.id === plan.packageId)?.package_type}
                         onChange={(v) => updatePlan(key, { instructions: v })}
                       />
                     </div>

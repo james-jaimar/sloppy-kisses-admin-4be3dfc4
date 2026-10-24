@@ -10,10 +10,11 @@ import { supabase } from "@/lib/supabase/client";
 import { AccountBar, DoneHandoff } from "./AccountHandoff";
 import { usePublicTenant } from "./publicBookingQueries";
 import { PET_SIZE_LABEL, petSizeToBand, type PetSize } from "@/features/pets/sizeUtils";
+import { groomingAddonPrice } from "@/features/grooming/priceListRules";
 
 type Kind = "inhouse" | "mobile";
 
-interface PubPackage { code: string; name: string; species: string; size_band: string | null; price_zar: number; expected_minutes: number }
+interface PubPackage { code: string; name: string; species: string; size_band: string | null; package_type: string; price_zar: number; expected_minutes: number }
 interface PubAddon { code: string; name: string; price_zar: number; kind: string; duration_minutes: number; bookable_standalone: boolean }
 
 const inputCls = "h-10 w-full rounded-xl border border-border bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-sk-coral/40";
@@ -63,7 +64,7 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
     const pkg = catalog.data?.packages.find((x) => x.code === p.pkg) ?? null;
     const extras = p.addons.map((c) => catalog.data?.addons.find((a) => a.code === c)).filter(Boolean) as PubAddon[];
     const mins = Number(pkg?.expected_minutes ?? 0) + extras.reduce((s, a) => s + Number(a.duration_minutes ?? 0), 0);
-    const price = Number(pkg?.price_zar ?? 0) + extras.reduce((s, a) => s + Number(a.price_zar), 0);
+    const price = Number(pkg?.price_zar ?? 0) + extras.reduce((s, a) => s + groomingAddonPrice(a.code, Number(a.price_zar), pkg?.package_type), 0);
     return { pkg, extras, mins, price, ok: Boolean(pkg || extras.length) };
   }), [pets, catalog.data]);
   const longest = Math.max(30, ...lines.map((l) => l.mins));
@@ -216,7 +217,7 @@ export default function PublicGroomingPage({ kind }: { kind: Kind }) {
                       <button key={a.code} type="button"
                         onClick={() => setPet(i, { addons: on ? p.addons.filter((c) => c !== a.code) : [...p.addons, a.code] })}
                         className={"rounded-full border px-3 py-1 text-xs " + (on ? "border-sk-coral bg-sk-coral-soft font-semibold" : "border-border hover:bg-muted")}>
-                        {a.name} · {fmtZar(Number(a.price_zar))}
+                        {a.name} · {groomingAddonPrice(a.code, Number(a.price_zar), lines[i].pkg?.package_type) === 0 ? "Included" : fmtZar(Number(a.price_zar))}
                       </button>
                     );
                   })}
