@@ -1,10 +1,12 @@
 # Public booking refresh
 # October price-list updates
-- [ ] Add missing grooming treatments using existing editable Settings catalogs; retain Full/Express inclusions.
-- [ ] Add Saturday daycare pricing and eligibility; enforce no weekend trials.
-- [ ] Implement five-day daycare monthly free-groom allowance.
+- [x] Add missing grooming treatments using existing editable Settings catalogs; retain Full/Express inclusions.
+- [x] Add Saturday daycare pricing and eligibility; enforce no weekend trials.
+- [x] Implement five-day daycare monthly free-groom allowance.
 - Birthday parties and party packs deferred by the owner; excluded from this update.
-- [ ] Verify rules and current settings; Xero catalog updates depend on an authorised connection.
+- [x] Verify pricing tests, public Full-groom estimate and rolled-back database assertions for weekday trials and monthly free-groom limits.
+- [ ] Push new item codes to live Xero — blocked by an authorised connection.
+- [ ] Verify signed-in staff/portal price-list booking end-to-end — blocked by external/unmanaged Supabase session access.
 
 - [x] Find and inspect genuine Sloppy Kisses imagery.
 - [x] Refresh /book and /book/hotel with photo-led presentation, accommodation choices and a clear price summary.
