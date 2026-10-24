@@ -1,0 +1,33 @@
+alter table public.daycare_workflow_settings add column saturday_price_zar numeric not null default 350, add column saturday_existing_clients_only boolean not null default true, add column trials_weekdays_only boolean not null default true;
+create function public.validate_daycare_price_list() returns trigger language plpgsql security definer set search_path=public as $$ declare tenant uuid; customer uuid; day date; service text; w public.daycare_workflow_settings; begin
+if tg_table_name='daycare_workflow_settings' then if new.saturday_price_zar<0 then raise exception 'Saturday price cannot be negative.'; end if; return new; end if;
+if tg_table_name='booking_pets' then select b.tenant_id,b.customer_id,(b.start_at at time zone 'Africa/Johannesburg')::date,b.service_type::text into tenant,customer,day,service from public.bookings b where b.id=new.booking_id; if exists(select 1 from public.bookings b where b.id=new.booking_id and b.status in ('cancelled','no_show')) then return new; end if;
+elsif tg_table_name='daycare_attendance' then tenant:=new.tenant_id; customer:=new.customer_id; day:=new.attendance_date; service:='daycare'; if new.status in ('cancelled','not_arrived') then return new; end if;
+else tenant:=new.tenant_id; customer:=new.customer_id; service:=new.service_type::text; day:=coalesce(new.start_date,(new.start_at at time zone 'Africa/Johannesburg')::date); if tg_table_name='bookings' and new.status in ('cancelled','no_show') then return new; end if; end if;
+if service not in ('daycare','daycare_assessment') or day is null then return new; end if;
+select * into w from public.daycare_workflow_settings where tenant_id=tenant;
+if service='daycare_assessment' and coalesce(w.trials_weekdays_only,true) and extract(dow from day) in (0,6) then raise exception 'Trial and assessment days are available Monday to Friday only.'; end if;
+if service='daycare' and extract(dow from day)=6 and coalesce(w.saturday_existing_clients_only,true) and not exists(select 1 from public.daycare_enrolments e where e.tenant_id=tenant and e.customer_id=customer and e.active and e.start_date<=day and (e.end_date is null or e.end_date>=day)) then raise exception 'Saturday daycare is for existing daycare clients only.'; end if;
+return new; end $$;
+revoke all on function public.validate_daycare_price_list() from public,anon,authenticated;
+create trigger validate_daycare_price_list before insert or update on public.daycare_workflow_settings for each row execute function public.validate_daycare_price_list();
+create trigger validate_daycare_price_list before insert or update on public.bookings for each row execute function public.validate_daycare_price_list();
+create trigger validate_daycare_price_list before insert or update on public.booking_pets for each row execute function public.validate_daycare_price_list();
+create trigger validate_daycare_price_list before insert or update on public.daycare_attendance for each row execute function public.validate_daycare_price_list();
+create trigger validate_daycare_price_list before insert or update on public.booking_requests for each row execute function public.validate_daycare_price_list();
+create function public.charge_saturday_daycare() returns trigger language plpgsql security definer set search_path=public as $$ declare b public.bookings; tenant uuid; customer uuid; pet uuid; day date; inv uuid; price numeric; code text; begin
+if tg_table_name='booking_pets' then select * into b from public.bookings where id=new.booking_id; if b.service_type<>'daycare' or b.status in ('cancelled','no_show') then return new; end if; tenant:=b.tenant_id;customer:=b.customer_id;pet:=new.pet_id;day:=coalesce(b.start_date,(b.start_at at time zone 'Africa/Johannesburg')::date);
+else tenant:=new.tenant_id; customer:=new.customer_id; pet:=new.pet_id;day:=new.attendance_date; if new.status in ('cancelled','not_arrived') then return new; end if; end if;
+if extract(dow from day)<>6 then return new; end if;
+if not coalesce(public._auto_invoice_enabled(tenant,'daycare'),true) then return new; end if;
+perform pg_advisory_xact_lock(hashtextextended(tenant::text||pet::text||day::text,0));
+code:='SATURDAY_DAYCARE:'||pet::text||':'||day::text;
+if exists(select 1 from public.invoice_items i join public.invoices v on v.id=i.invoice_id where i.tenant_id=tenant and i.item_code=code and v.status<>'cancelled') then return new; end if;
+select coalesce(saturday_price_zar,350) into price from public.daycare_workflow_settings where tenant_id=tenant; price:=coalesce(price,350);
+if b.id is not null then inv:=public.ensure_booking_invoice(b.id); else inv:=public.ensure_draft_invoice(tenant,customer); end if;
+if inv is null then return new; end if;
+insert into public.invoice_items(tenant_id,invoice_id,booking_id,description,quantity,unit_price,item_code,sort_order) values(tenant,inv,b.id,'Saturday daycare — '||coalesce((select name from public.pets where id=pet),'Pet')||' · '||to_char(day,'DD Mon YYYY'),1,price,code,coalesce((select max(sort_order)+1 from public.invoice_items where invoice_id=inv),1));
+return new; end $$;
+revoke all on function public.charge_saturday_daycare() from public,anon,authenticated;
+create trigger charge_saturday_daycare after insert on public.booking_pets for each row execute function public.charge_saturday_daycare();
+create trigger charge_saturday_daycare after insert on public.daycare_attendance for each row execute function public.charge_saturday_daycare();

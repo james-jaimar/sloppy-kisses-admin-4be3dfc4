@@ -2567,9 +2567,12 @@ export type Database = {
           late_arrival_cutoff: string
           photo_gate_mode: string
           require_assessment: boolean
+          saturday_existing_clients_only: boolean
+          saturday_price_zar: number
           stay_play_default_collect_time: string
           stay_play_grace_minutes: number
           tenant_id: string
+          trials_weekdays_only: boolean
           updated_at: string
         }
         Insert: {
@@ -2583,9 +2586,12 @@ export type Database = {
           late_arrival_cutoff?: string
           photo_gate_mode?: string
           require_assessment?: boolean
+          saturday_existing_clients_only?: boolean
+          saturday_price_zar?: number
           stay_play_default_collect_time?: string
           stay_play_grace_minutes?: number
           tenant_id: string
+          trials_weekdays_only?: boolean
           updated_at?: string
         }
         Update: {
@@ -2599,9 +2605,12 @@ export type Database = {
           late_arrival_cutoff?: string
           photo_gate_mode?: string
           require_assessment?: boolean
+          saturday_existing_clients_only?: boolean
+          saturday_price_zar?: number
           stay_play_default_collect_time?: string
           stay_play_grace_minutes?: number
           tenant_id?: string
+          trials_weekdays_only?: boolean
           updated_at?: string
         }
         Relationships: [
