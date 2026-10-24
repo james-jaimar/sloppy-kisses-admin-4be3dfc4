@@ -1,0 +1,15 @@
+create or replace function public.validate_daycare_price_list() returns trigger language plpgsql security definer set search_path=public as $$ declare tenant uuid; customer uuid; day date; service text; w public.daycare_workflow_settings; begin
+if tg_table_name='daycare_workflow_settings' then if new.saturday_price_zar<0 then raise exception 'Saturday price cannot be negative.'; end if; return new; end if;
+if tg_table_name='booking_pets' then select b.tenant_id,b.customer_id,coalesce(b.start_date,(b.start_at at time zone 'Africa/Johannesburg')::date),b.service_type::text into tenant,customer,day,service from public.bookings b where b.id=new.booking_id; if exists(select 1 from public.bookings b where b.id=new.booking_id and b.status in ('cancelled','no_show')) then return new; end if;
+elsif tg_table_name='daycare_attendance' then tenant:=new.tenant_id; customer:=new.customer_id; day:=new.attendance_date; service:='daycare'; if new.status in ('cancelled','not_arrived') then return new; end if;
+elsif tg_table_name='booking_requests' then tenant:=new.tenant_id; customer:=new.customer_id; service:=new.service_type::text; day:=(new.preferred_start_at at time zone 'Africa/Johannesburg')::date; if new.status='declined' then return new; end if;
+else tenant:=new.tenant_id; customer:=new.customer_id; service:=new.service_type::text; day:=coalesce(new.start_date,(new.start_at at time zone 'Africa/Johannesburg')::date); if new.status in ('cancelled','no_show') then return new; end if; end if;
+if service not in ('daycare','daycare_assessment') or day is null then return new; end if;
+select * into w from public.daycare_workflow_settings where tenant_id=tenant;
+if service='daycare_assessment' and coalesce(w.trials_weekdays_only,true) and extract(dow from day) in (0,6) then raise exception 'Trial and assessment days are available Monday to Friday only.'; end if;
+if service='daycare' and extract(dow from day)=6 and coalesce(w.saturday_existing_clients_only,true) and not exists(select 1 from public.daycare_enrolments e where e.tenant_id=tenant and e.customer_id=customer and e.active and e.start_date<=day and (e.end_date is null or e.end_date>=day)) then raise exception 'Saturday daycare is for existing daycare clients only.'; end if;
+return new; end $$;
+create function public.keep_full_groom_inclusions() returns trigger language plpgsql security definer set search_path=public as $$ begin
+if new.item_code like 'GROOM_ADDON:%' and not public._invoice_locked(new.invoice_id) and substring(new.item_code from 13) in ('teeth_gel','nails_trim','nail_trim','ear_clean','anal_gland','hygiene_cut','hand_strip','shampoo_hypo','shampoo_tick_flea','shampoo_deshed','shampoo_whitening') and exists(select 1 from public.grooming_booking_details d join public.grooming_packages p on p.id=d.package_id where d.booking_id=new.booking_id and p.package_type='full') then new.unit_price:=0; end if; return new; end $$;
+revoke all on function public.keep_full_groom_inclusions() from public,anon,authenticated;
+create trigger keep_full_groom_inclusions before update on public.invoice_items for each row execute function public.keep_full_groom_inclusions();

@@ -31,6 +31,7 @@ export interface DaycarePlan {
   billing_period: string;
   sort_order: number;
   active: boolean;
+  free_grooms_per_month: number;
 }
 
 export function useDaycarePlans(tenantId: string | null | undefined, opts?: { activeOnly?: boolean }) {
@@ -41,7 +42,7 @@ export function useDaycarePlans(tenantId: string | null | undefined, opts?: { ac
     queryFn: async (): Promise<DaycarePlan[]> => {
       let q = supabase
         .from("daycare_plans")
-        .select("id, tenant_id, name, days_per_week, price, billing_period, sort_order, active")
+        .select("id, tenant_id, name, days_per_week, price, billing_period, sort_order, active, free_grooms_per_month")
         .eq("tenant_id", tenantId as string)
         .order("sort_order", { ascending: true })
         .order("name", { ascending: true });
@@ -57,14 +58,16 @@ export function useCreateDaycarePlan(tenantId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<DaycarePlan>) => {
+      if (!input.name) throw new Error("Plan name is required");
       const { error } = await supabase.from("daycare_plans").insert({
         tenant_id: tenantId,
-        name: input.name!,
+        name: input.name,
         days_per_week: input.days_per_week ?? null,
         price: input.price ?? null,
         billing_period: input.billing_period ?? "month",
         sort_order: input.sort_order ?? 100,
         active: input.active ?? true,
+        free_grooms_per_month: input.free_grooms_per_month ?? 0,
       } as any);
       if (error) throw error;
     },
@@ -364,6 +367,9 @@ export interface DaycareWorkflowSettings {
   daily_capacity: number | null;
   stay_play_default_collect_time: string;
   stay_play_grace_minutes: number;
+  saturday_price_zar: number;
+  saturday_existing_clients_only: boolean;
+  trials_weekdays_only: boolean;
 }
 
 export function useDaycareWorkflowSettings(tenantId: string | null | undefined) {
