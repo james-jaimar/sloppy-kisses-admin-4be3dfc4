@@ -10064,6 +10064,15 @@ export type Database = {
         Returns: undefined
       }
       portal_service_gates: { Args: { p_tenant_id: string }; Returns: Json }
+      preview_daycare_free_groom: {
+        Args: {
+          p_day: string
+          p_exclude_booking?: string
+          p_pet: string
+          p_tenant: string
+        }
+        Returns: boolean
+      }
       preview_monthly_daycare_breakdown: {
         Args: { p_period_start: string; p_tenant_id: string }
         Returns: {
