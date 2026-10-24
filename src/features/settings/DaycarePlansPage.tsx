@@ -52,6 +52,7 @@ export default function DaycarePlansPage() {
           billing_period: draft.billing_period ?? "month",
           sort_order: Number(draft.sort_order ?? 100),
           active: draft.active ?? true,
+          free_grooms_per_month: Number(draft.free_grooms_per_month ?? 0),
         },
       });
       toast.success("Plan updated");
@@ -107,6 +108,7 @@ export default function DaycarePlansPage() {
                   <th className="px-5 py-3">Billing</th>
                   <th className="px-5 py-3">Sort</th>
                   <th className="px-5 py-3">Active</th>
+                  <th className="px-5 py-3">Free grooms / month</th>
                   <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -117,7 +119,7 @@ export default function DaycarePlansPage() {
                     onSave={saveNew} pending={create.isPending} />
                 )}
                 {rows.length === 0 && !creating && (
-                  <tr><td colSpan={7} className="px-5 py-10 text-center text-muted-foreground">No plans yet.</td></tr>
+                  <tr><td colSpan={8} className="px-5 py-10 text-center text-muted-foreground">No plans yet.</td></tr>
                 )}
                 {rows.map((r) => editingId === r.id ? (
                   <DraftRow key={r.id} draft={draft} setDraft={setDraft}
@@ -130,6 +132,7 @@ export default function DaycarePlansPage() {
                     <td className="px-5 py-3">{r.billing_period}</td>
                     <td className="px-5 py-3 tabular-nums">{r.sort_order}</td>
                     <td className="px-5 py-3">{r.active ? "Yes" : "No"}</td>
+                    <td className="px-5 py-3">{r.free_grooms_per_month}</td>
                     <td className="px-5 py-3 text-right">
                       {canManage && (
                         <div className="inline-flex gap-2">
