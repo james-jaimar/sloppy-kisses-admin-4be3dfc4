@@ -8,6 +8,7 @@ import { GroomingInstructionsForm, type GroomingInstructionsValue } from "@/feat
 import { usePetGroomingDefaults, useInstructionCatalog } from "@/features/grooming/instructions/queries";
 import { useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { useGroomingWorkflowSettings } from "@/features/grooming/workflowQueries";
+import { groomingAddonPrice } from "@/features/grooming/priceListRules";
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
 import { useGroomingDayAvailability } from "@/features/grooming/availabilityQueries";
 import { layoutGroomingAppointments, type PetSlotRequest } from "@/features/grooming/multiPetSchedule";
@@ -111,9 +112,13 @@ export default function GroomingRequestWizard({ mode }: Props) {
       const codes = Array.isArray(val) ? (val as string[]) : typeof val === "string" ? [val] : [];
       for (const code of codes) {
         const opt = options.find((o) => o.group_id === g.id && o.code === code);
+        if (!opt) continue;
         const unit = opt?.addon_code ? priceByCode.get(opt.addon_code) ?? 0 : 0;
-        const price = unit * dogCount;
-        if (price > 0) extras.push({ label: dogCount > 1 ? `${opt!.label} × ${dogCount} dogs` : opt!.label, price });
+        const price = (petIds.length ? petIds : [""]).reduce((sum, id) => {
+          const pkg = (packages.data ?? []).find((p: any) => p.id === packageForPet(id));
+          return sum + groomingAddonPrice(opt.addon_code ?? "", unit, pkg?.package_type);
+        }, 0);
+        if (price > 0) extras.push({ label: dogCount > 1 ? `${opt.label} × ${dogCount} dogs` : opt.label, price });
       }
     }
     const extrasTotal = extras.reduce((s, e) => s + e.price, 0);
