@@ -2511,6 +2511,7 @@ export type Database = {
           billing_period: string
           created_at: string
           days_per_week: number | null
+          free_grooms_per_month: number
           id: string
           name: string
           price: number | null
@@ -2523,6 +2524,7 @@ export type Database = {
           billing_period?: string
           created_at?: string
           days_per_week?: number | null
+          free_grooms_per_month?: number
           id?: string
           name: string
           price?: number | null
@@ -2535,6 +2537,7 @@ export type Database = {
           billing_period?: string
           created_at?: string
           days_per_week?: number | null
+          free_grooms_per_month?: number
           id?: string
           name?: string
           price?: number | null
@@ -9628,6 +9631,15 @@ export type Database = {
       daycare_expire_catchup_credits: {
         Args: { p_tenant_id?: string }
         Returns: number
+      }
+      daycare_free_groom_available: {
+        Args: {
+          p_day: string
+          p_exclude_booking?: string
+          p_pet: string
+          p_tenant: string
+        }
+        Returns: boolean
       }
       daycare_grant_closure_credits: {
         Args: { p_end: string; p_start: string; p_tenant_id: string }
