@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { Button } from "@/components/ui/button";
 import {
   useBillingItemCodes, useSaveBillingItemCode, useDeleteBillingItemCode, useXeroPushItemCodes,
 } from "@/features/xero/queries";
@@ -37,7 +38,7 @@ export default function BillingItemCodesPage() {
   const del = useDeleteBillingItemCode(tenantId);
   const pushItems = useXeroPushItemCodes(tenantId);
 
-  const [newRow, setNewRow] = useState({ ref_key: "", label: "", code: "" });
+  const [newRow, setNewRow] = useState({ kind: "custom", ref_key: "", label: "", code: "" });
 
   const rows = listQ.data ?? [];
   const byRef = useMemo(() => new Map(rows.map((r) => [`${r.kind}:${r.ref_key}`, r])), [rows]);
@@ -60,8 +61,8 @@ export default function BillingItemCodesPage() {
 
   async function addExtra() {
     if (!newRow.ref_key.trim() || !newRow.code.trim()) { toast.error("Give the item a key and a code."); return; }
-    await setCode("custom", newRow.ref_key.trim(), newRow.label.trim() || newRow.ref_key.trim(), newRow.code);
-    setNewRow({ ref_key: "", label: "", code: "" });
+    await setCode(newRow.kind, newRow.ref_key.trim(), newRow.label.trim() || newRow.ref_key.trim(), newRow.code);
+    setNewRow({ kind: "custom", ref_key: "", label: "", code: "" });
   }
 
   return (
@@ -150,7 +151,15 @@ export default function BillingItemCodesPage() {
             {!extras.length && <p className="text-sm text-muted-foreground">No extra codes yet.</p>}
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_10rem_auto] sm:items-end">
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_10rem_auto] sm:items-end">
+            <div>
+              <div className={label}>Type</div>
+              <select className={input} value={newRow.kind} disabled={!canManage}
+                onChange={(e) => setNewRow({ ...newRow, kind: e.target.value })}>
+                <option value="custom">Other charge</option>
+                <option value="addon">Grooming add-on</option>
+              </select>
+            </div>
             <div>
               <div className={label}>Key</div>
               <input className={input} value={newRow.ref_key} disabled={!canManage}
@@ -166,10 +175,9 @@ export default function BillingItemCodesPage() {
               <input className={input} value={newRow.code} disabled={!canManage}
                 placeholder="FEE-LATE" onChange={(e) => setNewRow({ ...newRow, code: e.target.value })} />
             </div>
-            <button onClick={addExtra} disabled={!canManage}
-              className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-semibold disabled:opacity-50">
+            <Button onClick={addExtra} disabled={!canManage} variant="outline">
               <Plus className="h-4 w-4" /> Add
-            </button>
+            </Button>
           </div>
         </div>
       </div>
