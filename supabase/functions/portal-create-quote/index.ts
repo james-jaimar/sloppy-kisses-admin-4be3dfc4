@@ -173,6 +173,14 @@ Deno.serve(async (req) => {
   const holdExpires = new Date(now.getTime() + holdHours * 3600_000);
   const firstAcc = body.pet_accommodations[body.pet_ids[0]];
 
+  // Saving an estimate also creates the unpaid stay so staff can collect information.
+  const requestResponse = await fetch(`${SUPABASE_URL}/functions/v1/portal-create-booking`, {
+    method: "POST", headers: { "Content-Type": "application/json", Authorization: authHeader, apikey: ANON_KEY },
+    body: JSON.stringify({ service_type: body.service_type, pet_ids: body.pet_ids, start_at: body.start_at, end_at: body.end_at, notes: body.notes, hotel: { accommodation_type: body.pet_accommodations[body.pet_ids[0]], pet_accommodations: body.pet_accommodations, check_in_window: body.check_in_window, check_out_window: body.check_out_window, extras: body.extras } }),
+  });
+  const stay = await requestResponse.json();
+  if (!requestResponse.ok || !stay.booking_id) return j(400, { ok: false, error: stay.error ?? "Could not save hotel enquiry" });
+
   const { data: est, error: estErr } = await admin
     .from("estimates")
     .insert({
@@ -181,6 +189,7 @@ Deno.serve(async (req) => {
       estimate_number: num,
       status: "sent",
       created_via: "portal",
+      booking_id: stay.booking_id,
       issue_date: now.toISOString().slice(0, 10),
       sent_at: now.toISOString(),
       service_type: body.service_type,
@@ -193,6 +202,7 @@ Deno.serve(async (req) => {
       hold_until: holdExpires.toISOString().slice(0, 10),
       expiry_date: holdExpires.toISOString().slice(0, 10),
       extras: {
+        document_kind: "estimate",
         check_in_window: body.check_in_window ?? null,
         check_out_window: body.check_out_window ?? null,
         pet_accommodations: body.pet_accommodations,
@@ -221,7 +231,9 @@ Deno.serve(async (req) => {
     );
   }
 
-  // Email the quote — best effort, and it must not move the hold we just set.
+  await admin.from("hotel_booking_reviews").upsert({ tenant_id: tenantId, booking_id: stay.booking_id, estimate_id: est.id }, { onConflict: "booking_id" });
+
+  // Email the estimate — staff approval is still required.
   let emailed = false;
   try {
     const r = await fetch(`${SUPABASE_URL}/functions/v1/send-quote-email`, {
@@ -243,6 +255,7 @@ Deno.serve(async (req) => {
 
   return j(200, {
     ok: true,
+    booking_id: stay.booking_id,
     quote_id: est.id,
     estimate_number: est.estimate_number,
     public_token: est.public_token,

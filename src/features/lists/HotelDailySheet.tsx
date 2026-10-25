@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { fmtTime, useHotelSheet, usePetAlerts } from "./queries";
 import { AlertChips, EmptyState, Sheet, TABLE, TD, TH, Tick } from "./sheetUi";
-import { addonLabel, walksPerDay, useHotelBookingAddons } from "@/features/hotelCattery/bookingAddons";
+import { addonLabel, isWalk, walksPerDay, useHotelBookingAddons } from "@/features/hotelCattery/bookingAddons";
 
 /** Hotel & cattery care sheet: every occupied room with AM/PM rounds to tick. */
 export function HotelDailySheet({
@@ -29,7 +29,7 @@ export function HotelDailySheet({
 
   return (
     <Sheet
-      title="Hotel & cattery day sheet"
+      title="Dog & Cat Hotel day sheet"
       subtitle={dayLabel}
       meta={
         <>
@@ -103,6 +103,7 @@ export function HotelDailySheet({
                         <Tick key={i} label={`Walk ${i + 1}`} />
                       ))}
                     </div>
+                    {(addons[s.id] ?? []).some(a => isWalk(a) && a.quantity_basis === "total") && <div className="mt-2 text-xs font-semibold">Total-stay walks: record date and number completed in handover notes.</div>}
                     <div className="mt-1.5 flex flex-wrap gap-2">
                       <Tick label="Fed PM" />
                       <Tick label="Clean" />

@@ -108,10 +108,11 @@ export default function PublicHotelPage() {
   const estimate = useMemo(() => {
     if (pets.some((p) => !p.accommodation)) return null;
     const groups = new Map<string, PetDraft[]>();
-    for (const p of pets) groups.set(p.accommodation, [...(groups.get(p.accommodation) ?? []), p]);
+    for (const p of pets) { const key = `${p.species}|${p.accommodation}`; groups.set(key, [...(groups.get(key) ?? []), p]); }
     const lines: { label: string; amount: number }[] = [];
-    for (const [acc, group] of groups) {
-      const rate = speciesRates.find((r) => r.accommodation_type === acc);
+    for (const [key, group] of groups) {
+      const [petSpecies, acc] = key.split("|");
+      const rate = (rates.data?.rates ?? []).find((r) => r.species === petSpecies && r.accommodation_type === acc);
       if (!rate) return null;
       lines.push({
         label: `${rate.display_name} (${group[0].name || `Pet ${pets.indexOf(group[0]) + 1}`}) · ${fmtZar(Number(rate.nightly_rate_zar))} × ${nights} night${nights === 1 ? "" : "s"}`,

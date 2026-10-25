@@ -316,8 +316,8 @@ export default function HotelRequestWizard() {
       });
       if (error) throw new Error(error.message);
       if ((data as any)?.ok === false) throw new Error((data as any).error ?? "Could not save the quote");
-      toast.success("Quote saved — we're holding these dates for you.");
-      nav(`/customer/quotes/${(data as any).quote_id}`);
+      toast.success("Estimate saved — our team will review your stay.");
+      nav(data?.booking_id ? `/customer/bookings/${data.booking_id}` : `/customer/quotes/${data?.quote_id}`);
     } catch (e: any) {
       toast.error(e?.message ?? "Could not save the quote");
     } finally {

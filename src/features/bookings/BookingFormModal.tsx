@@ -113,7 +113,7 @@ const RESOURCE_LABELS: Record<ServiceType, string> = {
   daycare: "Area",
   daycare_assessment: "Area",
   hotel_dog: "Kennel / suite",
-  hotel_cat: "Cattery unit",
+  hotel_cat: "Cat Hotel unit",
   grooming_inhouse: "Groomer / station",
   grooming_mobile: "Van",
   pickup_dropoff: "Vehicle",
@@ -201,7 +201,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     }
     return seed;
   });
-  const [status, setStatus] = useState<BookingStatus>(booking?.status ?? "confirmed");
+  const [status, setStatus] = useState<BookingStatus>(booking?.status ?? (["hotel_dog", "hotel_cat"].includes(prefill?.service_type ?? "daycare") ? "requested" : "confirmed"));
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [reviewGrooming, setReviewGrooming] = useState(false);
   const [sendGroomingEmails, setSendGroomingEmails] = useState(true);
