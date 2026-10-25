@@ -9979,6 +9979,7 @@ export type Database = {
           vaccine_type: string
         }[]
       }
+      hotel_convert_enquiry: { Args: { p_request_id: string }; Returns: string }
       hotel_day_availability: {
         Args: {
           p_end: string
