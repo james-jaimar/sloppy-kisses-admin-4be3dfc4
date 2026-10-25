@@ -278,6 +278,9 @@ export interface HotelWorkflowSettings {
   daycare_credit_enabled: boolean;
   guidelines_md: string | null;
   guidelines_version: number;
+  payment_cutoff_days: number;
+  advance_deposit_pct: number;
+  approval_checklist: { code: string; label: string }[];
 }
 
 export function useHotelWorkflowSettings(tenantId: string | null | undefined) {

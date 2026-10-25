@@ -53,6 +53,9 @@ export default function HotelWorkflowPage() {
     portal_quotes_enabled: true,
     portal_quote_hold_hours: 48,
     portal_quote_max_active: 3,
+    payment_cutoff_days: 30,
+    advance_deposit_pct: 50,
+    approval_checklist: [] as { code: string; label: string }[],
   });
 
   useEffect(() => {
@@ -84,6 +87,9 @@ export default function HotelWorkflowPage() {
         portal_quotes_enabled: (settingsQ.data as any).portal_quotes_enabled ?? true,
         portal_quote_hold_hours: Number((settingsQ.data as any).portal_quote_hold_hours ?? 48),
         portal_quote_max_active: Number((settingsQ.data as any).portal_quote_max_active ?? 3),
+        payment_cutoff_days: settingsQ.data.payment_cutoff_days ?? 30,
+        advance_deposit_pct: Number(settingsQ.data.advance_deposit_pct ?? 50),
+        approval_checklist: settingsQ.data.approval_checklist ?? [],
       });
     }
   }, [settingsQ.data]);
@@ -116,6 +122,9 @@ export default function HotelWorkflowPage() {
         portal_quotes_enabled: form.portal_quotes_enabled,
         portal_quote_hold_hours: form.portal_quote_hold_hours,
         portal_quote_max_active: form.portal_quote_max_active,
+        payment_cutoff_days: form.payment_cutoff_days,
+        advance_deposit_pct: form.advance_deposit_pct,
+        approval_checklist: form.approval_checklist,
         guidelines_md: form.guidelines_md.trim() || null,
         ...(form.guidelines_md.trim() !== (((settingsQ.data as any)?.guidelines_md ?? "").trim())
           ? { guidelines_version: Number((settingsQ.data as any)?.guidelines_version ?? 0) + 1 }
@@ -327,6 +336,11 @@ export default function HotelWorkflowPage() {
 
           <div className="space-y-4 rounded-xl border border-border p-4">
             <div className="text-sm font-semibold">Money rules</div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Full payment cutoff (days)"><input type="number" min={0} max={365} disabled={!canManage} value={form.payment_cutoff_days} onChange={e => setForm(f => ({ ...f, payment_cutoff_days: Number(e.target.value) }))} className="h-10 w-full rounded-md border border-input bg-background px-3" /></Field>
+              <Field label="Deposit before cutoff (%)"><input type="number" min={1} max={100} disabled={!canManage} value={form.advance_deposit_pct} onChange={e => setForm(f => ({ ...f, advance_deposit_pct: Number(e.target.value) }))} className="h-10 w-full rounded-md border border-input bg-background px-3" /></Field>
+            </div>
+            <Field label="Approval checklist"><textarea disabled={!canManage} rows={5} value={form.approval_checklist.map(c => c.label).join("\n")} onChange={e => setForm(f => ({ ...f, approval_checklist: e.target.value.split("\n").map((label, i) => ({ code: f.approval_checklist[i]?.code ?? `check_${i}`, label })) }))} className="w-full rounded-md border border-input bg-background p-3 text-sm" /></Field>
 
             <label className="flex items-start gap-3">
               <input
@@ -337,10 +351,9 @@ export default function HotelWorkflowPage() {
                 className="mt-1 h-4 w-4 rounded border-border"
               />
               <span className="text-sm">
-                Split hotel invoices into deposit + balance
+                Legacy hotel deposit calculation
                 <span className="block text-[11px] text-muted-foreground">
-                  Uses the deposit % and balance-due days from Settings → Policies. The deposit invoice secures the
-                  booking; the balance invoice is due before arrival.
+                  Applies to existing invoice-first stays only. New stays use approval, a pro forma, then an invoice after verified payment.
                 </span>
               </span>
             </label>
