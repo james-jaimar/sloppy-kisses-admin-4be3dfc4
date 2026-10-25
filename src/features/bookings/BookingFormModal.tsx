@@ -207,7 +207,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     Object.fromEntries((booking?.booking_pets ?? []).filter(bp => bp.pet && bp.resource_id).map(bp => [bp.pet?.id ?? "", bp.resource_id ?? ""])),
   );
   const [roomIssues, setRoomIssues] = useState<Record<string, CapacityIssue | null>>({});
-  const [status, setStatus] = useState<BookingStatus>(booking?.status ?? (["hotel_dog", "hotel_cat"].includes(prefill?.service_type ?? "daycare") ? "requested" : "confirmed"));
+  const [status, setStatus] = useState<BookingStatus>(booking?.status ?? (["hotel_dog", "hotel_cat"].includes(prefill?.service_type ?? "daycare") ? "draft" : "confirmed"));
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [reviewGrooming, setReviewGrooming] = useState(false);
   const [sendGroomingEmails, setSendGroomingEmails] = useState(true);
@@ -1129,7 +1129,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     <ModalShell
       wide
       title={isEdit ? `Edit booking ${booking?.booking_number ?? ""}` : "New booking"}
-      subtitle={isEdit ? "Update booking details" : "Create a confirmed booking on behalf of a customer"}
+      subtitle={isEdit ? "Update booking details" : (["hotel_dog", "hotel_cat"].includes(serviceType) ? "New hotel stays start as a draft and move on automatically as the review progresses" : "Create a confirmed booking on behalf of a customer")}
       onClose={bookingInProgress ? undefined : onClose}
     >
       <form onSubmit={(e) => { e.preventDefault(); void saveBooking(); }} className="space-y-6 p-6">
