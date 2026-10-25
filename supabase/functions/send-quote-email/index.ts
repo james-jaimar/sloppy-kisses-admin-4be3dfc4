@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
   // Daycare places are billed in full for the first month — there is no 50% deposit.
   const paymentPct = Number(extras.payment_percent ?? 50);
   const isProforma = extras.document_kind === "proforma";
+  const isReviewEstimate = extras.document_kind === "estimate" && Boolean(q.booking_id);
   const deposit = isDaycare ? total : Math.round(total * paymentPct) / 100;
   const daycarePlan = extras?.daycare_plan_name ?? null;
   const daycareDays: string[] = Array.isArray(extras?.weekdays) ? extras.weekdays : [];
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
   };
 
   const useTpl = tpl && tpl.is_active !== false && String(tpl.body ?? "").trim().length > 0;
-  const intro = isProforma ? `Hi ${firstName},\n\nYour hotel stay has been approved. Your pro forma is attached. ${paymentPct}% (${fmtZar(deposit)}) is payable now. Please use the bank details and reference on the document and upload your payment proof in your booking. A tax invoice is issued once staff verify received payment.` : render(useTpl ? String(tpl!.body) : DEFAULT_QUOTE_INTRO, ctx);
+  const intro = isProforma ? `Hi ${firstName},\n\nYour hotel stay has been approved. Your pro forma is attached. ${paymentPct}% (${fmtZar(deposit)}) is payable now. Please use the bank details and reference on the document and upload your payment proof in your booking. A tax invoice is issued once staff verify received payment.` : isReviewEstimate ? `Hi ${firstName},\n\nYour hotel estimate is attached. Our team will review the information and documents for your stay before sending a pro forma payment request. This estimate is not a confirmed booking or a tax invoice.` : render(useTpl ? String(tpl!.body) : DEFAULT_QUOTE_INTRO, ctx);
   const subject = isProforma ? `Hotel pro forma ${q.estimate_number} from ${tenant?.name ?? "us"}` : useTpl && tpl!.subject
     ? render(String(tpl!.subject), ctx)
     : `Your stay quote ${q.estimate_number} from ${tenant?.name ?? "us"}`;
@@ -154,6 +155,7 @@ Deno.serve(async (req) => {
       body_html: render(c.body_html ?? "", ctx),
     })),
   };
+  if (isReviewEstimate) { settings.hero_label = "ESTIMATE"; settings.hero_headline = "Your stay is under review"; settings.deposit_label = "Payment after approval"; settings.cta_label = "View your booking"; settings.cta_subtext = "Complete your stay information in the portal."; settings.hold_line = "Staff approval is required before payment."; }
   if (isProforma) {
     settings.hero_label = "PRO FORMA";
     settings.hero_headline = "Your stay is approved";
@@ -184,7 +186,7 @@ Deno.serve(async (req) => {
     total,
     deposit,
     validUntil,
-    publicToken: isProforma ? null : (q as any).public_token ?? null,
+    publicToken: isProforma || isReviewEstimate ? null : (q as any).public_token ?? null,
     intro,
     guidelines,
     settings,
