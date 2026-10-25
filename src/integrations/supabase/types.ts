@@ -4380,6 +4380,8 @@ export type Database = {
           booking_id: string
           checklist: Json
           collection_time: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           customer_message: string | null
           estimate_id: string | null
@@ -4396,6 +4398,8 @@ export type Database = {
           booking_id: string
           checklist?: Json
           collection_time?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           customer_message?: string | null
           estimate_id?: string | null
@@ -4412,6 +4416,8 @@ export type Database = {
           booking_id?: string
           checklist?: Json
           collection_time?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           customer_message?: string | null
           estimate_id?: string | null
