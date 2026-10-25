@@ -167,7 +167,7 @@ Deno.serve(async (req) => {
         sb.from("message_templates").select("*").eq("tenant_id", ev.tenant_id).eq("event_code", ev.event_type).eq("channel", ev.channel).eq("is_active", true).maybeSingle(),
       ]);
       const settings = settingsRes.data;
-      const tpl = tplRes.data;
+      const tpl = tplRes.data ?? (ev.event_type === "manual_message" && ev.booking_id && ev.payload?.message ? { subject: "{{payload.subject}}", body: "{{payload.message}}", body_format: "text" } : null);
       const customer = custRes.data;
       const brand = await loadTenantBrand(sb, ev.tenant_id);
 
