@@ -133,7 +133,7 @@ export default function BookingDetailPage() {
           <div className="sk-card p-6 text-sm text-muted-foreground">Booking not found.</div>
         ) : (
           isHotel && tenantId ? (
-            <div className="mx-auto max-w-5xl space-y-4">
+            <div className="mx-auto w-full max-w-[min(100%,max(85vw,64rem))] space-y-4">
               <PinnedNotesBanner customerId={b.customer_id} tenantId={tenantId} />
               <HotelReviewPanel
                 bookingId={b.id} tenantId={tenantId} customerId={b.customer_id}
