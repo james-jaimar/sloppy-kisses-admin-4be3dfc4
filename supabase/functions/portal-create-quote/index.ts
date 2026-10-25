@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
   // --- Pets must belong to this customer --------------------------------
   const { data: pets } = await admin
     .from("pets")
-    .select("id, name")
+    .select("id, name, species")
     .eq("tenant_id", tenantId)
     .eq("customer_id", customer.id)
     .in("id", body.pet_ids);
@@ -113,20 +113,23 @@ Deno.serve(async (req) => {
     .eq("active", true);
   if (ratesErr) return j(200, { ok: false, error: `Could not load rates: ${ratesErr.message}` });
   const species = body.service_type === "hotel_cat" ? "cat" : "dog";
-  const rateFor = (code: string) =>
-    (rates ?? []).find((r: any) => r.accommodation_type === code && r.species === species);
+  const rateFor = (code: string, petSpecies: string) =>
+    (rates ?? []).find((r: any) => r.accommodation_type === code && r.species === petSpecies);
 
   const n = nights(body.start_at, body.end_at);
   const groups = new Map<string, string[]>();
   for (const id of body.pet_ids) {
     const acc = body.pet_accommodations[id];
     if (!acc) return j(400, { error: "missing_accommodation" });
-    groups.set(acc, [...(groups.get(acc) ?? []), petName.get(id) ?? "Pet"]);
+    const pet = pets.find(p => p.id === id);
+    const key = `${pet?.species}|${acc}`;
+    groups.set(key, [...(groups.get(key) ?? []), petName.get(id) ?? "Pet"]);
   }
 
   const items: { description: string; quantity: number; unit_price: number }[] = [];
-  for (const [acc, names] of groups) {
-    const rate: any = rateFor(acc);
+  for (const [key, names] of groups) {
+    const [petSpecies, acc] = key.split("|");
+    const rate: any = rateFor(acc, petSpecies);
     if (!rate) {
       return j(200, {
         ok: false,

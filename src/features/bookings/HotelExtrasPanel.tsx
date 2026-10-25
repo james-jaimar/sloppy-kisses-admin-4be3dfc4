@@ -137,16 +137,18 @@ export function HotelExtrasPanel({
     if (pets.length > 0) {
       for (const p of pets) {
         const acc = petAccommodations?.[p.id] || accommodationType;
-        groups.set(acc, [...(groups.get(acc) ?? []), p.name]);
+        const key = `${p.species}|${acc}`;
+        groups.set(key, [...(groups.get(key) ?? []), p.name]);
       }
     } else {
-      groups.set(accommodationType, Array.from({ length: Math.max(1, petCount) }, () => "Pet"));
+      groups.set(`${species}|${accommodationType}`, Array.from({ length: Math.max(1, petCount) }, () => "Pet"));
     }
 
     const stayRows: { label: string; total: number }[] = [];
     let stayTotal = 0;
-    for (const [acc, names] of groups) {
-      const rate = (ratesQ.data ?? []).find((r) => r.accommodation_type === acc);
+    for (const [key, names] of groups) {
+      const [petSpecies, acc] = key.split("|");
+      const rate = (ratesQ.data ?? []).find((r) => r.species === petSpecies && r.accommodation_type === acc);
       if (!rate) continue;
       const uplift = peak && Number(rate.peak_uplift_pct) > 0 ? Number(rate.peak_uplift_pct) / 100 : 0;
       const nightly = Math.round(Number(rate.nightly_rate_zar) * (1 + uplift) * 100) / 100;
@@ -307,7 +309,7 @@ export function HotelExtrasPanel({
                     </span>
                   </label>
                   {sel && (
-                    <div className="flex items-center gap-1" title={s.per_night ? "How many per day (all dogs)" : "Number of dogs / times"}>
+                    <div className="flex items-center gap-1" title={sel.quantity_basis === "total" ? "Total walks during this stay (all pets)" : s.per_night ? "How many per day (all pets)" : "Number of pets / times"}>
                       <button type="button" onClick={() => setQty(s.id, sel.quantity - 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">−</button>
                       <span className="w-8 text-center text-sm tabular-nums">{Math.round(sel.quantity)}</span>
                       <button type="button" onClick={() => setQty(s.id, sel.quantity + 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">+</button>

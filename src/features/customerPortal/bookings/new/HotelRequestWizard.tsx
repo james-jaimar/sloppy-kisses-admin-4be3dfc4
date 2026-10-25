@@ -224,11 +224,13 @@ export default function HotelRequestWizard() {
     for (const p of selectedPets as any[]) {
       const acc = petAcc[p.id] || accommodationType;
       if (!acc) return null;
-      groups.set(acc, [...(groups.get(acc) ?? []), p.name as string]);
+      const key = `${p.species}|${acc}`;
+      groups.set(key, [...(groups.get(key) ?? []), p.name as string]);
     }
     const lines: { label: string; amount: number }[] = [];
-    for (const [acc, names] of groups) {
-      const rate: any = (ratesQ.data ?? []).find((r) => r.accommodation_type === acc);
+    for (const [key, names] of groups) {
+      const [petSpecies, acc] = key.split("|");
+      const rate: any = (ratesQ.data ?? []).find((r) => r.species === petSpecies && r.accommodation_type === acc);
       if (!rate) return null;
       const nightly = Number(rate.nightly_rate_zar);
       lines.push({
@@ -271,7 +273,7 @@ export default function HotelRequestWizard() {
     petIds.length > 0 && !!checkInDate && nights >= 1 &&
     transportAddressReady && !capacityBlocked && !extrasCatalog.isLoading && !extrasCatalog.isError &&
     selectedPets.every((p: any) => {
-      const r = speciesRates.find(r => r.accommodation_type === accFor(p.id));
+      const r = (ratesQ.data ?? []).find(r => r.species === p.species && r.accommodation_type === accFor(p.id));
       return r && rateAllowsSize(r, (p.size_override ?? p.size ?? null) as PetSizeBand | null);
     });
 
