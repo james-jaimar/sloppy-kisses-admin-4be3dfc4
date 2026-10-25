@@ -64,7 +64,7 @@ export function HotelFields({
 }) {
   return (
     <div className="rounded-xl border border-border bg-sk-surface-muted p-4">
-      <SectionTitle>{species === "cat" ? "Cattery" : "Hotel"} details</SectionTitle>
+      <SectionTitle>{species === "cat" ? "Cat Hotel" : "Dog Hotel"} details</SectionTitle>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <div className="mb-1 text-xs font-medium">Accommodation type</div>
@@ -122,7 +122,7 @@ export function HotelFields({
             checked={value.grooming_required ?? false}
             onChange={(e) => onChange({ grooming_required: e.target.checked })}
           />
-          Groom during stay
+          Groom on checkout day
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input

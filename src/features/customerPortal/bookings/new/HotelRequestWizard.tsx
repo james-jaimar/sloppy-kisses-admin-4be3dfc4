@@ -399,10 +399,10 @@ export default function HotelRequestWizard() {
 
   return (
     <>
-      <AppHeader title="Book Hotel & Cattery" />
+      <AppHeader title="Book Dog & Cat Hotel" />
       <div className="mx-auto w-full max-w-6xl space-y-6 p-4 md:p-6">
         <Link to="/customer/bookings/new" className="inline-flex items-center gap-1 text-xs text-muted-foreground">← All services</Link>
-        <BookingPhotos title="Hotel & Cattery" subtitle="A little holiday for your best friend. Choose their dates and accommodation, with prices from our current rate card." />
+        <BookingPhotos title="Dog & Cat Hotel" subtitle="A little holiday for your best friend. Choose their dates and accommodation, with prices from our current rate card." />
         <AwardPlaceholder />
         {draftImported && draft?.tenantId === cust.data.tenant_id && <div className="border-l-2 border-primary pl-3 text-sm">
           Your stay choices have been brought across. Please confirm which pets are staying.

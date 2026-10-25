@@ -14,7 +14,7 @@ export const adminNav = [
   { to: "/admin/pets", label: "Pets", icon: PawPrint, code: "pets.view" },
   { to: "/admin/bookings", label: "Bookings", icon: CalendarCheck, code: "bookings.view" },
   { to: "/admin/daycare", label: "Daycare", icon: Dog, code: "daycare.view" },
-  { to: "/admin/hotel-cattery", label: "Hotel & Cattery", icon: Hotel, code: "hotel.view" },
+  { to: "/admin/hotel-cattery", label: "Dog & Cat Hotel", icon: Hotel, code: "hotel.view" },
   { to: "/admin/grooming", label: "Grooming", icon: Scissors, code: "grooming.view" },
   { to: "/admin/mobile-vans", label: "Mobile Vans", icon: Truck, code: "grooming.view" },
   { to: "/admin/pickup-dropoff", label: "Pick Up / Drop Off", icon: ArrowLeftRight, code: "transport.view" },

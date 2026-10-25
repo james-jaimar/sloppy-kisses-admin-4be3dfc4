@@ -218,7 +218,7 @@ export default function PublicHotelPage() {
         <CheckCircle2 className="mx-auto h-10 w-10 text-sk-turquoise" />
         <h1 className="text-xl font-bold">Request received!</h1>
         <p className="text-sm text-muted-foreground">
-          Thanks {contact.first_name} — we've got your {species === "cat" ? "cattery" : "hotel"} request for{" "}
+          Thanks {contact.first_name} — we've got your {species === "cat" ? "Cat Hotel" : "Dog Hotel"} request for{" "}
           {new Date(`${checkIn}T00:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })} to{" "}
           {new Date(`${checkOut}T00:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })}.
           Our team will confirm your booking by email shortly.
@@ -235,7 +235,7 @@ export default function PublicHotelPage() {
           <ArrowLeft className="h-3.5 w-3.5" /> All services
         </Link>
       </div>
-      <BookingPhotos title="Hotel & Cattery" subtitle="A little holiday for your best friend. Choose their dates and accommodation, with prices from our current rate card." />
+      <BookingPhotos title="Dog & Cat Hotel" subtitle="A little holiday for your best friend. Choose their dates and accommodation, with prices from our current rate card." />
       <AwardPlaceholder />
       <AccountBar service="hotel" />
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">

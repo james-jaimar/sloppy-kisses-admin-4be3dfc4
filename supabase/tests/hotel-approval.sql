@@ -7,8 +7,7 @@ BEGIN
  IF public.hotel_required_percent(date '2026-11-23',date '2026-10-25',30,50,25)<>25 THEN RAISE EXCEPTION 'Override must win'; END IF;
  SELECT pets.tenant_id,pets.customer_id,pets.id,rc.accommodation_type INTO t,c,p,rate FROM public.pets JOIN public.hotel_rate_cards rc ON rc.tenant_id=pets.tenant_id AND rc.species=pets.species::text AND rc.active WHERE pets.species='dog' LIMIT 1;
  IF p IS NULL THEN RAISE EXCEPTION 'Need a dog and configured hotel rate'; END IF;
- SELECT pr.auth_user_id INTO actor FROM public.profiles pr JOIN public.tenant_users tu ON tu.profile_id=pr.id WHERE tu.tenant_id=t AND public.user_has_permission(t,'bookings.edit',pr.auth_user_id) LIMIT 1;
- -- Actor discovery is adapted to the installed permission signature by the test runner.
+ SELECT pr.auth_user_id INTO actor FROM public.profiles pr JOIN public.tenant_users tu ON tu.profile_id=pr.id JOIN public.user_roles ur ON ur.tenant_user_id=tu.id JOIN public.role_permissions rp ON rp.role_id=ur.role_id JOIN public.permissions perm ON perm.id=rp.permission_id WHERE tu.tenant_id=t AND tu.status='active' AND perm.code IN ('bookings.edit','payments.create') GROUP BY pr.auth_user_id HAVING count(DISTINCT perm.code)=2 LIMIT 1;
  IF actor IS NULL THEN RAISE EXCEPTION 'Need an authorized staff actor'; END IF;
  PERFORM set_config('request.jwt.claim.sub',actor::text,true);
  BEGIN

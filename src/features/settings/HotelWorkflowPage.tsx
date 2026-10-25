@@ -139,7 +139,7 @@ export default function HotelWorkflowPage() {
   return (
     <>
       <AppHeader
-        title="Hotel & Cattery workflow"
+        title="Dog & Cat Hotel workflow"
         subtitle="Vaccination gate, capacity rules, check-in window and late-checkout fee."
       />
       <div className="flex-1 p-6">
