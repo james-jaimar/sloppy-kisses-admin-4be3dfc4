@@ -72,6 +72,8 @@ export interface BookingListRow {
   } | null;
   resource: { id: string; name: string; type: ResourceType } | null;
   booking_pets: {
+    resource_id?: string | null;
+    accommodation_type?: string | null;
     pet: { id: string; pet_number: string | null; name: string | null; species: string | null; breed: string | null } | null;
   }[];
 }
@@ -86,7 +88,7 @@ const BOOKING_SELECT = `
   invoice_review_needed, invoice_review_reason,
   customer:customers(id, customer_number, full_name, email, mobile),
   resource:resources(id, name, type),
-  booking_pets(pet:pets(id, pet_number, name, species, breed))
+  booking_pets(resource_id, accommodation_type, pet:pets(id, pet_number, name, species, breed))
 ` as const;
 
 export function useResources(tenantId: string | null | undefined) {

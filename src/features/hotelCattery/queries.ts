@@ -15,7 +15,7 @@ export interface HotelBookingRow {
   resource_id: string | null;
   resource: { id: string; name: string; type: ResourceType } | null;
   customer: { id: string; full_name: string | null; mobile: string | null } | null;
-  pets: { id: string; name: string | null; species: string | null; breed: string | null }[];
+  pets: { id: string; name: string | null; species: string | null; breed: string | null; resource_id?: string | null }[];
 }
 
 export interface HotelResourceRow {
@@ -70,7 +70,7 @@ export function useHotelBookingsInWindow(params: {
           id, booking_number, status, service_type, start_at, end_at, resource_id,
           resource:resources(id, name, type),
           customer:customers(id, full_name, mobile),
-          booking_pets(pet:pets(id, name, species, breed))
+          booking_pets(resource_id, pet:pets(id, name, species, breed))
         `)
         .eq("tenant_id", tenantId as string)
         .in("service_type", HOTEL_SERVICE_TYPES as any)
@@ -90,7 +90,7 @@ export function useHotelBookingsInWindow(params: {
           resource_id: b.resource_id,
           resource: b.resource ?? null,
           customer: b.customer ?? null,
-          pets: (b.booking_pets ?? []).map((bp: any) => bp.pet).filter(Boolean),
+          pets: (b.booking_pets ?? []).filter((bp: any) => bp.pet).map((bp: any) => ({ ...bp.pet, resource_id: bp.resource_id })),
         }))
         .filter((b) => {
           if (!b.end_at) return true; // open-ended treated as ongoing
@@ -195,11 +195,12 @@ export function useUpdateBookingStatus(tenantId: string) {
 export function useAssignBookingResource(tenantId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ bookingId, resourceId }: { bookingId: string; resourceId: string | null }) => {
+    mutationFn: async ({ bookingId, petId, resourceId }: { bookingId: string; petId: string; resourceId: string | null }) => {
       const { error } = await supabase
-        .from("bookings")
+        .from("booking_pets")
         .update({ resource_id: resourceId })
-        .eq("id", bookingId)
+        .eq("booking_id", bookingId)
+        .eq("pet_id", petId)
         .eq("tenant_id", tenantId);
       if (error) throw error;
       return { bookingId, resourceId };
