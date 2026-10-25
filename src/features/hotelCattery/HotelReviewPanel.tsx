@@ -12,7 +12,7 @@ import { hotelPaymentPercent } from "./paymentRules";
 import { downloadQuotePdf } from "@/features/quotes/queries";
 import { PetAttachments } from "@/features/uploads/PetAttachments";
 import { PetHealthPanel } from "@/features/pets/PetHealthPanel";
-import { AccommodationFormCard } from "@/features/hotelForm/AccommodationFormCard";
+import { HotelIntakeEditor } from "@/features/hotelForm/HotelIntakeEditor";
 import { HotelPaymentProof } from "./HotelPaymentProof";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
@@ -89,7 +89,7 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
     {canEdit && r?.approved_at && !r.verified_payment_id && hasPermission("payments.create") && <div className="space-y-3"><h3 className="font-semibold">Verify received payment</h3><HotelReceiptForm bookingId={bookingId} suggested={Number(estimate?.total ?? 0) * requiredPct / 100} /><select aria-label="Received payment" value={payment} onChange={e => setPayment(e.target.value)} className="w-full rounded-md border border-input bg-background p-3"><option value="">Or select an existing unallocated receipt</option>{receipts.data?.map(p => <option key={p.id} value={p.id}>{p.paid_at?.slice(0, 10)} · {money(Number(p.amount))} · {p.payment_reference ?? p.payment_method}</option>)}</select><Button disabled={!payment || action.isPending} onClick={() => run("receipt")}>Verify existing receipt & issue invoice</Button></div>}
     {r?.approved_at && <HotelPaymentProof tenantId={tenantId} customerId={customerId} bookingId={bookingId} portal={portal} />}
     {pets.map(p => <details key={p.id} className="border-t border-border pt-3"><summary className="cursor-pointer font-medium">{p.name ?? "Pet"} · photos, vaccination card & health</summary><div className="mt-4 space-y-4"><PetAttachments tenantId={tenantId} petId={p.id} petName={p.name ?? "Pet"} uploadedVia={portal ? "portal" : "admin"} />{!portal && <PetHealthPanel tenantId={tenantId} petId={p.id} />}</div></details>)}
-    {!portal && <AccommodationFormCard bookingId={bookingId} />}
+    <HotelIntakeEditor key={bookingId} bookingId={bookingId} tenantId={tenantId} customerId={customerId} pets={pets} portal={portal} />
   </section>;
 }
 

@@ -1,4 +1,5 @@
 import { AlertTriangle, FileText } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAccommodationForm, type FormPet } from "./accommodationForm";
 
 function Row({ label, value }: { label: string; value?: string | null }) {
@@ -25,7 +26,7 @@ export function AccommodationFormCard({ bookingId }: { bookingId: string }) {
         <div className="mt-1 text-xs text-muted-foreground">Loading…</div>
       ) : !p ? (
         <div className="mt-1 flex items-center gap-1.5 text-xs text-sk-orange">
-          <AlertTriangle className="h-3.5 w-3.5" /> Not received yet — capture it under Edit booking.
+          <AlertTriangle className="h-3.5 w-3.5" /> Not received yet — <Link to={`/admin/bookings/${bookingId}`} className="underline">open accommodation intake</Link>.
         </div>
       ) : (
         <div className="mt-1 space-y-2 text-xs">

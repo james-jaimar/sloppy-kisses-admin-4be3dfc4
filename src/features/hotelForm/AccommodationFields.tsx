@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { ChevronDown, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PetAttachments } from "@/features/uploads/PetAttachments";
 import { AddressSelector } from "@/features/customers/AddressSelector";
 import { useCustomerAddresses } from "@/features/customers/addressQueries";
@@ -82,19 +83,21 @@ export function Section({
     );
   }
   return (
-    <section className="rounded-xl border border-border bg-white">
-      <button
+    <section className="border-b border-border bg-background">
+      <Button
+        variant="ghost"
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+        aria-expanded={open}
+        className="flex h-auto w-full items-center justify-between gap-3 whitespace-normal px-1 py-3 text-left"
       >
         <span className="flex min-w-0 items-center gap-2">
           {complete && <CheckCircle2 className="h-4 w-4 shrink-0 text-sk-green" />}
           <span className="text-sm font-semibold">{title}</span>
-          {summary && <span className="truncate text-xs text-muted-foreground">· {summary}</span>}
+          {summary && <span className="text-xs text-muted-foreground">· {summary}</span>}
         </span>
         <ChevronDown className={"h-4 w-4 shrink-0 text-muted-foreground transition-transform " + (open ? "rotate-180" : "")} />
-      </button>
+      </Button>
       {open && <div className="space-y-4 border-t border-border px-4 py-4">{children}</div>}
     </section>
   );
