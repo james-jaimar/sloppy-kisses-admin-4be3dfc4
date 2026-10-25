@@ -12,14 +12,17 @@ interface Props {
   customerId: string;
   reviewNeeded?: boolean | null;
   reviewReason?: string | null;
+  existingOnly?: boolean;
 }
 
-export function BookingInvoicePanel({ tenantId, bookingId, customerId, reviewNeeded, reviewReason }: Props) {
+export function BookingInvoicePanel({ tenantId, bookingId, customerId, reviewNeeded, reviewReason, existingOnly = false }: Props) {
   const { hasPermission, profile } = useCurrentUser();
   const can = (code: string) => profile?.user_type === "platform" || hasPermission(code);
   const q = useBookingInvoice(tenantId, bookingId);
   const inv = q.data?.invoice;
   const [open, setOpen] = useState(false);
+
+  if (existingOnly && !inv) return q.isError ? <p className="text-sm text-destructive">Could not load the invoice.</p> : null;
 
   return (
     <div className="sk-card p-5">
@@ -65,7 +68,7 @@ export function BookingInvoicePanel({ tenantId, bookingId, customerId, reviewNee
       ) : (
         <>
           <div className="mt-2 text-xs text-muted-foreground">No invoice linked to this booking.</div>
-          {can("invoices.create") && (
+          {!existingOnly && can("invoices.create") && (
           <button onClick={() => setOpen(true)}
             className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-sk-coral px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-sk-coral-dark">
             <Plus className="h-3.5 w-3.5" /> Create invoice

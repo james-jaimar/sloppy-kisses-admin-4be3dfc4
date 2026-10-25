@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { Loader2, CheckCircle2, CalendarDays, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
 
 const fmtZar = (n: number) =>
   "R " + (Number.isFinite(n) ? n : 0).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -83,7 +84,6 @@ export default function PublicQuotePage() {
   }
 
   const { quote, items, pets, tenant, customer } = data;
-  const brand = tenant?.primary_colour || "#ff5a5a";
   const total = Number(quote?.total ?? 0);
   const isDaycare = quote?.service_type === "daycare";
   // Daycare places are billed in full for the first month — no 50% deposit.
@@ -97,16 +97,16 @@ export default function PublicQuotePage() {
     <div className="min-h-screen bg-sk-surface-muted py-6 sm:py-10">
       <div className="mx-auto max-w-2xl px-4">
         <div className="sk-card overflow-hidden">
-          <div className="px-6 py-6 text-center sm:px-8" style={{ background: brand }}>
-            <div className="text-xs font-bold uppercase tracking-[0.16em] text-white/85">
+          <div className="bg-primary px-6 py-6 text-center sm:px-8">
+            <div className="text-xs font-bold uppercase text-primary-foreground">
               {isDaycare ? "Daycare quote" : "Hotel quote"} {quote?.estimate_number}
             </div>
-            <div className="mt-1 text-2xl font-extrabold text-white">{tenant?.name}</div>
+            <div className="mt-1 text-2xl font-extrabold text-primary-foreground">{tenant?.name}</div>
           </div>
 
           {done ? (
             <div className="p-6 text-center sm:p-8">
-              <CheckCircle2 className="mx-auto h-10 w-10" style={{ color: brand }} />
+              <CheckCircle2 className="mx-auto h-10 w-10 text-primary" />
               <h1 className="mt-3 text-xl font-semibold">
                 {isDaycare ? "Thank you — the daycare place is booked" : "Thank you — quote accepted"}
               </h1>
@@ -123,23 +123,21 @@ export default function PublicQuotePage() {
               </p>
               <p className="mt-3 text-sm text-muted-foreground">
                 {!isDaycare
-                  ? <>Next, we need a few details for your stay — emergency contact, vet, vaccination cards and tick &amp; flea dates. Once we have everything, we'll confirm the booking and email your invoice.</>
+                  ? <>You've accepted quote {quote?.estimate_number}. Your stay is not confirmed yet. Our staff will contact you to gather emergency contact and vet details, vaccination cards, tick &amp; flea dates and the other requirements. Once these have been reviewed, staff will confirm your stay and send the tax invoice with your deposit and payment dates.</>
                   : done.invoice_number
                   ? <>Invoice <span className="font-medium text-foreground">{done.invoice_number}</span> is on its way to {done.customer_email ?? "your email"}.</>
                   : <>Your invoice is on its way by email.</>}
               </p>
               {done.portal?.activated ? (
-                <div className="mt-5 rounded-xl border border-border bg-white p-4 text-left">
+                <div className="mt-5 rounded-lg border border-border bg-background p-4 text-left">
                   <div className="text-sm font-semibold">Your online account is ready</div>
                   <p className="mt-1 text-sm text-muted-foreground">
                     We've emailed {done.customer_email ?? "you"} a link to set your password. You can then see your
                     bookings, invoices and pay online.
                   </p>
-                  <a href="/login"
-                    className="mt-3 inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold text-white"
-                    style={{ background: brand }}>
+                  <Button asChild className="mt-3"><a href="/login">
                     {isDaycare ? "Sign in to pay" : "Sign in to add your details"}
-                  </a>
+                  </a></Button>
                 </div>
               ) : (
                 <p className="mt-4 text-sm text-muted-foreground">
@@ -196,7 +194,7 @@ export default function PublicQuotePage() {
                 </div>
               )}
 
-              <div className="mt-5 grid grid-cols-2 gap-4 rounded-xl border border-border p-4">
+              <div className="mt-5 grid gap-4 rounded-lg border border-border p-4 sm:grid-cols-2">
                 <div>
                   <div className="text-xs text-muted-foreground">
                     {isDaycare ? "First invoice" : "Total for the stay"}
@@ -205,9 +203,9 @@ export default function PublicQuotePage() {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">
-                    {isDaycare ? "Payable to secure the place" : "50% deposit to secure"}
+                    {isDaycare ? "Payable to secure the place" : "After staff confirmation"}
                   </div>
-                  <div className="text-xl font-extrabold" style={{ color: brand }}>{fmtZar(deposit)}</div>
+                  {isDaycare ? <div className="text-xl font-extrabold text-primary">{fmtZar(deposit)}</div> : <p className="mt-1 text-sm text-muted-foreground">Your invoice will show the applicable deposit and payment dates. No invoice is issued when you accept this quote.</p>}
                 </div>
               </div>
 
@@ -221,7 +219,7 @@ export default function PublicQuotePage() {
 
               {accepted ? (
                 <p className="mt-6 rounded-xl bg-muted p-4 text-center text-sm">
-                  {isDaycare ? "This quote has already been accepted — your invoice has been emailed to you." : "This quote has already been accepted. We'll confirm your booking and email the invoice once we have all your details."}
+                  {isDaycare ? "This quote has already been accepted — your invoice has been emailed to you." : "This quote has already been accepted. Your stay is not confirmed yet. Staff will contact you to gather outstanding information, then confirm and invoice after review."}
                 </p>
               ) : data.expired ? (
                 <p className="mt-6 rounded-xl bg-muted p-4 text-center text-sm">
@@ -229,23 +227,21 @@ export default function PublicQuotePage() {
                 </p>
               ) : (
                 <div className="mt-6 text-center">
-                  <button onClick={accept} disabled={accepting}
-                    className="inline-flex h-12 items-center gap-2 rounded-full px-8 text-sm font-bold text-white disabled:opacity-60"
-                    style={{ background: brand }}>
+                  <Button onClick={accept} disabled={accepting} size="lg" className="min-h-12 h-auto whitespace-normal py-3 font-bold">
                     {accepting && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Accept this quote
-                  </button>
+                    {isDaycare ? "Accept this quote" : "Yes, I accept this quote"}
+                  </Button>
                   <div className="mt-3 text-xs text-muted-foreground">
                     {isDaycare
                       ? "Accepting books the daycare place and generates your first invoice."
-                      : "Accepting reserves your dates. We'll confirm and invoice once we have your pet's details."}
+                      : "Accepting agrees to the quote only — it does not confirm your stay or issue an invoice. Our staff will contact you for the outstanding details."}
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          <div className="border-t border-border bg-white px-6 py-4 text-center text-xs text-muted-foreground sm:px-8">
+          <div className="border-t border-border bg-background px-6 py-4 text-center text-xs text-muted-foreground sm:px-8">
             {[tenant?.contact_phone, tenant?.contact_email].filter(Boolean).join(" · ")}
           </div>
         </div>

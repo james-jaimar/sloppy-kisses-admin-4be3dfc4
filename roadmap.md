@@ -1,4 +1,6 @@
 # Unified hotel intake slices
+- [ ] Make confirmation prominent and remove hotel invoice creation shortcut.
+- [ ] Verify basic staff quote → public acceptance → intake gathering without invoice or duplicate booking.
 - [x] Consolidate vaccination statuses/waivers in detailed rows and align uploaded-card evidence with booking gates (20 regression tests passed; preview compilation passed).
 - [x] Correct hotel request acknowledgements without confirming stays.
 - [x] Add shared dashboard and Hotel review/quote counts linked to the pipeline.
