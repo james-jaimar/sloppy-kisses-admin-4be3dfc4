@@ -9,7 +9,10 @@ vi.mock("./accommodationForm", async () => {
   const actual = await vi.importActual<any>("./accommodationForm");
   return { ...actual, useAccommodationForm: () => ({ data: state.existing, isLoading: false }), useSubmitAccommodationForm: () => ({ mutateAsync: state.mutate, isPending: false }) };
 });
-vi.mock("./prefillQueries", () => ({ useAccommodationCustomer: () => ({ data: state.customer, isLoading: false }), useAccommodationPets: () => ({ data: state.records, isLoading: false }) }));
+vi.mock("@/features/pets/vaccinationGate", () => ({ useBookingVaccinationGate: () => ({ data: [] }), VAX_STATUS_LABEL: {} }));
+vi.mock("@/features/pets/photoGateQueries", () => ({ useBookingPhotoGate: () => ({ data: [] }) }));
+vi.mock("./HotelPetChecks", () => ({ HotelPetChecks: () => null }));
+vi.mock("./prefillQueries", () => ({ useAccommodationWriteBack: () => ({ mutateAsync: async () => {} }), useAccommodationCustomer: () => ({ data: state.customer, isLoading: false }), useAccommodationPets: () => ({ data: state.records, isLoading: false }) }));
 vi.mock("@/features/uploads/PetAttachments", () => ({ PetAttachments: () => null }));
 vi.mock("./GuidelinesSection", () => ({ GuidelinesSection: () => null }));
 vi.mock("./HotelPetChecks", () => ({ HotelPetChecks: () => null }));

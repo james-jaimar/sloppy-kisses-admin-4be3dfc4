@@ -1727,9 +1727,11 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               <div className="text-sm font-semibold">Accommodation form</div>
               <div className="text-xs text-muted-foreground">Prefilled from the customer & pet records</div>
             </div>
+            {!isEdit && <>
             <OwnerSection form={accom} setForm={patchAccom} collapsible />
             <EmergencySection form={accom} setForm={patchAccom} collapsible />
             <VetSection form={accom} setForm={patchAccom} collapsible />
+            </>}
             <StayWindowSection
               form={accom}
               setForm={patchAccom}
@@ -1779,11 +1781,13 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 )}
               </div>
             )}
+            {isEdit ? <p className="text-xs text-muted-foreground">Contacts, vet, pet health, care and terms are completed on the booking page.</p> : <>
             <PetSections form={accom} setForm={patchAccom} collapsible tenantId={tenantId} uploadedVia="admin" />
             <CareSection form={accom} setForm={patchAccom} collapsible />
             <AttachmentsSection form={accom} setForm={patchAccom} collapsible />
             <GuidelinesSection tenantId={tenantId} collapsible />
             <AcknowledgementSection form={accom} setForm={patchAccom} collapsible />
+            </>}
           </div>
         )}
         {kind === "transport" && (

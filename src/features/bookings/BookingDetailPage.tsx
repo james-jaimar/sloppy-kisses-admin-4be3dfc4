@@ -5,7 +5,8 @@ import { ArrowLeft, Pencil, CalendarDays, ExternalLink, Loader2, Trash2 } from "
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
-import { useBookingDetail, useDeleteBooking } from "./queries";
+import { useBookingDetail, useDeleteBooking, useResources } from "./queries";
+import { StageBand } from "@/features/hotelForm/StageBand";
 import { BookingStatusChip } from "./statusMeta";
 import { BookingFormModal } from "./BookingFormModal";
 import { useTransportLegExistsForBooking, useLinkedChildBookings } from "@/features/transport/queries";
@@ -57,6 +58,8 @@ export default function BookingDetailPage() {
   const b = detailQ.data;
   const del = useDeleteBooking();
 
+  const isHotel = Boolean(b?.service_type.startsWith("hotel"));
+  const resourcesQ = useResources(isHotel ? tenantId : null);
   const bookingDate = b?.start_at ? b.start_at.slice(0, 10) : null;
   const needsTransportHint = Boolean(
     b && b.requires_transport && b.service_type !== "pickup_dropoff",
@@ -88,7 +91,7 @@ export default function BookingDetailPage() {
             >
               <ArrowLeft className="h-4 w-4" /> Back
             </button>
-            {b && (
+            {b && !isHotel && (
               <button
                 onClick={() => setEditOpen(true)}
                 className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark"
@@ -129,9 +132,42 @@ export default function BookingDetailPage() {
         ) : !b ? (
           <div className="sk-card p-6 text-sm text-muted-foreground">Booking not found.</div>
         ) : (
+          isHotel && tenantId ? (
+            <div className="mx-auto max-w-5xl space-y-4">
+              <PinnedNotesBanner customerId={b.customer_id} tenantId={tenantId} />
+              <HotelReviewPanel
+                bookingId={b.id} tenantId={tenantId} customerId={b.customer_id}
+                startDate={b.start_date ?? b.start_at ?? ""}
+                pets={b.booking_pets.flatMap(bp => bp.pet ? [bp.pet] : [])}
+                vaxOverridden={Boolean((b as any).vax_override_by)}
+                checkedIn={["checked_in", "in_progress", "completed"].includes(String(b.status))}
+                stay={
+                  <StageBand id="stay-logistics" step={1} title="Stay & logistics" tone="neutral"
+                    actions={<button onClick={() => setEditOpen(true)} className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-medium hover:bg-muted"><Pencil className="h-4 w-4" /> Edit dates & rooms</button>}>
+                    <div className="flex flex-wrap items-center gap-2"><BookingStatusChip status={b.status} /><BookingStayPlayBadge tenantId={tenantId} bookingId={b.id} /></div>
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <Field label="Check-in">{fmt(b.start_at)}</Field>
+                      <Field label="Check-out">{fmt(b.end_at)}</Field>
+                      <Field label="Nights">{b.start_date && b.end_date ? Math.max(1, Math.round((new Date(b.end_date).getTime() - new Date(b.start_date).getTime()) / 86400000)) : "—"}</Field>
+                      <Field label="Customer">{b.customer ? <Link to={`/admin/customers/${b.customer.id}`} className="inline-flex items-center gap-1 font-medium hover:text-sk-coral-dark">{b.customer.full_name ?? "Unnamed"}<ExternalLink className="h-3.5 w-3.5" /></Link> : "—"}<div className="text-xs text-muted-foreground">{b.customer?.customer_number} · {b.customer?.mobile ?? b.customer?.email ?? "—"}</div></Field>
+                      <Field label="Pets & rooms"><ul className="space-y-1">{b.booking_pets.map((bp, i) => bp.pet ? <li key={bp.pet.id ?? i}><Link to={`/admin/pets/${bp.pet.id}`} className="font-medium hover:text-sk-coral-dark">{bp.pet.name}</Link> <span className="text-xs text-muted-foreground">· {resourcesQ.data?.find(r => r.id === (bp as any).resource_id)?.name ?? <span className="text-sk-orange">Room unassigned</span>}</span></li> : null)}</ul></Field>
+                    </div>
+                    <HotelMoneyStrip bookingId={b.id} mode="admin" />
+                    <HotelGroomRequestsPanel tenantId={tenantId} bookingId={b.id} />
+                    <StayPlaySection tenantId={tenantId} bookingId={b.id} />
+                    <AddressGateBanner booking={b as any} tenantId={tenantId} />
+                    {(b.notes_internal || b.notes_customer) && <div className="grid gap-4 sm:grid-cols-2">{b.notes_internal && <Field label="Internal notes"><p className="whitespace-pre-wrap">{b.notes_internal}</p></Field>}{b.notes_customer && <Field label="Customer notes"><p className="whitespace-pre-wrap">{b.notes_customer}</p></Field>}</div>}
+                  </StageBand>
+                }
+              />
+              <div className="grid gap-4 md:grid-cols-2">
+                <BookingInvoicePanel tenantId={tenantId} bookingId={b.id} customerId={b.customer_id} reviewNeeded={(b as any).invoice_review_needed} reviewReason={(b as any).invoice_review_reason} />
+                <BookingCommsPanel tenantId={tenantId} bookingId={b.id} />
+              </div>
+            </div>
+          ) : (
           <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-6">
-              {tenantId && b.service_type.startsWith("hotel") && <HotelReviewPanel bookingId={b.id} tenantId={tenantId} customerId={b.customer_id} startDate={b.start_date ?? b.start_at ?? ""} pets={b.booking_pets.flatMap(bp => bp.pet ? [bp.pet] : [])} />}
               <PinnedNotesBanner customerId={b.customer_id} tenantId={tenantId} />
               <AddressGateBanner booking={b as any} tenantId={tenantId} />
               {!b.service_type.startsWith("hotel") && <BookingVaccinationGate
@@ -334,6 +370,7 @@ export default function BookingDetailPage() {
               )}
             </div>
           </div>
+          )
         )}
       </div>
 
