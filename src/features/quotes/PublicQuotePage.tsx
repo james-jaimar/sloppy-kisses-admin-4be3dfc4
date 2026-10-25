@@ -108,7 +108,7 @@ export default function PublicQuotePage() {
             <div className="p-6 text-center sm:p-8">
               <CheckCircle2 className="mx-auto h-10 w-10" style={{ color: brand }} />
               <h1 className="mt-3 text-xl font-semibold">
-                {isDaycare ? "Thank you — the daycare place is booked" : "Thank you — your booking is confirmed"}
+                {isDaycare ? "Thank you — the daycare place is booked" : "Thank you — quote accepted"}
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 {isDaycare ? (
@@ -122,7 +122,9 @@ export default function PublicQuotePage() {
                 )}
               </p>
               <p className="mt-3 text-sm text-muted-foreground">
-                {done.invoice_number
+                {!isDaycare
+                  ? <>Next, we need a few details for your stay — emergency contact, vet, vaccination cards and tick &amp; flea dates. Once we have everything, we'll confirm the booking and email your invoice.</>
+                  : done.invoice_number
                   ? <>Invoice <span className="font-medium text-foreground">{done.invoice_number}</span> is on its way to {done.customer_email ?? "your email"}.</>
                   : <>Your invoice is on its way by email.</>}
               </p>
@@ -136,12 +138,12 @@ export default function PublicQuotePage() {
                   <a href="/login"
                     className="mt-3 inline-flex h-10 items-center rounded-lg px-4 text-sm font-semibold text-white"
                     style={{ background: brand }}>
-                    {isDaycare ? "Sign in to pay" : "Sign in to pay the deposit"}
+                    {isDaycare ? "Sign in to pay" : "Sign in to add your details"}
                   </a>
                 </div>
               ) : (
                 <p className="mt-4 text-sm text-muted-foreground">
-                  We'll email your invoice with the payment details.
+                  {isDaycare ? "We'll email your invoice with the payment details." : "Our team will be in touch to collect the details we need."}
                 </p>
               )}
             </div>
@@ -219,7 +221,7 @@ export default function PublicQuotePage() {
 
               {accepted ? (
                 <p className="mt-6 rounded-xl bg-muted p-4 text-center text-sm">
-                  This quote has already been accepted — your invoice has been emailed to you.
+                  {isDaycare ? "This quote has already been accepted — your invoice has been emailed to you." : "This quote has already been accepted. We'll confirm your booking and email the invoice once we have all your details."}
                 </p>
               ) : data.expired ? (
                 <p className="mt-6 rounded-xl bg-muted p-4 text-center text-sm">
@@ -236,7 +238,7 @@ export default function PublicQuotePage() {
                   <div className="mt-3 text-xs text-muted-foreground">
                     {isDaycare
                       ? "Accepting books the daycare place and generates your first invoice."
-                      : "Accepting confirms the booking and generates your invoice."}
+                      : "Accepting reserves your dates. We'll confirm and invoice once we have your pet's details."}
                   </div>
                 </div>
               )}
