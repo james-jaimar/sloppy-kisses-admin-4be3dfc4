@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { useHotelGroomPendingCount } from "@/features/hotelGrooming/queries";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { OccupancyGrid } from "./OccupancyGrid";
+import { Button } from "@/components/ui/button";
 import { TodayPanel } from "./TodayPanel";
 import { useHotelBookingsInWindow, useHotelQuotesInWindow, useHotelResources } from "./queries";
 
@@ -49,10 +50,11 @@ export default function HotelBoardPage() {
   return (
     <>
       <AppHeader
-        title="Hotel & Cattery"
+        title="Dog & Cat Hotel"
         subtitle="Occupancy across kennels, runs and cattery pens."
         actions={
           <div className="flex items-center gap-2">
+            <Button variant="outline" asChild><Link to="/admin/hotel-cattery/pipeline">Pipeline & approvals</Link></Button>
             <Link
               to="/admin/hotel-cattery/grooms"
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 text-sm font-medium hover:bg-sk-surface-muted"

@@ -22,6 +22,7 @@ import { HotelMoneyStrip } from "@/features/hotelCattery/HotelMoneyStrip";
 import { GroomerPicker } from "@/features/grooming/GroomerPicker";
 import { BookingGroomingPrefsBanner } from "@/features/grooming/instructions/BookingGroomingPrefsBanner";
 import { AddressGateBanner } from "./AddressGate";
+import { HotelReviewPanel } from "@/features/hotelCattery/HotelReviewPanel";
 
 const SERVICE_LABELS: Record<string, string> = {
   daycare: "Daycare",
@@ -130,6 +131,7 @@ export default function BookingDetailPage() {
         ) : (
           <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-6">
+              {tenantId && b.service_type.startsWith("hotel") && <HotelReviewPanel bookingId={b.id} tenantId={tenantId} customerId={b.customer_id} startDate={b.start_date ?? b.start_at ?? ""} pets={b.booking_pets.flatMap(bp => bp.pet ? [bp.pet] : [])} />}
               <PinnedNotesBanner customerId={b.customer_id} tenantId={tenantId} />
               <AddressGateBanner booking={b as any} tenantId={tenantId} />
               <BookingVaccinationGate

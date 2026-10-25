@@ -12,6 +12,7 @@ import { useMinLeadHours } from "./new/useBookingSubmit";
 import { useAccommodationForm } from "@/features/hotelForm/accommodationForm";
 import { PortalGroomRequestStatus } from "@/features/hotelGrooming/PortalGroomRequestStatus";
 import { HotelMoneyStrip } from "@/features/hotelCattery/HotelMoneyStrip";
+import { HotelReviewPanel } from "@/features/hotelCattery/HotelReviewPanel";
 
 export default function MyBookingDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,7 +25,7 @@ export default function MyBookingDetailPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, tenant_id, booking_number, service_type, status, start_at, end_at, payment_hold_expires_at, notes_customer, booking_pets(pet:pets(id, name)), invoice:invoices!bookings_invoice_id_fkey(id, invoice_number, total, balance_due, status)")
+        .select("id, tenant_id, customer_id, booking_number, service_type, status, start_at, end_at, payment_hold_expires_at, notes_customer, booking_pets(pet:pets(id, name)), invoice:invoices!bookings_invoice_id_fkey(id, invoice_number, total, balance_due, status)")
         .eq("id", id!)
         .maybeSingle();
       if (error) throw error;
@@ -63,6 +64,7 @@ export default function MyBookingDetailPage() {
         </Link>
 
         {group === "hotel" && <AccommodationFormBanner bookingId={b.id} />}
+        {group === "hotel" && <HotelReviewPanel portal bookingId={b.id} tenantId={b.tenant_id} customerId={b.customer_id} startDate={b.start_at ?? ""} pets={b.booking_pets.flatMap((bp: any) => bp.pet ? [bp.pet] : [])} />}
         {group === "hotel" && <PortalGroomRequestStatus bookingId={b.id} />}
         {b.status === "pending_payment" && (
           <div className="rounded-xl border border-sk-orange/30 bg-sk-orange-soft px-4 py-3 text-sm text-sk-orange">

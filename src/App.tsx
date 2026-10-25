@@ -56,6 +56,7 @@ import GroomingKioskPage from "@/features/grooming/kiosk/GroomingKioskPage";
 import GroomingTvPage from "@/features/grooming/kiosk/GroomingTvPage";
 import GroomingKioskStaffPage from "@/features/settings/GroomingKioskStaffPage";
 import HotelBoardPage from "@/features/hotelCattery/HotelBoardPage";
+import HotelPipelinePage from "@/features/hotelCattery/HotelPipelinePage";
 import HotelGroomQueuePage from "@/features/hotelGrooming/HotelGroomQueuePage";
 import HotelWorkflowPage from "@/features/settings/HotelWorkflowPage";
 import HotelQuoteEmailPage from "@/features/settings/HotelQuoteEmailPage";
@@ -225,6 +226,9 @@ const App = () => (
                 <Route path="/admin/daycare/attendance" element={<AttendancePage />} />
                 <Route path="/admin/daycare/billing" element={<DaycareBillingPage />} />
                 <Route path="/admin/hotel-cattery" element={<HotelBoardPage />} />
+                <Route element={<RequirePermission code="hotel.view" />}>
+                  <Route path="/admin/hotel-cattery/pipeline" element={<HotelPipelinePage />} />
+                </Route>
                 <Route path="/admin/hotel-cattery/grooms" element={<HotelGroomQueuePage />} />
                 <Route path="/admin/grooming" element={<GroomingBoardPage />} />
                 <Route path="/admin/mobile-vans" element={<MobileVansPage />} />

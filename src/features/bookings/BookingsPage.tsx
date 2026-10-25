@@ -34,7 +34,7 @@ const SERVICE_TYPES: (ServiceType | "all")[] = [
 ];
 
 const STATUSES: (BookingStatus | "all")[] = [
-  "all", "draft", "requested", "confirmed", "checked_in", "in_progress",
+  "all", "draft", "requested", "needs_info", "approved", "pending_payment", "confirmed", "checked_in", "in_progress",
   "ready", "checked_out", "completed", "cancelled", "no_show",
 ];
 
