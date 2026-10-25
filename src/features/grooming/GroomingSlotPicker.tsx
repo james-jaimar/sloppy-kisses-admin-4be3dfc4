@@ -184,7 +184,19 @@ export function GroomingSlotPicker({
                   type="button"
                   disabled={past || Boolean(closed)}
                   title={closed ? `Closed — ${closed.name ?? "closure"}` : undefined}
-                  onClick={() => setSelectedDate(d)}
+                  onClick={() => {
+                    setSelectedDate(d);
+                    // Changing the day must move the booking too — keep the
+                    // picked time and re-emit it on the new day, otherwise the
+                    // form keeps the original date until a time is re-clicked.
+                    if (value && !isSameDay(new Date(value), d)) {
+                      const prev = new Date(value);
+                      const start = new Date(d);
+                      start.setHours(prev.getHours(), prev.getMinutes(), 0, 0);
+                      const end = new Date(start.getTime() + durationMinutes * 60000);
+                      onChange(toLocalIso(start), toLocalIso(end));
+                    }
+                  }}
                   className={
                     "h-9 rounded-md text-xs font-medium transition-colors " +
                     (past
