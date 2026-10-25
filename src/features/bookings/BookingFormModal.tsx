@@ -1244,8 +1244,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             <select
               value={serviceType}
               onChange={(e) => {
-                setServiceType(e.target.value as ServiceType);
+                const next = e.target.value as ServiceType;
+                setServiceType(next);
                 setResourceId(null);
+                if (!isEdit) setStatus(["hotel_dog", "hotel_cat"].includes(next) ? "draft" : "confirmed");
               }}
               className={inputCls}
             >
