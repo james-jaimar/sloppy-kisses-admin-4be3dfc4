@@ -36,6 +36,7 @@ export interface HotelDetails {
   accommodation_type: string | null;
   check_in_window: string | null;
   check_out_window: string | null;
+  agreed_collection_time?: string | null;
   feeding_instructions: string | null;
   medication_instructions: string | null;
   additional_notes: string | null;

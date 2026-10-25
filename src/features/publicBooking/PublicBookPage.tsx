@@ -8,7 +8,7 @@ const SERVICES = [
   {
     key: "hotel",
     icon: BedDouble,
-    title: "Hotel & Cattery",
+    title: "Dog & Cat Hotel",
     blurb: "Overnight stays for dogs and cats — check live space and prices, then book.",
     ready: true,
   },
