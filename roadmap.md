@@ -1,12 +1,10 @@
-# Unified hotel intake slices
-- [x] Make confirmation prominent and remove hotel invoice creation shortcut (invoice display regression tests passed; compilation passed).
-- [x] Verify basic staff quote → public acceptance → intake gathering without invoice or duplicate booking (rollback database regression passed; 2 email-link tests passed; quote email function deployed). Public acceptance presentation checked with mocked data; live email and signed-in staff checks remain unverified.
-- [x] Consolidate vaccination statuses/waivers in detailed rows and align uploaded-card evidence with booking gates (20 regression tests passed; preview compilation passed).
-- [x] Correct hotel request acknowledgements without confirming stays.
-- [x] Add shared dashboard and Hotel review/quote counts linked to the pipeline.
-- [x] Verify notification classification and review count rules (13 regression tests passed; hosted templates/counts checked).
-- [ ] Signed-in hotel request/email and indicator checks — external Supabase provides no managed browser session.
-- [x] Slice 1: editable, prefilled accommodation intake on staff and customer booking pages.
-- [x] Slice 2: per-pet photo, vaccination and health checks with separate waivers.
-- [x] Slice 3: numbered single-page hotel booking (stay, contacts, pets, terms, approval) with live readiness replacing manual ticks.
-- [ ] Signed-in save/upload check — needs a live session (external Supabase).
+# Roadmap — Hotel booking walkthrough fixes
+
+- [x] Slice 1: Walks/extras auto-scale when pet count changes on an existing booking (HotelExtrasPanel scales "total" quantities + staff notice)
+- [x] Slice 2: Mixed dog/cat bookings — staff pet picker already lists all species; added species emoji on chips; cats no longer default into dog rate cards (panel + save fallback)
+- [x] Slice 3: Species-aware rates/room allocation — per-pet accommodation select already filters by species; save path now falls back to the pet's own species rate card
+- [x] Slice 4: Walks are dog-only on mixed stays — priceHotelExtras takes dogCount; portal booking/quote + wizard pass it; test added
+- [ ] Slice 5: Pet-specific grooming on hotel stays — verify hotel_grooming_requests is per-pet
+- [ ] Slice 6: Partial pet cancellation with credit notes
+- [ ] Slice 7: Transport carrier logistics for mixed stays
+- [ ] Slice 8: Grouped dog/cat invoice lines

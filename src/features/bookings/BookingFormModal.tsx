@@ -463,10 +463,23 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   async function persistPetAccommodations(bookingId: string) {
     if (kind !== "hotel") return;
     const fallback = hotel.accommodation_type ?? null;
+    const bookingSpecies = serviceType === "hotel_cat" ? "cat" : "dog";
     for (const petId of petIds) {
       const pet = (petsQ.data ?? []).find(p => p.id === petId);
       const defaultRoom = (resourcesQ.data ?? []).find(r => r.id === resourceId && r.type === hotelResourceType(pet?.species));
-      const acc = petAcc[petId] || fallback;
+      let acc = petAcc[petId] || fallback;
+      // Mixed stays: a cat on a dog booking (or vice versa) must never inherit the other species' rate card.
+      if (!petAcc[petId] && pet?.species && pet.species !== bookingSpecies) {
+        const { data: rc } = await supabase
+          .from("hotel_rate_cards")
+          .select("accommodation_type")
+          .eq("tenant_id", tenantId)
+          .eq("species", pet.species)
+          .eq("active", true)
+          .limit(1)
+          .maybeSingle();
+        if (rc?.accommodation_type) acc = rc.accommodation_type;
+      }
       const { error } = await supabase
         .from("booking_pets")
         .update({ accommodation_type: acc, resource_id: petRooms[petId] || defaultRoom?.id || null } as never)
@@ -874,6 +887,31 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           },
           pet_ids: petIds,
         });
+        // Slice 6: removing a pet from a stay whose invoice is already issued
+        // must not silently reprice — invoices are never edited after issue,
+        // so staff need to raise a credit note for the removed pet.
+        const removedPetIds = (booking.booking_pets ?? [])
+          .map((bp) => bp.pet?.id ?? "")
+          .filter((pid) => pid && !petIds.includes(pid));
+        if (removedPetIds.length > 0) {
+          const { data: issued } = await supabase
+            .from("invoices")
+            .select("id, invoice_number, status")
+            .eq("booking_id", booking.id)
+            .eq("tenant_id", tenantId)
+            .in("status", ["issued", "sent", "part_paid", "paid", "overdue"])
+            .limit(1)
+            .maybeSingle();
+          if (issued) {
+            const names = removedPetIds
+              .map((pid) => petsQ.data?.find((p) => p.id === pid)?.name ?? "a pet")
+              .join(", ");
+            toast.warning(
+              `${names} removed. Invoice ${issued.invoice_number ?? ""} is already issued — raise a credit note for the removed pet's nights; the invoice total will not change by itself.`,
+              { duration: 12000 },
+            );
+          }
+        }
         if (kind === "hotel") await persistPetAccommodations(booking.id);
         await saveDetails(booking.id);
         if (kind === "hotel") await persistSurcharges(booking.id);
@@ -1210,7 +1248,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                           : "border-border bg-white text-foreground hover:bg-muted")
                       }
                     >
-                      {p.name} {p.pet_number ? `· ${p.pet_number}` : ""}
+                      {p.name} {p.pet_number ? `· ${p.pet_number}` : ""} {p.species === "cat" ? "🐱" : "🐶"}
                     </button>
                   );
                 })}

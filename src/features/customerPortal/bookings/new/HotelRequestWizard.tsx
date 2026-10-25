@@ -203,7 +203,7 @@ export default function HotelRequestWizard() {
   const extraSelections = (extrasCatalog.data?.surcharges ?? [])
     .filter(s => (extraQuantities[s.code] ?? 0) > 0)
     .map(s => ({ code: s.code, quantity: extraQuantities[s.code] }));
-  const pricedExtras = priceHotelExtras(extrasCatalog.data?.surcharges ?? [], extraSelections, selectedPets.length, nights);
+  const pricedExtras = priceHotelExtras(extrasCatalog.data?.surcharges ?? [], extraSelections, selectedPets.length, nights, undefined, selectedPets.filter((p: any) => p.species !== "cat").length);
   function changeExtra(code: string, quantity: number) {
     setRequestedExtras(a => ({ ...a, [code]: quantity }));
     if (code === "late_checkout") setForm(f => ({ ...f, check_out_window: quantity > 0 ? CHECK_OUT_STAY_PLAY : CHECK_OUT_STANDARD }));

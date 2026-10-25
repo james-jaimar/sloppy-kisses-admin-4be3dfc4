@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import {
@@ -105,6 +105,15 @@ export function HotelExtrasPanel({
   const activeRate = species_rates.find((r) => r.accommodation_type === accommodationType) ?? null;
 
   const pets = petSizesQ.data ?? [];
+  // Default each pet to the first rate card of its own species, so a cat on a
+  // "Hotel — dog" booking never defaults into a dog area.
+  function defaultAccFor(petSpecies: string) {
+    if (petSpecies === species) return accommodationType;
+    return (ratesQ.data ?? []).find((r) => r.species === petSpecies)?.accommodation_type ?? accommodationType;
+  }
+  function petAcc(p: { id: string; species: string }) {
+    return petAccommodations?.[p.id] || defaultAccFor(p.species);
+  }
   function bandIndex(b: PetSizeBand | null | undefined) {
     return b ? SIZE_BAND_ORDER.indexOf(b) : -1;
   }
@@ -136,7 +145,7 @@ export function HotelExtrasPanel({
     const groups = new Map<string, string[]>();
     if (pets.length > 0) {
       for (const p of pets) {
-        const acc = petAccommodations?.[p.id] || accommodationType;
+        const acc = petAcc(p);
         const key = `${p.species}|${acc}`;
         groups.set(key, [...(groups.get(key) ?? []), p.name]);
       }
@@ -190,6 +199,32 @@ export function HotelExtrasPanel({
   }, [activeRate, nights, peak, petCount, pets, petAccommodations, accommodationType, selection, surchargesQ.data, wfQ.data, discountPct]);
 
   const defaultQty = Math.max(1, pets.length || petCount || 1);
+
+  // Slice 1: when the pet count changes after extras were chosen, scale
+  // "total over stay" quantities (e.g. walks) in proportion, and tell staff.
+  const prevPetCountRef = useRef<number>(defaultQty);
+  const [scaledNote, setScaledNote] = useState<string | null>(null);
+  useEffect(() => {
+    const prev = prevPetCountRef.current;
+    const next = defaultQty;
+    prevPetCountRef.current = next;
+    if (prev === next || selection.length === 0) return;
+    const scaled: string[] = [];
+    const updated = selection.map((s) => {
+      if (s.quantity_basis !== "total") return s;
+      const cat = (surchargesQ.data ?? []).find((x) => x.id === s.surcharge_id);
+      if (!cat) return s;
+      const newQty = Math.max(1, Math.round((s.quantity * next) / Math.max(1, prev)));
+      if (newQty === s.quantity) return s;
+      scaled.push(`${cat.name}: ${s.quantity} → ${newQty}`);
+      return { ...s, quantity: newQty };
+    });
+    if (scaled.length > 0) {
+      onSelectionChange(updated);
+      setScaledNote(`Pet count changed ${prev} → ${next}. Scaled: ${scaled.join(", ")}. Adjust if needed.`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultQty]);
 
   function toggleSurcharge(id: string) {
     const exists = selection.find((s) => s.surcharge_id === id);
@@ -271,7 +306,7 @@ export function HotelExtrasPanel({
                 </div>
                 <select
                   className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-                  value={petAccommodations?.[p.id] || accommodationType}
+                  value={petAcc(p)}
                   onChange={(e) => onPetAccommodationChange(p.id, e.target.value)}
                 >
                   <option value="">— Select accommodation —</option>
@@ -288,6 +323,12 @@ export function HotelExtrasPanel({
           <p className="mt-1 text-[11px] text-muted-foreground">
             Two pets in the same area use that area&apos;s extra-pet rate; pets in different areas are each priced at their own nightly rate.
           </p>
+        </div>
+      )}
+
+      {scaledNote && (
+        <div className="mt-4 rounded-lg border border-sk-orange/40 bg-sk-orange-soft px-3 py-2 text-xs font-medium text-sk-orange">
+          {scaledNote}
         </div>
       )}
 
