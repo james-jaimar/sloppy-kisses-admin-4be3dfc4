@@ -1,8 +1,9 @@
 export interface HotelExtraRequest { code: string; quantity: number }
 export interface HotelExtraRate { id?: string; code: string; name: string; price_zar: number; per_night: boolean }
 
-/** Requests are per pet; persisted quantities are totals across the selected pets. */
-export function priceHotelExtras(catalog: HotelExtraRate[], requests: HotelExtraRequest[], petCount: number, nights: number, checkOutWindow?: string | null) {
+/** Requests are per pet; persisted quantities are totals across the selected pets.
+ *  Walks are a dog-only extra: pass dogCount so cats on mixed stays are not charged. */
+export function priceHotelExtras(catalog: HotelExtraRate[], requests: HotelExtraRequest[], petCount: number, nights: number, checkOutWindow?: string | null, dogCount?: number) {
   const quantities = new Map<string, number>();
   for (const request of requests) {
     if (!Number.isInteger(request.quantity) || request.quantity < 1 || request.quantity > 100 || quantities.has(request.code)) {
