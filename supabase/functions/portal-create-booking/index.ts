@@ -333,7 +333,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
     gateMode = (dcs as any)?.block_unvaccinated === false ? "off" : "hard";
   }
-  if (gateMode !== "off") {
+  if (gateMode !== "off" && group !== "hotel") {
     const onDate = start.toISOString().slice(0, 10);
     const missing: string[] = [];
     for (const p of pets) {
@@ -737,7 +737,7 @@ Deno.serve(async (req) => {
     if (error) return cleanup(error.message);
     if (hotelExtras.length) {
       const { error: extrasError } = await admin.from("hotel_booking_surcharges").insert(hotelExtras.map(extra => ({
-        tenant_id: tenantId, booking_id: bookingId, surcharge_id: extra.id, quantity: extra.quantity,
+        tenant_id: tenantId, booking_id: bookingId, surcharge_id: extra.id, quantity: extra.quantity, quantity_basis: extra.quantity_basis,
       })));
       if (extrasError) return cleanup(extrasError.message);
     }

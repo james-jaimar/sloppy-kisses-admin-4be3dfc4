@@ -9710,6 +9710,7 @@ export type Database = {
         Returns: string
       }
       current_profile_id: { Args: never; Returns: string }
+      customer_hotel_review: { Args: { p_booking_id: string }; Returns: Json }
       customer_type_for_service: {
         Args: { p_service: Database["public"]["Enums"]["service_type"] }
         Returns: string

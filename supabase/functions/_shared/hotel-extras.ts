@@ -21,7 +21,8 @@ export function priceHotelExtras(catalog: HotelExtraRate[], requests: HotelExtra
     const perPet = quantities.get(rate.code) ?? 0;
     if (!perPet || !petCount) return [];
     const quantity = perPet * petCount;
-    const billedQuantity = quantity * (rate.per_night ? nights : 1);
-    return [{ ...rate, perPet, quantity, billedQuantity, total: Math.round(Number(rate.price_zar) * billedQuantity * 100) / 100 }];
+    const totalWalks = /walk/i.test(rate.code);
+    const billedQuantity = quantity * (rate.per_night && !totalWalks ? nights : 1);
+    return [{ ...rate, per_night: rate.per_night && !totalWalks, quantity_basis: totalWalks ? "total" : "catalog", perPet, quantity, billedQuantity, total: Math.round(Number(rate.price_zar) * billedQuantity * 100) / 100 }];
   });
 }

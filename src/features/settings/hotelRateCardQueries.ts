@@ -35,6 +35,7 @@ export interface HotelSurcharge {
 }
 
 export interface HotelBookingSurcharge {
+  quantity_basis?: "catalog" | "total";
   id: string;
   tenant_id: string;
   booking_id: string;
@@ -162,7 +163,7 @@ export function useSetBookingHotelSurcharges(tenantId: string) {
   return useMutation({
     mutationFn: async ({ bookingId, rows }: {
       bookingId: string;
-      rows: { surcharge_id: string; quantity: number; price_override_zar?: number | null }[];
+      rows: { surcharge_id: string; quantity: number; price_override_zar?: number | null; quantity_basis?: "catalog" | "total" }[];
     }) => {
       const del = await supabase.from("hotel_booking_surcharges" as any).delete().eq("booking_id", bookingId);
       if (del.error) throw del.error;

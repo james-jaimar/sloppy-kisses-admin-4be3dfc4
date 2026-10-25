@@ -23,8 +23,8 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
   const { hasPermission } = useCurrentUser();
   const canEdit = !portal && hasPermission("bookings.edit");
   const canOverride = canEdit && hasPermission("settings.hotel.manage");
-  const review = useHotelReview(bookingId);
-  const settings = useHotelWorkflowSettings(tenantId);
+  const review = useHotelReview(bookingId, portal);
+  const settings = useHotelWorkflowSettings(portal ? null : tenantId);
   const action = useHotelReviewAction(bookingId);
   const confirm = useConfirm();
   const [checks, setChecks] = useState<Record<string, boolean>>({});
@@ -47,8 +47,10 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
     if (error) throw error;
     return (data ?? []).filter(p => !p.payment_allocations.length);
   }});
-  const checklist = (settings.data?.approval_checklist ?? []) as { code: string; label: string }[];
-  const requiredPct = hotelPaymentPercent(startDate, new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" }), settings.data?.payment_cutoff_days ?? 30, Number(settings.data?.advance_deposit_pct ?? 50), r?.payment_percent_override == null ? null : Number(r.payment_percent_override));
+  const publicSettings = portal ? r?.public_settings : settings.data;
+  const paid = Boolean(r?.verified_payment_id || r?.payment_verified);
+  const checklist = publicSettings?.approval_checklist ?? [];
+  const requiredPct = hotelPaymentPercent(startDate, new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" }), publicSettings?.payment_cutoff_days ?? 30, Number(publicSettings?.advance_deposit_pct ?? 50), r?.payment_percent_override == null ? null : Number(r.payment_percent_override));
   const estimate = r?.estimate;
   async function run(kind: string) {
     try {
@@ -70,10 +72,10 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
       } else await downloadQuotePdf(estimate.id, `${estimate.estimate_number}.pdf`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not send document"); } finally { setBusy(false); }
   }
-  if (review.isLoading || settings.isLoading) return <div className="p-4 text-sm text-muted-foreground">Loading hotel review…</div>;
+  if (review.isLoading || (!portal && settings.isLoading)) return <div className="p-4 text-sm text-muted-foreground">Loading hotel review…</div>;
   if (review.error) return <div className="p-4 text-sm text-destructive">Could not load hotel review.</div>;
   return <section className="space-y-5 border-b border-border pb-6">
-    <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">{portal ? "Your stay preparations" : "Hotel approval checklist"}</h2><span className="text-sm font-medium text-sk-coral-dark">{r?.verified_payment_id ? "Payment verified" : r?.approved_at ? "Approved · awaiting payment" : "Information review"}</span></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-lg font-semibold">{portal ? "Your stay preparations" : "Hotel approval checklist"}</h2><span className="text-sm font-medium text-sk-coral-dark">{paid ? "Payment verified" : r?.approved_at ? "Approved · awaiting payment" : "Information review"}</span></div>
     {checklist.map(c => <label key={c.code} className="flex items-center gap-3 border-b border-border py-2 text-sm"><input type="checkbox" checked={Boolean(checks[c.code])} disabled={!canEdit || Boolean(r?.verified_payment_id)} onChange={e => setChecks(s => ({ ...s, [c.code]: e.target.checked }))} className="h-5 w-5 accent-primary" />{c.label}</label>)}
     {portal && message && <p className="whitespace-pre-wrap rounded-lg bg-muted p-4 text-sm">{message}</p>}
     {canEdit && !r?.verified_payment_id && <div className="space-y-3">

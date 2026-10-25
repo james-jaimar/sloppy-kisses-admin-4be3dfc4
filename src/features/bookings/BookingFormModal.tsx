@@ -1063,6 +1063,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         rows: hotelSurcharges.map((s) => ({
           surcharge_id: s.surcharge_id,
           quantity: s.quantity,
+          quantity_basis: s.quantity_basis ?? "catalog",
           price_override_zar: null,
         })),
       });

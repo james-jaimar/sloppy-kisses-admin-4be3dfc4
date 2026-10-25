@@ -6,8 +6,8 @@ const catalog = [
   { id: "play-id", code: "late_checkout", name: "Stay & Play", price_zar: 250, per_night: false },
 ];
 describe("hotel extras pricing and persisted quantities", () => {
-  it("charges two daily walks for each of two dogs over seven nights", () => {
-    expect(priceHotelExtras(catalog, [{ code: "walk", quantity: 2 }], 2, 7)[0]).toMatchObject({ id: "walk-id", quantity: 4, billedQuantity: 28, total: 2800 });
+  it("charges two total walks for each of two dogs, regardless of seven nights", () => {
+    expect(priceHotelExtras(catalog, [{ code: "walk", quantity: 2 }], 2, 7)[0]).toMatchObject({ id: "walk-id", quantity: 4, billedQuantity: 4, total: 400, quantity_basis: "total" });
   });
   it("charges Stay & Play once for each dog, not for every night", () => {
     expect(priceHotelExtras(catalog, [{ code: "late_checkout", quantity: 1 }], 2, 7)[0]).toMatchObject({ quantity: 2, billedQuantity: 2, total: 500 });
