@@ -10,10 +10,17 @@ import { useAccommodationCustomer, useAccommodationPets } from "./prefillQueries
 import { AcknowledgementSection, buildAccommodationForm, CareSection, EmergencySection, OwnerSection, PetSections, syncFormPets, VetSection } from "./AccommodationFields";
 import { GuidelinesSection } from "./GuidelinesSection";
 import { HotelPetChecks } from "./HotelPetChecks";
+import { StageBand } from "./StageBand";
+import { hotelReadiness, type ReadinessItem } from "./intakeReadiness";
+import { useBookingVaccinationGate } from "@/features/pets/vaccinationGate";
+import { useBookingPhotoGate } from "@/features/pets/photoGateQueries";
 
-export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, portal = false }: {
+export interface IntakeStatus { items: ReadinessItem[]; dirty: boolean }
+
+export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, portal = false, vaxOverridden = false, onStatus }: {
   bookingId: string; tenantId: string; customerId: string;
   pets: { id: string; name: string | null }[]; portal?: boolean;
+  vaxOverridden?: boolean; onStatus?: (status: IntakeStatus) => void;
 }) {
   const { hasPermission } = useCurrentUser();
   const canEdit = portal || hasPermission("bookings.edit");
@@ -21,6 +28,8 @@ export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, porta
   const customer = useAccommodationCustomer(customerId);
   const records = useAccommodationPets(pets.map(p => p.id));
   const submit = useSubmitAccommodationForm(bookingId);
+  const vaxGate = useBookingVaccinationGate(bookingId);
+  const photoGate = useBookingPhotoGate(bookingId);
   const stay = useQuery({ queryKey: ["hotel_intake_stay", bookingId], queryFn: async () => {
     const { data, error } = await supabase.from("hotel_booking_details").select("check_in_window, check_out_window, pickup_required, dropoff_required, feeding_instructions, medication_instructions, grooming_required, grooming_instructions, belongings_notes, emergency_notes, additional_notes").eq("booking_id", bookingId).maybeSingle();
     if (error) throw error;
@@ -71,36 +80,42 @@ export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, porta
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not save hotel intake"); }
   }
 
+  const readiness = form ? hotelReadiness({ form, vaxRows: vaxGate.data ?? [], vaxOverridden, photoRows: photoGate.data ?? [] }) : null;
+  const readinessKey = readiness ? JSON.stringify(readiness) + dirty : "";
+  useEffect(() => { if (readiness) onStatus?.({ items: readiness, dirty }); }, [readinessKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading && !form) return <p className="text-sm text-muted-foreground">Loading accommodation intake…</p>;
   if (error) return <p className="text-sm text-destructive">Could not load accommodation intake. Please retry before editing.</p>;
-  if (!form) return null;
+  if (!form || !readiness) return null;
   const change = (next: AccommodationFormPayload) => { setForm(next); setDirty(true); };
   const props = { form, setForm: change, collapsible: true };
-  const missing = [
-    !form.owner.full_name || !form.owner.mobile ? "Owner contact" : null,
-    !form.emergency_contact.full_name || !form.emergency_contact.mobile ? "Emergency contact" : null,
-    !form.vet.vet_name || !form.vet.contact_number ? "Vet details" : null,
-    !form.acknowledgement.accepted || !form.acknowledgement.signed_name ? "Customer acknowledgement" : null,
-  ].filter(Boolean);
-  return <section className="space-y-3 border-b border-border pb-6" aria-label="Accommodation intake">
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <h2 className="text-lg font-semibold">Accommodation intake</h2>
-      <span className="text-xs text-muted-foreground" role="status">{dirty ? "Unsaved changes" : existing.data?.receivedAt ? "Saved on this booking" : "Not saved yet"}</span>
-    </div>
-    {missing.length > 0 && <div className="flex flex-wrap gap-2">{missing.map(item => <span key={item} className="rounded-md bg-sk-orange-soft px-2 py-1 text-xs text-sk-orange">{item} outstanding</span>)}</div>}
-    <fieldset disabled={!canEdit || submit.isPending} className="min-w-0 space-y-3">
-      <OwnerSection {...props} />
-      <EmergencySection {...props} />
-      <VetSection {...props} />
-      <PetSections {...props} tenantId={tenantId} uploadedVia={portal ? "portal" : "admin"} renderChecks={pet => pet.pet_id ? <HotelPetChecks bookingId={bookingId} tenantId={tenantId} petId={pet.pet_id} petName={pet.name || "Pet"} portal={portal} species={records.data?.find(record => record.id === pet.pet_id)?.species} /> : null} />
-      <CareSection {...props} />
-      {(form.feeding_instructions || form.medication_instructions || form.grooming_instructions) && <div className="border-t border-border py-3 text-sm"><h3 className="font-semibold">Earlier stay-wide care notes</h3>{[form.feeding_instructions, form.medication_instructions, form.grooming_instructions].filter(Boolean).map((note, i) => <p key={i} className="mt-2 whitespace-pre-wrap text-muted-foreground">{note}</p>)}</div>}
-      {portal ? <><GuidelinesSection tenantId={tenantId} collapsible /><AcknowledgementSection {...props} /></> :
-        <div className="border-t border-border py-3 text-sm"><h3 className="font-semibold">Customer acknowledgement</h3><p className="mt-1 text-muted-foreground">{form.acknowledgement.accepted && form.acknowledgement.signed_name ? `Signed by ${form.acknowledgement.signed_name}${form.acknowledgement.signed_at ? ` · ${new Date(form.acknowledgement.signed_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}` : ""}` : "Awaiting customer acknowledgement"}</p></div>}
+  const done = (...codes: string[]) => codes.every(c => readiness.find(i => i.code === c)?.done);
+  const outstanding = (...codes: string[]) => readiness.filter(i => codes.includes(i.code) && !i.done && !i.optional).length;
+  const ack = form.acknowledgement;
+  const markPaper = () => change({ ...form, acknowledgement: { ...ack, accepted: true, signed_name: ack.signed_name || form.owner.full_name, signed_at: new Date().toISOString(), signed_place: "Reception (paper copy)" } });
+  return <div className="space-y-4" aria-label="Accommodation intake">
+    <fieldset disabled={!canEdit || submit.isPending} className="min-w-0 space-y-4">
+      <StageBand id="intake-contacts" step={2} title="Contacts & vet" tone="blue" done={done("contacts", "vet")} status={done("contacts", "vet") ? "Done" : `${outstanding("contacts", "vet")} outstanding`}>
+        <OwnerSection {...props} />
+        <EmergencySection {...props} />
+        <VetSection {...props} />
+      </StageBand>
+      <StageBand id="intake-pets" step={3} title={`${pets.length > 1 ? "Pets" : "Pet"}: health, vaccines & care`} tone="muted" done={done("vaccinations", "tick_flea", "care")} status={done("vaccinations", "tick_flea", "care") ? "Done" : `${outstanding("vaccinations", "tick_flea", "care")} outstanding`}>
+        <PetSections {...props} tenantId={tenantId} uploadedVia={portal ? "portal" : "admin"} renderChecks={pet => pet.pet_id ? <HotelPetChecks bookingId={bookingId} tenantId={tenantId} petId={pet.pet_id} petName={pet.name || "Pet"} portal={portal} species={records.data?.find(record => record.id === pet.pet_id)?.species} /> : null} />
+        <CareSection {...props} />
+        {(form.feeding_instructions || form.medication_instructions || form.grooming_instructions) && <div className="border-t border-border py-3 text-sm"><h3 className="font-semibold">Earlier stay-wide care notes</h3>{[form.feeding_instructions, form.medication_instructions, form.grooming_instructions].filter(Boolean).map((note, i) => <p key={i} className="mt-2 whitespace-pre-wrap text-muted-foreground">{note}</p>)}</div>}
+      </StageBand>
+      <StageBand id="intake-terms" step={4} title="Terms & acknowledgement" tone="coral" done={done("terms")}>
+        {portal ? <><GuidelinesSection tenantId={tenantId} collapsible /><AcknowledgementSection {...props} /></> :
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+            <p>{ack.accepted && ack.signed_name ? `Signed by ${ack.signed_name}${ack.signed_place ? ` · ${ack.signed_place}` : " · customer portal"}${ack.signed_at ? ` · ${new Date(ack.signed_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}` : ""}` : "Waiting for the customer to accept the terms in their portal, or a signed paper copy at reception."}</p>
+            {!(ack.accepted && ack.signed_name) && canEdit && <Button type="button" variant="outline" onClick={markPaper}>Paper copy signed at reception</Button>}
+          </div>}
+      </StageBand>
     </fieldset>
-    {canEdit && <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 border-t border-border bg-background py-3">
-      <span className="text-xs text-muted-foreground">{dirty ? "Changes not yet saved" : "Intake details"}</span>
+    {canEdit && <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 border-sk-border bg-background p-3 shadow-sm">
+      <span className="text-sm font-medium" role="status">{dirty ? "Unsaved intake changes" : existing.data?.receivedAt ? "Intake saved" : "Intake not saved yet"}</span>
       <Button onClick={save} disabled={!dirty || submit.isPending}>{submit.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}Save intake</Button>
     </div>}
-  </section>;
+  </div>;
 }
