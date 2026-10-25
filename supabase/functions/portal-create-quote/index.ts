@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
     if (!rate) {
       return j(200, {
         ok: false,
-        error: `No active ${species} rate is set up for "${acc}" — please contact us or pick another accommodation.`,
+        error: `No active ${petSpecies} rate is set up for "${acc}" — please contact us or pick another accommodation.`,
       });
     }
     items.push({
