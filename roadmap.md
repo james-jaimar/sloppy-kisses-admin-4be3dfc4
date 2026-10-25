@@ -1,4 +1,5 @@
 # Unified hotel intake slices
+- [ ] Consolidate vaccination statuses/waivers in detailed rows and align uploaded-card evidence with booking gates.
 - [x] Correct hotel request acknowledgements without confirming stays.
 - [x] Add shared dashboard and Hotel review/quote counts linked to the pipeline.
 - [x] Verify notification classification and review count rules (13 regression tests passed; hosted templates/counts checked).
