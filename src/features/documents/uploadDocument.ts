@@ -44,6 +44,7 @@ async function uploadDirectToS3(input: DocumentUploadInput) {
       tenant_id: input.tenantId,
       pet_id: input.petId ?? null,
       customer_id: input.customerId ?? null,
+      booking_id: input.bookingId ?? null,
       file_name: input.file.name,
       content_type: input.file.type || "application/octet-stream",
       size_bytes: input.file.size,
