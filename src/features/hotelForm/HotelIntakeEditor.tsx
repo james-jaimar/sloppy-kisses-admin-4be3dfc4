@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useAccommodationForm, useSubmitAccommodationForm, type AccommodationFormPayload } from "./accommodationForm";
-import { useAccommodationCustomer, useAccommodationPets } from "./prefillQueries";
+import { useAccommodationCustomer, useAccommodationPets, useAccommodationWriteBack } from "./prefillQueries";
 import { AcknowledgementSection, buildAccommodationForm, CareSection, EmergencySection, OwnerSection, PetSections, syncFormPets, VetSection } from "./AccommodationFields";
 import { GuidelinesSection } from "./GuidelinesSection";
 import { HotelPetChecks } from "./HotelPetChecks";
@@ -28,6 +28,7 @@ export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, porta
   const customer = useAccommodationCustomer(customerId);
   const records = useAccommodationPets(pets.map(p => p.id));
   const submit = useSubmitAccommodationForm(bookingId);
+  const writeBack = useAccommodationWriteBack();
   const vaxGate = useBookingVaccinationGate(bookingId);
   const photoGate = useBookingPhotoGate(bookingId);
   const stay = useQuery({ queryKey: ["hotel_intake_stay", bookingId], queryFn: async () => {
@@ -71,12 +72,17 @@ export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, porta
       toast.error("Please enter your full name for the acknowledgement."); return;
     }
     try {
-      await submit.mutateAsync({ ...form, acknowledgement: {
+      const payload = { ...form, acknowledgement: {
         ...form.acknowledgement,
         signed_at: portal && form.acknowledgement.accepted ? form.acknowledgement.signed_at || new Date().toISOString() : form.acknowledgement.signed_at,
-      } });
+      } };
+      await submit.mutateAsync(payload);
       setDirty(false);
-      toast.success("Hotel intake saved");
+      if (!portal) {
+        try { await writeBack.mutateAsync({ customerId, form: payload }); }
+        catch { toast.warning("Intake saved, but the customer profile was not updated."); return; }
+      }
+      toast.success(portal ? "Hotel intake saved" : "Hotel intake saved and customer profile updated");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not save hotel intake"); }
   }
 
