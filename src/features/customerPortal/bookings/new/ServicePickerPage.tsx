@@ -3,7 +3,7 @@ import { ArrowLeft, Hotel, Dog, Scissors, Truck, ArrowLeftRight, ChevronRight } 
 import { AppHeader } from "@/components/layout/AppHeader";
 
 const SERVICES = [
-  { to: "hotel", label: "Hotel & Cattery", desc: "Overnight stays for your dog or cat", icon: Hotel, tone: "text-sk-turquoise-dark bg-sk-turquoise-soft" },
+  { to: "hotel", label: "Dog & Cat Hotel", desc: "Overnight stays for your dog or cat", icon: Hotel, tone: "text-sk-turquoise-dark bg-sk-turquoise-soft" },
   { to: "daycare", label: "Daycare", desc: "A day of play, socialising & snoozing", icon: Dog, tone: "text-sk-coral-dark bg-sk-coral-soft" },
   { to: "grooming-inhouse", label: "Grooming (in-house)", desc: "Book a spa day at the salon", icon: Scissors, tone: "text-sk-green bg-sk-green-soft" },
   { to: "grooming-mobile", label: "Grooming (mobile)", desc: "We bring the van to your door", icon: Truck, tone: "text-sk-orange bg-sk-orange-soft" },

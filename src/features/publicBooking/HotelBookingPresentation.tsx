@@ -18,7 +18,7 @@ export function HotelAccommodationChoices({ rates, species, value, onChange, blo
       const selected = r.accommodation_type === value;
       const photo = bookingPhotos[i % bookingPhotos.length];
       return <Button key={r.accommodation_type} type="button" variant="outline" disabled={Boolean(reason)} aria-pressed={selected} onClick={() => onChange(r.accommodation_type)} className={`relative h-auto flex-col items-stretch overflow-hidden whitespace-normal p-0 text-left hover:bg-card ${selected ? "border-primary ring-1 ring-primary" : "border-border"}`}>
-        {species === "cat" ? <div className="flex h-32 items-center justify-center bg-accent text-sm text-accent-foreground">Cattery photos coming soon</div> : <img src={photo.url} alt={photo.alt} loading="lazy" className="h-32 w-full object-cover" />}
+        {species === "cat" ? <div className="flex h-32 items-center justify-center bg-accent text-sm text-accent-foreground">Cat Hotel photos coming soon</div> : <img src={photo.url} alt={photo.alt} loading="lazy" className="h-32 w-full object-cover" />}
         <div className="space-y-2 p-3">
           <div className="flex items-center justify-between gap-2"><span className="font-semibold">{r.display_name}</span>{selected && <Check className="h-4 w-4 shrink-0 text-primary" />}</div>
           <p className="text-xs font-normal text-muted-foreground">{species === "cat" ? "For our feline guests" : "Illustrative photo · accommodation photos to follow"}</p>
