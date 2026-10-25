@@ -262,6 +262,7 @@ export function useUpsertPetVaccination(tenantId: string, petId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pet_vaccinations"] });
+      for (const key of ["booking_vax_gate", "pet_vax_status", "pets_vax_status", "vax_outstanding"]) void qc.invalidateQueries({ queryKey: [key] });
     },
   });
 }
@@ -273,7 +274,10 @@ export function useDeletePetVaccination(tenantId: string) {
       const { error } = await supabase.from("vaccinations").delete().eq("id", id).eq("tenant_id", tenantId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["pet_vaccinations"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pet_vaccinations"] });
+      for (const key of ["booking_vax_gate", "pet_vax_status", "pets_vax_status", "vax_outstanding"]) void qc.invalidateQueries({ queryKey: [key] });
+    },
   });
 }
 

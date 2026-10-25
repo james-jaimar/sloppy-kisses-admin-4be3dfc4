@@ -15,3 +15,4 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 - Hotel approval readiness is computed live from the intake and vaccination/photo gates (intakeReadiness.ts) and mapped onto the configured checklist codes; unknown codes stay manual, so staff never tick what the form already proves.
 - Hotel attention indicators share the tenant-scoped review-count query and stage constants, excluding converted enquiries/quotes so the dashboard, board and sidebar agree without double counting.
 - Hotel booking-created events resolve to the editable request acknowledgement in the dispatcher (including delayed events); hotel confirmation templates require the staff-confirmed review timestamp. Keep generic service templates unchanged.
+- Hotel detailed vaccination rows consume booking_vaccination_gate for dated readiness and waivers; shared pet-card evidence matches the existing pet_vaccination_status policy so upload and approval cannot disagree.

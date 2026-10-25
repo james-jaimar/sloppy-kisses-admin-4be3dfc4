@@ -10,8 +10,11 @@ import { supabase } from "@/lib/supabase/client";
 import { uploadDocumentToS3, getDocumentDownloadUrl } from "@/features/documents/uploadDocument";
 import { SnapUploadButton } from "@/features/uploads/SnapUploadButton";
 import { VaxWaiverBanner } from "./VaxWaiverBanner";
+import { useBookingVaccinationGate, VAX_STATUS_LABEL, type VaxGateRow } from "./vaccinationGate";
+import { Button } from "@/components/ui/button";
 
 interface Props {
+  bookingId?: string;
   tenantId: string;
   petId: string;
   species?: string | null;
@@ -53,6 +56,28 @@ function norm(s: string | null | undefined) {
   return (s ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
 }
 
+/** Booking-context rows use the same dated, waiver-aware decision as approval. */
+export function applyBookingVaccinationGate(rows: VaxRowState[], gate: VaxGateRow[], petId: string): VaxRowState[] {
+  const remaining = gate.filter(row => row.pet_id === petId);
+  const result = rows.map(row => {
+    const index = remaining.findIndex(item => norm(item.vaccine_type) === norm(row.record?.vaccination_type ?? row.label) || norm(item.label) === norm(row.label));
+    if (index < 0) return { ...row, required: false };
+    const [item] = remaining.splice(index, 1);
+    return { ...row, required: true, hasCert: item.has_certificate, label_status: VAX_STATUS_LABEL[item.status] ?? item.status, tone: gateTone(item.status) };
+  });
+  for (const item of remaining) result.push({ key: `gate:${item.vaccine_type}`, label: item.label || item.vaccine_type, required: true, record: null, hasCert: item.has_certificate, label_status: VAX_STATUS_LABEL[item.status] ?? item.status, tone: gateTone(item.status) });
+  return result;
+}
+
+function gateTone(status: string): Tone {
+  return status === "ok" ? "green" : status === "waived" ? "grey" : status === "missing" || status === "expired" ? "coral" : "orange";
+}
+
+export function hasVaccinationCertificate(record: PetVaccination | null, docs: { id: string }[]): boolean {
+  // A shared pet card covers recorded vaccines, just as pet_vaccination_status does.
+  return Boolean(record && (record.document_id || docs.length));
+}
+
 /** Shared row model — also used by the pet page header chip. */
 export function useVaccinationChecklist(tenantId: string, petId: string, species?: string | null) {
   const vaxQ = usePetVaccinations(tenantId, petId);
@@ -83,13 +108,12 @@ export function useVaccinationChecklist(tenantId: string, petId: string, species
         .filter((r: any) => r.required !== false && (!species || !r.species || r.species === species))
         .map((r: any) => norm(r.vaccine_type)),
     );
-    const docIds = new Set((docsQ.data ?? []).map((d: any) => d.id));
     const used = new Set<string>();
 
     const fromCatalog = types.map((t) => {
       const rec = records.find((r) => norm(r.vaccination_type) === norm(t.code) || norm(r.vaccination_type) === norm(t.name)) ?? null;
       if (rec) used.add(rec.id);
-      const hasCert = Boolean(rec?.document_id && docIds.has(rec.document_id));
+      const hasCert = hasVaccinationCertificate(rec, docsQ.data ?? []);
       const s = rec ? recordTone(rec, hasCert) : { label: requiredCodes.has(norm(t.code)) ? "Required — not provided" : "Not provided", tone: (requiredCodes.has(norm(t.code)) ? "coral" : "grey") as Tone };
       return {
         key: t.id,
@@ -104,7 +128,7 @@ export function useVaccinationChecklist(tenantId: string, petId: string, species
     });
 
     const extras = records.filter((r) => !used.has(r.id)).map((r) => {
-      const hasCert = Boolean(r.document_id && docIds.has(r.document_id));
+      const hasCert = hasVaccinationCertificate(r, docsQ.data ?? []);
       const s = recordTone(r, hasCert);
       return { key: r.id, label: r.vaccination_type, required: false, record: r, hasCert, label_status: s.label, tone: s.tone } as VaxRowState;
     });
@@ -113,15 +137,20 @@ export function useVaccinationChecklist(tenantId: string, petId: string, species
   }, [vaxQ.data, typesQ.data, rulesQ.data, docsQ.data, species]);
 
   const outstanding = rows.filter((r) => r.required && r.tone !== "green").length;
-  return { rows, outstanding, isLoading: vaxQ.isLoading || typesQ.isLoading, types: typesQ.data ?? [], docs: docsQ.data ?? [] };
+  return { rows, outstanding, isLoading: vaxQ.isLoading || typesQ.isLoading || rulesQ.isLoading || docsQ.isLoading, error: vaxQ.error || typesQ.error || rulesQ.error || docsQ.error, types: typesQ.data ?? [], docs: docsQ.data ?? [] };
 }
 
-export function PetVaccinationsPanel({ tenantId, petId, species = null, canManage: canManageOverride, uploadedVia = "admin" }: Props) {
+export function PetVaccinationsPanel({ bookingId, tenantId, petId, species = null, canManage: canManageOverride, uploadedVia = "admin" }: Props) {
   const { hasPermission } = useCurrentUser();
   const confirm = useConfirm();
   const qc = useQueryClient();
   const canManage = canManageOverride ?? hasPermission("pets.manage_vaccinations");
-  const { rows, isLoading, types } = useVaccinationChecklist(tenantId, petId, species);
+  const checklist = useVaccinationChecklist(tenantId, petId, species);
+  const gate = useBookingVaccinationGate(bookingId);
+  const { types, docs } = checklist;
+  const isLoading = checklist.isLoading || Boolean(bookingId && gate.isLoading);
+  const error = checklist.error || (bookingId ? gate.error : null);
+  const rows = bookingId && gate.data ? applyBookingVaccinationGate(checklist.rows, gate.data, petId) : checklist.rows;
   const upsert = useUpsertPetVaccination(tenantId, petId);
   const del = useDeletePetVaccination(tenantId);
   const [editing, setEditing] = useState<{ row?: VaxRowState; type?: VaccineType } | null>(null);
@@ -148,10 +177,11 @@ export function PetVaccinationsPanel({ tenantId, petId, species = null, canManag
       <VaxWaiverBanner petId={petId} canManage={canManage && uploadedVia === "admin"} />
 
       {isLoading && <div className="text-sm text-muted-foreground">Loading…</div>}
-      {!isLoading && !rows.length && <div className="text-sm text-muted-foreground">No vaccine types configured yet.</div>}
+      {error && <div className="text-sm text-destructive">Could not check vaccinations.</div>}
+      {!isLoading && !error && !rows.length && <div className="text-sm text-muted-foreground">No vaccine types configured yet.</div>}
 
       <ul className="divide-y divide-border">
-        {rows.map((r) => (
+        {!isLoading && !error && rows.map((r) => (
           <li key={r.key} className="flex flex-wrap items-center gap-3 py-3">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
@@ -167,9 +197,9 @@ export function PetVaccinationsPanel({ tenantId, petId, species = null, canManag
             <span className={"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium " + TONE_CLASS[r.tone]}>
               {r.tone === "green" ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}{r.label_status}
             </span>
-            {r.record?.document_id && r.hasCert && (
-              <button onClick={() => handleDownload(r.record!.document_id!)} title="Download certificate"
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"><Download className="h-4 w-4" /></button>
+            {r.record && r.hasCert && (r.record.document_id || docs[0]?.id) && (
+              <Button variant="ghost" size="icon" onClick={() => { const id = r.record?.document_id || docs[0]?.id; if (id) void handleDownload(id); }} title="Download certificate" aria-label={`Download certificate for ${r.label}`}
+                className="h-8 w-8 text-muted-foreground"><Download className="h-4 w-4" /></Button>
             )}
             {canManage && (
               <>
@@ -178,7 +208,7 @@ export function PetVaccinationsPanel({ tenantId, petId, species = null, canManag
                   {r.record ? "Edit" : "Provide details"}
                 </button>
                 {r.record && (
-                  <button onClick={async () => { if (await confirm({ title: "Delete vaccination record?", confirmLabel: "Delete", tone: "destructive" })) del.mutate(r.record!.id); }}
+                  <button onClick={async () => { const record = r.record; if (record && await confirm({ title: "Delete vaccination record?", confirmLabel: "Delete", tone: "destructive" })) del.mutate(record.id); }}
                     className="rounded px-2 py-1 text-xs text-sk-coral-dark hover:bg-sk-coral-soft"><Trash2 className="h-3.5 w-3.5" /></button>
                 )}
               </>
@@ -201,7 +231,7 @@ export function PetVaccinationsPanel({ tenantId, petId, species = null, canManag
             qc.invalidateQueries({ queryKey: ["pet_vaccinations"] });
             qc.invalidateQueries({ queryKey: ["pet_vax_docs"] });
             qc.invalidateQueries({ queryKey: ["documents_panel"] });
-            for (const key of ["booking_vax_gate", "pet_vax_status", "pets_vax_status", "pet_vax_cards", "pet_attachment_status"]) void qc.invalidateQueries({ queryKey: [key] });
+            for (const key of ["booking_vax_gate", "pet_vax_status", "pets_vax_status", "pet_vax_cards", "pet_attachment_status", "vax_outstanding"]) void qc.invalidateQueries({ queryKey: [key] });
           }}
           upsert={upsert}
         />
