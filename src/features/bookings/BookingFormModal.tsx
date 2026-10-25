@@ -42,6 +42,8 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { HotelExtrasPanel, type SurchargeSelection } from "./HotelExtrasPanel";
 import { usePublicHolidays, movementBlockReason, MOVEMENT_RULES_NOTE } from "@/features/hotelForm/dayRules";
 import { HotelCapacityNotice, type CapacityIssue } from "@/features/hotelCattery/HotelCapacityNotice";
+import { HotelPetRooms } from "@/features/hotelCattery/HotelPetRooms";
+import { hotelResourceType } from "@/features/hotelCattery/roomAllocation";
 import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQueries";
 import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtrasPanel";
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
@@ -201,6 +203,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     }
     return seed;
   });
+  const [petRooms, setPetRooms] = useState<Record<string, string>>(() =>
+    Object.fromEntries((booking?.booking_pets ?? []).filter(bp => bp.pet && bp.resource_id).map(bp => [bp.pet?.id ?? "", bp.resource_id ?? ""])),
+  );
+  const [roomIssues, setRoomIssues] = useState<Record<string, CapacityIssue | null>>({});
   const [status, setStatus] = useState<BookingStatus>(booking?.status ?? (["hotel_dog", "hotel_cat"].includes(prefill?.service_type ?? "daycare") ? "requested" : "confirmed"));
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [reviewGrooming, setReviewGrooming] = useState(false);
@@ -458,11 +464,12 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     if (kind !== "hotel") return;
     const fallback = hotel.accommodation_type ?? null;
     for (const petId of petIds) {
+      const pet = (petsQ.data ?? []).find(p => p.id === petId);
+      const defaultRoom = (resourcesQ.data ?? []).find(r => r.id === resourceId && r.type === hotelResourceType(pet?.species));
       const acc = petAcc[petId] || fallback;
-      if (!acc) continue;
       const { error } = await supabase
         .from("booking_pets")
-        .update({ accommodation_type: acc } as never)
+        .update({ accommodation_type: acc, resource_id: petRooms[petId] || defaultRoom?.id || null } as never)
         .eq("booking_id", bookingId)
         .eq("pet_id", petId);
       if (error) {
@@ -817,16 +824,18 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       if (!proceed) return;
     }
 
-    if (kind === "hotel" && capacityIssue) {
-      const nights = capacityIssue.nights.length;
-      if (capacityIssue.mode === "block") {
+    const activeRoomIds = new Set(petIds.map(id => petRooms[id]).filter(Boolean));
+    const activeCapacityIssue = Object.entries(roomIssues).find(([id, issue]) => activeRoomIds.has(id) && issue)?.[1] ?? capacityIssue;
+    if (kind === "hotel" && activeCapacityIssue) {
+      const nights = activeCapacityIssue.nights.length;
+      if (activeCapacityIssue.mode === "block") {
         return toast.error(
-          `${capacityIssue.resourceName} is full (${capacityIssue.capacity} spaces) on ${nights} ${nights === 1 ? "night" : "nights"}. Pick another area or change the dates.`,
+          `${activeCapacityIssue.resourceName} is full (${activeCapacityIssue.capacity} spaces) on ${nights} ${nights === 1 ? "night" : "nights"}. Pick another area or change the dates.`,
         );
       }
       const proceed = await confirm({
         title: "Over capacity",
-        description: `${capacityIssue.resourceName} would exceed its ${capacityIssue.capacity} spaces on ${nights} ${nights === 1 ? "night" : "nights"}. Save anyway?`,
+        description: `${activeCapacityIssue.resourceName} would exceed its ${activeCapacityIssue.capacity} spaces on ${nights} ${nights === 1 ? "night" : "nights"}. Save anyway?`,
         confirmLabel: "Save anyway",
         tone: "destructive",
       });
@@ -1374,7 +1383,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             )}
           </div>
           )}
-          <div className="sm:col-span-2">
+          {kind !== "hotel" && <div className="sm:col-span-2">
             <div className="mb-1 text-sm font-medium">{RESOURCE_LABELS[serviceType]}</div>
             <select
               value={resourceId ?? ""}
@@ -1441,8 +1450,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 onIssueChange={setCapacityIssue}
               />
             )}
-          </div>
+          </div>}
         </div>
+
+        {kind === "hotel" && <HotelPetRooms tenantId={tenantId} pets={(petsQ.data ?? []).filter(p => petIds.includes(p.id))} assignments={petRooms} onChange={(id, room) => setPetRooms(prev => ({ ...prev, [id]: room }))} startAt={startIso} endAt={endIso} bookingId={booking?.id ?? null} onIssueChange={(room, issue) => setRoomIssues(prev => JSON.stringify(prev[room]) === JSON.stringify(issue) ? prev : { ...prev, [room]: issue })} />}
 
         {kind === "grooming" && (
           <GroomingFields
