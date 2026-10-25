@@ -105,6 +105,15 @@ export function HotelExtrasPanel({
   const activeRate = species_rates.find((r) => r.accommodation_type === accommodationType) ?? null;
 
   const pets = petSizesQ.data ?? [];
+  // Default each pet to the first rate card of its own species, so a cat on a
+  // "Hotel — dog" booking never defaults into a dog area.
+  function defaultAccFor(petSpecies: string) {
+    if (petSpecies === species) return accommodationType;
+    return (ratesQ.data ?? []).find((r) => r.species === petSpecies)?.accommodation_type ?? accommodationType;
+  }
+  function petAcc(p: { id: string; species: string }) {
+    return petAccommodations?.[p.id] || defaultAccFor(p.species);
+  }
   function bandIndex(b: PetSizeBand | null | undefined) {
     return b ? SIZE_BAND_ORDER.indexOf(b) : -1;
   }
