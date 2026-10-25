@@ -317,6 +317,12 @@ export function HotelExtrasPanel({
         </div>
       )}
 
+      {scaledNote && (
+        <div className="mt-4 rounded-lg border border-sk-orange/40 bg-sk-orange-soft px-3 py-2 text-xs font-medium text-sk-orange">
+          {scaledNote}
+        </div>
+      )}
+
       <div className="mt-4">
         <div className="mb-2 text-xs font-medium">Surcharges</div>
         {(surchargesQ.data ?? []).length === 0 ? (
