@@ -134,11 +134,11 @@ export default function BookingDetailPage() {
               {tenantId && b.service_type.startsWith("hotel") && <HotelReviewPanel bookingId={b.id} tenantId={tenantId} customerId={b.customer_id} startDate={b.start_date ?? b.start_at ?? ""} pets={b.booking_pets.flatMap(bp => bp.pet ? [bp.pet] : [])} />}
               <PinnedNotesBanner customerId={b.customer_id} tenantId={tenantId} />
               <AddressGateBanner booking={b as any} tenantId={tenantId} />
-              <BookingVaccinationGate
+              {!b.service_type.startsWith("hotel") && <BookingVaccinationGate
                 bookingId={b.id}
                 overriddenBy={(b as any).vax_override_by}
                 overrideReason={(b as any).vax_override_reason}
-              />
+              />}
               {(b.service_type === "hotel_dog" || b.service_type === "hotel_cat") && (
                 <HotelGroomRequestsPanel tenantId={tenantId} bookingId={b.id} />
               )}
@@ -154,7 +154,7 @@ export default function BookingDetailPage() {
               {(b.service_type === "hotel_dog" || b.service_type === "hotel_cat") && (
                 <HotelMoneyStrip bookingId={b.id} mode="admin" />
               )}
-              {tenantId && (
+              {tenantId && !b.service_type.startsWith("hotel") && (
                 <PhotoGatePanel tenantId={tenantId} bookingId={b.id} serviceType={b.service_type} />
               )}
               <div className="sk-card p-5">

@@ -1,4 +1,7 @@
-import { useRef, useState } from "react";
+import { ReactNode, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Camera, Check, FileText, Loader2, Upload } from "lucide-react";
 import { uploadDocumentToS3 } from "@/features/documents/uploadDocument";
@@ -12,7 +15,7 @@ const KIND_META: Record<PetDocKind, { label: string; hint: string; icon: typeof 
 };
 
 function Tile({
-  kind, petId, petName, tenantId, onDone, uploadedVia,
+  kind, petId, petName, tenantId, onDone, uploadedVia, action,
 }: {
   kind: PetDocKind;
   petId: string;
@@ -20,6 +23,7 @@ function Tile({
   tenantId: string;
   onDone: () => void;
   uploadedVia: "portal" | "admin";
+  action?: ReactNode;
 }) {
   const meta = KIND_META[kind];
   const Icon = meta.icon;
@@ -50,8 +54,8 @@ function Tile({
   return (
     <div
       className={
-        "space-y-2 rounded-xl border p-3 " +
-        (onFileState ? "border-sk-green bg-sk-green-soft/40" : "border-dashed border-border bg-white")
+        "space-y-2 rounded-lg border p-3 " +
+        (onFileState ? "border-sk-green bg-sk-green-soft/40" : "border-dashed border-border bg-background")
       }
     >
       <div className="flex items-center gap-2 text-sm font-semibold">
@@ -72,15 +76,15 @@ function Tile({
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <button
+        <Button variant="outline" size="sm"
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold hover:bg-muted disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-          {onFileState ? "Replace" : "Upload"}
-        </button>
+          {onFileState ? kind === "vaccination" ? "Add another card" : "Update photo" : "Upload"}
+        </Button>
         <SnapUploadButton
           target={{
             tenantId,
@@ -91,6 +95,8 @@ function Tile({
           onUploaded={onDone}
         />
       </div>
+      {action}
+      {kind === "vaccination" && <VaccinationCards tenantId={tenantId} petId={petId} />}
       <input
         ref={inputRef}
         type="file"
@@ -104,19 +110,37 @@ function Tile({
 
 /** Photo + vaccination card for one pet — real uploads, not a tick box. */
 export function PetAttachments({
-  tenantId, petId, petName, uploadedVia = "portal",
+  tenantId, petId, petName, uploadedVia = "portal", photoAction, vaccinationAction,
 }: {
   tenantId: string;
   petId: string;
   petName: string;
   uploadedVia?: "portal" | "admin";
+  photoAction?: ReactNode;
+  vaccinationAction?: ReactNode;
 }) {
   const qc = useQueryClient();
-  const refresh = () => qc.invalidateQueries({ queryKey: ["pet_attachment_status"] });
+  const refresh = () => { for (const key of ["pet_attachment_status", "pet_vax_cards", "pet_vax_docs", "pet_photo_status", "booking_photo_gate", "booking_vax_gate", "pet_vax_status"]) void qc.invalidateQueries({ queryKey: [key] }); };
   return (
     <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
-      <Tile kind="pet_photo" petId={petId} petName={petName} tenantId={tenantId} onDone={refresh} uploadedVia={uploadedVia} />
-      <Tile kind="vaccination" petId={petId} petName={petName} tenantId={tenantId} onDone={refresh} uploadedVia={uploadedVia} />
+      <Tile kind="pet_photo" petId={petId} petName={petName} tenantId={tenantId} onDone={refresh} uploadedVia={uploadedVia} action={photoAction} />
+      <Tile kind="vaccination" petId={petId} petName={petName} tenantId={tenantId} onDone={refresh} uploadedVia={uploadedVia} action={vaccinationAction} />
     </div>
   );
+}
+
+function VaccinationCards({ tenantId, petId }: { tenantId: string; petId: string }) {
+  const cards = useQuery({ queryKey: ["pet_vax_cards", tenantId, petId], queryFn: async () => {
+    const { data, error } = await supabase.from("documents").select("id, file_name, created_at").eq("tenant_id", tenantId).eq("pet_id", petId).eq("type", "vaccination").is("deleted_at", null).is("archived_at", null).in("status", ["uploaded", "verified"]).order("created_at", { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  } });
+  if (cards.error) return <p className="text-xs text-destructive">Could not load vaccination cards.</p>;
+  if (!cards.data?.length) return null;
+  return <details className="border-t border-border pt-2"><summary className="cursor-pointer text-xs font-medium">Cards on file ({cards.data.length})</summary><ul className="mt-2 space-y-1">{cards.data.map(card => <li key={card.id}><CardDownload id={card.id} name={card.file_name} /></li>)}</ul></details>;
+}
+
+function CardDownload({ id, name }: { id: string; name: string | null }) {
+  const preview = useDocumentPreviewUrl(id);
+  return preview.data ? <a className="block break-words text-xs text-primary underline" href={preview.data} target="_blank" rel="noopener noreferrer">{name || "Vaccination card"}</a> : <span className="block break-words text-xs text-muted-foreground">{name || "Vaccination card"}</span>;
 }

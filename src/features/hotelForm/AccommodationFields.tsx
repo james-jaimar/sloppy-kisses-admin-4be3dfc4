@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
 import { ChevronDown, CheckCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PetAttachments } from "@/features/uploads/PetAttachments";
 import { AddressSelector } from "@/features/customers/AddressSelector";
 import { useCustomerAddresses } from "@/features/customers/addressQueries";
@@ -82,19 +83,21 @@ export function Section({
     );
   }
   return (
-    <section className="rounded-xl border border-border bg-white">
-      <button
+    <section className="border-b border-border bg-background">
+      <Button
+        variant="ghost"
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+        aria-expanded={open}
+        className="flex h-auto w-full items-center justify-between gap-3 whitespace-normal px-1 py-3 text-left"
       >
         <span className="flex min-w-0 items-center gap-2">
           {complete && <CheckCircle2 className="h-4 w-4 shrink-0 text-sk-green" />}
           <span className="text-sm font-semibold">{title}</span>
-          {summary && <span className="truncate text-xs text-muted-foreground">· {summary}</span>}
+          {summary && <span className="text-xs text-muted-foreground">· {summary}</span>}
         </span>
         <ChevronDown className={"h-4 w-4 shrink-0 text-muted-foreground transition-transform " + (open ? "rotate-180" : "")} />
-      </button>
+      </Button>
       {open && <div className="space-y-4 border-t border-border px-4 py-4">{children}</div>}
     </section>
   );
@@ -401,8 +404,8 @@ export function StayWindowSection({
 
 
 export function PetSections({
-  form, setForm, collapsible, tenantId, uploadedVia = "portal",
-}: FormProps & { tenantId?: string | null; uploadedVia?: "portal" | "admin" }) {
+  form, setForm, collapsible, tenantId, uploadedVia = "portal", renderChecks,
+}: FormProps & { tenantId?: string | null; uploadedVia?: "portal" | "admin"; renderChecks?: (pet: FormPet) => ReactNode }) {
   function patchPet(i: number, patch: Partial<FormPet>) {
     setForm({ ...form, pets: form.pets.map((p, idx) => (idx === i ? { ...p, ...patch } : p)) });
   }
@@ -445,12 +448,12 @@ export function PetSections({
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Text label="5-in-1 / DHPP date" type="date" value={p.vax_dhpp} onChange={(v) => patchPet(i, { vax_dhpp: v })} />
-            {tenantId && p.pet_id && (
+            {!renderChecks && <Text label="5-in-1 / DHPP date" type="date" value={p.vax_dhpp} onChange={(v) => patchPet(i, { vax_dhpp: v })} />}
+            {!renderChecks && tenantId && p.pet_id && (
               <PetAttachments tenantId={tenantId} petId={p.pet_id} petName={p.name || "this pet"} uploadedVia={uploadedVia} />
             )}
-            <Text label="Rabies date" type="date" value={p.vax_rabies} onChange={(v) => patchPet(i, { vax_rabies: v })} />
-            <Text label="Kennel cough date" type="date" value={p.vax_kennel_cough} onChange={(v) => patchPet(i, { vax_kennel_cough: v })} />
+            {!renderChecks && <Text label="Rabies date" type="date" value={p.vax_rabies} onChange={(v) => patchPet(i, { vax_rabies: v })} />}
+            {!renderChecks && <Text label="Kennel cough date" type="date" value={p.vax_kennel_cough} onChange={(v) => patchPet(i, { vax_kennel_cough: v })} />}
             <Text label="Tick & flea product" value={p.tick_flea_product} onChange={(v) => patchPet(i, { tick_flea_product: v })} />
             <Text label="Tick & flea date" type="date" value={p.tick_flea_date} onChange={(v) => patchPet(i, { tick_flea_date: v })} />
             <Area label="Feeding instructions" value={p.feeding_instructions ?? ""} onChange={(v) => patchPet(i, { feeding_instructions: v })} />
@@ -467,6 +470,7 @@ export function PetSections({
             )}
             <Area label="Anything else about this pet" value={p.notes} onChange={(v) => patchPet(i, { notes: v })} />
           </div>
+          {renderChecks?.(p)}
         </Section>
       ))}
     </>

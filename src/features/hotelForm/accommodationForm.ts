@@ -139,10 +139,11 @@ export function useAccommodationForm(bookingId: string | null | undefined) {
     queryKey: ["accommodation-form", bookingId],
     enabled: Boolean(bookingId),
     queryFn: async () => {
+      if (!bookingId) throw new Error("Booking is required");
       const { data: det, error } = await supabase
         .from("hotel_booking_details")
         .select("form_submission_id, form_received_at")
-        .eq("booking_id", bookingId!)
+        .eq("booking_id", bookingId)
         .maybeSingle();
       if (error) throw error;
       if (!det?.form_submission_id) return { receivedAt: null, payload: null as AccommodationFormPayload | null };
@@ -164,8 +165,9 @@ export function useSubmitAccommodationForm(bookingId: string | null | undefined)
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: AccommodationFormPayload) => {
+      if (!bookingId) throw new Error("Booking is required");
       const { data, error } = await supabase.rpc("submit_accommodation_form", {
-        p_booking_id: bookingId!,
+        p_booking_id: bookingId,
         p_payload: payload as unknown as never,
       });
       if (error) throw error;
@@ -175,6 +177,9 @@ export function useSubmitAccommodationForm(bookingId: string | null | undefined)
       qc.invalidateQueries({ queryKey: ["accommodation-form", bookingId] });
       qc.invalidateQueries({ queryKey: ["booking-details"] });
       qc.invalidateQueries({ queryKey: ["portal_booking", bookingId] });
+      qc.invalidateQueries({ queryKey: ["hotel_review", bookingId] });
+      qc.invalidateQueries({ queryKey: ["hotel_pipeline"] });
+      qc.invalidateQueries({ queryKey: ["hotel_groom_requests"] });
     },
   });
 }

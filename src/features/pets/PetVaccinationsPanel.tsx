@@ -201,6 +201,7 @@ export function PetVaccinationsPanel({ tenantId, petId, species = null, canManag
             qc.invalidateQueries({ queryKey: ["pet_vaccinations"] });
             qc.invalidateQueries({ queryKey: ["pet_vax_docs"] });
             qc.invalidateQueries({ queryKey: ["documents_panel"] });
+            for (const key of ["booking_vax_gate", "pet_vax_status", "pets_vax_status", "pet_vax_cards", "pet_attachment_status"]) void qc.invalidateQueries({ queryKey: [key] });
           }}
           upsert={upsert}
         />
