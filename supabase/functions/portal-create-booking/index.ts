@@ -534,7 +534,8 @@ Deno.serve(async (req) => {
       const startDay = start.toISOString().slice(0, 10);
       const endDay = body.end_at?.slice(0, 10) ?? startDay;
       const stayNights = Math.max(1, Math.round((Date.parse(endDay) - Date.parse(startDay)) / 86400000));
-      hotelExtras = priceHotelExtras((catalog ?? []) as HotelExtraRate[], body.hotel?.extras ?? [], body.pet_ids.length, stayNights, body.hotel?.check_out_window ?? null);
+      const dogCount = (pets as any[]).filter((p) => p.species !== "cat").length;
+      hotelExtras = priceHotelExtras((catalog ?? []) as HotelExtraRate[], body.hotel?.extras ?? [], body.pet_ids.length, stayNights, body.hotel?.check_out_window ?? null, dogCount);
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : "Invalid hotel extras" }, 400);
     }

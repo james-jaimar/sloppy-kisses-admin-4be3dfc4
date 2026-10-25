@@ -155,7 +155,8 @@ Deno.serve(async (req) => {
   if (catalogError) return j(500, { error: "Could not load hotel extras. Please try again." });
   let hotelExtras: ReturnType<typeof priceHotelExtras>;
   try {
-    hotelExtras = priceHotelExtras((catalog ?? []) as HotelExtraRate[], body.extras ?? [], body.pet_ids.length, n, body.check_out_window ?? null);
+    const dogCount = (pets as any[]).filter((p) => p.species !== "cat").length;
+    hotelExtras = priceHotelExtras((catalog ?? []) as HotelExtraRate[], body.extras ?? [], body.pet_ids.length, n, body.check_out_window ?? null, dogCount);
   } catch (error) {
     return j(400, { error: error instanceof Error ? error.message : "Invalid hotel extras" });
   }
