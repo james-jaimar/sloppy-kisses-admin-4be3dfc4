@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { useHotelReviewCounts } from "@/features/hotelCattery/useHotelReviewCounts";
 
 /**
  * Live badge counts for the admin sidebar. Keyed by the nav item's
@@ -12,6 +13,7 @@ export function useNavBadges(): Record<string, number> {
   const { currentTenant, hasPermission, profile } = useCurrentUser();
   const tenantId = currentTenant?.id ?? null;
   const isPlatform = profile?.user_type === "platform";
+  const hotelCounts = useHotelReviewCounts(tenantId);
 
   const canSeeComms = isPlatform || hasPermission("comms.view");
   const canSeeDaycare = isPlatform || hasPermission("daycare.view");
@@ -61,6 +63,7 @@ export function useNavBadges(): Record<string, number> {
   });
 
   return {
+    "hotel.view": hotelCounts.data?.total ?? 0,
     "comms.view": commsFailures.data ?? 0,
     "daycare.view": daycareAttention.data ?? 0,
   };

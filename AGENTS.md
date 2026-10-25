@@ -13,3 +13,4 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 - Booking photo pointers use the verified primary site's asset delivery URLs so the same CDN assets render in local, preview and portal views.
 - Hotel booking review embeds the shared accommodation intake editor on staff and portal pages; save through the existing intake RPC, preserve stay fields and customer signatures, and keep pet photo and vaccination waivers separate from invoice approval.
 - Hotel approval readiness is computed live from the intake and vaccination/photo gates (intakeReadiness.ts) and mapped onto the configured checklist codes; unknown codes stay manual, so staff never tick what the form already proves.
+- Hotel attention indicators share the tenant-scoped review-count query and stage constants, excluding converted enquiries/quotes so the dashboard, board and sidebar agree without double counting.

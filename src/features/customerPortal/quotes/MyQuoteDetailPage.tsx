@@ -18,6 +18,7 @@ export default function MyQuoteDetailPage() {
   const items = q.data?.items ?? [];
   const left = quote?.status === "sent" ? holdRemaining(quote?.hold_expires_at) : null;
   const isDaycare = quote?.service_type === "daycare";
+  const isHotel = quote?.service_type === "hotel_dog" || quote?.service_type === "hotel_cat";
   // Daycare places don't hold dates, so there is no hold countdown to wait on.
   const canAct =
     quote?.status === "sent" && !quote?.booking_id && !quote?.enrolment_id && (isDaycare || Boolean(left));
@@ -31,7 +32,7 @@ export default function MyQuoteDetailPage() {
           toast.success("Quote accepted — your daycare place is booked.");
           nav("/customer/dashboard");
         } else {
-          toast.success("Quote accepted — your booking is confirmed.");
+          toast.success(isHotel ? "Quote accepted — please complete your intake for staff review. Your stay is not confirmed yet." : "Quote accepted — your booking is confirmed.");
           if ((res as any)?.booking_id) nav(`/customer/bookings/${(res as any).booking_id}`);
         }
       } else {
@@ -114,7 +115,7 @@ export default function MyQuoteDetailPage() {
                   disabled={act.isPending}
                   className="rounded-lg bg-sk-coral px-5 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50"
                 >
-                  {act.isPending ? "Working…" : "Accept & book"}
+                  {act.isPending ? "Working…" : isHotel ? "Accept quote & complete intake" : "Accept & book"}
                 </button>
                 <button
                   onClick={() => run("cancel")}
