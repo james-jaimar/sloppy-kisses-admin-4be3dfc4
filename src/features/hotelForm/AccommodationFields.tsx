@@ -454,8 +454,8 @@ export function PetSections({
             )}
             {!renderChecks && <Text label="Rabies date" type="date" value={p.vax_rabies} onChange={(v) => patchPet(i, { vax_rabies: v })} />}
             {!renderChecks && <Text label="Kennel cough date" type="date" value={p.vax_kennel_cough} onChange={(v) => patchPet(i, { vax_kennel_cough: v })} />}
-            <Text label="Tick & flea product" value={p.tick_flea_product} onChange={(v) => patchPet(i, { tick_flea_product: v })} />
-            <Text label="Tick & flea date" type="date" value={p.tick_flea_date} onChange={(v) => patchPet(i, { tick_flea_date: v })} />
+            {!renderChecks && <Text label="Tick & flea product" value={p.tick_flea_product} onChange={(v) => patchPet(i, { tick_flea_product: v })} />}
+            {!renderChecks && <Text label="Tick & flea date" type="date" value={p.tick_flea_date} onChange={(v) => patchPet(i, { tick_flea_date: v })} />
             <Area label="Feeding instructions" value={p.feeding_instructions ?? ""} onChange={(v) => patchPet(i, { feeding_instructions: v })} />
             <Area label="Medication instructions" value={p.medication_instructions ?? ""} onChange={(v) => patchPet(i, { medication_instructions: v })} />
             <div className="md:col-span-2">

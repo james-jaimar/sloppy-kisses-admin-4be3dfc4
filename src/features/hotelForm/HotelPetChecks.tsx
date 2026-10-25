@@ -22,6 +22,6 @@ export function HotelPetChecks({ bookingId, tenantId, petId, petName, portal, sp
       vaccinationAction={<div className="space-y-2 text-xs">{vaccines.isLoading ? "Checking vaccinations…" : vaccines.error ? "Could not check vaccinations" : rows.map(row => <div key={row.vaccine_type} className="flex flex-wrap justify-between gap-2"><span>{row.label || row.vaccine_type}</span><span className={row.status === "ok" || row.status === "waived" ? "text-sk-green" : "text-sk-orange"}>{VAX_STATUS_LABEL[row.status]}</span></div>)}{!portal && hasPermission("pets.manage") && <div className="flex justify-end"><VaxWaiverQuickAction petId={petId} petName={petName} /></div>}</div>}
     />
     <PetVaccinationsPanel tenantId={tenantId} petId={petId} species={species} uploadedVia={portal ? "portal" : "admin"} canManage={portal ? true : hasPermission("pets.manage_vaccinations")} />
-    <PetHealthPanel tenantId={tenantId} petId={petId} readOnly={portal} />
+    <PetHealthPanel tenantId={tenantId} petId={petId} portal={portal} />
   </div>;
 }

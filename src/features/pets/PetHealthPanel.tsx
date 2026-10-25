@@ -42,13 +42,17 @@ export function PetHealthPanel({
   tenantId,
   petId,
   readOnly = false,
+  portal = false,
 }: {
   tenantId: string;
   petId: string;
   readOnly?: boolean;
+  /** Portal customers record treatments for their own pets; holds stay staff-only. */
+  portal?: boolean;
 }) {
   const { hasPermission } = useCurrentUser();
-  const canManage = !readOnly && hasPermission(PERMISSION);
+  const canManage = portal || (!readOnly && hasPermission(PERMISSION));
+  const canRemove = canManage && !portal;
   const confirm = useConfirm();
 
   const rulesQ = useParasiteRules(tenantId, { activeOnly: true });
@@ -70,7 +74,7 @@ export function PetHealthPanel({
       {/* Parasite & preventative treatments */}
       <div>
         <div className="mb-2 flex items-center justify-between gap-2">
-          <div className="text-sm font-semibold">Parasite &amp; preventative treatments</div>
+          <div className="text-sm font-semibold">Parasite & preventative treatments</div>
           {canManage && (rulesQ.data?.length ?? 0) > 0 && (
             <button
               onClick={() => setRecording(rulesQ.data![0].kind)}
@@ -125,7 +129,7 @@ export function PetHealthPanel({
                     {t.product_name ? ` · ${t.product_name}` : ""}
                     {t.notes ? ` · ${t.notes}` : ""}
                   </span>
-                  {canManage && (
+                  {canRemove && (
                     <button
                       onClick={async () => {
                         if (!(await confirm({ title: "Remove this treatment record?", confirmLabel: "Remove", tone: "destructive" }))) return;
@@ -144,82 +148,84 @@ export function PetHealthPanel({
         )}
       </div>
 
-      {/* Health holds */}
-      <div className="border-t border-border pt-5">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <div className="text-sm font-semibold">Not fit to attend</div>
-          {canManage && (
-            <button
-              onClick={() => setAddingHold(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
-            >
-              <ShieldAlert className="h-3.5 w-3.5" /> Add hold
-            </button>
-          )}
-        </div>
-
-        {openHolds.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-            No active holds — this pet is clear to attend.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {openHolds.map((h) => (
-              <div
-                key={h.id}
-                className={
-                  "rounded-lg border px-3 py-2 " +
-                  (h.blocks_attendance ? "border-sk-coral bg-sk-coral-soft" : "border-sk-orange bg-sk-orange-soft")
-                }
+      {/* Health holds — internal, staff only */}
+      {!portal && (
+        <div className="border-t border-border pt-5">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="text-sm font-semibold">Not fit to attend</div>
+            {canManage && (
+              <button
+                onClick={() => setAddingHold(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold">{holdReasonLabel(h.reason)}</span>
-                  <span className="text-[11px] text-muted-foreground">
-                    since {fmt(h.started_on)}
-                    {h.expected_clear_on ? ` · expected clear ${fmt(h.expected_clear_on)}` : ""}
-                  </span>
-                  <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium">
-                    {h.blocks_attendance ? "Blocks attendance" : "Warning only"}
-                  </span>
-                  {canManage && (
-                    <button
-                      onClick={async () => {
-                        if (!(await confirm({
-                          title: "Clear this hold?",
-                          description: "Only clear once a vet clearance certificate has been received and uploaded to this pet's documents.",
-                          confirmLabel: "Clear hold",
-                        }))) return;
-                        try { await clearHold.mutateAsync({ id: h.id }); toast.success("Hold cleared"); }
-                        catch (e: any) { toast.error(e?.message ?? "Could not clear"); }
-                      }}
-                      className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-xs font-medium hover:bg-white/80"
-                    >
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Clear with vet certificate
-                    </button>
-                  )}
-                </div>
-                {h.notes && <div className="mt-1 text-xs">{h.notes}</div>}
-              </div>
-            ))}
+                <ShieldAlert className="h-3.5 w-3.5" /> Add hold
+              </button>
+            )}
           </div>
-        )}
 
-        {pastHolds.length > 0 && (
-          <details className="mt-2">
-            <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
-              Cleared holds ({pastHolds.length})
-            </summary>
-            <div className="mt-2 space-y-1">
-              {pastHolds.map((h) => (
-                <div key={h.id} className="rounded-lg bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
-                  {holdReasonLabel(h.reason)} · {fmt(h.started_on)} → cleared {fmt(h.cleared_at)}
-                  {h.clearance_notes ? ` · ${h.clearance_notes}` : ""}
+          {openHolds.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+              No active holds — this pet is clear to attend.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {openHolds.map((h) => (
+                <div
+                  key={h.id}
+                  className={
+                    "rounded-lg border px-3 py-2 " +
+                    (h.blocks_attendance ? "border-sk-coral bg-sk-coral-soft" : "border-sk-orange bg-sk-orange-soft")
+                  }
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold">{holdReasonLabel(h.reason)}</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      since {fmt(h.started_on)}
+                      {h.expected_clear_on ? ` · expected clear ${fmt(h.expected_clear_on)}` : ""}
+                    </span>
+                    <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] font-medium">
+                      {h.blocks_attendance ? "Blocks attendance" : "Warning only"}
+                    </span>
+                    {canManage && (
+                      <button
+                        onClick={async () => {
+                          if (!(await confirm({
+                            title: "Clear this hold?",
+                            description: "Only clear once a vet clearance certificate has been received and uploaded to this pet's documents.",
+                            confirmLabel: "Clear hold",
+                          }))) return;
+                          try { await clearHold.mutateAsync({ id: h.id }); toast.success("Hold cleared"); }
+                          catch (e: any) { toast.error(e?.message ?? "Could not clear"); }
+                        }}
+                        className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1 text-xs font-medium hover:bg-white/80"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Clear with vet certificate
+                      </button>
+                    )}
+                  </div>
+                  {h.notes && <div className="mt-1 text-xs">{h.notes}</div>}
                 </div>
               ))}
             </div>
-          </details>
-        )}
-      </div>
+          )}
+
+          {pastHolds.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+                Cleared holds ({pastHolds.length})
+              </summary>
+              <div className="mt-2 space-y-1">
+                {pastHolds.map((h) => (
+                  <div key={h.id} className="rounded-lg bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
+                    {holdReasonLabel(h.reason)} · {fmt(h.started_on)} → cleared {fmt(h.cleared_at)}
+                    {h.clearance_notes ? ` · ${h.clearance_notes}` : ""}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
+      )}
 
       {recording && (
         <RecordTreatmentModal
