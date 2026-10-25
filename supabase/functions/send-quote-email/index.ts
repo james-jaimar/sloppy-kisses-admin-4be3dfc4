@@ -96,7 +96,9 @@ Deno.serve(async (req) => {
   const total = Number(q.total ?? 0);
   const isDaycare = q.service_type === "daycare";
   // Daycare places are billed in full for the first month — there is no 50% deposit.
-  const deposit = isDaycare ? total : Math.round(total * 50) / 100;
+  const paymentPct = Number(extras.payment_percent ?? 50);
+  const isProforma = extras.document_kind === "proforma";
+  const deposit = isDaycare ? total : Math.round(total * paymentPct) / 100;
   const daycarePlan = extras?.daycare_plan_name ?? null;
   const daycareDays: string[] = Array.isArray(extras?.weekdays) ? extras.weekdays : [];
   const validUntil = q.hold_until ?? q.expiry_date ?? null;
@@ -120,8 +122,8 @@ Deno.serve(async (req) => {
   };
 
   const useTpl = tpl && tpl.is_active !== false && String(tpl.body ?? "").trim().length > 0;
-  const intro = render(useTpl ? String(tpl!.body) : DEFAULT_QUOTE_INTRO, ctx);
-  const subject = useTpl && tpl!.subject
+  const intro = isProforma ? `Hi ${firstName},\n\nYour hotel stay has been approved. Your pro forma is attached. ${paymentPct}% (${fmtZar(deposit)}) is payable now. Please use the bank details and reference on the document and upload your payment proof in your booking. A tax invoice is issued once staff verify received payment.` : render(useTpl ? String(tpl!.body) : DEFAULT_QUOTE_INTRO, ctx);
+  const subject = isProforma ? `Hotel pro forma ${q.estimate_number} from ${tenant?.name ?? "us"}` : useTpl && tpl!.subject
     ? render(String(tpl!.subject), ctx)
     : `Your stay quote ${q.estimate_number} from ${tenant?.name ?? "us"}`;
 
@@ -136,6 +138,7 @@ Deno.serve(async (req) => {
   const baseSettings = resolveQuoteEmailSettings(emailSettingsRow);
   const settings = {
     ...baseSettings,
+    ...(isProforma ? { hero_label: "PRO FORMA", hero_headline: "Your stay is approved", deposit_label: `${paymentPct}% payable now`, cta_label: "View your booking", cta_subtext: "Upload documents and payment proof in your portal." } : {}),
     hero_label: render(baseSettings.hero_label, ctx),
     hero_headline: render(baseSettings.hero_headline, ctx),
     total_label: render(baseSettings.total_label, ctx),
@@ -151,6 +154,13 @@ Deno.serve(async (req) => {
       body_html: render(c.body_html ?? "", ctx),
     })),
   };
+  if (isProforma) {
+    settings.hero_label = "PRO FORMA";
+    settings.hero_headline = "Your stay is approved";
+    settings.deposit_label = `${paymentPct}% payable now`;
+    settings.cta_label = "View your booking";
+    settings.cta_subtext = "A tax invoice follows verified payment.";
+  }
 
   const { html, text } = buildQuoteEmail({
     tenantName: tenant?.name ?? "Sloppy Kisses",
@@ -174,7 +184,7 @@ Deno.serve(async (req) => {
     total,
     deposit,
     validUntil,
-    publicToken: (q as any).public_token ?? null,
+    publicToken: isProforma ? null : (q as any).public_token ?? null,
     intro,
     guidelines,
     settings,

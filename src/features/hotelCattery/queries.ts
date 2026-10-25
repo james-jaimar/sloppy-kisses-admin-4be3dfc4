@@ -294,7 +294,7 @@ export function useHotelWorkflowSettings(tenantId: string | null | undefined) {
         .eq("tenant_id", tenantId as string)
         .maybeSingle();
       if (error) throw error;
-      return (data ?? null) as HotelWorkflowSettings | null;
+      return (data ?? null) as unknown as HotelWorkflowSettings | null;
     },
   });
 }
