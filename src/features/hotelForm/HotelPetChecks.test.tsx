@@ -12,11 +12,11 @@ vi.mock("@/features/pets/PetVaccinationsPanel", () => ({ PetVaccinationsPanel: (
 vi.mock("@/features/pets/PetHealthPanel", () => ({ PetHealthPanel: () => null }));
 describe("Hotel per-pet checks", () => {
   beforeEach(() => { cleanup(); vi.clearAllMocks(); });
-  it("keeps photo and vaccination waiver actions independently bound to this pet", () => {
+  it("keeps the photo waiver separate and routes vaccination management to the detailed panel", () => {
     render(<HotelPetChecks bookingId="stay-1" tenantId="tenant-1" petId="dog-1" petName="Dog" portal={false} species="dog" />);
     expect(actions.photo).toHaveBeenCalledWith({ petId: "dog-1", petName: "Dog" });
-    expect(actions.vaccination).toHaveBeenCalledWith({ petId: "dog-1", petName: "Dog" });
-    expect(actions.records.mock.calls[0][0]).toMatchObject({ petId: "dog-1", species: "dog", uploadedVia: "admin" });
+    expect(actions.vaccination).not.toHaveBeenCalled();
+    expect(actions.records.mock.calls[0][0]).toMatchObject({ bookingId: "stay-1", petId: "dog-1", species: "dog", uploadedVia: "admin", canManage: true });
   });
   it("does not expose staff waiver mutations to the customer", () => {
     render(<HotelPetChecks bookingId="stay-1" tenantId="tenant-1" petId="dog-1" petName="Dog" portal species="dog" />);
