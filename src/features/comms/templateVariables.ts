@@ -52,6 +52,8 @@ const QUOTE_VARS: TemplateVariable[] = [
 
 export const TEMPLATE_VARIABLE_MAP: Record<string, TemplateVariable[]> = {
   booking_created: [...CUSTOMER_VARS, ...BOOKING_VARS],
+  hotel_booking_requested: [...CUSTOMER_VARS, ...BOOKING_VARS, { path: "booking.portal_url", label: "Hotel intake link", sample: "https://sloppykisses.jaimar.dev/customer/bookings/sample" }],
+  hotel_booking_confirmed: [...CUSTOMER_VARS, ...BOOKING_VARS, { path: "booking.portal_url", label: "Hotel stay link", sample: "https://sloppykisses.jaimar.dev/customer/bookings/sample" }],
   booking_reminder_24h: [...CUSTOMER_VARS, ...BOOKING_VARS],
   booking_cancelled: [...CUSTOMER_VARS, ...BOOKING_VARS],
   booking_rescheduled: [...CUSTOMER_VARS, ...BOOKING_VARS, ...CHANGE_VARS],

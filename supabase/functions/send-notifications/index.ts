@@ -7,6 +7,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { loadTransport, loadTenantBrand, renderBrandedHtml, sendMail } from "../_shared/comms-transport.ts";
 import { htmlToText, looksLikeHtml } from "../_shared/html-email.ts";
+import { hotelNotificationTemplate } from "../_shared/hotel-notifications.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -167,7 +168,28 @@ Deno.serve(async (req) => {
         sb.from("message_templates").select("*").eq("tenant_id", ev.tenant_id).eq("event_code", ev.event_type).eq("channel", ev.channel).eq("is_active", true).maybeSingle(),
       ]);
       const settings = settingsRes.data;
-      const tpl = tplRes.data ?? (ev.event_type === "manual_message" && ev.booking_id && ev.payload?.message ? { subject: "{{payload.subject}}", body: "{{payload.message}}", body_format: "text" } : null);
+      let tpl = tplRes.data ?? (ev.event_type === "manual_message" && ev.booking_id && ev.payload?.message ? { subject: "{{payload.subject}}", body: "{{payload.message}}", body_format: "text" } : null);
+      const serviceType = bookingRes.data?.service_type;
+      const isHotel = serviceType === "hotel_dog" || serviceType === "hotel_cat";
+      let staffConfirmed = false;
+      if (isHotel && ev.event_type === "booking_status_changed" && ev.payload?.to === "confirmed") {
+        const { data: review, error: reviewError } = await sb.from("hotel_booking_reviews")
+          .select("confirmed_at").eq("booking_id", ev.booking_id).eq("tenant_id", ev.tenant_id).maybeSingle();
+        if (reviewError) throw reviewError;
+        staffConfirmed = Boolean(review?.confirmed_at);
+      }
+      const templateCode = hotelNotificationTemplate(ev.event_type, serviceType, ev.payload?.to, staffConfirmed);
+      if (!templateCode) {
+        await sb.from("notification_events").update({ status: "skipped", error: "Hotel stay not confirmed by staff" }).eq("id", ev.id);
+        skipped++;
+        continue;
+      }
+      if (templateCode !== ev.event_type) {
+        const { data: hotelTemplate, error: templateError } = await sb.from("message_templates").select("*")
+          .eq("tenant_id", ev.tenant_id).eq("event_code", templateCode).eq("channel", ev.channel).eq("is_active", true).maybeSingle();
+        if (templateError) throw templateError;
+        tpl = hotelTemplate;
+      }
       const customer = custRes.data;
       const brand = await loadTenantBrand(sb, ev.tenant_id);
 
@@ -216,7 +238,10 @@ Deno.serve(async (req) => {
       const ctx = {
         tenant: tenantRes.data,
         customer,
-        booking: bookingRes.data,
+        booking: bookingRes.data ? {
+          ...bookingRes.data,
+          portal_url: `${(brand?.app_url || Deno.env.get("APP_BASE_URL") || "").replace(/\/+$/, "")}/customer/bookings/${ev.booking_id}`,
+        } : null,
         invoice: buildInvoiceCtx(invoiceRes.data, brand),
         pet,
         vaccine: ev.payload?.vaccine ?? {},
