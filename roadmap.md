@@ -1,8 +1,8 @@
 # Public booking refresh
 # Unified hotel intake slices
-- [ ] Slice 1: editable, prefilled accommodation intake on staff and customer booking pages; preserve partial saves and consent.
-- [ ] Verify slice 1 before proceeding.
-- [ ] Slice 2: per-pet photo, vaccination and health checks with separate existing waivers and multiple cards.
+- [x] Slice 1: editable, prefilled accommodation intake on staff and customer booking pages; preserve partial saves and consent.
+- [x] Verify slice 1 before proceeding: partial save, customer prefill and unsigned consent regression passed; app validation passed.
+- [x] Slice 2: per-pet photo, vaccination and health checks with separate existing waivers and multiple cards.
 - [ ] Verify slice 2 and regressions; authenticated live checks depend on external Supabase access.
 # Hotel approvals and payment-first billing
 - [x] Add secured hotel review/checklist and payment-first invoice rules; preserve existing issued invoices.

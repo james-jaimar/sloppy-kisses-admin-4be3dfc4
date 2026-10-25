@@ -63,7 +63,6 @@ export default function MyBookingDetailPage() {
           <ArrowLeft className="h-3.5 w-3.5" /> Back to bookings
         </Link>
 
-        {group === "hotel" && <AccommodationFormBanner bookingId={b.id} />}
         {group === "hotel" && <HotelReviewPanel portal bookingId={b.id} tenantId={b.tenant_id} customerId={b.customer_id} startDate={b.start_at ?? ""} pets={b.booking_pets.flatMap((bp: any) => bp.pet ? [bp.pet] : [])} />}
         {group === "hotel" && <PortalGroomRequestStatus bookingId={b.id} />}
         {b.status === "pending_payment" && (
