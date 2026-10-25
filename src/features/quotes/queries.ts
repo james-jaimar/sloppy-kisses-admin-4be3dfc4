@@ -165,7 +165,7 @@ export function useHotelStayLines(params: {
 }
 
 /** Quote validity window configured in Hotel workflow settings (defaults to 14 days). */
-export interface StayPetInput { name: string; accommodation_type: string }
+export interface StayPetInput { name: string; accommodation_type: string; species?: string }
 
 /**
  * Per-dog stay pricing: one line per dog using that dog's own accommodation.

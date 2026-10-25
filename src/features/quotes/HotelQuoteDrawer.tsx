@@ -85,7 +85,7 @@ export function HotelQuoteDrawer({
 
   const stayPets = useMemo(
     () =>
-      selectedPets.map((p: any) => ({ name: p.name as string, accommodation_type: accFor(p.id) })),
+      selectedPets.map((p: any) => ({ name: p.name as string, accommodation_type: accFor(p.id), species: p.species as string })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [selectedPets, petAcc, accommodation],
   );
