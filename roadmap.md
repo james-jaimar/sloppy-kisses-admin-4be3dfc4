@@ -1,10 +1,13 @@
 # Public booking refresh
 # Hotel approvals and payment-first billing
-- [ ] Add secured hotel review/checklist and payment-first invoice rules; preserve existing issued invoices.
-- [ ] Add Hotel pipeline page, booking review, uploads, estimate/pro forma and verified payment actions.
-- [ ] Mirror review and payment-request status in the customer portal; add editable workflow settings.
-- [ ] Fix mixed pet accommodation, total walk quantities, Cat Hotel labels and collection-time capture.
-- [ ] Test cutoff/permissions/accounting rules and check the live screens; report external-session/payment-provider blockers.
+- [x] Add secured hotel review/checklist and payment-first invoice rules; preserve existing issued invoices.
+- [x] Add Hotel pipeline page, booking review, uploads, estimate/pro forma and verified payment actions.
+- [x] Mirror review and payment-request status in the customer portal; add editable workflow settings.
+- [x] Add total walk quantities, Cat Hotel labels, collection-time capture and existing trial-day shortcut.
+- [x] Verify cutoff and payment-first accounting with rolled-back database test and 17 frontend tests; public form has no runtime errors or horizontal overflow.
+- [ ] Verify signed-in staff and customer hotel review/upload/payment flow — blocked by external/unmanaged Supabase session access.
+- [ ] Finish mixed dog/cat per-pet resource allocation and calendar/capacity checks; current prices use pet species but placement remains booking-wide. Awaiting completion, not verified.
+- [ ] Verify booking photography on hosted preview; local browser did not render asset-pointer images.
 # October price-list updates
 - [x] Add missing grooming treatments using existing editable Settings catalogs; retain Full/Express inclusions.
 - [x] Add Saturday daycare pricing and eligibility; enforce no weekend trials.
