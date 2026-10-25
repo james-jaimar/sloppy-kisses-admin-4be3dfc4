@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 
 export type GateMode = "off" | "warn" | "block";
@@ -243,6 +243,25 @@ export function usePetHealthGate(petId: string | null, onDate?: string) {
       if (error) throw error;
       return (data ?? { ok: true, blocked: false, treatments: [], holds: [] }) as unknown as HealthGate;
     },
+  });
+}
+
+/** Tick & flea gate status for several pets — drives hotel intake readiness. */
+export function usePetsTickFleaStatus(petIds: string[]) {
+  const queries = useQueries({
+    queries: (petIds ?? []).map((petId) => ({
+      queryKey: ["pet_health_gate", petId],
+      queryFn: async (): Promise<HealthGate> => {
+        const { data, error } = await supabase.rpc("pet_health_gate" as any, { p_pet_id: petId });
+        if (error) throw error;
+        return (data ?? { ok: true, blocked: false, treatments: [], holds: [] }) as unknown as HealthGate;
+      },
+      enabled: Boolean(petId),
+    })),
+  });
+  return queries.map((q, i) => {
+    const row = q.data?.treatments.find((t) => t.kind === "tick_flea");
+    return { pet_id: petIds[i], status: row?.status ?? "missing" };
   });
 }
 

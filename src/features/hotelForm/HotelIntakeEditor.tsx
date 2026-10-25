@@ -12,6 +12,7 @@ import { GuidelinesSection } from "./GuidelinesSection";
 import { HotelPetChecks } from "./HotelPetChecks";
 import { StageBand } from "./StageBand";
 import { hotelReadiness, type ReadinessItem } from "./intakeReadiness";
+import { usePetsTickFleaStatus } from "@/features/pets/healthQueries";
 import { useBookingVaccinationGate } from "@/features/pets/vaccinationGate";
 import { useBookingPhotoGate } from "@/features/pets/photoGateQueries";
 
@@ -31,6 +32,7 @@ export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, porta
   const writeBack = useAccommodationWriteBack();
   const vaxGate = useBookingVaccinationGate(bookingId);
   const photoGate = useBookingPhotoGate(bookingId);
+  const tickRows = usePetsTickFleaStatus(pets.map(p => p.id));
   const stay = useQuery({ queryKey: ["hotel_intake_stay", bookingId], queryFn: async () => {
     const { data, error } = await supabase.from("hotel_booking_details").select("check_in_window, check_out_window, pickup_required, dropoff_required, feeding_instructions, medication_instructions, grooming_required, grooming_instructions, belongings_notes, emergency_notes, additional_notes").eq("booking_id", bookingId).maybeSingle();
     if (error) throw error;
@@ -86,7 +88,7 @@ export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, porta
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not save hotel intake"); }
   }
 
-  const readiness = form ? hotelReadiness({ form, vaxRows: vaxGate.data ?? [], vaxOverridden, photoRows: photoGate.data ?? [] }) : null;
+  const readiness = form ? hotelReadiness({ form, vaxRows: vaxGate.data ?? [], vaxOverridden, photoRows: photoGate.data ?? [], tickRows }) : null;
   const readinessKey = readiness ? JSON.stringify(readiness) + dirty : "";
   useEffect(() => { if (readiness) onStatus?.({ items: readiness, dirty }); }, [readinessKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
