@@ -24,8 +24,8 @@ describe("hotel extras pricing and persisted quantities", () => {
 });
 // Mixed stays: walks are dog-only — cats must not be charged.
 it("charges walks for dogs only on mixed dog/cat stays", () => {
-  const catalog = [{ id: "w", code: "walk", name: "Walk", price_zar: 100, per_night: false }];
-  // 3 pets (2 dogs + 1 cat), 1 walk per pet per day over 7 nights.
-  expect(n(catalog, [{ code: "walk", quantity: 1 }], 3, 7, undefined, 2)[0])
+  const walkCatalog = [{ id: "w", code: "walk", name: "Walk", price_zar: 100, per_night: false }];
+  // 3 pets (2 dogs + 1 cat), 1 walk per pet over the stay.
+  expect(priceHotelExtras(walkCatalog, [{ code: "walk", quantity: 1 }], 3, 7, undefined, 2)[0])
     .toMatchObject({ quantity: 2, billedQuantity: 2, total: 200 });
 });
