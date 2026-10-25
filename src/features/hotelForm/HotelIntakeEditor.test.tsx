@@ -11,6 +11,7 @@ vi.mock("./accommodationForm", async () => {
 });
 vi.mock("@/features/pets/vaccinationGate", () => ({ useBookingVaccinationGate: () => ({ data: [] }), VAX_STATUS_LABEL: {} }));
 vi.mock("@/features/pets/photoGateQueries", () => ({ useBookingPhotoGate: () => ({ data: [] }) }));
+vi.mock("@/features/pets/healthQueries", () => ({ usePetsTickFleaStatus: () => [{ pet_id: "pet-1", status: "ok" }] }));
 vi.mock("./HotelPetChecks", () => ({ HotelPetChecks: () => null }));
 vi.mock("./prefillQueries", () => ({ useAccommodationWriteBack: () => ({ mutateAsync: async () => {} }), useAccommodationCustomer: () => ({ data: state.customer, isLoading: false }), useAccommodationPets: () => ({ data: state.records, isLoading: false }) }));
 vi.mock("@/features/uploads/PetAttachments", () => ({ PetAttachments: () => null }));
