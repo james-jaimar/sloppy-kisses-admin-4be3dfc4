@@ -4460,6 +4460,7 @@ export type Database = {
           id: string
           price_override_zar: number | null
           quantity: number
+          quantity_basis: string
           surcharge_id: string
           tenant_id: string
         }
@@ -4469,6 +4470,7 @@ export type Database = {
           id?: string
           price_override_zar?: number | null
           quantity?: number
+          quantity_basis?: string
           surcharge_id: string
           tenant_id: string
         }
@@ -4478,6 +4480,7 @@ export type Database = {
           id?: string
           price_override_zar?: number | null
           quantity?: number
+          quantity_basis?: string
           surcharge_id?: string
           tenant_id?: string
         }
@@ -9955,6 +9958,15 @@ export type Database = {
       grooming_sync_instruction_addons: {
         Args: { p_booking_id: string }
         Returns: undefined
+      }
+      hotel_booking_stay_lines: {
+        Args: { p_booking_id: string }
+        Returns: {
+          description: string
+          line_total: number
+          quantity: number
+          unit_price: number
+        }[]
       }
       hotel_can_confirm_booking: {
         Args: { p_booking_id: string }
