@@ -94,6 +94,7 @@ export function HotelFields({
           />
         </div>
       </div>
+      <label className="mt-3 block text-sm">Agreed collection time<input type="time" className={inputCls} value={value.agreed_collection_time?.slice(0, 5) ?? ""} onChange={e => onChange({ agreed_collection_time: e.target.value || null })} /></label>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div>
           <div className="mb-1 text-xs font-medium">Feeding instructions</div>

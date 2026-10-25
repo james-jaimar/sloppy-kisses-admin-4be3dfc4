@@ -147,6 +147,7 @@ Deno.serve(async (req) => {
       .select("id")
       .eq("tenant_id", tenant.id)
       .eq("customer_id", customerId)
+      .eq("species", pSpecies)
       .ilike("name", pName)
       .limit(1)
       .maybeSingle();
@@ -168,8 +169,8 @@ Deno.serve(async (req) => {
     petIds.push(pet.id);
   }
 
-  const startAt = `${checkIn}T14:00:00+02:00`;
-  const endAt = `${checkOut}T10:00:00+02:00`;
+  const startAt = `${checkIn}T09:00:00+02:00`;
+  const endAt = `${checkOut}T09:00:00+02:00`;
 
   const { error: rErr } = await admin.from("booking_requests").insert({
     tenant_id: tenant.id,

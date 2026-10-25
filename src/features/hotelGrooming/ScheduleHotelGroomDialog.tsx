@@ -29,7 +29,7 @@ export function ScheduleHotelGroomDialog({
   const packagesQ = useGroomingPackages(tenantId, { activeOnly: true });
   const schedule = useScheduleHotelGroom();
   const [packageId, setPackageId] = useState<string>("");
-  const [start, setStart] = useState<string | null>(null);
+  const [start, setStart] = useState<string | null>(request.window_end ? `${request.window_end}T09:00:00` : null);
   const [end, setEnd] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
 

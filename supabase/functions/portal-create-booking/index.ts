@@ -537,7 +537,10 @@ Deno.serve(async (req) => {
       .select("id, code, name, price_zar, per_night").eq("tenant_id", tenantId).eq("active", true);
     if (catalogError) return json({ error: "Could not load hotel extras. Please try again." }, 500);
     try {
-      hotelExtras = priceHotelExtras((catalog ?? []) as HotelExtraRate[], body.hotel?.extras ?? [], body.pet_ids.length, 1, body.hotel?.check_out_window ?? null);
+      const startDay = start.toISOString().slice(0, 10);
+      const endDay = body.end_at?.slice(0, 10) ?? startDay;
+      const stayNights = Math.max(1, Math.round((Date.parse(endDay) - Date.parse(startDay)) / 86400000));
+      hotelExtras = priceHotelExtras((catalog ?? []) as HotelExtraRate[], body.hotel?.extras ?? [], body.pet_ids.length, stayNights, body.hotel?.check_out_window ?? null);
     } catch (error) {
       return json({ error: error instanceof Error ? error.message : "Invalid hotel extras" }, 400);
     }
