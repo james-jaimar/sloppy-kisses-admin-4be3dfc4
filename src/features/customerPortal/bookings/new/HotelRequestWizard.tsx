@@ -291,7 +291,7 @@ export default function HotelRequestWizard() {
   const vax = usePetsVaxBlocked(petIds, serviceType, checkInDate || null);
 
   const canSubmit =
-    stayReady && transportAddressReady && !photoBlocked && !vax.blocked && form.acknowledgement.accepted &&
+    stayReady && transportAddressReady && form.acknowledgement.accepted &&
     form.acknowledgement.signed_name.trim().length > 1 && !submit.isPending;
 
   /** Saves the priced stay as a quote that holds the dates for a short while. */

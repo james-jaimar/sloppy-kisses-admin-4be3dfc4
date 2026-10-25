@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
       .eq("tenant_id", tenantId)
       .maybeSingle();
     const photoMode = (photoSettings as any)?.photo_gate_mode ?? "off";
-    if (photoMode === "hard") {
+    if (photoMode === "hard" && group !== "hotel") {
       const { data: photoDocs } = await admin
         .from("documents")
         .select("pet_id")
@@ -601,7 +601,7 @@ Deno.serve(async (req) => {
       customer_id: customer.id,
       booking_number: numRes as unknown as string,
       service_type: body.service_type,
-      status: "confirmed",
+      status: group === "hotel" ? "requested" : "confirmed",
       source: "customer_portal",
       resource_id: resourceId,
       start_at: start.toISOString(),
@@ -761,6 +761,7 @@ Deno.serve(async (req) => {
     if (error) return cleanup(error.message);
   }
 
+  if (group === "hotel") return json({ booking_id: bookingId, booking_number: booking.booking_number, invoice_id: null, balance_due: 0, short_notice: shortNotice, payment_required_now: false, needs_review: true });
   // --- Issue the invoice ------------------------------------------------
   const { data: invoiceId, error: invErr } = await admin.rpc("issue_booking_invoice", {
     p_booking_id: bookingId,

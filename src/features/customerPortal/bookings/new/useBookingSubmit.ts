@@ -36,6 +36,7 @@ export interface CreateBookingResult {
   balance_due: number;
   short_notice: boolean;
   payment_required_now: boolean;
+  needs_review?: boolean;
 }
 
 const ERRORS: Record<string, string> = {
@@ -99,7 +100,7 @@ export function useCreatePortalBooking() {
       qc.invalidateQueries({ queryKey: ["portal_invoices"] });
       qc.invalidateQueries({ queryKey: ["portal_enrolments"] });
       if (res.booking_id) {
-        toast.success(`Booking ${res.booking_number} confirmed`);
+        toast.success(res.needs_review ? `Stay ${res.booking_number} submitted for hotel review` : `Booking ${res.booking_number} confirmed`);
         navigate(`/customer/bookings/${res.booking_id}?created=1`);
       } else {
         toast.success("Daycare enrolment confirmed");

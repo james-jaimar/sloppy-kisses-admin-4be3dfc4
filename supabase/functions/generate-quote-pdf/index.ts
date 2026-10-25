@@ -35,6 +35,11 @@ Deno.serve(async (req) => {
 
   const { data: q } = await admin.from("estimates").select("*").eq("id", quoteId).maybeSingle();
   if (!q) return jerr(404, "Quote not found");
+  if (!isServiceCall) {
+    const caller = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: auth } } });
+    const { data: visible, error } = await caller.from("estimates").select("id").eq("id", quoteId).maybeSingle();
+    if (error || !visible) return jerr(403, "This document is not available to your account");
+  }
 
   const [{ data: items }, { data: customer }, { data: settings }, { data: tenant }] = await Promise.all([
     admin.from("estimate_items").select("*").eq("estimate_id", quoteId).order("sort_order"),

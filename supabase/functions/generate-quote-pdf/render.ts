@@ -48,7 +48,8 @@ export async function renderQuotePdf({ q, items, customer, settings, tenant, adm
   } else {
     draw(settings?.company_name || tenant?.name || "Sloppy Kisses", M, cursorY - 16, 16, bold, brand);
   }
-  drawRight("QUOTE", width - M, cursorY - 8, 20, bold, text);
+  const isProforma = q.extras?.document_kind === "proforma";
+  drawRight(isProforma ? "PRO FORMA" : "ESTIMATE", width - M, cursorY - 8, 20, bold, text);
   drawRight(`# ${q.estimate_number ?? ""}`, width - M, cursorY - 26, 11, reg, muted);
 
   cursorY -= 84;
@@ -171,13 +172,14 @@ export async function renderQuotePdf({ q, items, customer, settings, tenant, adm
 
   // ── Totals + deposit ──────────────────────────────────────────────────────
   const total = Number(q.total ?? 0);
-  const deposit = Math.round(total * 50) / 100;
+  const pct = Number(q.extras?.payment_percent ?? 50);
+  const deposit = Math.round(total * pct) / 100;
   const totalsW = 235;
   const totalsX = width - M - totalsW;
   const rows: Array<[string, string, boolean]> = [
     ["Subtotal", fmtZar(Number(q.subtotal ?? total)), false],
     ["Total (VAT incl.)", fmtZar(total), true],
-    ["50% deposit to secure", fmtZar(deposit), false],
+    [`${pct}% payable now`, fmtZar(deposit), false],
     ["Balance before arrival", fmtZar(total - deposit), false],
   ];
   let ty = cursorY;
@@ -200,9 +202,7 @@ export async function renderQuotePdf({ q, items, customer, settings, tenant, adm
   cursorY = ty - 20;
 
   // ── Notes / footer ────────────────────────────────────────────────────────
-  const holdNote = q.hold_until
-    ? `These dates are pencilled in for you until ${fmtDate(q.hold_until)}. A 50% deposit secures the booking; the balance is due before arrival.`
-    : "A 50% deposit secures the booking; the balance is due before arrival.";
+  const holdNote = `Not a tax invoice. ${pct}% (${fmtZar(deposit)}) payable now. ${pct < 100 ? "The remaining balance is due at the payment cutoff before arrival." : "Full payment is required to secure this stay."}${q.hold_until ? ` Dates held until ${fmtDate(q.hold_until)}.` : ""}`;
   const notes = [holdNote, q.notes, settings?.footer_notes].filter(Boolean).join("\n\n");
   draw("NOTES", M, cursorY, 8, bold, muted);
   wrapMultiline(page, safe(notes), M, cursorY - 15, width - 2 * M, 9, reg, muted);
