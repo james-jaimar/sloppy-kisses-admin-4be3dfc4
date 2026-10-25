@@ -95,7 +95,7 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
   const ready = Boolean(status) && required.every(i => i.done) && manualCodes.every(c => checks[c.code]) && !status?.dirty;
   const confirmed = Boolean(r?.confirmed_at) || paid;
   const stageIndex = checkedIn ? 3 : confirmed ? 2 : 1;
-  const stages = ["Quote accepted", "Gathering info", "Confirmed · invoiced", "Checked in"];
+  const stages = ["Request received", "Gathering info · staff review", "Confirmed · invoiced", "Checked in"];
   return <div className="space-y-4">
     <section className="rounded-2xl border-2 border-sk-border bg-sk-surface p-4 sm:p-5" aria-label="Stay progress">
       <ol className="grid gap-2 sm:grid-cols-4">{stages.map((s, i) => <li key={s} className={cn("rounded-lg px-3 py-2 text-sm font-semibold", i < stageIndex ? "bg-sk-green-soft text-sk-green" : i === stageIndex ? "bg-primary text-primary-foreground" : "bg-sk-surface-muted text-muted-foreground")}>{i + 1}. {s}</li>)}</ol>
@@ -113,7 +113,7 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
     <HotelIntakeEditor key={bookingId} bookingId={bookingId} tenantId={tenantId} customerId={customerId} pets={pets} portal={portal} vaxOverridden={vaxOverridden} onStatus={setStatus} />
     <StageBand id="stay-approval" step={5} title={portal ? "Confirmation & invoice" : "Confirm booking & invoice"} tone="green" done={confirmed ? true : undefined} status={confirmed ? "Confirmed · invoice issued" : undefined}>
     {portal && message && <p className="whitespace-pre-wrap rounded-lg bg-background p-4 text-sm">{message}</p>}
-    {portal && !r?.approved_at && <p className="text-sm text-muted-foreground">Once everything above is complete, our team will confirm your stay and email your invoice.</p>}
+    {portal && !confirmed && <p className="text-sm text-muted-foreground">Your stay is not confirmed yet. Our team must review your intake and documents before confirming it and emailing your invoice.</p>}
     {canEdit && !confirmed && <div className="space-y-3">
       {manualCodes.map(c => <label key={c.code} className="flex items-center gap-3 text-sm"><input type="checkbox" checked={Boolean(checks[c.code])} onChange={e => setChecks(s => ({ ...s, [c.code]: e.target.checked }))} className="h-5 w-5 accent-primary" />{c.label}</label>)}
       <label className="block text-sm">Information needed from customer<textarea value={message} onChange={e => setMessage(e.target.value)} rows={3} className="mt-1 w-full rounded-md border border-input bg-background p-3" /></label>
