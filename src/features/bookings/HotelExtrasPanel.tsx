@@ -145,7 +145,7 @@ export function HotelExtrasPanel({
     const groups = new Map<string, string[]>();
     if (pets.length > 0) {
       for (const p of pets) {
-        const acc = petAccommodations?.[p.id] || accommodationType;
+        const acc = petAcc(p);
         const key = `${p.species}|${acc}`;
         groups.set(key, [...(groups.get(key) ?? []), p.name]);
       }
@@ -306,7 +306,7 @@ export function HotelExtrasPanel({
                 </div>
                 <select
                   className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-                  value={petAccommodations?.[p.id] || accommodationType}
+                  value={petAcc(p)}
                   onChange={(e) => onPetAccommodationChange(p.id, e.target.value)}
                 >
                   <option value="">— Select accommodation —</option>
