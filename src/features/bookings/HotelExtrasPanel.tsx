@@ -191,6 +191,32 @@ export function HotelExtrasPanel({
 
   const defaultQty = Math.max(1, pets.length || petCount || 1);
 
+  // Slice 1: when the pet count changes after extras were chosen, scale
+  // "total over stay" quantities (e.g. walks) in proportion, and tell staff.
+  const prevPetCountRef = useRef<number>(defaultQty);
+  const [scaledNote, setScaledNote] = useState<string | null>(null);
+  useEffect(() => {
+    const prev = prevPetCountRef.current;
+    const next = defaultQty;
+    prevPetCountRef.current = next;
+    if (prev === next || selection.length === 0) return;
+    const scaled: string[] = [];
+    const updated = selection.map((s) => {
+      if (s.quantity_basis !== "total") return s;
+      const cat = (surchargesQ.data ?? []).find((x) => x.id === s.surcharge_id);
+      if (!cat) return s;
+      const newQty = Math.max(1, Math.round((s.quantity * next) / Math.max(1, prev)));
+      if (newQty === s.quantity) return s;
+      scaled.push(`${cat.name}: ${s.quantity} → ${newQty}`);
+      return { ...s, quantity: newQty };
+    });
+    if (scaled.length > 0) {
+      onSelectionChange(updated);
+      setScaledNote(`Pet count changed ${prev} → ${next}. Scaled: ${scaled.join(", ")}. Adjust if needed.`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultQty]);
+
   function toggleSurcharge(id: string) {
     const exists = selection.find((s) => s.surcharge_id === id);
     if (exists) onSelectionChange(selection.filter((s) => s.surcharge_id !== id));
