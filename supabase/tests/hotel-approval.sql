@@ -19,7 +19,7 @@ BEGIN
   IF EXISTS(SELECT 1 FROM public.invoices WHERE booking_id=b) OR (SELECT invoice_id FROM public.bookings WHERE id=b) IS NOT NULL THEN RAISE EXCEPTION 'Hotel detail creation must not create invoice'; END IF;
   eid:=public.hotel_review_action(b,'estimate','{}');
   SELECT public_token INTO token FROM public.estimates WHERE id=eid;
-  IF token IS NULL OR (SELECT total FROM public.estimates WHERE id=eid)<=0 THEN RAISE EXCEPTION 'Basic dates/pet quote must have a public token and price without intake'; END IF;
+  IF token IS NULL OR (SELECT e.total FROM public.estimates e WHERE e.id=eid)<=0 THEN RAISE EXCEPTION 'Basic dates/pet quote must have a public token and price without intake'; END IF;
   accepted:=public.accept_public_quote(token);
   IF NOT COALESCE((accepted->>'ok')::boolean,false) OR (accepted->>'booking_id')::uuid<>b THEN RAISE EXCEPTION 'Public acceptance must reuse the existing booking'; END IF;
   IF (SELECT status FROM public.estimates WHERE id=eid)<>'accepted' OR (SELECT accepted_at FROM public.estimates WHERE id=eid) IS NULL THEN RAISE EXCEPTION 'Linked quote acceptance must be recorded'; END IF;
