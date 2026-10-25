@@ -41,7 +41,7 @@ import { useCreateRecurringBooking } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { HotelExtrasPanel, type SurchargeSelection } from "./HotelExtrasPanel";
 import { usePublicHolidays, movementBlockReason, MOVEMENT_RULES_NOTE } from "@/features/hotelForm/dayRules";
-import { HotelCapacityNotice, type CapacityIssue } from "@/features/hotelCattery/HotelCapacityNotice";
+import { type CapacityIssue } from "@/features/hotelCattery/HotelCapacityNotice";
 import { HotelPetRooms } from "@/features/hotelCattery/HotelPetRooms";
 import { hotelResourceType } from "@/features/hotelCattery/roomAllocation";
 import { useSetBookingHotelSurcharges } from "@/features/settings/hotelRateCardQueries";
@@ -1439,17 +1439,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 </div>
               </div>
             )}
-            {kind === "hotel" && (
-              <HotelCapacityNotice
-                tenantId={tenantId}
-                resourceId={resourceId}
-                startAt={startIso}
-                endAt={endIso}
-                petCount={petIds.length || 1}
-                excludeBookingId={booking?.id ?? null}
-                onIssueChange={setCapacityIssue}
-              />
-            )}
+
           </div>}
         </div>
 
