@@ -6,8 +6,9 @@
 - [x] Add total walk quantities, Cat Hotel labels, collection-time capture and existing trial-day shortcut.
 - [x] Verify cutoff and payment-first accounting with rolled-back database test and 17 frontend tests; public form has no runtime errors or horizontal overflow.
 - [ ] Verify signed-in staff and customer hotel review/upload/payment flow — blocked by external/unmanaged Supabase session access.
-- [ ] Finish mixed dog/cat per-pet resource allocation and calendar/capacity checks across staff, portal and enquiry conversion.
-- [ ] Verify booking photography on hosted preview; local browser did not render asset-pointer images.
+- [x] Finish mixed dog/cat per-pet room allocation, staff selectors, species-specific capacity and calendar lanes; database regression passed with all fixtures rolled back.
+- [x] Verify all three photos on the primary website and local hotel page/gallery; shared pointers now render in preview too.
+- [ ] Obtain genuine accommodation photos from Charlotte; existing website photos remain explicitly illustrative.
 # October price-list updates
 - [x] Add missing grooming treatments using existing editable Settings catalogs; retain Full/Express inclusions.
 - [x] Add Saturday daycare pricing and eligibility; enforce no weekend trials.
@@ -32,3 +33,4 @@
 - [x] Restore interactive extras and per-pet quantities in the hotel portal summary.
 - [x] Save selected extras with bookings and quotes using current configured prices; both endpoints deployed.
 - [x] Verify pricing and persisted quantity rules (13 tests passed), public controls and mobile layout; authenticated portal save remains blocked as noted above.
+- [x] Run 25 hotel/draft/extras/room and staff-workflow regression tests; latest app validation passed.
