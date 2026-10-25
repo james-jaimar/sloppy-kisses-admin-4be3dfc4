@@ -8,6 +8,8 @@ import { BookingFormModal } from "@/features/bookings/BookingFormModal";
 import { useCurrentUser, useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { OccupancyGrid } from "./OccupancyGrid";
 import { Button } from "@/components/ui/button";
+import { HotelReviewNotice } from "./HotelReviewNotice";
+import { useHotelReviewCounts } from "./useHotelReviewCounts";
 import { TodayPanel } from "./TodayPanel";
 import { useHotelBookingsInWindow, useHotelQuotesInWindow, useHotelResources } from "./queries";
 
@@ -25,6 +27,7 @@ export default function HotelBoardPage() {
   const [trialOpen, setTrialOpen] = useState(false);
   const tenantId = tenant?.id ?? null;
   const groomQ = useHotelGroomPendingCount(tenantId);
+  const reviewCounts = useHotelReviewCounts(tenantId);
   const [anchor, setAnchor] = useState<Date>(() => startOfDay(new Date()));
 
   const windowStart = anchor;
@@ -58,7 +61,7 @@ export default function HotelBoardPage() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {hasPermission("bookings.create") && <Button variant="outline" onClick={() => setTrialOpen(true)}>Book trial day</Button>}
-            <Button variant="outline" asChild><Link to="/admin/hotel-cattery/pipeline">Pipeline & approvals</Link></Button>
+            <Button variant="outline" asChild><Link to="/admin/hotel-cattery/pipeline">Pipeline & approvals{reviewCounts.data?.total ? ` (${reviewCounts.data.total})` : ""}</Link></Button>
             <Link
               to="/admin/hotel-cattery/grooms"
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-white px-3 text-sm font-medium hover:bg-sk-surface-muted"
@@ -98,6 +101,7 @@ export default function HotelBoardPage() {
         }
       />
       <div className="flex-1 space-y-6 p-6">
+        <HotelReviewNotice tenantId={tenantId} />
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">Show:</span>
           {([

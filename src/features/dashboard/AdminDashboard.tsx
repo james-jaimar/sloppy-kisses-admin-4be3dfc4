@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { useCustomerAndPetCounts } from "@/features/customers/queries";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useMissingAddressCount } from "@/features/bookings/addressGate";
+import { HotelReviewNotice } from "@/features/hotelCattery/HotelReviewNotice";
 import {
   useDashboardTodayStats,
   useTodaysSchedule,
@@ -125,6 +126,7 @@ export default function AdminDashboard() {
         }
       />
       <div className="flex-1 space-y-6 p-6">
+        <HotelReviewNotice tenantId={tenantId} />
         {missingAddress.count > 0 && (
           <Link
             to="/admin/bookings/needs-address"
