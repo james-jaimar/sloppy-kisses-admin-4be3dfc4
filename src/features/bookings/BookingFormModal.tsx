@@ -1210,7 +1210,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                           : "border-border bg-white text-foreground hover:bg-muted")
                       }
                     >
-                      {p.name} {p.pet_number ? `· ${p.pet_number}` : ""}
+                      {p.name} {p.pet_number ? `· ${p.pet_number}` : ""} {p.species === "cat" ? "🐱" : "🐶"}
                     </button>
                   );
                 })}
