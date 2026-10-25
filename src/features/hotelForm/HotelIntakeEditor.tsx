@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase/client";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,16 +21,26 @@ export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, porta
   const customer = useAccommodationCustomer(customerId);
   const records = useAccommodationPets(pets.map(p => p.id));
   const submit = useSubmitAccommodationForm(bookingId);
+  const stay = useQuery({ queryKey: ["hotel_intake_stay", bookingId], queryFn: async () => {
+    const { data, error } = await supabase.from("hotel_booking_details").select("check_in_window, check_out_window, pickup_required, dropoff_required, feeding_instructions, medication_instructions, grooming_required, grooming_instructions, belongings_notes, emergency_notes, additional_notes").eq("booking_id", bookingId).maybeSingle();
+    if (error) throw error;
+    return data;
+  } });
   const [form, setForm] = useState<AccommodationFormPayload | null>(null);
   const [dirty, setDirty] = useState(false);
-  const loading = existing.isLoading || customer.isLoading || records.isLoading;
-  const error = existing.error || customer.error || records.error;
+  const loading = existing.isLoading || customer.isLoading || records.isLoading || stay.isLoading;
+  const error = existing.error || customer.error || records.error || stay.error;
 
   useEffect(() => {
     if (loading || error || dirty) return;
     const seeded = buildAccommodationForm({ customer: customer.data, pets: records.data, saved: existing.data?.payload });
+    if (!existing.data?.payload && stay.data) {
+      for (const [key, value] of Object.entries(stay.data)) {
+        if (value !== null) Object.assign(seeded, { [key]: value });
+      }
+    }
     setForm(syncFormPets(seeded, records.data ?? []));
-  }, [loading, error, dirty, customer.data, records.data, existing.data]);
+  }, [loading, error, dirty, customer.data, records.data, existing.data, stay.data]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -82,6 +94,7 @@ export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, porta
       <VetSection {...props} />
       <PetSections {...props} tenantId={tenantId} uploadedVia={portal ? "portal" : "admin"} renderChecks={pet => pet.pet_id ? <HotelPetChecks bookingId={bookingId} tenantId={tenantId} petId={pet.pet_id} petName={pet.name || "Pet"} portal={portal} species={records.data?.find(record => record.id === pet.pet_id)?.species} /> : null} />
       <CareSection {...props} />
+      {(form.feeding_instructions || form.medication_instructions || form.grooming_instructions) && <div className="border-t border-border py-3 text-sm"><h3 className="font-semibold">Earlier stay-wide care notes</h3>{[form.feeding_instructions, form.medication_instructions, form.grooming_instructions].filter(Boolean).map((note, i) => <p key={i} className="mt-2 whitespace-pre-wrap text-muted-foreground">{note}</p>)}</div>}
       {portal ? <><GuidelinesSection tenantId={tenantId} collapsible /><AcknowledgementSection {...props} /></> :
         <div className="border-t border-border py-3 text-sm"><h3 className="font-semibold">Customer acknowledgement</h3><p className="mt-1 text-muted-foreground">{form.acknowledgement.accepted && form.acknowledgement.signed_name ? `Signed by ${form.acknowledgement.signed_name}${form.acknowledgement.signed_at ? ` · ${new Date(form.acknowledgement.signed_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}` : ""}` : "Awaiting customer acknowledgement"}</p></div>}
     </fieldset>

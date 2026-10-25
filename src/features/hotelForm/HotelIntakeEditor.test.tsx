@@ -4,6 +4,7 @@ import { HotelIntakeEditor } from "./HotelIntakeEditor";
 
 const state = vi.hoisted(() => ({ existing: { payload: null as any }, records: [{ id: "pet-1", name: "Dog", breed: "Poodle", size: "small" }], saved: null as any, mutate: vi.fn(), customer: { full_name: "Owner", mobile: "+27123456789", emergency_contact_name: "Emergency", emergency_contact_mobile: "+27987654321", vet_clinic_name: "Vet", vet_clinic_contact: "+27111111111" } }));
 vi.mock("@/lib/tenant/TenantContext", () => ({ useCurrentUser: () => ({ hasPermission: () => true }) }));
+vi.mock("@tanstack/react-query", async () => ({ ...await vi.importActual<any>("@tanstack/react-query"), useQuery: () => ({ data: { pickup_required: true, dropoff_required: false, check_out_window: "Stay & Play 16:00–16:30", feeding_instructions: "Existing feeding notes" }, isLoading: false }) }));
 vi.mock("./accommodationForm", async () => {
   const actual = await vi.importActual<any>("./accommodationForm");
   return { ...actual, useAccommodationForm: () => ({ data: state.existing, isLoading: false }), useSubmitAccommodationForm: () => ({ mutateAsync: state.mutate, isPending: false }) };

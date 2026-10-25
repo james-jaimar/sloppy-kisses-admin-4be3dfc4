@@ -49,6 +49,7 @@ export function useSetPetVaxWaiver(petId: string) {
       qc.invalidateQueries({ queryKey: ["pets"] });
       qc.invalidateQueries({ queryKey: ["grooming_vax_gate"] });
       qc.invalidateQueries({ queryKey: ["hotel_vax_gate"] });
+      for (const key of ["booking_vax_gate", "pet_vax_status", "pets_vax_status"]) void qc.invalidateQueries({ queryKey: [key] });
     },
   });
 }
