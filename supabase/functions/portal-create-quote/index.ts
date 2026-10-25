@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
         check_out_window: body.check_out_window ?? null,
         pet_accommodations: body.pet_accommodations,
         pets: body.pet_ids.map(id => ({ pet_id: id, accommodation_type: body.pet_accommodations[id] })),
-        surcharges: hotelExtras.map(extra => ({ surcharge_id: extra.id, quantity: extra.quantity })),
+        surcharges: hotelExtras.map(extra => ({ surcharge_id: extra.id, quantity: extra.quantity, quantity_basis: extra.quantity_basis })),
         notes: body.notes ?? null,
       },
       subtotal,

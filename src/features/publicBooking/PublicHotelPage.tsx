@@ -132,11 +132,12 @@ export default function PublicHotelPage() {
     for (const s of rates.data?.surcharges ?? []) {
       const qty = addons[s.code] ?? 0;
       if (qty <= 0) continue;
-      const total = s.per_night
+      const daily = s.per_night && !/walk/i.test(s.code);
+      const total = daily
         ? Number(s.price_zar) * qty * nights * petCount
         : Number(s.price_zar) * qty * petCount;
       lines.push({
-        label: `${s.name}${s.per_night ? ` · ${qty}/day × ${nights} night${nights === 1 ? "" : "s"}` : qty > 1 ? ` × ${qty}` : ""} × ${petWord}`,
+        label: `${s.name}${daily ? ` · ${qty}/day × ${nights} night${nights === 1 ? "" : "s"}` : ` × ${qty} over stay`} × ${petWord}`,
         amount: total,
       });
     }
