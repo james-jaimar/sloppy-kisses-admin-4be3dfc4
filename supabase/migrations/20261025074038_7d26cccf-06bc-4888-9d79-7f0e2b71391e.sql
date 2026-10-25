@@ -1,0 +1,1 @@
+DO $m$ DECLARE d text; BEGIN SELECT pg_get_functiondef('hotel_private.hotel_review_action(uuid,text,jsonb)'::regprocedure) INTO d; d:=replace(d,'hotel_review_action.total','total'); d:=replace(d,'DECLARE b public.bookings;',E'#variable_conflict use_variable\nDECLARE b public.bookings;'); EXECUTE d; END $m$;
