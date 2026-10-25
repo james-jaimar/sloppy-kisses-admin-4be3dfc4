@@ -12,6 +12,7 @@ import {
 import { useHotelWorkflowSettings } from "@/features/hotelCattery/queries";
 
 export interface SurchargeSelection {
+  quantity_basis?: "catalog" | "total";
   surcharge_id: string;
   quantity: number;
 }
@@ -82,9 +83,10 @@ export function HotelExtrasPanel({
     queryKey: ["hotel_extras_pet_sizes", petIds?.join(",") ?? ""],
     enabled: !!petIds && petIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase.from("pets").select("id, name, size").in("id", petIds!);
+      if (!petIds?.length) return [];
+      const { data, error } = await supabase.from("pets").select("id, name, size, species").in("id", petIds);
       if (error) throw error;
-      return (data ?? []) as { id: string; name: string; size: PetSizeBand | null }[];
+      return (data ?? []) as { id: string; name: string; size: PetSizeBand | null; species: string }[];
     },
   });
 
@@ -94,7 +96,7 @@ export function HotelExtrasPanel({
     if (!existingQ.data) return;
     if (selection.length > 0) return;
     onSelectionChange(
-      existingQ.data.map((r) => ({ surcharge_id: r.surcharge_id, quantity: Number(r.quantity) })),
+      existingQ.data.map((r) => ({ surcharge_id: r.surcharge_id, quantity: Number(r.quantity), quantity_basis: r.quantity_basis ?? "catalog" })),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookingId, existingQ.data]);
@@ -144,7 +146,7 @@ export function HotelExtrasPanel({
     const stayRows: { label: string; total: number }[] = [];
     let stayTotal = 0;
     for (const [acc, names] of groups) {
-      const rate = species_rates.find((r) => r.accommodation_type === acc);
+      const rate = (ratesQ.data ?? []).find((r) => r.accommodation_type === acc);
       if (!rate) continue;
       const uplift = peak && Number(rate.peak_uplift_pct) > 0 ? Number(rate.peak_uplift_pct) / 100 : 0;
       const nightly = Math.round(Number(rate.nightly_rate_zar) * (1 + uplift) * 100) / 100;
@@ -169,7 +171,7 @@ export function HotelExtrasPanel({
       .map((s) => {
         const cat = (surchargesQ.data ?? []).find((x) => x.id === s.surcharge_id);
         if (!cat) return null;
-        const qty = s.quantity * (cat.per_night ? nights : 1);
+        const qty = s.quantity * (cat.per_night && s.quantity_basis !== "total" ? nights : 1);
         const total = Math.round(qty * Number(cat.price_zar) * 100) / 100;
         return { name: cat.name, qty, unit: Number(cat.price_zar), total, per_night: cat.per_night };
       })
@@ -190,7 +192,7 @@ export function HotelExtrasPanel({
   function toggleSurcharge(id: string) {
     const exists = selection.find((s) => s.surcharge_id === id);
     if (exists) onSelectionChange(selection.filter((s) => s.surcharge_id !== id));
-    else onSelectionChange([...selection, { surcharge_id: id, quantity: defaultQty }]);
+    else onSelectionChange([...selection, { surcharge_id: id, quantity: defaultQty, quantity_basis: /walk/i.test((surchargesQ.data ?? []).find(s => s.id === id)?.code ?? "") ? "total" : "catalog" }]);
   }
 
   function setQty(id: string, qty: number) {
@@ -271,7 +273,7 @@ export function HotelExtrasPanel({
                   onChange={(e) => onPetAccommodationChange(p.id, e.target.value)}
                 >
                   <option value="">— Select accommodation —</option>
-                  {species_rates.map((r) => (
+                  {(ratesQ.data ?? []).filter(r => r.species === p.species).map((r) => (
                     <option key={r.id} value={r.accommodation_type}>
                       {r.display_name} · {fmtZar(Number(r.nightly_rate_zar))}/night
                       {rateAllowsPet(r, p.size) ? "" : " — size mismatch"}
@@ -301,7 +303,7 @@ export function HotelExtrasPanel({
                     <input type="checkbox" className="h-4 w-4" checked={!!sel} onChange={() => toggleSurcharge(s.id)} />
                     <span className="font-medium">{s.name}</span>
                     <span className="text-xs text-muted-foreground">
-                      {fmtZar(Number(s.price_zar))} {s.per_night ? "/ night" : "/ stay"}
+                      {fmtZar(Number(s.price_zar))} {/walk/i.test(s.code) ? "/ walk" : s.per_night ? "/ night" : "/ stay"}
                     </span>
                   </label>
                   {sel && (
@@ -309,11 +311,12 @@ export function HotelExtrasPanel({
                       <button type="button" onClick={() => setQty(s.id, sel.quantity - 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">−</button>
                       <span className="w-8 text-center text-sm tabular-nums">{Math.round(sel.quantity)}</span>
                       <button type="button" onClick={() => setQty(s.id, sel.quantity + 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">+</button>
-                      {s.per_night && (
+                      {s.per_night && sel.quantity_basis !== "total" && (
                         <span className="ml-1 text-xs text-muted-foreground">
                           per day{preview ? ` = ${Math.round(sel.quantity) * preview.nights} total` : ""}
                         </span>
                       )}
+                      {sel.quantity_basis === "total" && <span className="ml-1 text-xs text-muted-foreground">total over stay</span>}
                     </div>
                   )}
                 </div>

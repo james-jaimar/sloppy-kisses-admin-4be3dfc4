@@ -228,7 +228,7 @@ export default function HotelRequestWizard() {
     }
     const lines: { label: string; amount: number }[] = [];
     for (const [acc, names] of groups) {
-      const rate: any = speciesRates.find((r) => r.accommodation_type === acc);
+      const rate: any = (ratesQ.data ?? []).find((r) => r.accommodation_type === acc);
       if (!rate) return null;
       const nightly = Number(rate.nightly_rate_zar);
       lines.push({
@@ -521,7 +521,7 @@ export default function HotelRequestWizard() {
                       className={selectCls}
                     >
                       <option value="">— Select accommodation —</option>
-                      {speciesRates.map((r) => {
+                      {(ratesQ.data ?? []).filter(r => r.species === p.species).map((r) => {
                         const fits = rateAllowsSize(
                           r,
                           ((p.size_override ?? p.size) ?? null) as PetSizeBand | null,
@@ -601,7 +601,7 @@ export default function HotelRequestWizard() {
               }
             >
               <div className="font-semibold">
-                {photoBlocked ? "A photo is required before you can book" : "Photo still missing"}
+                Photo needed before final hotel approval
               </div>
               <div className="text-xs opacity-90">
                 We use it to match your pet at check-in. Still needed for {petsMissingPhoto.join(", ")} — upload it on the
@@ -620,7 +620,7 @@ export default function HotelRequestWizard() {
           <div className="flex flex-col gap-2">
             {step > 0 && <Button variant="outline" onClick={() => setStep(s => s - 1)}>Back</Button>}
             {step === 0 && quoteSettings.data?.enabled !== false && <Button variant="outline" onClick={onSaveQuote} disabled={!stayReady || !estimate || savingQuote}>{savingQuote ? "Saving…" : "Save as quote"}</Button>}
-            {!isLast ? <Button onClick={() => setStep(s => s + 1)} disabled={step === 0 && !stayReady}>Continue</Button> : <Button onClick={onSubmit} disabled={!canSubmit}>{submit.isPending ? "Booking…" : "Confirm booking"}</Button>}
+            {!isLast ? <Button onClick={() => setStep(s => s + 1)} disabled={step === 0 && !stayReady}>Continue</Button> : <Button onClick={onSubmit} disabled={!canSubmit}>{submit.isPending ? "Submitting…" : "Submit for hotel review"}</Button>}
           </div>
         </HotelStaySummary>
         </div>
