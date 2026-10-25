@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import { StageBand } from "@/features/hotelForm/StageBand";
+import { AUTO_CHECKLIST_CODES, checklistFromReadiness } from "@/features/hotelForm/intakeReadiness";
+import type { IntakeStatus } from "@/features/hotelForm/HotelIntakeEditor";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CheckCircle2, FileDown, Mail, Save } from "lucide-react";
+import { CheckCircle2, CircleAlert, FileDown, Mail, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
@@ -15,10 +19,13 @@ import { HotelPaymentProof } from "./HotelPaymentProof";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const money = (n: number) => new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" }).format(n);
-export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, pets, portal = false }: {
+export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, pets, portal = false, stay, vaxOverridden = false, checkedIn = false }: {
   bookingId: string; tenantId: string; customerId: string; startDate: string;
   pets: { id: string; name: string | null }[]; portal?: boolean;
+  /** Section 1 (stay & logistics), rendered between the progress summary and the intake. */
+  stay?: ReactNode; vaxOverridden?: boolean; checkedIn?: boolean;
 }) {
+  const [status, setStatus] = useState<IntakeStatus | null>(null);
   const { hasPermission } = useCurrentUser();
   const canEdit = !portal && hasPermission("bookings.edit");
   const canOverride = canEdit && hasPermission("settings.hotel.manage");
@@ -51,11 +58,12 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
   const checklist = publicSettings?.approval_checklist ?? [];
   const requiredPct = hotelPaymentPercent(startDate, new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" }), publicSettings?.payment_cutoff_days ?? 30, Number(publicSettings?.advance_deposit_pct ?? 50), r?.payment_percent_override == null ? null : Number(r.payment_percent_override));
   const estimate = r?.estimate;
+  const liveChecks = status ? checklistFromReadiness(status.items, checklist.map(c => c.code), checks) : checks;
   async function run(kind: string) {
     try {
       if (kind === "receipt" && !await confirm({ title: "Verify received payment and issue invoice?", description: "Confirm this payment has cleared the bank or till. An uploaded proof alone is not a received payment.", confirmLabel: "Verify and issue" })) return;
-      if (kind === "approve") await action.mutateAsync({ action: "save", data: { checklist: checks, customer_message: message, collection_time: collection, ...(canOverride ? { override_percent: override ? percent : null, override_reason: reason } : {}) } });
-      const data = kind === "save" || kind === "needs_info" ? { checklist: checks, customer_message: message, collection_time: collection, ...(canOverride ? { override_percent: override ? percent : null, override_reason: reason } : {}) } : kind === "receipt" ? { payment_id: payment } : {};
+      if (kind === "approve") await action.mutateAsync({ action: "save", data: { checklist: liveChecks, customer_message: message, collection_time: collection, ...(canOverride ? { override_percent: override ? percent : null, override_reason: reason } : {}) } });
+      const data = kind === "save" || kind === "needs_info" ? { checklist: liveChecks, customer_message: message, collection_time: collection, ...(canOverride ? { override_percent: override ? percent : null, override_reason: reason } : {}) } : kind === "receipt" ? { payment_id: payment } : {};
       await action.mutateAsync({ action: kind, data });
       toast.success(kind === "receipt" ? "Payment allocated and invoice issued" : kind === "approve" ? "Approved — pro forma ready" : "Hotel review saved");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not update review"); }
