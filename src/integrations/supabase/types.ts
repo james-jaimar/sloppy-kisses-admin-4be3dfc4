@@ -4370,6 +4370,86 @@ export type Database = {
           },
         ]
       }
+      hotel_booking_reviews: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          booking_id: string
+          checklist: Json
+          collection_time: string | null
+          created_at: string
+          customer_message: string | null
+          estimate_id: string | null
+          id: string
+          override_reason: string | null
+          payment_percent_override: number | null
+          tenant_id: string
+          updated_at: string
+          verified_payment_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          booking_id: string
+          checklist?: Json
+          collection_time?: string | null
+          created_at?: string
+          customer_message?: string | null
+          estimate_id?: string | null
+          id?: string
+          override_reason?: string | null
+          payment_percent_override?: number | null
+          tenant_id: string
+          updated_at?: string
+          verified_payment_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          booking_id?: string
+          checklist?: Json
+          collection_time?: string | null
+          created_at?: string
+          customer_message?: string | null
+          estimate_id?: string | null
+          id?: string
+          override_reason?: string | null
+          payment_percent_override?: number | null
+          tenant_id?: string
+          updated_at?: string
+          verified_payment_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_booking_reviews_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_booking_reviews_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "estimates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_booking_reviews_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_booking_reviews_verified_payment_id_fkey"
+            columns: ["verified_payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotel_booking_surcharges: {
         Row: {
           booking_id: string
@@ -4783,6 +4863,8 @@ export type Database = {
       }
       hotel_workflow_settings: {
         Row: {
+          advance_deposit_pct: number
+          approval_checklist: Json
           check_in_close_time: string
           check_in_open_time: string
           check_out_by_time: string
@@ -4800,6 +4882,7 @@ export type Database = {
           min_lead_hours: number
           no_refund_early_checkout: boolean
           overbooking_mode: string
+          payment_cutoff_days: number
           payment_hold_hours: number
           peak_end_month_day: string | null
           peak_start_month_day: string | null
@@ -4818,6 +4901,8 @@ export type Database = {
           vax_gate_mode: string
         }
         Insert: {
+          advance_deposit_pct?: number
+          approval_checklist?: Json
           check_in_close_time?: string
           check_in_open_time?: string
           check_out_by_time?: string
@@ -4835,6 +4920,7 @@ export type Database = {
           min_lead_hours?: number
           no_refund_early_checkout?: boolean
           overbooking_mode?: string
+          payment_cutoff_days?: number
           payment_hold_hours?: number
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
@@ -4853,6 +4939,8 @@ export type Database = {
           vax_gate_mode?: string
         }
         Update: {
+          advance_deposit_pct?: number
+          approval_checklist?: Json
           check_in_close_time?: string
           check_in_open_time?: string
           check_out_by_time?: string
@@ -4870,6 +4958,7 @@ export type Database = {
           min_lead_hours?: number
           no_refund_early_checkout?: boolean
           overbooking_mode?: string
+          payment_cutoff_days?: number
           payment_hold_hours?: number
           peak_end_month_day?: string | null
           peak_start_month_day?: string | null
@@ -9708,6 +9797,10 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: string
       }
+      ensure_booking_invoice_before_hotel_review: {
+        Args: { p_booking_id: string }
+        Returns: string
+      }
       ensure_daycare_prorata_invoice: {
         Args: { p_enrolment_id: string }
         Returns: string
@@ -9919,6 +10012,20 @@ export type Database = {
           day: string
           pets: number
         }[]
+      }
+      hotel_required_percent: {
+        Args: {
+          p_cutoff?: number
+          p_deposit?: number
+          p_override?: number
+          p_start: string
+          p_today: string
+        }
+        Returns: number
+      }
+      hotel_review_action: {
+        Args: { p_action: string; p_booking_id: string; p_data?: Json }
+        Returns: string
       }
       hotel_stay_lines: {
         Args: {
