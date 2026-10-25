@@ -6,6 +6,7 @@ interface HotelReviewData {
   customer_message: string | null;
   collection_time: string | null;
   approved_at: string | null;
+  confirmed_at?: string | null;
   verified_payment_id?: string | null;
   payment_verified?: boolean;
   payment_percent_override: number | null;
