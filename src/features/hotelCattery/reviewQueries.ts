@@ -33,6 +33,6 @@ export function useHotelReviewAction(bookingId: string) {
     if (error) throw error;
     return result;
   }, onSuccess: async () => {
-    await Promise.all(["hotel_review", "hotel_pipeline", "hotel_receipts", "bookings", "hotel_bookings", "hotel_money", "portal_booking", "estimates", "invoices", "payments"].map(key => qc.invalidateQueries({ queryKey: [key] })));
+    await Promise.all(["hotel_review", "hotel_pipeline", "hotel_receipts", "bookings", "booking_invoice", "hotel_bookings", "hotel_money", "portal_booking", "estimates", "invoices", "payments"].map(key => qc.invalidateQueries({ queryKey: [key] })));
   }});
 }

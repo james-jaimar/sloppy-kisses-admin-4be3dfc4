@@ -161,7 +161,7 @@ export default function BookingDetailPage() {
                 }
               />
               <div className="grid gap-4 md:grid-cols-2">
-                <BookingInvoicePanel tenantId={tenantId} bookingId={b.id} customerId={b.customer_id} reviewNeeded={(b as any).invoice_review_needed} reviewReason={(b as any).invoice_review_reason} />
+                <BookingInvoicePanel existingOnly tenantId={tenantId} bookingId={b.id} customerId={b.customer_id} reviewNeeded={(b as any).invoice_review_needed} reviewReason={(b as any).invoice_review_reason} />
                 <BookingCommsPanel tenantId={tenantId} bookingId={b.id} />
               </div>
             </div>
