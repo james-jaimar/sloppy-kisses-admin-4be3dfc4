@@ -10,6 +10,7 @@ BEGIN
  SELECT auth_user_id INTO actor FROM public.profiles WHERE user_type='platform' AND auth_user_id IS NOT NULL LIMIT 1;
  IF actor IS NULL THEN RAISE EXCEPTION 'Need an authorized staff actor'; END IF;
  PERFORM set_config('request.jwt.claim.sub',actor::text,true);
+ IF NOT public.user_has_permission(t,'bookings.edit') OR NOT public.user_has_permission(t,'payments.create') THEN RAISE EXCEPTION 'Actor lacks required permissions'; END IF;
  BEGIN
   INSERT INTO public.bookings(tenant_id,customer_id,booking_number,service_type,status,source,start_at,end_at,start_date,end_date,suppress_initial_emails)
   VALUES(t,c,'TEST-HOTEL-'||gen_random_uuid(),'hotel_dog','draft','staff_capture','2027-02-01 09:00+02','2027-02-08 09:00+02','2027-02-01','2027-02-08',true) RETURNING id INTO b;
@@ -23,7 +24,7 @@ BEGIN
   SELECT e.total INTO total FROM public.estimates e WHERE e.id=eid;
   IF total<=0 THEN RAISE EXCEPTION 'Pro forma must be priced'; END IF;
   inv:=public.hotel_review_action(b,'record_receipt',jsonb_build_object('amount',total/2,'method','eft','reference','TEST-CLEARED'));
-  IF inv IS NULL OR NOT EXISTS(SELECT 1 FROM public.invoices WHERE id=inv AND total>0) THEN RAISE EXCEPTION 'Receipt must create priced invoice'; END IF;
+  IF inv IS NULL OR NOT EXISTS(SELECT 1 FROM public.invoices i WHERE i.id=inv AND i.total>0) THEN RAISE EXCEPTION 'Receipt must create priced invoice'; END IF;
   IF NOT EXISTS(SELECT 1 FROM public.payment_allocations WHERE invoice_id=inv AND amount=total/2) THEN RAISE EXCEPTION 'Receipt must allocate actual 50 percent'; END IF;
   IF (SELECT status FROM public.bookings WHERE id=b)<>'confirmed' THEN RAISE EXCEPTION 'Paid approved stay must confirm'; END IF;
   RAISE EXCEPTION USING ERRCODE='P0002',MESSAGE='HOTEL_TEST_PASSED_ROLLBACK';
