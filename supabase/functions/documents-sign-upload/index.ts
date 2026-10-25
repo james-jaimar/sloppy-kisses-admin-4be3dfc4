@@ -43,6 +43,7 @@ Deno.serve(async (req) => {
     tenant_id?: string;
     pet_id?: string | null;
     customer_id?: string | null;
+    booking_id?: string | null;
     file_name?: string;
     content_type?: string;
     size_bytes?: number;
@@ -78,6 +79,7 @@ Deno.serve(async (req) => {
       tenant_id: tenantId,
       pet_id: body.pet_id ?? null,
       customer_id: body.customer_id ?? null,
+      booking_id: body.booking_id ?? null,
       type: body.type,
       file_name: body.file_name,
       content_type: body.content_type ?? null,

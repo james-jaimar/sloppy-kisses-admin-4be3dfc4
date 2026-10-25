@@ -112,7 +112,7 @@ Deno.serve(async (req) => {
     .eq("tenant_id", tenantId)
     .eq("active", true);
   if (ratesErr) return j(200, { ok: false, error: `Could not load rates: ${ratesErr.message}` });
-  const species = body.service_type === "hotel_cat" ? "cat" : "dog";
+
   const rateFor = (code: string, petSpecies: string) =>
     (rates ?? []).find((r: any) => r.accommodation_type === code && r.species === petSpecies);
 
@@ -215,7 +215,7 @@ Deno.serve(async (req) => {
     } as any)
     .select("id, estimate_number, public_token, hold_expires_at, total")
     .single();
-  if (estErr) return j(200, { ok: false, error: estErr.message });
+  if (estErr) return j(200, { ok: false, booking_id: stay.booking_id, error: `Your enquiry was saved, but the estimate could not be created: ${estErr.message}` });
 
   if (items.length > 0) {
     await admin.from("estimate_items").insert(

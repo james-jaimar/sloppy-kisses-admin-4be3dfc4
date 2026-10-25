@@ -4,7 +4,8 @@ import { Link } from "react-router-dom";
 import { Scissors } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHotelGroomPendingCount } from "@/features/hotelGrooming/queries";
-import { useCurrentTenant } from "@/lib/tenant/TenantContext";
+import { BookingFormModal } from "@/features/bookings/BookingFormModal";
+import { useCurrentUser, useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { OccupancyGrid } from "./OccupancyGrid";
 import { Button } from "@/components/ui/button";
 import { TodayPanel } from "./TodayPanel";
@@ -20,6 +21,8 @@ const WINDOW_DAYS = 14;
 
 export default function HotelBoardPage() {
   const { tenant } = useCurrentTenant();
+  const { hasPermission } = useCurrentUser();
+  const [trialOpen, setTrialOpen] = useState(false);
   const tenantId = tenant?.id ?? null;
   const groomQ = useHotelGroomPendingCount(tenantId);
   const [anchor, setAnchor] = useState<Date>(() => startOfDay(new Date()));
@@ -53,7 +56,8 @@ export default function HotelBoardPage() {
         title="Dog & Cat Hotel"
         subtitle="Occupancy across kennels, runs and cattery pens."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {hasPermission("bookings.create") && <Button variant="outline" onClick={() => setTrialOpen(true)}>Book trial day</Button>}
             <Button variant="outline" asChild><Link to="/admin/hotel-cattery/pipeline">Pipeline & approvals</Link></Button>
             <Link
               to="/admin/hotel-cattery/grooms"
@@ -134,6 +138,7 @@ export default function HotelBoardPage() {
         </div>
       </div>
 
+      {trialOpen && tenantId && <BookingFormModal tenantId={tenantId} prefill={{ service_type: "daycare_assessment", notes_customer: "Hotel trial day" }} onClose={() => setTrialOpen(false)} onSaved={() => setTrialOpen(false)} />}
     </>
   );
 }
