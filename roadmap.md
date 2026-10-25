@@ -1,4 +1,10 @@
 # Public booking refresh
+# Hotel approvals and payment-first billing
+- [ ] Add secured hotel review/checklist and payment-first invoice rules; preserve existing issued invoices.
+- [ ] Add Hotel pipeline page, booking review, uploads, estimate/pro forma and verified payment actions.
+- [ ] Mirror review and payment-request status in the customer portal; add editable workflow settings.
+- [ ] Fix mixed pet accommodation, total walk quantities, Cat Hotel labels and collection-time capture.
+- [ ] Test cutoff/permissions/accounting rules and check the live screens; report external-session/payment-provider blockers.
 # October price-list updates
 - [x] Add missing grooming treatments using existing editable Settings catalogs; retain Full/Express inclusions.
 - [x] Add Saturday daycare pricing and eligibility; enforce no weekend trials.
