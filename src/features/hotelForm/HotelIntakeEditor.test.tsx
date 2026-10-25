@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HotelIntakeEditor } from "./HotelIntakeEditor";
 
@@ -17,7 +17,7 @@ vi.mock("@/features/uploads/snapQueries", () => ({ usePetAttachmentStatus: () =>
 
 const props = { bookingId: "booking-1", tenantId: "tenant-1", customerId: "owner-1", pets: [{ id: "pet-1", name: "Dog" }] };
 describe("Hotel intake saves", () => {
-  beforeEach(() => { state.existing.payload = null; state.mutate.mockReset(); state.mutate.mockImplementation(async (payload) => { state.saved = payload; }); });
+  beforeEach(() => { cleanup(); state.existing.payload = null; state.mutate.mockReset(); state.mutate.mockImplementation(async (payload) => { state.saved = payload; }); });
   it("prefills emergency and vet records and saves partial staff intake without fabricating consent", async () => {
     render(<HotelIntakeEditor {...props} />);
     fireEvent.click(await screen.findByRole("button", { name: /Emergency contact/ }));
@@ -32,5 +32,16 @@ describe("Hotel intake saves", () => {
     expect(state.saved.pickup_required).toBe(true);
     expect(state.saved.check_out_window).toBe("Stay & Play 16:00–16:30");
     expect(state.saved.feeding_instructions).toBe("Existing feeding notes");
+  });
+  it("retains a customer's existing signature when staff update care information", async () => {
+    const { emptyAccommodationForm } = await import("./AccommodationFields");
+    state.existing.payload = { ...emptyAccommodationForm(), acknowledgement: { accepted: true, signed_name: "Owner signature", signed_at: "2026-10-24T10:00:00Z", signed_place: "Bryanston" } };
+    render(<HotelIntakeEditor {...props} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Care instructions" }));
+    fireEvent.change(screen.getByLabelText("Emergency instructions"), { target: { value: "Call the emergency contact first" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save intake" }));
+    await waitFor(() => expect(state.mutate).toHaveBeenCalledTimes(1));
+    expect(state.saved.acknowledgement).toEqual({ accepted: true, signed_name: "Owner signature", signed_at: "2026-10-24T10:00:00Z", signed_place: "Bryanston" });
+    expect(state.saved.emergency_notes).toBe("Call the emergency contact first");
   });
 });

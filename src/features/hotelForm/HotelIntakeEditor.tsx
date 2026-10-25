@@ -34,7 +34,7 @@ export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, porta
   useEffect(() => {
     if (loading || error || dirty) return;
     const seeded = buildAccommodationForm({ customer: customer.data, pets: records.data, saved: existing.data?.payload });
-    if (!existing.data?.payload && stay.data) {
+    if (stay.data) {
       for (const [key, value] of Object.entries(stay.data)) {
         if (value !== null) Object.assign(seeded, { [key]: value });
       }
