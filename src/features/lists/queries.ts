@@ -186,7 +186,7 @@ export function useHotelSheet(tenantId: string | null | undefined, day: Date) {
           id, booking_number, start_at, end_at, status,
           resource:resources(name),
           customer:customers(full_name, mobile),
-          booking_pets(pet:pets(id, name, breed)),
+          booking_pets(room:resources!booking_pets_resource_id_fkey(name), pet:pets(id, name, breed)),
           details:hotel_booking_details(feeding_instructions, medication_instructions, additional_notes)
         `)
         .eq("tenant_id", tenantId as string)
@@ -203,7 +203,7 @@ export function useHotelSheet(tenantId: string | null | undefined, day: Date) {
             booking_number: b.booking_number,
             start_at: b.start_at,
             end_at: b.end_at,
-            room: b.resource?.name ?? "Unassigned",
+            room: (b.booking_pets ?? []).map((bp: any) => `${bp.pet?.name ?? "Pet"}: ${bp.room?.name ?? "Unassigned"}`).join(" · ") || "Unassigned",
             customer_name: b.customer?.full_name ?? "—",
             customer_mobile: b.customer?.mobile ?? null,
             pets: (b.booking_pets ?? []).map((bp: any) => bp.pet).filter(Boolean),

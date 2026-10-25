@@ -88,7 +88,7 @@ export default function HotelRoundsPage() {
                     {job.pets.map((p) => p.name).filter(Boolean).join(", ") || "No pet linked"}
                   </div>
                   <div className="truncate text-sm text-muted-foreground">
-                    {job.customer?.full_name ?? "—"} · {job.resource?.name ?? "Unassigned run"}
+                    {job.customer?.full_name ?? "—"} · {job.pets.map(p => `${p.name}: ${p.room_name ?? "Unassigned"}`).join(" · ")}
                   </div>
                   {(addons[job.id] ?? []).length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">

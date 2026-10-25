@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { HotelRoomLabels } from "./HotelRoomLabels";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { LogIn, LogOut, Hotel, FileText } from "lucide-react";
@@ -138,6 +139,7 @@ export function TodayPanel({
       <Panel title="Arrivals today" empty="No arrivals scheduled." icon={<LogIn className="h-4 w-4" />}>
         {arrivals.map((b) => (
           <BookingRow
+            tenantId={tenantId}
             key={b.id}
             b={b}
             timeLabel={b.start_at ? new Date(b.start_at).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" }) : "—"}
@@ -158,6 +160,7 @@ export function TodayPanel({
       <Panel title="Departures today" empty="No departures scheduled." icon={<LogOut className="h-4 w-4" />}>
         {departures.map((b) => (
           <BookingRow
+            tenantId={tenantId}
             key={b.id}
             b={b}
             timeLabel={b.end_at ? new Date(b.end_at).toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" }) : "—"}
@@ -229,7 +232,7 @@ function Panel({ title, empty, icon, children }: { title: string; empty: string;
   );
 }
 
-function BookingRow({ b, timeLabel, action }: { b: HotelBookingRow; timeLabel: string; action: React.ReactNode }) {
+function BookingRow({ b, timeLabel, action, tenantId }: { b: HotelBookingRow; timeLabel: string; action: React.ReactNode; tenantId?: string | null }) {
   const petName = b.pets[0]?.name ?? "Pet";
   const extraPets = b.pets.length > 1 ? ` +${b.pets.length - 1}` : "";
   return (
@@ -244,7 +247,7 @@ function BookingRow({ b, timeLabel, action }: { b: HotelBookingRow; timeLabel: s
           {petName}{extraPets} <span className="text-muted-foreground font-normal">· {b.customer?.full_name ?? "—"}</span>
         </Link>
         <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-          <span className="truncate">{b.resource?.name ?? "Unassigned"} · {b.booking_number}</span>
+          <span><HotelRoomLabels tenantId={tenantId ?? null} booking={b} /> · {b.booking_number}</span>
           {b.status === "pending_payment" && (
             <span className="rounded bg-sk-orange-soft px-1.5 py-0.5 text-[10px] font-semibold text-sk-orange">
               Awaiting payment

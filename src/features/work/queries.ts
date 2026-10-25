@@ -55,6 +55,8 @@ export interface WorkJob {
 }
 
 export interface WorkJobPet {
+  resource_id?: string | null;
+  room_name?: string | null;
   id: string;
   name: string | null;
   breed: string | null;
@@ -117,7 +119,7 @@ const JOB_SELECT = `
   id, booking_number, status, service_type, start_at, end_at,
   customer:customers(id, full_name, mobile),
   resource:resources(id, name),
-  booking_pets(pet:pets(
+  booking_pets(resource_id, room:resources!booking_pets_resource_id_fkey(name), pet:pets(
     id, name, breed, species, sex, size, size_override, date_of_birth,
     medical_notes, behaviour_notes, behaviour_aggressive_history,
     behaviour_nervous, behaviour_barker, behaviour_jumps, behaviour_social
@@ -135,7 +137,7 @@ function mapJob(b: any): WorkJob {
     end_at: b.end_at,
     customer: b.customer ?? null,
     resource: b.resource ?? null,
-    pets: (b.booking_pets ?? []).map((bp: any) => bp.pet).filter(Boolean),
+    pets: (b.booking_pets ?? []).filter((bp: any) => bp.pet).map((bp: any) => ({ ...bp.pet, resource_id: bp.resource_id, room_name: bp.room?.name ?? null })),
     signed_off: Array.isArray(b.signoff) ? b.signoff.length > 0 : Boolean(b.signoff),
   };
 }
