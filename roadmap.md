@@ -6,7 +6,7 @@
 - [x] Add total walk quantities, Cat Hotel labels, collection-time capture and existing trial-day shortcut.
 - [x] Verify cutoff and payment-first accounting with rolled-back database test and 17 frontend tests; public form has no runtime errors or horizontal overflow.
 - [ ] Verify signed-in staff and customer hotel review/upload/payment flow — blocked by external/unmanaged Supabase session access.
-- [ ] Finish mixed dog/cat per-pet resource allocation and calendar/capacity checks; current prices use pet species but placement remains booking-wide. Awaiting completion, not verified.
+- [ ] Finish mixed dog/cat per-pet resource allocation and calendar/capacity checks across staff, portal and enquiry conversion.
 - [ ] Verify booking photography on hosted preview; local browser did not render asset-pointer images.
 # October price-list updates
 - [x] Add missing grooming treatments using existing editable Settings catalogs; retain Full/Express inclusions.
