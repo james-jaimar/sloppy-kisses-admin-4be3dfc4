@@ -404,8 +404,8 @@ export function StayWindowSection({
 
 
 export function PetSections({
-  form, setForm, collapsible, tenantId, uploadedVia = "portal",
-}: FormProps & { tenantId?: string | null; uploadedVia?: "portal" | "admin" }) {
+  form, setForm, collapsible, tenantId, uploadedVia = "portal", renderChecks,
+}: FormProps & { tenantId?: string | null; uploadedVia?: "portal" | "admin"; renderChecks?: (pet: FormPet) => ReactNode }) {
   function patchPet(i: number, patch: Partial<FormPet>) {
     setForm({ ...form, pets: form.pets.map((p, idx) => (idx === i ? { ...p, ...patch } : p)) });
   }
@@ -448,12 +448,12 @@ export function PetSections({
             </div>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Text label="5-in-1 / DHPP date" type="date" value={p.vax_dhpp} onChange={(v) => patchPet(i, { vax_dhpp: v })} />
-            {tenantId && p.pet_id && (
+            {!renderChecks && <Text label="5-in-1 / DHPP date" type="date" value={p.vax_dhpp} onChange={(v) => patchPet(i, { vax_dhpp: v })} />}
+            {!renderChecks && tenantId && p.pet_id && (
               <PetAttachments tenantId={tenantId} petId={p.pet_id} petName={p.name || "this pet"} uploadedVia={uploadedVia} />
             )}
-            <Text label="Rabies date" type="date" value={p.vax_rabies} onChange={(v) => patchPet(i, { vax_rabies: v })} />
-            <Text label="Kennel cough date" type="date" value={p.vax_kennel_cough} onChange={(v) => patchPet(i, { vax_kennel_cough: v })} />
+            {!renderChecks && <Text label="Rabies date" type="date" value={p.vax_rabies} onChange={(v) => patchPet(i, { vax_rabies: v })} />}
+            {!renderChecks && <Text label="Kennel cough date" type="date" value={p.vax_kennel_cough} onChange={(v) => patchPet(i, { vax_kennel_cough: v })} />}
             <Text label="Tick & flea product" value={p.tick_flea_product} onChange={(v) => patchPet(i, { tick_flea_product: v })} />
             <Text label="Tick & flea date" type="date" value={p.tick_flea_date} onChange={(v) => patchPet(i, { tick_flea_date: v })} />
             <Area label="Feeding instructions" value={p.feeding_instructions ?? ""} onChange={(v) => patchPet(i, { feeding_instructions: v })} />
@@ -470,6 +470,7 @@ export function PetSections({
             )}
             <Area label="Anything else about this pet" value={p.notes} onChange={(v) => patchPet(i, { notes: v })} />
           </div>
+          {renderChecks?.(p)}
         </Section>
       ))}
     </>

@@ -10,8 +10,6 @@ import { useHotelWorkflowSettings } from "./queries";
 import { useHotelReview, useHotelReviewAction } from "./reviewQueries";
 import { hotelPaymentPercent } from "./paymentRules";
 import { downloadQuotePdf } from "@/features/quotes/queries";
-import { PetAttachments } from "@/features/uploads/PetAttachments";
-import { PetHealthPanel } from "@/features/pets/PetHealthPanel";
 import { HotelIntakeEditor } from "@/features/hotelForm/HotelIntakeEditor";
 import { HotelPaymentProof } from "./HotelPaymentProof";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -88,7 +86,6 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
     {estimate && <div className="space-y-3 border-y border-border py-4"><div className="flex flex-wrap justify-between gap-2"><span className="font-semibold">{r?.approved_at ? "Pro forma" : "Estimate"} {estimate.estimate_number}</span><span className="font-semibold">{money(Number(estimate.total))}</span></div><div className="text-sm">{requiredPct}% payable now · {money(Number(estimate.total) * requiredPct / 100)}</div><p className="text-xs text-muted-foreground">Not a tax invoice. Use the document’s bank details and reference for EFT.</p><div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy} onClick={() => document()}><FileDown className="mr-2 h-4 w-4" />Download</Button>{canEdit && hasPermission("invoices.send") && <Button variant="outline" disabled={busy} onClick={() => document(true)}><Mail className="mr-2 h-4 w-4" />Email document</Button>}</div></div>}
     {canEdit && r?.approved_at && !r.verified_payment_id && hasPermission("payments.create") && <div className="space-y-3"><h3 className="font-semibold">Verify received payment</h3><HotelReceiptForm bookingId={bookingId} suggested={Number(estimate?.total ?? 0) * requiredPct / 100} /><select aria-label="Received payment" value={payment} onChange={e => setPayment(e.target.value)} className="w-full rounded-md border border-input bg-background p-3"><option value="">Or select an existing unallocated receipt</option>{receipts.data?.map(p => <option key={p.id} value={p.id}>{p.paid_at?.slice(0, 10)} · {money(Number(p.amount))} · {p.payment_reference ?? p.payment_method}</option>)}</select><Button disabled={!payment || action.isPending} onClick={() => run("receipt")}>Verify existing receipt & issue invoice</Button></div>}
     {r?.approved_at && <HotelPaymentProof tenantId={tenantId} customerId={customerId} bookingId={bookingId} portal={portal} />}
-    {pets.map(p => <details key={p.id} className="border-t border-border pt-3"><summary className="cursor-pointer font-medium">{p.name ?? "Pet"} · photos, vaccination card & health</summary><div className="mt-4 space-y-4"><PetAttachments tenantId={tenantId} petId={p.id} petName={p.name ?? "Pet"} uploadedVia={portal ? "portal" : "admin"} />{!portal && <PetHealthPanel tenantId={tenantId} petId={p.id} />}</div></details>)}
     <HotelIntakeEditor key={bookingId} bookingId={bookingId} tenantId={tenantId} customerId={customerId} pets={pets} portal={portal} />
   </section>;
 }

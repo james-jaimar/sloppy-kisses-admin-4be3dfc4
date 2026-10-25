@@ -7,6 +7,7 @@ import { useAccommodationForm, useSubmitAccommodationForm, type AccommodationFor
 import { useAccommodationCustomer, useAccommodationPets } from "./prefillQueries";
 import { AcknowledgementSection, buildAccommodationForm, CareSection, EmergencySection, OwnerSection, PetSections, syncFormPets, VetSection } from "./AccommodationFields";
 import { GuidelinesSection } from "./GuidelinesSection";
+import { HotelPetChecks } from "./HotelPetChecks";
 
 export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, portal = false }: {
   bookingId: string; tenantId: string; customerId: string;
@@ -79,7 +80,7 @@ export function HotelIntakeEditor({ bookingId, tenantId, customerId, pets, porta
       <OwnerSection {...props} />
       <EmergencySection {...props} />
       <VetSection {...props} />
-      <PetSections {...props} tenantId={tenantId} uploadedVia={portal ? "portal" : "admin"} />
+      <PetSections {...props} tenantId={tenantId} uploadedVia={portal ? "portal" : "admin"} renderChecks={pet => pet.pet_id ? <HotelPetChecks bookingId={bookingId} tenantId={tenantId} petId={pet.pet_id} petName={pet.name || "Pet"} portal={portal} species={records.data?.find(record => record.id === pet.pet_id)?.species} /> : null} />
       <CareSection {...props} />
       {portal ? <><GuidelinesSection tenantId={tenantId} collapsible /><AcknowledgementSection {...props} /></> :
         <div className="border-t border-border py-3 text-sm"><h3 className="font-semibold">Customer acknowledgement</h3><p className="mt-1 text-muted-foreground">{form.acknowledgement.accepted && form.acknowledgement.signed_name ? `Signed by ${form.acknowledgement.signed_name}${form.acknowledgement.signed_at ? ` · ${new Date(form.acknowledgement.signed_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}` : ""}` : "Awaiting customer acknowledgement"}</p></div>}

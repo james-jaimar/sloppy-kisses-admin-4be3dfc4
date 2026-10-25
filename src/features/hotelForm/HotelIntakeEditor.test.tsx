@@ -11,6 +11,7 @@ vi.mock("./accommodationForm", async () => {
 vi.mock("./prefillQueries", () => ({ useAccommodationCustomer: () => ({ data: state.customer, isLoading: false }), useAccommodationPets: () => ({ data: state.records, isLoading: false }) }));
 vi.mock("@/features/uploads/PetAttachments", () => ({ PetAttachments: () => null }));
 vi.mock("./GuidelinesSection", () => ({ GuidelinesSection: () => null }));
+vi.mock("./HotelPetChecks", () => ({ HotelPetChecks: () => null }));
 vi.mock("@/features/uploads/snapQueries", () => ({ usePetAttachmentStatus: () => ({ data: {} }) }));
 
 const props = { bookingId: "booking-1", tenantId: "tenant-1", customerId: "owner-1", pets: [{ id: "pet-1", name: "Dog" }] };
