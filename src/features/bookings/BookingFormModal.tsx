@@ -463,10 +463,23 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   async function persistPetAccommodations(bookingId: string) {
     if (kind !== "hotel") return;
     const fallback = hotel.accommodation_type ?? null;
+    const bookingSpecies = serviceType === "hotel_cat" ? "cat" : "dog";
     for (const petId of petIds) {
       const pet = (petsQ.data ?? []).find(p => p.id === petId);
       const defaultRoom = (resourcesQ.data ?? []).find(r => r.id === resourceId && r.type === hotelResourceType(pet?.species));
-      const acc = petAcc[petId] || fallback;
+      let acc = petAcc[petId] || fallback;
+      // Mixed stays: a cat on a dog booking (or vice versa) must never inherit the other species' rate card.
+      if (!petAcc[petId] && pet?.species && pet.species !== bookingSpecies) {
+        const { data: rc } = await supabase
+          .from("hotel_rate_cards")
+          .select("accommodation_type")
+          .eq("tenant_id", tenantId)
+          .eq("species", pet.species)
+          .eq("active", true)
+          .limit(1)
+          .maybeSingle();
+        if (rc?.accommodation_type) acc = rc.accommodation_type;
+      }
       const { error } = await supabase
         .from("booking_pets")
         .update({ accommodation_type: acc, resource_id: petRooms[petId] || defaultRoom?.id || null } as never)
