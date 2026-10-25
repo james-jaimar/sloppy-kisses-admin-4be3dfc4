@@ -1784,6 +1784,11 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             />
             {hotelNeedsVan && (
               <div className="space-y-2">
+                {(petsQ.data ?? []).some((p) => petIds.includes(p.id) && p.species === "cat") && (
+                  <div className="rounded-lg border border-sk-turquoise/40 bg-sk-turquoise-soft px-3 py-2 text-xs font-medium text-sk-turquoise-dark">
+                    🐱 This stay includes a cat — the driver needs a secure carrier for the van trip.
+                  </div>
+                )}
                 {accom.pickup_required && (
                   <div>
                     <div className="text-xs font-semibold">Van collection · check-in day</div>
