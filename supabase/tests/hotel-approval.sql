@@ -1,6 +1,6 @@
 -- Database-owner regression; every test row is rolled back inside the subtransaction.
 DO $$
-DECLARE t uuid; c uuid; p uuid; actor uuid; b uuid; rate text; eid uuid; inv uuid; total numeric; checklist jsonb;
+DECLARE t uuid; c uuid; p uuid; actor uuid; b uuid; rate text; eid uuid; inv uuid; total numeric; checklist jsonb; token uuid; accepted jsonb;
 BEGIN
  IF public.hotel_required_percent(date '2026-11-25',date '2026-10-25',30,50,NULL)<>50 THEN RAISE EXCEPTION '31 days requires 50 percent'; END IF;
  IF public.hotel_required_percent(date '2026-11-24',date '2026-10-25',30,50,NULL)<>100 THEN RAISE EXCEPTION '30 days requires 100 percent'; END IF;
@@ -17,6 +17,15 @@ BEGIN
   INSERT INTO public.booking_pets(tenant_id,booking_id,pet_id,accommodation_type) VALUES(t,b,p,rate);
   INSERT INTO public.hotel_booking_details(tenant_id,booking_id,accommodation_type) VALUES(t,b,rate);
   IF EXISTS(SELECT 1 FROM public.invoices WHERE booking_id=b) OR (SELECT invoice_id FROM public.bookings WHERE id=b) IS NOT NULL THEN RAISE EXCEPTION 'Hotel detail creation must not create invoice'; END IF;
+  eid:=public.hotel_review_action(b,'estimate','{}');
+  SELECT public_token INTO token FROM public.estimates WHERE id=eid;
+  IF token IS NULL OR (SELECT total FROM public.estimates WHERE id=eid)<=0 THEN RAISE EXCEPTION 'Basic dates/pet quote must have a public token and price without intake'; END IF;
+  accepted:=public.accept_public_quote(token);
+  IF NOT COALESCE((accepted->>'ok')::boolean,false) OR (accepted->>'booking_id')::uuid<>b THEN RAISE EXCEPTION 'Public acceptance must reuse the existing booking'; END IF;
+  IF (SELECT status FROM public.estimates WHERE id=eid)<>'accepted' OR (SELECT accepted_at FROM public.estimates WHERE id=eid) IS NULL THEN RAISE EXCEPTION 'Linked quote acceptance must be recorded'; END IF;
+  IF (SELECT status FROM public.bookings WHERE id=b)<>'needs_info' THEN RAISE EXCEPTION 'Accepted hotel quote must enter information gathering, not confirmation'; END IF;
+  IF EXISTS(SELECT 1 FROM public.invoices WHERE booking_id=b) OR (SELECT invoice_id FROM public.bookings WHERE id=b) IS NOT NULL THEN RAISE EXCEPTION 'Quote acceptance must not issue an invoice'; END IF;
+  IF (public.accept_public_quote(token)->>'booking_id')::uuid<>b THEN RAISE EXCEPTION 'Repeat acceptance must reuse booking'; END IF;
   SELECT jsonb_object_agg(x->>'code',true) INTO checklist FROM public.hotel_workflow_settings w CROSS JOIN LATERAL jsonb_array_elements(w.approval_checklist) x WHERE w.tenant_id=t;
   PERFORM public.hotel_review_action(b,'save',jsonb_build_object('checklist',checklist));
   IF (SELECT invoice_id FROM public.bookings WHERE id=b) IS NOT NULL THEN RAISE EXCEPTION 'Saving intake must not create invoice'; END IF;
