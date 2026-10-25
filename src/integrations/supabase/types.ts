@@ -4280,6 +4280,7 @@ export type Database = {
         Row: {
           accommodation_type: string | null
           additional_notes: string | null
+          agreed_collection_time: string | null
           belongings_notes: string | null
           booking_id: string
           check_in_window: string | null
@@ -4303,6 +4304,7 @@ export type Database = {
         Insert: {
           accommodation_type?: string | null
           additional_notes?: string | null
+          agreed_collection_time?: string | null
           belongings_notes?: string | null
           booking_id: string
           check_in_window?: string | null
@@ -4326,6 +4328,7 @@ export type Database = {
         Update: {
           accommodation_type?: string | null
           additional_notes?: string | null
+          agreed_collection_time?: string | null
           belongings_notes?: string | null
           booking_id?: string
           check_in_window?: string | null
