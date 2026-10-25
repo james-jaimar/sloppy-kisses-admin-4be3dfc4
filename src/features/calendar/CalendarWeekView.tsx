@@ -16,6 +16,7 @@ import { BookingFormModal } from "@/features/bookings/BookingFormModal";
 import { BookingDetailPanel } from "@/features/bookings/BookingDetailPanel";
 import { BookingStatusDot } from "@/features/bookings/statusMeta";
 import { toast } from "sonner";
+import { petRoomId } from "@/features/hotelCattery/roomAllocation";
 
 /** A booking shows on its start day, and multi-night stays show on every day they cover. */
 function onDay(b: { start_at: string | null; end_at?: string | null; service_type?: string | null }, day: Date) {
@@ -36,8 +37,8 @@ const SERVICE_FILTERS: { key: string; label: string; types: ServiceType[] }[] = 
   { key: "daycare", label: "Daycare", types: ["daycare", "daycare_assessment"] },
   { key: "grooming_inhouse", label: "Grooming", types: ["grooming_inhouse"] },
   { key: "grooming_mobile", label: "Mobile Grooming", types: ["grooming_mobile"] },
-  { key: "hotel", label: "Hotel", types: ["hotel_dog"] },
-  { key: "cattery", label: "Cattery", types: ["hotel_cat"] },
+  { key: "hotel", label: "Dog Hotel", types: ["hotel_dog", "hotel_cat"] },
+  { key: "cattery", label: "Cat Hotel", types: ["hotel_dog", "hotel_cat"] },
   { key: "pickup", label: "Pick Up / Drop Off", types: ["pickup_dropoff"] },
 ];
 
@@ -156,9 +157,9 @@ function NowLine({ dayAnchor }: { dayAnchor: Date }) {
 
 function EventCard({ b, onClick, height, hideResource = false }: { b: BookingListRow; onClick: () => void; height?: number; hideResource?: boolean }) {
   const pet = b.booking_pets[0]?.pet;
-  const warn = !b.resource_id;
+  const warn = b.service_type.startsWith("hotel") ? b.booking_pets.some(bp => bp.pet && !petRoomId({ ...bp.pet, resource_id: bp.resource_id }, b)) : !b.resource_id;
   const compact = typeof height === "number" && height < 46;
-  const draggable = !LOCKED_FOR_DRAG.includes(b.status);
+  const draggable = !b.service_type.startsWith("hotel") && !LOCKED_FOR_DRAG.includes(b.status);
   return (
     <button
       onClick={onClick}
@@ -325,11 +326,21 @@ export default function CalendarWeekView() {
     from: range.from.toISOString(),
     to: range.to.toISOString(),
     serviceTypes: serviceTypes.length ? serviceTypes : undefined,
-    resourceIds: selectedResources.size ? Array.from(selectedResources) : undefined,
+    resourceIds: undefined,
     statuses: selectedStatuses.size ? Array.from(selectedStatuses) : undefined,
   });
 
-  const bookings = bookingsQ.data ?? [];
+  const bookings = (bookingsQ.data ?? []).flatMap(b => {
+    if (!b.service_type.startsWith("hotel")) return !selectedResources.size || (b.resource_id && selectedResources.has(b.resource_id)) ? [b] : [];
+    const booking_pets = b.booking_pets.filter(bp => {
+      if (!bp.pet) return false;
+      if (serviceKey === "hotel" && bp.pet.species !== "dog") return false;
+      if (serviceKey === "cattery" && bp.pet.species !== "cat") return false;
+      const room = petRoomId({ ...bp.pet, resource_id: bp.resource_id }, b);
+      return !selectedResources.size || Boolean(room && selectedResources.has(room));
+    });
+    return booking_pets.length ? [{ ...b, booking_pets }] : [];
+  });
   const selectedBooking = bookings.find((b) => b.id === detailId) ?? null;
 
   function shift(dir: 1 | -1) {
@@ -637,9 +648,11 @@ function ResourceDayView({
             ))}
           </div>
           {cols.map((c) => {
-            const colBookings = dayBookings.filter((b) =>
-              c.id === "__unassigned" ? !b.resource_id : b.resource_id === c.id,
-            );
+            const colBookings = dayBookings.flatMap(b => {
+              if (!b.service_type.startsWith("hotel")) return (c.id === "__unassigned" ? !b.resource_id : b.resource_id === c.id) ? [b] : [];
+              const booking_pets = b.booking_pets.filter(bp => bp.pet && petRoomId({ ...bp.pet, resource_id: bp.resource_id }, b) === (c.id === "__unassigned" ? null : c.id));
+              return booking_pets.length ? [{ ...b, booking_pets }] : [];
+            });
             return (
               <div
                 key={c.id}

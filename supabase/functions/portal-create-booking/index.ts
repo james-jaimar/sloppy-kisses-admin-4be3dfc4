@@ -509,24 +509,18 @@ Deno.serve(async (req) => {
       .eq("tenant_id", tenantId)
       .maybeSingle();
     if ((hotelSettings as any)?.overbooking_mode === "block") {
-      const { data: avail } = await admin.rpc("hotel_day_availability", {
-        p_tenant_id: tenantId,
-        p_start: start.toISOString().slice(0, 10),
-        p_end: new Date(body.end_at).toISOString().slice(0, 10),
-        p_exclude_booking_id: null,
-      });
-      const byDay = new Map<string, { used: number; capacity: number; capped: boolean }>();
-      for (const r of (avail ?? []) as any[]) {
-        const cur = byDay.get(r.day) ?? { used: 0, capacity: 0, capped: false };
-        cur.used += Number(r.used ?? 0);
-        if (r.capacity != null) { cur.capacity += Number(r.capacity); cur.capped = true; }
-        byDay.set(r.day, cur);
-      }
-      const full = [...byDay.entries()].filter(
-        ([, v]) => v.capped && v.used + body.pet_ids.length > v.capacity,
-      );
-      if (full.length) {
-        return json({ error: "no_availability", nights: full.map(([d]) => d) }, 409);
+      for (const species of ["dog", "cat"]) {
+        const count = pets.filter(p => p.species === species).length;
+        if (!count) continue;
+        const { data: avail, error: availabilityError } = await admin.rpc("hotel_house_availability", {
+          p_tenant_id: tenantId,
+          p_start: start.toISOString().slice(0, 10),
+          p_end: new Date(body.end_at).toISOString().slice(0, 10),
+          p_species: species,
+        });
+        if (availabilityError) return json({ error: "Could not check hotel availability" }, 503);
+        const full = (avail ?? []).filter((r: any) => Number(r.capacity) > 0 && Number(r.used) + count > Number(r.capacity));
+        if (full.length) return json({ error: "no_availability", species, nights: full.map((r: any) => r.day) }, 409);
       }
     }
   }
@@ -557,43 +551,9 @@ Deno.serve(async (req) => {
       ? new Date(start.getTime() + (body.grooming?.duration_minutes ?? 60) * 60_000).toISOString()
       : null;
 
-  // --- Pick a hotel/cattery area ----------------------------------------
-  // Portal stays used to land unassigned on the board. Auto-assign the first
-  // active area of the right type that has room every night of the stay.
-  let resourceId: string | null = null;
-  if (group === "hotel") {
-    const wantedType = body.service_type === "hotel_cat" ? "cattery_area" : "hotel_area";
-    const { data: areas } = await admin
-      .from("resources")
-      .select("id, capacity")
-      .eq("tenant_id", tenantId)
-      .eq("type", wantedType)
-      .eq("active", true)
-      .order("sort_order", { ascending: true })
-      .order("name", { ascending: true });
-
-    if (areas?.length) {
-      const startDay = start.toISOString().slice(0, 10);
-      const endDay = (endAt ?? start.toISOString()).slice(0, 10);
-      const { data: avail } = await admin.rpc("hotel_day_availability", {
-        p_tenant_id: tenantId,
-        p_start: startDay,
-        p_end: endDay,
-        p_exclude_booking_id: null,
-      });
-      const usedByResource = new Map<string, number>();
-      for (const r of (avail ?? []) as any[]) {
-        const key = r.resource_id as string;
-        usedByResource.set(key, Math.max(usedByResource.get(key) ?? 0, Number(r.used ?? 0)));
-      }
-      const pets = body.pet_ids.length;
-      resourceId =
-        (areas as any[]).find((a) => {
-          if (a.capacity == null) return true;
-          return (usedByResource.get(a.id) ?? 0) + pets <= Number(a.capacity);
-        })?.id ?? null;
-    }
-  }
+  // Per-pet room assignment is enforced transactionally by booking_pets.
+  // No booking-wide area can place a cat in the Dog Hotel.
+  const resourceId: string | null = null;
 
   const addressSnapshot = await resolveAddressSnapshot(admin, tenantId, customer.id, body.service_address_id);
 

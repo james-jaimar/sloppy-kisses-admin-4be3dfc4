@@ -197,7 +197,7 @@ export default function HotelRequestWizard() {
       .join(", ")}`;
   };
   const activeRate = speciesRates.find((r) => r.accommodation_type === accommodationType) ?? null;
-  const accFor = (petId: string) => petAcc[petId] || accommodationType;
+  const accFor = (petId: string) => petAcc[petId] || ((pets.data ?? []).find(p => p.id === petId)?.species === (isCat ? "cat" : "dog") ? accommodationType : "");
 
   const extraQuantities = { ...requestedExtras, late_checkout: isStayPlayWindow(form.check_out_window) ? 1 : 0 };
   const extraSelections = (extrasCatalog.data?.surcharges ?? [])
@@ -222,7 +222,7 @@ export default function HotelRequestWizard() {
     if (selectedPets.length === 0) return null;
     const groups = new Map<string, string[]>();
     for (const p of selectedPets as any[]) {
-      const acc = petAcc[p.id] || accommodationType;
+      const acc = accFor(p.id);
       if (!acc) return null;
       const key = `${p.species}|${acc}`;
       groups.set(key, [...(groups.get(key) ?? []), p.name as string]);
@@ -258,16 +258,13 @@ export default function HotelRequestWizard() {
 
   // House-wide occupancy for the nights of this stay.
   const gates = usePortalServiceGates(cust.data?.tenant_id);
-  const houseQ = useHotelHouseAvailability({
-    tenantId: cust.data?.tenant_id,
-    start: checkInDate ? new Date(`${checkInDate}T00:00:00`) : null,
-    end: checkOutDate ? new Date(`${checkOutDate}T00:00:00`) : null,
-    species: isCat ? "cat" : "dog",
-    enabled: Boolean(checkInDate && checkOutDate && petIds.length),
-  });
-  const overNights = fullNights(houseQ.data, petIds.length);
-  const capacityBlocked =
-    gates.data?.hotel_overbooking_mode === "block" && overNights.length > 0;
+  const dogCount = selectedPets.filter(p => p.species !== "cat").length;
+  const catCount = selectedPets.filter(p => p.species === "cat").length;
+  const houseParams = { tenantId: cust.data?.tenant_id, start: checkInDate ? new Date(`${checkInDate}T00:00:00`) : null, end: checkOutDate ? new Date(`${checkOutDate}T00:00:00`) : null };
+  const houseQ = useHotelHouseAvailability({ ...houseParams, species: "dog", enabled: dogCount > 0 });
+  const catHouseQ = useHotelHouseAvailability({ ...houseParams, species: "cat", enabled: catCount > 0 });
+  const overNights = [...fullNights(houseQ.data, dogCount), ...fullNights(catHouseQ.data, catCount)];
+  const capacityBlocked = gates.data?.hotel_overbooking_mode === "block" && overNights.length > 0;
 
   const stayReady =
     petIds.length > 0 && !!checkInDate && nights >= 1 &&
@@ -491,10 +488,11 @@ export default function HotelRequestWizard() {
 
           <HouseCapacityNotice
             rows={houseQ.data}
-            petCount={petIds.length}
+            petCount={dogCount}
             mode={gates.data?.hotel_overbooking_mode ?? "warn"}
             loading={houseQ.isLoading}
           />
+          <HouseCapacityNotice rows={catHouseQ.data} petCount={catCount} mode={gates.data?.hotel_overbooking_mode ?? "warn"} loading={catHouseQ.isLoading} />
 
 
 

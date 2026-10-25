@@ -73,6 +73,7 @@ Deno.serve(async (req) => {
   if (nights < 1 || nights > 90) return json({ error: "stay_too_long" }, 400);
   if (pets.length === 0 || pets.length > 6) return json({ error: "pets_required" }, 400);
   for (const p of pets) {
+    if (p.species && !["dog", "cat"].includes(p.species)) return json({ error: "invalid_species" }, 400);
     if (p.size && !SIZES.has(p.size)) return json({ error: "invalid_size" }, 400);
   }
 
@@ -91,16 +92,16 @@ Deno.serve(async (req) => {
   // Re-check house capacity server-side so a full house can't be overbooked.
   const hasCat = pets.some((p) => (p.species ?? "").toLowerCase().startsWith("cat"));
   const species = hasCat && pets.every((p) => (p.species ?? "").toLowerCase().startsWith("cat")) ? "cat" : "dog";
-  const { data: avail } = await admin.rpc("hotel_house_availability", {
-    p_tenant_id: tenant.id,
-    p_start: checkIn,
-    p_end: checkOut,
-    p_species: species,
-  });
-  const full = (avail ?? []).filter(
-    (r: any) => Number(r.capacity) > 0 && Number(r.used) + pets.length > Number(r.capacity),
-  );
-  if (full.length > 0) return json({ error: "fully_booked", nights: full.map((r: any) => r.day) }, 409);
+  for (const petSpecies of ["dog", "cat"]) {
+    const count = pets.filter(p => (p.species ?? "dog") === petSpecies).length;
+    if (!count) continue;
+    const { data: avail, error: availabilityError } = await admin.rpc("hotel_house_availability", {
+      p_tenant_id: tenant.id, p_start: checkIn, p_end: checkOut, p_species: petSpecies,
+    });
+    if (availabilityError) return json({ error: "availability_unavailable" }, 503);
+    const full = (avail ?? []).filter((r: any) => Number(r.capacity) > 0 && Number(r.used) + count > Number(r.capacity));
+    if (full.length) return json({ error: "fully_booked", species: petSpecies, nights: full.map((r: any) => r.day) }, 409);
+  }
 
   // Find or create the customer — the response never reveals which path was taken.
   const fullName = `${firstName} ${lastName}`.trim();

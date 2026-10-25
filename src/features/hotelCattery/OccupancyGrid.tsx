@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { hotelResourceType, petsInRoom } from "./roomAllocation";
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { BOOKING_STATUS_META } from "@/features/bookings/statusMeta";
 import {
   useAssignBookingResource,
@@ -141,10 +143,15 @@ function countTone(used: number, capacity: number | null) {
 }
 
 export function OccupancyGrid({ tenantId, resources, bookings, quotes = [], windowStart, windowDays, loading }: OccupancyGridProps) {
+  const { hasPermission } = useCurrentUser();
+  const roomBookings = (roomId: string | null) => bookings.flatMap(b => {
+    const pets = petsInRoom(b.pets, b, roomId);
+    return pets.length ? [{ ...b, pets }] : [];
+  });
   const days = Array.from({ length: windowDays }, (_, i) => addDays(windowStart, i));
   const today = startOfDay(new Date());
 
-  const unassigned = bookings.filter((b) => !b.resource_id);
+  const unassigned = roomBookings(null);
   const rows: (HotelResourceRow | { id: "__unassigned"; name: string; type: null; capacity: null; sort_order: number })[] = [
     ...resources,
   ];
@@ -154,7 +161,10 @@ export function OccupancyGrid({ tenantId, resources, bookings, quotes = [], wind
 
   const totalCapacity = resources.reduce((s, r) => s + (r.capacity ?? 0), 0);
   const anyCapacity = resources.some((r) => r.capacity != null);
-  const assignedBookings = bookings.filter((b) => b.resource_id);
+  const assignedBookings = bookings.flatMap(b => {
+    const pets = b.pets.filter(p => !petsInRoom([p], b, null).length);
+    return pets.length ? [{ ...b, pets }] : [];
+  });
   const peak = days.reduce((max, d) => Math.max(max, usedOnDay(assignedBookings, d)), 0);
   const peakHeld = days.reduce(
     (max, d) => Math.max(max, heldOnDay(bookings, d) + quotesOnDay(quotes, d)),
@@ -224,11 +234,11 @@ export function OccupancyGrid({ tenantId, resources, bookings, quotes = [], wind
                 windowEnd={addDays(windowStart, windowDays)}
                 bookings={
                   r.id === "__unassigned"
-                    ? bookings.filter((b) => !b.resource_id)
-                    : bookings.filter((b) => b.resource_id === r.id)
+                    ? unassigned
+                    : roomBookings(r.id)
                 }
                 assign={
-                  r.id === "__unassigned" && tenantId
+                  tenantId && hasPermission("bookings.edit")
                     ? { tenantId, resources, allBookings: bookings, today }
                     : undefined
                 }
@@ -485,32 +495,43 @@ function AssignPanel({
         Assign an area
       </div>
       <div className="space-y-2">
-        {bookings.map((b) => {
-          const wanted = b.service_type === "hotel_cat" ? "cattery_area" : "hotel_area";
+        {bookings.flatMap((b) => b.pets.map(pet => {
+          const wanted = hotelResourceType(pet.species);
           const options = resources.filter((r) => r.type === wanted);
-          const petNames = b.pets.map((p) => p.name ?? "Unnamed pet").join(", ") || "Pet";
+          const petNames = pet.name ?? "Pet";
           return (
-            <div key={b.id} className="flex flex-wrap items-center gap-2 text-xs">
+            <div key={`${b.id}:${pet.id}`} className="flex flex-wrap items-center gap-2 text-xs">
               <span className="font-medium">{petNames}</span>
               <span className="text-muted-foreground">{b.customer?.full_name ?? "—"}</span>
               <span className="text-muted-foreground">{b.booking_number}</span>
               <select
                 className="ml-auto rounded-lg border border-border bg-background px-2 py-1 text-xs"
-                defaultValue=""
+                aria-label={`Room for ${petNames}`}
+                value={pet.resource_id ?? ""}
                 disabled={assignM.isPending || !options.length}
                 onChange={(e) => {
                   const id = e.target.value;
                   if (!id) return;
                   const target = options.find((o) => o.id === id);
-                  const used = usedOnDay(allBookings.filter((x) => x.resource_id === id), today);
-                  if (target?.capacity != null && used + Math.max(1, b.pets.length) > target.capacity) {
+                  const roomStays = allBookings.filter(x => x.id !== b.id).flatMap(x => {
+                    const pets = petsInRoom(x.pets, x, id);
+                    return pets.length ? [{ ...x, pets }] : [];
+                  });
+                  const start = startOfDay(new Date(b.start_at));
+                  const end = b.end_at ? startOfDay(new Date(b.end_at)) : addDays(start, 1);
+                  let used = 0;
+                  for (let day = start; day < end; day = addDays(day, 1)) {
+                    used = Math.max(used, usedOnDay(roomStays, day) + heldOnDay(roomStays, day));
+                  }
+                  const family = b.pets.filter(p => p.id !== pet.id && petsInRoom([p], b, id).length).length;
+                  if (target?.capacity != null && used + family + 1 > target.capacity) {
                     const ok = window.confirm(
-                      `${target.name} is at ${used}/${target.capacity} today. Assign anyway?`,
+                      `${target.name} would exceed ${target.capacity} spaces during this stay. Assign anyway?`,
                     );
                     if (!ok) { e.target.value = ""; return; }
                   }
                   assignM.mutate(
-                    { bookingId: b.id, resourceId: id },
+                    { bookingId: b.id, petId: pet.id, resourceId: id },
                     {
                       onSuccess: () => toast.success(`${b.booking_number} moved to ${target?.name ?? "area"}`),
                       onError: (err: any) => toast.error(err?.message ?? "Could not assign the area"),
@@ -522,15 +543,13 @@ function AssignPanel({
                 {options.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.name}
-                    {o.capacity != null
-                      ? ` (${usedOnDay(allBookings.filter((x) => x.resource_id === o.id), today)}/${o.capacity} today)`
-                      : ""}
+                    {o.capacity != null ? ` (${o.capacity} spaces)` : ""}
                   </option>
                 ))}
               </select>
             </div>
           );
-        })}
+        }))}
       </div>
     </div>
   );

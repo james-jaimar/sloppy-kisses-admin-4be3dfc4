@@ -87,14 +87,12 @@ export default function PublicHotelPage() {
   const allCats = pets.length > 0 && pets.every((p) => p.species === "cat");
   const species = allCats ? "cat" : "dog";
 
-  const houseQ = useHotelHouseAvailability({
-    tenantId: tenant.data?.id,
-    start: checkIn ? new Date(`${checkIn}T00:00:00`) : null,
-    end: checkOut ? new Date(`${checkOut}T00:00:00`) : null,
-    species,
-    enabled: Boolean(tenant.data?.id && checkIn && checkOut),
-  });
-  const overNights = fullNights(houseQ.data, pets.length);
+  const dogCount = pets.filter(p => p.species !== "cat").length;
+  const catCount = pets.filter(p => p.species === "cat").length;
+  const houseParams = { tenantId: tenant.data?.id, start: checkIn ? new Date(`${checkIn}T00:00:00`) : null, end: checkOut ? new Date(`${checkOut}T00:00:00`) : null };
+  const houseQ = useHotelHouseAvailability({ ...houseParams, species: "dog", enabled: dogCount > 0 });
+  const catHouseQ = useHotelHouseAvailability({ ...houseParams, species: "cat", enabled: catCount > 0 });
+  const overNights = [...fullNights(houseQ.data, dogCount), ...fullNights(catHouseQ.data, catCount)];
 
   const speciesRates = useMemo(
     () => (rates.data?.rates ?? []).filter((r) => r.species === species),
@@ -185,6 +183,7 @@ export default function PublicHotelPage() {
       if (err === "fully_booked") {
         toast.error("Sorry — those nights have just filled up. Please pick different dates.");
         houseQ.refetch();
+        catHouseQ.refetch();
         return;
       }
       if (err) throw new Error(err);
@@ -273,7 +272,7 @@ export default function PublicHotelPage() {
             </div>
           </div>
         </div>
-        <HouseCapacityNotice rows={houseQ.data} petCount={pets.length} mode="block" loading={houseQ.isLoading} />
+        <div className="space-y-2">{dogCount > 0 && <div><span className="text-xs font-semibold">Dog Hotel</span><HouseCapacityNotice rows={houseQ.data} petCount={dogCount} mode="block" loading={houseQ.isLoading} /></div>}{catCount > 0 && <div><span className="text-xs font-semibold">Cat Hotel</span><HouseCapacityNotice rows={catHouseQ.data} petCount={catCount} mode="block" loading={catHouseQ.isLoading} /></div>}</div>
       </section>
 
       {/* Pets */}

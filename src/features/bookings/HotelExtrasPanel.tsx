@@ -118,7 +118,7 @@ export function HotelExtrasPanel({
   }
   function rateBlockReason(r: { min_size_band: PetSizeBand | null; max_size_band: PetSizeBand | null; display_name: string }) {
     if (pets.length === 0) return null;
-    const bad = pets.filter((p) => !rateAllowsPet(r, p.size));
+    const bad = pets.filter((p) => p.species === species && !rateAllowsPet(r, p.size));
     if (bad.length === 0) return null;
     const names = bad.map((p) => `${p.name}${p.size ? ` (${p.size})` : " (no size set)"}`).join(", ");
     return `Not available for: ${names}`;
@@ -130,7 +130,7 @@ export function HotelExtrasPanel({
     : false;
 
   const preview = useMemo(() => {
-    if (!activeRate || nights === 0) return null;
+    if (nights === 0) return null;
 
     // One stay line per area the pets are actually in.
     const groups = new Map<string, string[]>();
@@ -149,7 +149,7 @@ export function HotelExtrasPanel({
     for (const [key, names] of groups) {
       const [petSpecies, acc] = key.split("|");
       const rate = (ratesQ.data ?? []).find((r) => r.species === petSpecies && r.accommodation_type === acc);
-      if (!rate) continue;
+      if (!rate) return null;
       const uplift = peak && Number(rate.peak_uplift_pct) > 0 ? Number(rate.peak_uplift_pct) / 100 : 0;
       const nightly = Math.round(Number(rate.nightly_rate_zar) * (1 + uplift) * 100) / 100;
       const total = Math.round(nightly * nights * 100) / 100;
