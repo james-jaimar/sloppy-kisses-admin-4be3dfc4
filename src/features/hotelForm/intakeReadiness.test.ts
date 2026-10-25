@@ -21,7 +21,23 @@ describe("hotel readiness", () => {
     const items = hotelReadiness({ form: base(), vaxRows: [{ pet_id: "p1", status: "expired" }], vaxOverridden: true, photoRows: [] });
     expect(checklistFromReadiness(items, ["vaccinations"], {}).vaccinations).toBe(true);
   });
-  it("missing tick & flea fails the care check", () => {
+  it("a missing tick & flea treatment fails the care check", () => {
+    const items = hotelReadiness({ form: base(), vaxRows: [], photoRows: [], tickRows: [{ pet_id: "p1", status: "missing" }] });
+    expect(checklistFromReadiness(items, ["care"], {}).care).toBe(false);
+  });
+  it("an overdue tick & flea treatment also fails the care check", () => {
+    const items = hotelReadiness({ form: base(), vaxRows: [], photoRows: [], tickRows: [{ pet_id: "p1", status: "overdue" }] });
+    expect(checklistFromReadiness(items, ["care"], {}).care).toBe(false);
+  });
+  it("a recorded tick & flea treatment passes the care check", () => {
+    const items = hotelReadiness({ form: base(), vaxRows: [], photoRows: [], tickRows: [{ pet_id: "p1", status: "ok" }] });
+    expect(checklistFromReadiness(items, ["care"], {}).care).toBe(true);
+  });
+  it("a due tick & flea treatment still passes the care check", () => {
+    const items = hotelReadiness({ form: base(), vaxRows: [], photoRows: [], tickRows: [{ pet_id: "p1", status: "due" }] });
+    expect(checklistFromReadiness(items, ["care"], {}).care).toBe(true);
+  });
+  it("legacy form entries still count when no health rows are supplied", () => {
     const f = base(); f.pets[0].tick_flea_date = "";
     expect(checklistFromReadiness(hotelReadiness({ form: f, vaxRows: [], photoRows: [] }), ["care"], {}).care).toBe(false);
   });
