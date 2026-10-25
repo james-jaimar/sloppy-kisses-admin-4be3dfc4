@@ -5,6 +5,7 @@ import { guardSend } from "../_shared/send-guard.ts";
 import { buildQuoteEmail, DEFAULT_QUOTE_INTRO, fmtZar, fmtDate as fmtD } from "../_shared/quote-email.ts";
 import { resolveQuoteEmailSettings } from "../_shared/quote-email-defaults.ts";
 import { publicBrandLogoUrl } from "../_shared/public-brand-logo.ts";
+import { quoteAcceptanceToken } from "./quote-link.ts";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -123,7 +124,7 @@ Deno.serve(async (req) => {
   };
 
   const useTpl = tpl && tpl.is_active !== false && String(tpl.body ?? "").trim().length > 0;
-  const intro = isProforma ? `Hi ${firstName},\n\nYour hotel stay has been approved. Your pro forma is attached. ${paymentPct}% (${fmtZar(deposit)}) is payable now. Please use the bank details and reference on the document and upload your payment proof in your booking. A tax invoice is issued once staff verify received payment.` : isReviewEstimate ? `Hi ${firstName},\n\nYour hotel estimate is attached. Our team will review the information and documents for your stay before sending a pro forma payment request. This estimate is not a confirmed booking or a tax invoice.` : render(useTpl ? String(tpl!.body) : DEFAULT_QUOTE_INTRO, ctx);
+  const intro = isProforma ? `Hi ${firstName},\n\nYour hotel stay has been approved. Your pro forma is attached. ${paymentPct}% (${fmtZar(deposit)}) is payable now. Please use the bank details and reference on the document and upload your payment proof in your booking. A tax invoice is issued once staff verify received payment.` : isReviewEstimate ? `Hi ${firstName},\n\nYour hotel quote ${q.estimate_number} for ${ctx.quote.dates} is attached. Click the link below to review and accept it — no sign-in is needed. Accepting the quote does not confirm your stay or issue a tax invoice. Our staff will contact you to gather the outstanding information and documents. Once reviewed, staff will confirm your stay and send your tax invoice with the applicable deposit and payment dates.` : render(useTpl ? String(tpl!.body) : DEFAULT_QUOTE_INTRO, ctx);
   const subject = isProforma ? `Hotel pro forma ${q.estimate_number} from ${tenant?.name ?? "us"}` : useTpl && tpl!.subject
     ? render(String(tpl!.subject), ctx)
     : `Your stay quote ${q.estimate_number} from ${tenant?.name ?? "us"}`;
@@ -155,7 +156,7 @@ Deno.serve(async (req) => {
       body_html: render(c.body_html ?? "", ctx),
     })),
   };
-  if (isReviewEstimate) { settings.hero_label = "ESTIMATE"; settings.hero_headline = "Your stay is under review"; settings.deposit_label = "Payment after approval"; settings.cta_label = "View your booking"; settings.cta_subtext = "Complete your stay information in the portal."; settings.hold_line = "Staff approval is required before payment."; }
+  if (isReviewEstimate) { settings.hero_label = "ESTIMATE"; settings.hero_headline = "Your hotel stay quote"; settings.deposit_label = `${paymentPct}% after staff confirmation`; settings.cta_label = "Review & accept this quote"; settings.cta_subtext = "No sign-in required. Staff will gather your information before confirming the stay."; settings.hold_line = "This quote is not a confirmed booking or a tax invoice."; }
   if (isProforma) {
     settings.hero_label = "PRO FORMA";
     settings.hero_headline = "Your stay is approved";
@@ -186,7 +187,7 @@ Deno.serve(async (req) => {
     total,
     deposit,
     validUntil,
-    publicToken: isProforma || isReviewEstimate ? null : (q as any).public_token ?? null,
+    publicToken: quoteAcceptanceToken(extras.document_kind, q.public_token),
     intro,
     guidelines,
     settings,
