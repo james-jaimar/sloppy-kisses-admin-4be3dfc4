@@ -29,3 +29,13 @@ it("charges walks for dogs only on mixed dog/cat stays", () => {
   expect(priceHotelExtras(walkCatalog, [{ code: "walk", quantity: 1 }], 3, 7, undefined, 2)[0])
     .toMatchObject({ quantity: 2, billedQuantity: 2, total: 200 });
 });
+
+it("charges 22 walks for two dogs and no walks for the cat on an 11-night mixed stay", () => {
+  expect(priceHotelExtras(catalog, [{ code: "walk", quantity: 11 }], 3, 11, undefined, 2)[0]).toMatchObject({ quantity: 22, billedQuantity: 22, total: 2200 });
+});
+it("charges Stay & Play for two dogs, not the accompanying cat", () => {
+  expect(priceHotelExtras(catalog, [{ code: "late_checkout", quantity: 1 }], 3, 11, undefined, 2)[0]).toMatchObject({ quantity: 2, total: 500 });
+});
+it("never charges dog-only extras for a cat-only stay", () => {
+  expect(priceHotelExtras(catalog, [{ code: "walk", quantity: 11 }, { code: "late_checkout", quantity: 1 }], 1, 11, undefined, 0)).toEqual([]);
+});

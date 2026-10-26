@@ -39,6 +39,8 @@ import { PetsVaccinationGate } from "./VaccinationGatePanel";
 import { RecurrenceFields, DEFAULT_RECURRENCE, toRule, type RecurrenceValue } from "./RecurrenceFields";
 import { useCreateRecurringBooking } from "./recurringQueries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { accommodationForPet } from "@/features/hotelCattery/stayPetRules";
+import { useHotelRateCards } from "@/features/settings/hotelRateCardQueries";
 import { HotelExtrasPanel, type SurchargeSelection } from "./HotelExtrasPanel";
 import { usePublicHolidays, movementBlockReason, MOVEMENT_RULES_NOTE } from "@/features/hotelForm/dayRules";
 import { type CapacityIssue } from "@/features/hotelCattery/HotelCapacityNotice";
@@ -460,6 +462,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   }
 
   /** Per-pet accommodation choice → booking_pets, so each dog is priced in its own area. */
+  const hotelRatesQ = useHotelRateCards(tenantId, { activeOnly: true });
+
   async function persistPetAccommodations(bookingId: string) {
     if (kind !== "hotel") return;
     const fallback = hotel.accommodation_type ?? null;
@@ -467,19 +471,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     for (const petId of petIds) {
       const pet = (petsQ.data ?? []).find(p => p.id === petId);
       const defaultRoom = (resourcesQ.data ?? []).find(r => r.id === resourceId && r.type === hotelResourceType(pet?.species));
-      let acc = petAcc[petId] || fallback;
-      // Mixed stays: a cat on a dog booking (or vice versa) must never inherit the other species' rate card.
-      if (!petAcc[petId] && pet?.species && pet.species !== bookingSpecies) {
-        const { data: rc } = await supabase
-          .from("hotel_rate_cards")
-          .select("accommodation_type")
-          .eq("tenant_id", tenantId)
-          .eq("species", pet.species)
-          .eq("active", true)
-          .limit(1)
-          .maybeSingle();
-        if (rc?.accommodation_type) acc = rc.accommodation_type;
-      }
+      const acc = pet ? accommodationForPet({ species: pet.species, size: pet.size_override ?? pet.size }, hotelRatesQ.data ?? [], petAcc[petId] || fallback) : "";
+      if (!acc) throw new Error(`Choose compatible accommodation for ${pet?.name ?? "this pet"}`);
       const { error } = await supabase
         .from("booking_pets")
         .update({ accommodation_type: acc, resource_id: petRooms[petId] || defaultRoom?.id || null } as never)
@@ -752,6 +745,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   async function saveBooking(confirmed = false) {
     if (bookingInProgress) return;
     if (!customerId) return toast.error("Please select a customer");
+    if (kind === "hotel" && petIds.some(id => {
+      const p = (petsQ.data ?? []).find(p => p.id === id);
+      return !p || !accommodationForPet({ species: p.species, size: p.size_override ?? p.size }, hotelRatesQ.data ?? [], petAcc[id] || hotel.accommodation_type);
+    })) return toast.error("Choose species-compatible accommodation for every pet before saving");
     if (kind === "grooming") {
       const missing = groomCardKeys.find((k) => !planHasWork(k));
       if (missing !== undefined) {
