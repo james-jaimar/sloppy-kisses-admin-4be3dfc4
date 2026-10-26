@@ -1,12 +1,19 @@
-# Roadmap — Hotel booking walkthrough fixes
+# Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
-All slices complete (25 Oct 2026):
+- [x] Slice 1a: Date edit sticks — picking a new day in the grooming slot picker now moves the booking, keeping the chosen time
+- [x] Slice 1b: Repeat invoices dated per service date (advance bookings issue/due on service date; same-day keeps payment terms); grooming invoice lines show the service date
+- [x] Slice 1c: Booking form flow reordered — package/extras → day & time → grooming sheets → repeats → vaccination/health checks at the bottom
+- [x] Slice 1d: Printed parlour sheets now include each dog's detailed grooming brief (per-group choices + notes)
+- [x] Slice 1e: Portal new-booking errors now say which fields failed validation instead of a generic message
+- [x] Slice 2a: Calendar day/week/resource views render simultaneous bookings side-by-side instead of stacked
+- [x] Slice 2b: Operations volume report at /admin/reports/operations — per day or month: daycare, in-house grooming, mobile grooming (with per-van breakdown), hotel check-ins/outs, transport; CSV export
 
-- [x] Slice 1: Walks/extras auto-scale when pet count changes on an existing booking (HotelExtrasPanel scales "total" quantities + staff notice)
-- [x] Slice 2: Mixed dog/cat bookings — species emoji on pet chips; cats no longer default into dog rate cards (panel + save fallback)
-- [x] Slice 3: Species-aware rates — per-pet accommodation filters by species; save path falls back to the pet's own species rate card
-- [x] Slice 4: Walks are dog-only on mixed stays — priceHotelExtras takes dogCount; portal booking/quote + wizard pass it; test added
-- [x] Slice 5: Pet-specific grooming on hotel stays — already per-pet via hotel_grooming_requests.pet_id (verified)
-- [x] Slice 6: Partial pet removal on a booking with an issued invoice warns staff to raise a credit note (DB already flags invoice_review_needed)
-- [x] Slice 7: Cat carrier notice shown when a hotel stay with a cat requests van collection/drop-off
-- [x] Slice 8: Mixed-stay invoices now price each species against its own rate card (hotel_stay_lines_pets groups by species + accommodation)
+## Deferred / not reproduced
+- Portal new-booking failure: endpoint reachable, signed-in reproduction unavailable (external Supabase). Need Charlotte's exact error/service/account to go further.
+- Printer failure: not reproduced — need browser/printer details.
+- Adding items to an existing invoice: already possible (Invoice detail → add line; POS → attach to open invoice). Walk Charlotte through it.
+
+## Next logical slices (proposed)
+- [ ] Slice 3: Walk Charlotte's portal booking path end-to-end once we have her error details
+- [ ] Slice 4: Dashboard "today" tiles — dogs in hotel, grooming today, vans out (surfacing existing counts on the admin dashboard)
+- [ ] Slice 5: Invoice due-date rules per service (e.g. hotel deposit vs balance dates) if Charlotte wants more than service-date invoicing
