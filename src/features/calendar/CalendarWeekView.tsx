@@ -96,6 +96,56 @@ function dropToStart(clientY: number, columnEl: HTMLElement, dayAnchor: Date, of
   return start;
 }
 
+/**
+ * Side-by-side columns for overlapping events: each overlapping cluster is
+ * split into N equal columns so simultaneous bookings (e.g. 4 grooming
+ * stations at 09:00) are all readable instead of stacked on top of each other.
+ */
+function overlapLayout(items: { id: string; s: number; e: number }[]) {
+  const sorted = [...items].sort((a, b) => a.s - b.s || a.e - b.e);
+  const pos = new Map<string, { col: number; cols: number }>();
+  let cluster: typeof sorted = [];
+  let clusterEnd = -Infinity;
+  const flush = () => {
+    if (!cluster.length) return;
+    const colEnds: number[] = [];
+    for (const it of cluster) {
+      let c = colEnds.findIndex((end) => end <= it.s);
+      if (c === -1) {
+        c = colEnds.length;
+        colEnds.push(it.e);
+      } else {
+        colEnds[c] = it.e;
+      }
+      pos.set(it.id, { col: c, cols: 0 });
+    }
+    for (const it of cluster) pos.get(it.id)!.cols = colEnds.length;
+    cluster = [];
+  };
+  for (const it of sorted) {
+    if (it.s >= clusterEnd) {
+      flush();
+      clusterEnd = it.e;
+    } else {
+      clusterEnd = Math.max(clusterEnd, it.e);
+    }
+    cluster.push(it);
+  }
+  flush();
+  return pos;
+}
+
+/** Absolute-position style for an event within its overlap cluster. */
+function overlapStyle(top: number, height: number, col: number, cols: number) {
+  const w = 100 / Math.max(1, cols);
+  return {
+    top: top + 2,
+    height,
+    left: `calc(${col * w}% + 2px)`,
+    width: `calc(${w}% - 4px)`,
+  } as const;
+}
+
 function hoursRange() {
   return Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i);
 }
