@@ -94,6 +94,11 @@ export default function InvoicingSettingsPage() {
         daycare_prorata_enabled: form.daycare_prorata_enabled,
         estimate_prefix: form.estimate_prefix || "QUO",
         next_estimate_number: form.next_estimate_number,
+        service_terms: Object.fromEntries(
+          Object.entries(form.service_terms)
+            .map(([k, v]) => [k, parseInt(v, 10)] as const)
+            .filter(([, n]) => !isNaN(n) && n >= 0),
+        ),
       } as any);
       toast.success("Invoicing settings saved");
     } catch (err: any) { toast.error(err?.message ?? "Failed"); }
@@ -214,6 +219,30 @@ export default function InvoicingSettingsPage() {
                   onChange={(e) => setForm({ ...form, reminder_days: e.target.value })}
                   className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
               </Field>
+            </div>
+          </Section>
+
+          <Section title="Payment terms per service">
+            <p className="mb-3 text-xs text-muted-foreground">
+              Override the default payment terms for same-day or walk-in bookings of a service. Leave blank to use
+              the default above. Advance bookings are always payable on the service date regardless.
+            </p>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {([
+                ["grooming_inhouse", "In-house grooming"],
+                ["grooming_mobile", "Mobile grooming"],
+                ["hotel_dog", "Hotel & cattery"],
+                ["pickup_dropoff", "Pick-up / drop-off"],
+                ["daycare", "Daycare (ad-hoc)"],
+              ] as const).map(([key, label]) => (
+                <Field key={key} label={label} hint="Days; blank = default">
+                  <input type="number" min={0} disabled={!canManage}
+                    value={form.service_terms[key] ?? ""}
+                    onChange={(e) => setForm({ ...form, service_terms: { ...form.service_terms, [key]: e.target.value } })}
+                    placeholder={String(form.payment_terms_days)}
+                    className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
+                </Field>
+              ))}
             </div>
           </Section>
 
