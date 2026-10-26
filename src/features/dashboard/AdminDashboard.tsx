@@ -67,7 +67,15 @@ export default function AdminDashboard() {
     const today = (s as any).today ?? 0;
     const yday = (s as any).yday ?? 0;
     const delta = today - yday;
-    return { ...s, value: today, delta, trend: delta >= 0 ? "up" : "down" };
+    let sub: string | null = null;
+    if (s.key === "hotel") {
+      const d = statsData?.hotel;
+      if (d) sub = `${d.dogsIn} in house · ${d.checkingIn} in · ${d.checkingOut} out`;
+    } else if (s.key === "mobile") {
+      const vans = statsData?.mobile?.vansOut ?? 0;
+      sub = `${vans} ${vans === 1 ? "van" : "vans"} out`;
+    }
+    return { ...s, value: today, delta, trend: delta >= 0 ? "up" : "down", sub };
   });
 
   const checkins = [
