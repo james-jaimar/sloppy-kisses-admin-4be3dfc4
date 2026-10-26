@@ -156,6 +156,59 @@ export function useGroomingSheet(tenantId: string | null | undefined, day: Date)
   });
 }
 
+/** Detailed grooming briefs per booking, flattened to printable "Group: choice" lines. */
+export function useGroomingBriefs(tenantId: string | null | undefined, bookingIds: string[]) {
+  const key = [...bookingIds].sort().join(",");
+  return useQuery({
+    queryKey: ["lists_grooming_briefs", tenantId, key],
+    enabled: Boolean(tenantId) && bookingIds.length > 0,
+    queryFn: async (): Promise<Record<string, string[]>> => {
+      const [instRes, groupsRes, optsRes] = await Promise.all([
+        supabase
+          .from("grooming_booking_instructions" as any)
+          .select("booking_id, selections, notes")
+          .eq("tenant_id", tenantId as string)
+          .in("booking_id", bookingIds),
+        supabase.from("grooming_instruction_groups" as any).select("id, code, label, kind").eq("tenant_id", tenantId as string).eq("active", true).order("sort_order"),
+        supabase.from("grooming_instruction_options" as any).select("group_id, code, label, no_action").eq("tenant_id", tenantId as string).eq("active", true),
+      ]);
+      if (instRes.error) throw instRes.error;
+      if (groupsRes.error) throw groupsRes.error;
+      if (optsRes.error) throw optsRes.error;
+      const groups = (groupsRes.data ?? []) as any[];
+      const opts = (optsRes.data ?? []) as any[];
+      const optLabel = (groupId: string, code: string) =>
+        opts.find((o) => o.group_id === groupId && o.code === code);
+      const out: Record<string, string[]> = {};
+      for (const row of (instRes.data ?? []) as any[]) {
+        const lines: string[] = [];
+        const selections = (row.selections ?? {}) as Record<string, unknown>;
+        for (const g of groups) {
+          const v = selections[g.code];
+          if (v === null || v === undefined || v === "" || v === false) continue;
+          if (g.kind === "bool") {
+            if (v === true) lines.push(g.label);
+            continue;
+          }
+          if (g.kind === "text" || g.kind === "number") {
+            lines.push(`${g.label}: ${String(v)}`);
+            continue;
+          }
+          const codes = Array.isArray(v) ? v : [v];
+          const labels = codes
+            .map((c) => optLabel(g.id, String(c)))
+            .filter((o) => o && !o.no_action)
+            .map((o) => o.label);
+          if (labels.length) lines.push(`${g.label}: ${labels.join(", ")}`);
+        }
+        if (row.notes) lines.push(`Notes: ${row.notes}`);
+        if (lines.length) out[row.booking_id] = lines;
+      }
+      return out;
+    },
+  });
+}
+
 // -------------------- Hotel & cattery --------------------
 
 export interface HotelStayRow {
