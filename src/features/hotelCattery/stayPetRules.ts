@@ -19,7 +19,7 @@ export function rescaleHotelExtras<T extends { surcharge_id: string; quantity: n
   return selection.flatMap(row => {
     const rate = catalog.find(r => r.id === row.surcharge_id);
     if (!rate) return [row];
-    const walk = /walk/i.test(rate.code);
+    const walk = /walk/i.test(rate.code) || rate.code === "late_checkout";
     const oldCount = walk ? before.dogs : before.pets;
     const newCount = walk ? after.dogs : after.pets;
     if (!newCount) return [];
