@@ -19,6 +19,6 @@
 - [x] Slice 5: Per-service payment terms — new "Payment terms per service" section in Invoicing Settings; same-day/walk-in invoices use the service's own terms (verified against live DB: grooming 0d → due today, transport 30d → due +30; test data removed)
 
 ## Next logical slices (proposed, 26 Oct)
-- [ ] Slice 6: Walks/extras quantity prompt — when pets are added to or removed from a hotel booking, prompt to rescale per-dog extras (e.g. 11 walks → 22 for two dogs)
-- [ ] Slice 7: Mixed dog+cat stays in one booking/quote — species-specific rates, rooms and invoice lines (builds on per-pet room allocation)
+- [~] Slice 6: Walks/extras quantity prompt — when pets are added to or removed from a hotel booking, prompt to rescale per-dog extras (e.g. 11 walks → 22 for two dogs)
+- [~] Slice 7: Mixed dog+cat stays in one booking/quote — species-specific rates, rooms and invoice lines (builds on per-pet room allocation)
 - [ ] Slice 8: Printer failure + portal booking reproduction — both need Charlotte's exact error/browser details before they can be fixed
