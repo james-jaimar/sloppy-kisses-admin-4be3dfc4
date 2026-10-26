@@ -1601,21 +1601,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                     petId={petForSize?.id ?? null}
                     visitDate={startAt || null}
                   />
-                  <details open={idx === 0} className="mt-3">
-                    <summary className="cursor-pointer select-none rounded-lg bg-muted/40 px-3 py-2 text-sm font-medium">
-                      Grooming sheet for {label}
-                    </summary>
-                    <div className="mt-2">
-                      <BookingGroomingInstructionsPanel
-                        tenantId={tenantId}
-                        bookingId={isEdit ? booking?.id ?? null : null}
-                        primaryPetId={key === EDIT_KEY ? petIds[0] ?? null : key}
-                        value={plan.instructions}
-                        packageType={packagesQ.data?.find(p => p.id === plan.packageId)?.package_type}
-                        onChange={(v) => updatePlan(key, { instructions: v })}
-                      />
-                    </div>
-                  </details>
                 </div>
               );
             })}
