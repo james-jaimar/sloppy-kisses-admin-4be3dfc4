@@ -830,16 +830,24 @@ function WeekView({
             >
               {hours.map((h) => <div key={h} className="h-14 border-b border-border/60" />)}
               <NowLine dayAnchor={d} />
-              {dayBookings.map((b) => {
-                const s = new Date(b.start_at!);
-                const e = b.end_at ? new Date(b.end_at) : new Date(s.getTime() + 60 * 60 * 1000);
-                const { top, height } = positionFor(s, e, d);
-                return (
-                  <div key={b.id} className="absolute left-1 right-1 z-10" style={{ top: top + 2, height }}>
-                    <EventCard b={b} onClick={() => onSelect(b.id)} height={height} />
-                  </div>
-                );
-              })}
+              {(() => {
+                const layout = overlapLayout(dayBookings.map((b) => {
+                  const s = new Date(b.start_at!).getTime();
+                  const e = b.end_at ? new Date(b.end_at).getTime() : s + 60 * 60 * 1000;
+                  return { id: b.id, s, e };
+                }));
+                return dayBookings.map((b) => {
+                  const s = new Date(b.start_at!);
+                  const e = b.end_at ? new Date(b.end_at) : new Date(s.getTime() + 60 * 60 * 1000);
+                  const { top, height } = positionFor(s, e, d);
+                  const p = layout.get(b.id) ?? { col: 0, cols: 1 };
+                  return (
+                    <div key={b.id} className="absolute z-10" style={overlapStyle(top, height, p.col, p.cols)}>
+                      <EventCard b={b} onClick={() => onSelect(b.id)} height={height} />
+                    </div>
+                  );
+                });
+              })()}
             </div>
           );
         })}
