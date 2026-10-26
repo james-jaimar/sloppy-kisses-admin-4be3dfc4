@@ -84,9 +84,15 @@ export function useCreatePortalBooking() {
       if (error || payload?.error) {
         const code = payload?.error ?? error?.message ?? "unknown";
         console.error("portal-create-booking failed:", { code, payload, error });
+        const detailFields = payload?.details
+          ? Object.keys(payload.details).map((f) => f.replace(/_/g, " ")).join(", ")
+          : "";
         const msg =
           ERRORS[code] ??
           (payload?.missing?.length ? `Outstanding: ${payload.missing.join(", ")}` : null) ??
+          (code === "invalid_request" && detailFields
+            ? `Some details didn't pass validation: ${detailFields}. Please check them and try again.`
+            : null) ??
           (typeof code === "string" && code !== "unknown" ? code : "Could not create the booking — please try again or contact us.");
         throw new Error(msg);
       }
