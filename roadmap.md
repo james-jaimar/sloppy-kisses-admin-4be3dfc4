@@ -19,6 +19,7 @@
 - [x] Slice 5: Per-service payment terms — new "Payment terms per service" section in Invoicing Settings; same-day/walk-in invoices use the service's own terms (verified against live DB: grooming 0d → due today, transport 30d → due +30; test data removed)
 
 ## Next logical slices (proposed, 26 Oct)
-- [~] Slice 6: Walks/extras quantity prompt — when pets are added to or removed from a hotel booking, prompt to rescale per-dog extras (e.g. 11 walks → 22 for two dogs)
-- [~] Slice 7: Mixed dog+cat stays in one booking/quote — species-specific rates, rooms and invoice lines (builds on per-pet room allocation)
+- [x] Slice 6: Staff pet-change prompt offers rescaled extras or keeps totals; walks use dog count (11 → 22 for a second dog, unchanged for a cat). Apply/keep decisions verified by component tests.
+- [x] Slice 7: Mixed dog+cat booking/quote accommodation choices use species-compatible rates; public/portal extras use dog-only walks and Stay & Play. Live public price check: two dogs + cat, 11 nights, 22 walks. Rollback database regression verified separate stay rates, quote acceptance without invoice, and one invoice after confirmation. Full suite: 83 tests passed.
+- [ ] Slices 6/7 authenticated smoke check: staff save/reopen and customer portal submission remain unverified because the connected external Supabase has no available managed test session.
 - [ ] Slice 8: Printer failure + portal booking reproduction — both need Charlotte's exact error/browser details before they can be fixed
