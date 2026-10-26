@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase/client";
 import { usePublicTenant, usePublicHotelRates, type PublicRate } from "./publicBookingQueries";
 import { HotelAccommodationChoices, HotelStaySummary } from "./HotelBookingPresentation";
+import { priceHotelExtras } from "../../../supabase/functions/_shared/hotel-extras";
 import { HotelExtrasChoices } from "./HotelExtrasChoices";
 import { clearHotelDraft, readHotelDraft, saveHotelDraft, HOTEL_PORTAL_PATH } from "./hotelDraft";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
@@ -125,20 +126,9 @@ export default function PublicHotelPage() {
         });
       }
     }
-    // Extras are charged per pet: Walk per pet per day, Stay & Play once per pet.
-    const petCount = pets.length;
-    const petWord = `${petCount} pet${petCount === 1 ? "" : "s"}`;
-    for (const s of rates.data?.surcharges ?? []) {
-      const qty = addons[s.code] ?? 0;
-      if (qty <= 0) continue;
-      const daily = s.per_night && !/walk/i.test(s.code);
-      const total = daily
-        ? Number(s.price_zar) * qty * nights * petCount
-        : Number(s.price_zar) * qty * petCount;
-      lines.push({
-        label: `${s.name}${daily ? ` · ${qty}/day × ${nights} night${nights === 1 ? "" : "s"}` : ` × ${qty} over stay`} × ${petWord}`,
-        amount: total,
-      });
+    const requests = Object.entries(addons).filter(([, quantity]) => quantity > 0).map(([code, quantity]) => ({ code, quantity }));
+    for (const extra of priceHotelExtras(rates.data?.surcharges ?? [], requests, pets.length, nights, undefined, dogCount)) {
+      lines.push({ label: `${extra.name} · ${extra.billedQuantity} total`, amount: extra.total });
     }
     return { lines, grand: lines.reduce((s, l) => s + l.amount, 0) };
   }, [pets, speciesRates, addons, nights, rates.data]);
@@ -336,7 +326,7 @@ export default function PublicHotelPage() {
       </section>
 
       {/* Add-ons */}
-      <HotelExtrasChoices catalog={rates.data?.surcharges ?? []} quantities={addons} onChange={(code, quantity) => setAddons(a => ({ ...a, [code]: quantity }))} petCount={pets.length} />
+      <HotelExtrasChoices catalog={rates.data?.surcharges ?? []} quantities={addons} onChange={(code, quantity) => setAddons(a => ({ ...a, [code]: quantity }))} petCount={pets.length} dogCount={dogCount} />
 
       {/* Transport */}
       <section className="booking-section space-y-3">

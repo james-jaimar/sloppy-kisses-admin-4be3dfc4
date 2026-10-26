@@ -1752,6 +1752,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             endAt={endAtLocal ? new Date(endAtLocal).toISOString() : null}
             petCount={petIds.length || 1}
             petIds={petIds}
+            selectedPets={(petsQ.data ?? []).filter(p => petIds.includes(p.id)).map(p => ({ id: p.id, name: p.name, species: p.species, size: p.size_override ?? p.size }))}
             selection={hotelSurcharges}
             onSelectionChange={setHotelSurcharges}
             discountPct={Number(hotel.discount_pct ?? 0)}
