@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { fmtTime, useGroomingSheet, usePetAlerts } from "./queries";
+import { fmtTime, useGroomingBriefs, useGroomingSheet, usePetAlerts } from "./queries";
 import { AlertChips, EmptyState, Sheet, TABLE, TD, TH, Tick } from "./sheetUi";
 
 type Layout = "master" | "station";
@@ -25,6 +25,7 @@ export function GroomingRunSheet({
   const jobs = q.data ?? [];
   const petIds = useMemo(() => jobs.flatMap((j) => j.pets.map((p) => p.id)), [jobs]);
   const alerts = usePetAlerts(tenantId, petIds).data ?? {};
+  const briefs = useGroomingBriefs(tenantId, jobs.map((j) => j.id)).data ?? {};
 
   const chronological = useMemo(
     () =>
