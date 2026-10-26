@@ -884,35 +884,30 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           },
           pet_ids: petIds,
         });
-        // Slice 6: removing a pet from a stay whose invoice is already issued
-        // must not silently reprice — invoices are never edited after issue,
-        // so staff need to raise a credit note for the removed pet.
-        const removedPetIds = (booking.booking_pets ?? [])
-          .map((bp) => bp.pet?.id ?? "")
-          .filter((pid) => pid && !petIds.includes(pid));
-        if (removedPetIds.length > 0) {
-          const { data: issued } = await supabase
-            .from("invoices")
-            .select("id, invoice_number, status")
-            .eq("booking_id", booking.id)
-            .eq("tenant_id", tenantId)
-            .in("status", ["issued", "sent", "part_paid", "paid", "overdue"])
-            .limit(1)
-            .maybeSingle();
-          if (issued) {
-            const names = removedPetIds
-              .map((pid) => petsQ.data?.find((p) => p.id === pid)?.name ?? "a pet")
-              .join(", ");
-            toast.warning(
-              `${names} removed. Invoice ${issued.invoice_number ?? ""} is already issued — raise a credit note for the removed pet's nights; the invoice total will not change by itself.`,
-              { duration: 12000 },
-            );
-          }
-        }
+        const oldPetSnapshot = (booking.booking_pets ?? [])
+          .filter((bp) => bp.pet?.id)
+          .map((bp) => ({ pet_id: bp.pet!.id, name: bp.pet!.name, species: bp.pet!.species, accommodation_type: bp.accommodation_type ?? "" }));
+        const removedPetIds = oldPetSnapshot.map((p) => p.pet_id).filter((pid) => !petIds.includes(pid));
         if (kind === "hotel") await persistPetAccommodations(booking.id);
         await saveDetails(booking.id);
         if (kind === "hotel") await persistSurcharges(booking.id);
         if (kind === "hotel") await persistAccommodation(booking.id);
+        // Pet removed from an already-invoiced stay: invoices are never edited,
+        // so draft a credit note for the removed pet's nights for staff review.
+        if (kind === "hotel" && removedPetIds.length > 0) {
+          const names = oldPetSnapshot.filter((p) => removedPetIds.includes(p.pet_id)).map((p) => p.name ?? "Pet").join(", ");
+          const { data: cnId, error: cnErr } = await (supabase as any).rpc("draft_hotel_pet_removal_credit", {
+            p_booking_id: booking.id, p_old_pets: oldPetSnapshot,
+          });
+          if (cnErr) {
+            toast.warning(`${names} removed. The invoice is already issued but a credit note could not be drafted (${cnErr.message}) — raise one manually.`, { duration: 12000 });
+          } else if (cnId) {
+            toast.success(`${names} removed. A draft credit note was created for the removed nights — review and issue it.`, {
+              duration: 12000,
+              action: { label: "Open credit note", onClick: () => window.open(`/admin/credit-notes/${cnId}`, "_self") },
+            });
+          }
+        }
         if (kind === "grooming") await persistGroomingAddons(booking.id);
         if (kind === "grooming") await persistInstructions(booking.id);
         toast.success("Booking updated");

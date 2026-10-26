@@ -1,7 +1,7 @@
 -- Owner regression. Fixtures, quotes, invoices and notifications all roll back.
 DO $$
 DECLARE t uuid; c uuid; dog uuid; dog2 uuid; cat uuid; actor uuid; b uuid; eid uuid; inv uuid;
-dr text; cr text; dp numeric; ep numeric; cp numeric; expected numeric; checklist jsonb; token uuid;
+dr text; cr text; snap jsonb; cn uuid; cn_total numeric; dp numeric; ep numeric; cp numeric; expected numeric; checklist jsonb; token uuid;
 BEGIN
  SELECT tenant_id,customer_id,id INTO t,c,dog FROM public.pets WHERE species='dog' LIMIT 1;
  SELECT accommodation_type,nightly_rate_zar,extra_pet_rate_zar INTO dr,dp,ep FROM public.hotel_rate_cards WHERE tenant_id=t AND species='dog' AND active AND nightly_rate_zar>0 LIMIT 1;
@@ -30,6 +30,16 @@ BEGIN
   inv:=public.hotel_review_action(b,'confirm','{}');
   IF inv IS NULL OR NOT EXISTS(SELECT 1 FROM public.invoice_items WHERE invoice_id=inv AND description LIKE '%TEST mixed cat%') THEN RAISE EXCEPTION 'Confirmed invoice must contain the cat accommodation line'; END IF;
   IF public.hotel_review_action(b,'confirm','{}')<>inv THEN RAISE EXCEPTION 'Confirmation must not duplicate the invoice'; END IF;
+  -- Removing the cat after invoicing drafts a credit note for its nights; the invoice is untouched.
+  SELECT jsonb_agg(jsonb_build_object('pet_id',p.id,'name',p.name,'species',p.species,'accommodation_type',bp.accommodation_type)) INTO snap
+    FROM public.booking_pets bp JOIN public.pets p ON p.id=bp.pet_id WHERE bp.booking_id=b;
+  expected:=(SELECT total FROM public.invoices WHERE id=inv);
+  DELETE FROM public.booking_pets WHERE booking_id=b AND pet_id=cat;
+  cn:=public.draft_hotel_pet_removal_credit(b,snap);
+  SELECT total INTO cn_total FROM public.credit_notes WHERE id=cn AND status='draft' AND invoice_id=inv;
+  IF cn_total IS DISTINCT FROM 11*cp THEN RAISE EXCEPTION 'Removing the cat must draft a credit of 11 cat nights, got %',cn_total; END IF;
+  IF (SELECT total FROM public.invoices WHERE id=inv)<>expected THEN RAISE EXCEPTION 'Issued invoice must not change'; END IF;
+  IF public.draft_hotel_pet_removal_credit(b,(SELECT jsonb_agg(e) FROM jsonb_array_elements(snap) e WHERE e->>'pet_id'<>cat::text)) IS NOT NULL THEN RAISE EXCEPTION 'No change must draft no credit'; END IF;
   RAISE EXCEPTION USING ERRCODE='P0002',MESSAGE='MIXED_STAY_PASSED_ROLLBACK';
  EXCEPTION WHEN no_data_found THEN IF SQLERRM<>'MIXED_STAY_PASSED_ROLLBACK' THEN RAISE; END IF; END;
 END $$;
