@@ -102,24 +102,26 @@ export function useDashboardTodayStats(tenantId: string | null | undefined, date
       const yday = new Date(today);
       yday.setDate(yday.getDate() - 1);
 
-      const [gT, gY, mT, mY, dT, dY, hT, hY, pT, pY] = await Promise.all([
+      const [gT, gY, mT, mY, vans, dT, dY, hT, hY, hDetail, pT, pY] = await Promise.all([
         countBookings(t, startISO, endISO, ["grooming_inhouse"]),
         countBookings(t, ydayStartISO, ydayEndISO, ["grooming_inhouse"]),
         countBookings(t, startISO, endISO, ["grooming_mobile"]),
         countBookings(t, ydayStartISO, ydayEndISO, ["grooming_mobile"]),
+        countVansOut(t, startISO, endISO),
         countDaycareExpected(t, today),
         countDaycareExpected(t, yday),
         countHotelOverlap(t, startISO, endISO),
         countHotelOverlap(t, ydayStartISO, ydayEndISO),
+        hotelDayDetail(t, startISO, endISO),
         countBookings(t, startISO, endISO, ["pickup_dropoff"]),
         countBookings(t, ydayStartISO, ydayEndISO, ["pickup_dropoff"]),
       ]);
 
       return {
         grooming: { today: gT, yday: gY },
-        mobile: { today: mT, yday: mY },
+        mobile: { today: mT, yday: mY, vansOut: vans },
         daycare: { today: dT, yday: dY },
-        hotel: { today: hT, yday: hY },
+        hotel: { today: hT, yday: hY, ...hDetail },
         transport: { today: pT, yday: pY },
       };
     },
