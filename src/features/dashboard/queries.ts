@@ -84,9 +84,9 @@ async function countVansOut(tenantId: string, dayStart: string, dayEnd: string) 
 
 export interface DashboardTodayStats {
   grooming: { today: number; yday: number };
-  mobile: { today: number; yday: number };
+  mobile: { today: number; yday: number; vansOut: number };
   daycare: { today: number; yday: number };
-  hotel: { today: number; yday: number };
+  hotel: { today: number; yday: number; dogsIn: number; checkingIn: number; checkingOut: number };
   transport: { today: number; yday: number };
 }
 
