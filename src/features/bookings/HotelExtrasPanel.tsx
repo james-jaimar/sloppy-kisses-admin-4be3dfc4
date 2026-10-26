@@ -9,6 +9,8 @@ import {
   type PetSizeBand,
   SIZE_BAND_ORDER,
 } from "@/features/settings/hotelRateCardQueries";
+import { Button } from "@/components/ui/button";
+import { accommodationForPet, rescaleHotelExtras } from "@/features/hotelCattery/stayPetRules";
 import { useHotelWorkflowSettings } from "@/features/hotelCattery/queries";
 
 export interface SurchargeSelection {
@@ -49,6 +51,7 @@ export function HotelExtrasPanel({
   endAt,
   petCount,
   petIds,
+  selectedPets,
   selection,
   onSelectionChange,
   petAccommodations,
@@ -66,6 +69,7 @@ export function HotelExtrasPanel({
   endAt: string | null;
   petCount: number;
   petIds?: string[];
+  selectedPets?: { id: string; name: string; size: PetSizeBand | null; species: string | null }[];
   selection: SurchargeSelection[];
   onSelectionChange: (rows: SurchargeSelection[]) => void;
   /** petId -> accommodation type, so dogs of different sizes get their own area & rate. */
@@ -104,16 +108,20 @@ export function HotelExtrasPanel({
   const species_rates = (ratesQ.data ?? []).filter((r) => r.species === species);
   const activeRate = species_rates.find((r) => r.accommodation_type === accommodationType) ?? null;
 
-  const pets = petSizesQ.data ?? [];
+  const pets = selectedPets ?? petSizesQ.data ?? [];
   // Default each pet to the first rate card of its own species, so a cat on a
   // "Hotel — dog" booking never defaults into a dog area.
-  function defaultAccFor(petSpecies: string) {
-    if (petSpecies === species) return accommodationType;
-    return (ratesQ.data ?? []).find((r) => r.species === petSpecies)?.accommodation_type ?? accommodationType;
+  function petAcc(p: { id: string; species: string | null; size?: PetSizeBand | null }) {
+    return accommodationForPet(p, ratesQ.data ?? [], petAccommodations?.[p.id] || accommodationType);
   }
-  function petAcc(p: { id: string; species: string }) {
-    return petAccommodations?.[p.id] || defaultAccFor(p.species);
-  }
+  useEffect(() => {
+    if (!onPetAccommodationChange || !ratesQ.data) return;
+    for (const p of pets) {
+      const acc = petAcc(p);
+      if (acc && petAccommodations?.[p.id] !== acc) onPetAccommodationChange(p.id, acc);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pets, ratesQ.data, accommodationType, petAccommodations]);
   function bandIndex(b: PetSizeBand | null | undefined) {
     return b ? SIZE_BAND_ORDER.indexOf(b) : -1;
   }
@@ -159,7 +167,8 @@ export function HotelExtrasPanel({
       const [petSpecies, acc] = key.split("|");
       const rate = (ratesQ.data ?? []).find((r) => r.species === petSpecies && r.accommodation_type === acc);
       if (!rate) return null;
-      const uplift = peak && Number(rate.peak_uplift_pct) > 0 ? Number(rate.peak_uplift_pct) / 100 : 0;
+      const ratePeak = startAt && endAt && inPeak(startAt, endAt, wfQ.data?.peak_start_month_day ?? null, wfQ.data?.peak_end_month_day ?? null);
+      const uplift = ratePeak && Number(rate.peak_uplift_pct) > 0 ? Number(rate.peak_uplift_pct) / 100 : 0;
       const nightly = Math.round(Number(rate.nightly_rate_zar) * (1 + uplift) * 100) / 100;
       const total = Math.round(nightly * nights * 100) / 100;
       stayRows.push({
@@ -200,36 +209,34 @@ export function HotelExtrasPanel({
 
   const defaultQty = Math.max(1, pets.length || petCount || 1);
 
-  // Slice 1: when the pet count changes after extras were chosen, scale
-  // "total over stay" quantities (e.g. walks) in proportion, and tell staff.
-  const prevPetCountRef = useRef<number>(defaultQty);
+  const counts = { pets: pets.length, dogs: pets.filter(p => p.species === "dog").length };
+  const prevPetCountRef = useRef(counts);
   const [scaledNote, setScaledNote] = useState<string | null>(null);
   useEffect(() => {
+    if (!surchargesQ.data || (!selectedPets && petSizesQ.isLoading)) return;
     const prev = prevPetCountRef.current;
-    const next = defaultQty;
-    prevPetCountRef.current = next;
-    if (prev === next || selection.length === 0) return;
-    const scaled: string[] = [];
-    const updated = selection.map((s) => {
-      if (s.quantity_basis !== "total") return s;
-      const cat = (surchargesQ.data ?? []).find((x) => x.id === s.surcharge_id);
-      if (!cat) return s;
-      const newQty = Math.max(1, Math.round((s.quantity * next) / Math.max(1, prev)));
-      if (newQty === s.quantity) return s;
-      scaled.push(`${cat.name}: ${s.quantity} → ${newQty}`);
-      return { ...s, quantity: newQty };
+    prevPetCountRef.current = counts;
+    if (prev.pets === counts.pets && prev.dogs === counts.dogs || !selection.length) return;
+    const updated = rescaleHotelExtras(selection, surchargesQ.data, prev, counts);
+    const changes = selection.flatMap(row => {
+      const next = updated.find(r => r.surcharge_id === row.surcharge_id);
+      if (next?.quantity === row.quantity) return [];
+      const name = surchargesQ.data.find(r => r.id === row.surcharge_id)?.name ?? "Extra";
+      return [`${name}: ${row.quantity} → ${next?.quantity ?? 0}`];
     });
-    if (scaled.length > 0) {
-      onSelectionChange(updated);
-      setScaledNote(`Pet count changed ${prev} → ${next}. Scaled: ${scaled.join(", ")}. Adjust if needed.`);
-    }
+    if (!changes.length) return;
+    const accepted = window.confirm(`Pets changed: ${prev.dogs} → ${counts.dogs} dogs, ${prev.pets} → ${counts.pets} pets.\n\nUpdate extras?\n${changes.join("\n")}\n\nOK: apply quantities. Cancel: keep existing totals.`);
+    // A cat-only stay can never retain a dog walk charge.
+    const rows = accepted ? updated : selection.filter(row => counts.dogs > 0 || !/walk/i.test(surchargesQ.data.find(r => r.id === row.surcharge_id)?.code ?? ""));
+    onSelectionChange(rows);
+    setScaledNote(accepted ? `Updated extras: ${changes.join(", ")}.` : "Existing quantities kept. Dog-only walks removed if no dogs remain.");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultQty]);
+  }, [counts.pets, counts.dogs, surchargesQ.data, petSizesQ.isLoading]);
 
   function toggleSurcharge(id: string) {
     const exists = selection.find((s) => s.surcharge_id === id);
     if (exists) onSelectionChange(selection.filter((s) => s.surcharge_id !== id));
-    else onSelectionChange([...selection, { surcharge_id: id, quantity: defaultQty, quantity_basis: /walk/i.test((surchargesQ.data ?? []).find(s => s.id === id)?.code ?? "") ? "total" : "catalog" }]);
+    else onSelectionChange([...selection, { surcharge_id: id, quantity: /walk/i.test((surchargesQ.data ?? []).find(s => s.id === id)?.code ?? "") ? counts.dogs : defaultQty, quantity_basis: /walk/i.test((surchargesQ.data ?? []).find(s => s.id === id)?.code ?? "") ? "total" : "catalog" }]);
   }
 
   function setQty(id: string, qty: number) {
@@ -246,7 +253,7 @@ export function HotelExtrasPanel({
         <div>
           <div className="mb-1 text-xs font-medium">Accommodation (rate card)</div>
           {pets.length > 1 && (
-            <div className="mb-1 text-[11px] text-muted-foreground">Default for all pets — set each pet below.</div>
+            <div className="mb-1 text-[11px] text-muted-foreground">Default for {species === "cat" ? "cats" : "dogs"} — set each pet below.</div>
           )}
           <select
             className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
@@ -294,7 +301,7 @@ export function HotelExtrasPanel({
         </div>
       </div>
 
-      {pets.length > 1 && onPetAccommodationChange && (
+      {pets.length > 0 && onPetAccommodationChange && (
         <div className="mt-4">
           <div className="mb-2 text-xs font-medium">Accommodation per pet</div>
           <div className="space-y-2">
@@ -306,12 +313,12 @@ export function HotelExtrasPanel({
                 </div>
                 <select
                   className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-                  value={petAcc(p)}
+                  value={petAcc(p)} aria-label={`Accommodation for ${p.name}`}
                   onChange={(e) => onPetAccommodationChange(p.id, e.target.value)}
                 >
                   <option value="">— Select accommodation —</option>
                   {(ratesQ.data ?? []).filter(r => r.species === p.species).map((r) => (
-                    <option key={r.id} value={r.accommodation_type}>
+                    <option key={r.id} value={r.accommodation_type} disabled={!rateAllowsPet(r, p.size)}>
                       {r.display_name} · {fmtZar(Number(r.nightly_rate_zar))}/night
                       {rateAllowsPet(r, p.size) ? "" : " — size mismatch"}
                     </option>
@@ -343,17 +350,17 @@ export function HotelExtrasPanel({
               return (
                 <div key={s.id} className="flex items-center gap-3 rounded-lg border border-border bg-white px-3 py-2 text-sm">
                   <label className="flex flex-1 items-center gap-2">
-                    <input type="checkbox" className="h-4 w-4" checked={!!sel} onChange={() => toggleSurcharge(s.id)} />
+                    <input type="checkbox" className="h-4 w-4" checked={!!sel} disabled={/walk/i.test(s.code) && counts.dogs === 0} onChange={() => toggleSurcharge(s.id)} />
                     <span className="font-medium">{s.name}</span>
                     <span className="text-xs text-muted-foreground">
                       {fmtZar(Number(s.price_zar))} {/walk/i.test(s.code) ? "/ walk" : s.per_night ? "/ night" : "/ stay"}
                     </span>
                   </label>
                   {sel && (
-                    <div className="flex items-center gap-1" title={sel.quantity_basis === "total" ? "Total walks during this stay (all pets)" : s.per_night ? "How many per day (all pets)" : "Number of pets / times"}>
-                      <button type="button" onClick={() => setQty(s.id, sel.quantity - 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">−</button>
+                    <div className="flex items-center gap-1" title={sel.quantity_basis === "total" ? "Total walks during this stay (dogs only)" : s.per_night ? "How many per day (all pets)" : "Number of pets / times"}>
+                      <Button variant="outline" size="icon" aria-label={`Fewer ${s.name}`} type="button" onClick={() => setQty(s.id, sel.quantity - 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">−</Button>
                       <span className="w-8 text-center text-sm tabular-nums">{Math.round(sel.quantity)}</span>
-                      <button type="button" onClick={() => setQty(s.id, sel.quantity + 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">+</button>
+                      <Button variant="outline" size="icon" aria-label={`More ${s.name}`} type="button" onClick={() => setQty(s.id, sel.quantity + 1)} className="h-8 w-8 rounded-md border border-border text-sm hover:bg-muted">+</Button>
                       {s.per_night && sel.quantity_basis !== "total" && (
                         <span className="ml-1 text-xs text-muted-foreground">
                           per day{preview ? ` = ${Math.round(sel.quantity) * preview.nights} total` : ""}
@@ -418,7 +425,7 @@ export function HotelExtrasPanel({
             </div>
           </div>
           <div className="mt-2 text-[11px] text-muted-foreground">
-            The booking's invoice is re-priced automatically after save (until it is sent or paid).
+            An invoice is issued only after staff confirmation. Changes to an issued invoice require review and a credit note.
           </div>
         </div>
       )}
