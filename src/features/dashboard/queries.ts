@@ -49,11 +49,44 @@ async function countHotelOverlap(tenantId: string, dayStart: string, dayEnd: str
   return count ?? 0;
 }
 
+/** Pets physically in the hotel/cattery on a day, plus that day's arrivals and departures. */
+async function hotelDayDetail(tenantId: string, dayStart: string, dayEnd: string) {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id, start_at, end_at, booking_pets(id)")
+    .eq("tenant_id", tenantId)
+    .in("service_type", ["hotel_dog", "hotel_cat"] as any)
+    .lt("start_at", dayEnd)
+    .gt("end_at", dayStart)
+    .not("status", "in", "(cancelled,no_show)");
+  if (error) throw error;
+  const rows = (data ?? []) as any[];
+  const dogsIn = rows.reduce((n, b) => n + (b.booking_pets?.length ?? 0), 0);
+  const checkingIn = rows.filter((b) => b.start_at >= dayStart && b.start_at < dayEnd).length;
+  const checkingOut = rows.filter((b) => b.end_at && b.end_at >= dayStart && b.end_at < dayEnd).length;
+  return { dogsIn, checkingIn, checkingOut };
+}
+
+/** Distinct vans (resources) with at least one mobile grooming job that day. */
+async function countVansOut(tenantId: string, dayStart: string, dayEnd: string) {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("resource_id")
+    .eq("tenant_id", tenantId)
+    .eq("service_type", "grooming_mobile")
+    .gte("start_at", dayStart)
+    .lt("start_at", dayEnd)
+    .not("status", "in", "(cancelled,no_show)")
+    .not("resource_id", "is", null);
+  if (error) throw error;
+  return new Set((data ?? []).map((r: any) => r.resource_id)).size;
+}
+
 export interface DashboardTodayStats {
   grooming: { today: number; yday: number };
-  mobile: { today: number; yday: number };
+  mobile: { today: number; yday: number; vansOut: number };
   daycare: { today: number; yday: number };
-  hotel: { today: number; yday: number };
+  hotel: { today: number; yday: number; dogsIn: number; checkingIn: number; checkingOut: number };
   transport: { today: number; yday: number };
 }
 
@@ -69,24 +102,26 @@ export function useDashboardTodayStats(tenantId: string | null | undefined, date
       const yday = new Date(today);
       yday.setDate(yday.getDate() - 1);
 
-      const [gT, gY, mT, mY, dT, dY, hT, hY, pT, pY] = await Promise.all([
+      const [gT, gY, mT, mY, vans, dT, dY, hT, hY, hDetail, pT, pY] = await Promise.all([
         countBookings(t, startISO, endISO, ["grooming_inhouse"]),
         countBookings(t, ydayStartISO, ydayEndISO, ["grooming_inhouse"]),
         countBookings(t, startISO, endISO, ["grooming_mobile"]),
         countBookings(t, ydayStartISO, ydayEndISO, ["grooming_mobile"]),
+        countVansOut(t, startISO, endISO),
         countDaycareExpected(t, today),
         countDaycareExpected(t, yday),
         countHotelOverlap(t, startISO, endISO),
         countHotelOverlap(t, ydayStartISO, ydayEndISO),
+        hotelDayDetail(t, startISO, endISO),
         countBookings(t, startISO, endISO, ["pickup_dropoff"]),
         countBookings(t, ydayStartISO, ydayEndISO, ["pickup_dropoff"]),
       ]);
 
       return {
         grooming: { today: gT, yday: gY },
-        mobile: { today: mT, yday: mY },
+        mobile: { today: mT, yday: mY, vansOut: vans },
         daycare: { today: dT, yday: dY },
-        hotel: { today: hT, yday: hY },
+        hotel: { today: hT, yday: hY, ...hDetail },
         transport: { today: pT, yday: pY },
       };
     },
