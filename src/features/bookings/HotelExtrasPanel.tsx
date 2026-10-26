@@ -227,7 +227,10 @@ export function HotelExtrasPanel({
     if (!changes.length) return;
     const accepted = window.confirm(`Pets changed: ${prev.dogs} → ${counts.dogs} dogs, ${prev.pets} → ${counts.pets} pets.\n\nUpdate extras?\n${changes.join("\n")}\n\nOK: apply quantities. Cancel: keep existing totals.`);
     // A cat-only stay can never retain a dog walk charge.
-    const rows = accepted ? updated : selection.filter(row => counts.dogs > 0 || !/walk/i.test(surchargesQ.data.find(r => r.id === row.surcharge_id)?.code ?? ""));
+    const rows = accepted ? updated : selection.filter(row => {
+      const code = surchargesQ.data.find(r => r.id === row.surcharge_id)?.code ?? "";
+      return counts.dogs > 0 || !(/walk/i.test(code) || code === "late_checkout");
+    });
     onSelectionChange(rows);
     setScaledNote(accepted ? `Updated extras: ${changes.join(", ")}.` : "Existing quantities kept. Dog-only walks removed if no dogs remain.");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -236,7 +239,7 @@ export function HotelExtrasPanel({
   function toggleSurcharge(id: string) {
     const exists = selection.find((s) => s.surcharge_id === id);
     if (exists) onSelectionChange(selection.filter((s) => s.surcharge_id !== id));
-    else onSelectionChange([...selection, { surcharge_id: id, quantity: /walk/i.test((surchargesQ.data ?? []).find(s => s.id === id)?.code ?? "") ? counts.dogs : defaultQty, quantity_basis: /walk/i.test((surchargesQ.data ?? []).find(s => s.id === id)?.code ?? "") ? "total" : "catalog" }]);
+    else onSelectionChange([...selection, { surcharge_id: id, quantity: (/walk/i.test((surchargesQ.data ?? []).find(s => s.id === id)?.code ?? "") || (surchargesQ.data ?? []).find(s => s.id === id)?.code === "late_checkout") ? counts.dogs : defaultQty, quantity_basis: /walk/i.test((surchargesQ.data ?? []).find(s => s.id === id)?.code ?? "") ? "total" : "catalog" }]);
   }
 
   function setQty(id: string, qty: number) {
@@ -350,7 +353,7 @@ export function HotelExtrasPanel({
               return (
                 <div key={s.id} className="flex items-center gap-3 rounded-lg border border-border bg-white px-3 py-2 text-sm">
                   <label className="flex flex-1 items-center gap-2">
-                    <input type="checkbox" className="h-4 w-4" checked={!!sel} disabled={/walk/i.test(s.code) && counts.dogs === 0} onChange={() => toggleSurcharge(s.id)} />
+                    <input type="checkbox" className="h-4 w-4" checked={!!sel} disabled={(/walk/i.test(s.code) || s.code === "late_checkout") && counts.dogs === 0} onChange={() => toggleSurcharge(s.id)} />
                     <span className="font-medium">{s.name}</span>
                     <span className="text-xs text-muted-foreground">
                       {fmtZar(Number(s.price_zar))} {/walk/i.test(s.code) ? "/ walk" : s.per_night ? "/ night" : "/ stay"}
