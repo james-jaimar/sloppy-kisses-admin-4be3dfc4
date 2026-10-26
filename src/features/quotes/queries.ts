@@ -32,7 +32,7 @@ export interface QuoteExtras {
   check_in_window?: string | null;
   check_out_window?: string | null;
   notes?: string | null;
-  surcharges?: { surcharge_id: string; quantity: number }[];
+  surcharges?: { surcharge_id: string; quantity: number; quantity_basis?: "total" | "catalog" }[];
   pets?: {
     pet_id: string;
     name?: string | null;

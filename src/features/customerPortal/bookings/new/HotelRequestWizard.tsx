@@ -189,7 +189,7 @@ export default function HotelRequestWizard() {
   const rateBlockReason = (r: { min_size_band: PetSizeBand | null; max_size_band: PetSizeBand | null }) => {
     if (selectedPets.length === 0) return null;
     const bad = selectedPets.filter(
-      (p: any) => !rateAllowsSize(r, ((p.size_override ?? p.size) ?? null) as PetSizeBand | null),
+      (p: any) => p.species === (isCat ? "cat" : "dog") && !rateAllowsSize(r, ((p.size_override ?? p.size) ?? null) as PetSizeBand | null),
     );
     if (bad.length === 0) return null;
     return `Not available for: ${bad
@@ -246,7 +246,7 @@ export default function HotelRequestWizard() {
       }
     }
     for (const extra of pricedExtras) lines.push({
-      label: `${extra.name} · ${extra.perPet} per pet${extra.per_night ? ` per day × ${nights} nights` : ""} (${selectedPets.map(p => p.name).join(", ")})`,
+      label: `${extra.name} · ${extra.perPet} ${/walk/i.test(extra.code) || extra.code === "late_checkout" ? "per dog" : "per pet"}${extra.per_night ? ` per day × ${nights} nights` : ""} (${selectedPets.filter(p => !/walk/i.test(extra.code) && extra.code !== "late_checkout" || p.species === "dog").map(p => p.name).join(", ")})`,
       amount: extra.total,
     });
     return { lines, grand: lines.reduce((s, l) => s + l.amount, 0) };
@@ -497,7 +497,7 @@ export default function HotelRequestWizard() {
 
 
           <section className="booking-section space-y-3">
-            <h2 className="text-lg font-semibold">Accommodation{selectedPets.length > 1 ? " · default for all pets" : ""}</h2>
+            <h2 className="text-lg font-semibold">Accommodation{selectedPets.length > 1 ? ` · default for ${isCat ? "cats" : "dogs"}` : ""}</h2>
             <HotelAccommodationChoices rates={speciesRates} species={isCat ? "cat" : "dog"} value={accommodationType}
               onChange={setAccommodationType} blocked={rateBlockReason} />
             <p className="text-xs text-muted-foreground">Final room allocation is confirmed by our team.</p>
@@ -540,7 +540,7 @@ export default function HotelRequestWizard() {
             </Field>
           )}
 
-          {extrasCatalog.isLoading ? <p className="text-sm text-muted-foreground">Loading extras…</p> : extrasCatalog.isError ? <p className="text-sm text-destructive">We couldn’t load the extras. Please refresh before continuing.</p> : <HotelExtrasChoices catalog={extrasCatalog.data?.surcharges ?? []} quantities={extraQuantities} onChange={changeExtra} petCount={selectedPets.length} />}
+          {extrasCatalog.isLoading ? <p className="text-sm text-muted-foreground">Loading extras…</p> : extrasCatalog.isError ? <p className="text-sm text-destructive">We couldn’t load the extras. Please refresh before continuing.</p> : <HotelExtrasChoices catalog={extrasCatalog.data?.surcharges ?? []} quantities={extraQuantities} onChange={changeExtra} petCount={selectedPets.length} dogCount={dogCount} />}
 
           <Field label="Room preference (optional)" hint="A request only — we'll do our best.">
             <select value={roomPref} onChange={(e) => setRoomPref(e.target.value)} className={selectCls}>

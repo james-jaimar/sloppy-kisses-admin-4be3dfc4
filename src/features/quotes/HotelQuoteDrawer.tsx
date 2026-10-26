@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { accommodationForPet } from "@/features/hotelCattery/stayPetRules";
 import { useNavigate } from "react-router-dom";
 import { Plus, Trash2, Sparkles, AlertTriangle, Scissors, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
@@ -81,7 +82,11 @@ export function HotelQuoteDrawer({
   const rates = (ratesQ.data ?? []).filter((r) => r.species === species);
   const selectedPets = (petsQ.data ?? []).filter((p: any) => petIds.includes(p.id));
 
-  const accFor = (petId: string) => petAcc[petId] || accommodation;
+  const accFor = (petId: string) => {
+    const pet = selectedPets.find(p => p.id === petId);
+    return pet ? accommodationForPet({ species: pet.species, size: pet.size_override ?? pet.size }, ratesQ.data ?? [], petAcc[petId] || accommodation) : "";
+  };
+  const dogCount = selectedPets.filter(p => p.species === "dog").length;
 
   const stayPets = useMemo(
     () =>
@@ -115,13 +120,12 @@ export function HotelQuoteDrawer({
       let changed = false;
       for (const p of selectedPets as any[]) {
         if (next[p.id]) continue;
-        const fit = rates.find((r: any) => rateAllowsSize(r, p.size ?? null));
-        const val = accommodation || fit?.accommodation_type;
+        const val = accommodationForPet({ species: p.species, size: p.size_override ?? p.size }, ratesQ.data ?? [], accommodation);
         if (val) { next[p.id] = val; changed = true; }
       }
       return changed ? next : prev;
     });
-  }, [selectedPets, rates, accommodation]);
+  }, [selectedPets, ratesQ.data, accommodation]);
 
   const checkOutOptions = useMemo(() => checkOutWindowsFor(endDate || null), [endDate]);
   useEffect(() => {
@@ -151,7 +155,7 @@ export function HotelQuoteDrawer({
       .map(([id, qty]) => {
         const s: any = cat.find((x: any) => x.id === id);
         if (!s) return null;
-        const perNight = s.unit === "per_night" || s.per_night;
+        const perNight = (s.unit === "per_night" || s.per_night) && !/walk/i.test(s.code);
         const quantity = perNight ? qty * Math.max(1, nights) : qty;
         return {
           description: `${s.name}${perNight ? " (per night)" : ""}`,
@@ -168,7 +172,7 @@ export function HotelQuoteDrawer({
   const sizeWarnings = useMemo(() => {
     const out: string[] = [];
     for (const p of selectedPets as any[]) {
-      const rate: any = rates.find((r: any) => r.accommodation_type === accFor(p.id));
+      const rate: any = (ratesQ.data ?? []).find((r: any) => r.species === p.species && r.accommodation_type === accFor(p.id));
       if (!rate) continue;
       if (!rateAllowsSize(rate, p.size ?? null)) {
         out.push(`${p.name}${p.size ? ` (${p.size})` : " (no size on file)"} does not fit ${rate.display_name}`);
@@ -199,7 +203,7 @@ export function HotelQuoteDrawer({
     [surchargesQ.data],
   );
   const stayPlayUnit = Number(stayPlaySurcharge?.amount_zar ?? stayPlaySurcharge?.price_zar ?? 0);
-  const stayPlayQty = Math.max(1, petIds.length);
+  const stayPlayQty = dogCount;
 
   useEffect(() => {
     if (!stayPlaySurcharge) return;
@@ -218,7 +222,7 @@ export function HotelQuoteDrawer({
   async function save() {
     if (!customerId) { toast.error("Pick a customer"); return; }
     if (petIds.length === 0) { toast.error("Pick at least one pet"); return; }
-    if (!accommodation || nights < 1) { toast.error("Choose an accommodation type and dates"); return; }
+    if (!accommodation || nights < 1 || selectedPets.some(p => !accFor(p.id))) { toast.error("Choose an accommodation type and dates"); return; }
     if (checkInBlock) { toast.error(checkInBlock); return; }
     if (checkOutBlock) { toast.error(checkOutBlock); return; }
     if (stayLines.length === 0) { toast.error(pricedQ.error ? String((pricedQ.error as Error).message) : "No price could be worked out"); return; }
@@ -229,7 +233,7 @@ export function HotelQuoteDrawer({
       notes: notes || null,
       surcharges: Object.entries(surcharges)
         .filter(([, q]) => q > 0)
-        .map(([surcharge_id, quantity]) => ({ surcharge_id, quantity })),
+        .map(([surcharge_id, quantity]) => ({ surcharge_id, quantity, quantity_basis: /walk/i.test((surchargesQ.data ?? []).find(s => s.id === surcharge_id)?.code ?? "") ? "total" as const : "catalog" as const })),
       pets: selectedPets.map((p: any) => ({
         pet_id: p.id,
         name: p.name,
@@ -263,7 +267,7 @@ export function HotelQuoteDrawer({
   return (
     <ModalShell
       title="New quote"
-      subtitle="Hotel enquiry → quote. Accepting it creates the booking, extras and deposit invoice."
+      subtitle="Accepting the quote starts information gathering. Staff confirm the stay and issue the invoice separately."
       onClose={onClose}
       wide
       footer={
@@ -312,7 +316,7 @@ export function HotelQuoteDrawer({
                     >
                       {p.name}
                       <span className="ml-1.5 text-xs text-muted-foreground">
-                        {p.size ? p.size : "no size"}
+                        {p.species} · {p.size ? p.size : "no size"}
                       </span>
                     </button>
                   );
@@ -327,16 +331,16 @@ export function HotelQuoteDrawer({
             <div className={label}>Service</div>
             <select value={serviceType} onChange={(e) => { onServiceChange(e.target.value); setAccommodation(""); }} className={input}>
               <option value="hotel_dog">Dog hotel</option>
-              <option value="hotel_cat">Cattery</option>
+              <option value="hotel_cat">Cat Hotel</option>
               <option value="daycare">Daycare</option>
             </select>
           </label>
           <label className="block">
-            <div className={label}>{selectedPets.length > 1 ? "Accommodation (default for all dogs)" : "Accommodation"}</div>
+            <div className={label}>{selectedPets.length > 1 ? "Accommodation (default for this species)" : "Accommodation"}</div>
             <select value={accommodation} onChange={(e) => setAccommodation(e.target.value)} className={input}>
               <option value="">Select…</option>
               {rates.map((r: any) => {
-                const fits = selectedPets.length === 0 || selectedPets.every((p: any) => rateAllowsSize(r, p.size ?? null));
+                const fits = selectedPets.length === 0 || selectedPets.filter(p => p.species === species).every((p: any) => rateAllowsSize(r, p.size ?? null));
                 return (
                   <option key={r.id} value={r.accommodation_type}>
                     {r.display_name} — R{Number(r.nightly_rate_zar).toFixed(2)}/night{fits ? "" : " (size mismatch)"}
@@ -359,7 +363,7 @@ export function HotelQuoteDrawer({
           <div className="rounded-xl border border-border p-4">
             <div className={label}>Accommodation per pet</div>
             <p className="mb-3 text-xs text-muted-foreground">
-              Dogs of different sizes can be in different areas — each is priced at its own nightly rate. Two dogs in the
+              Dogs and cats use their own accommodation and rates. Two pets of the same species in the
               same area still use that area&apos;s extra-pet rate.
             </p>
             <div className="space-y-2">
@@ -370,12 +374,12 @@ export function HotelQuoteDrawer({
                     <span className="ml-1.5 text-xs text-muted-foreground">{p.size ?? "no size"}</span>
                   </div>
                   <select
-                    value={accFor(p.id)}
+                    value={accFor(p.id)} aria-label={`Accommodation for ${p.name}`}
                     onChange={(e) => setPetAcc({ ...petAcc, [p.id]: e.target.value })}
                     className={input}
                   >
                     <option value="">Select…</option>
-                    {rates.map((r: any) => (
+                    {(ratesQ.data ?? []).filter(r => r.species === p.species).map((r: any) => (
                       <option key={r.id} value={r.accommodation_type}>
                         {r.display_name} — R{Number(r.nightly_rate_zar).toFixed(2)}/night
                         {rateAllowsSize(r, p.size ?? null) ? "" : " (size mismatch)"}
@@ -443,11 +447,11 @@ export function HotelQuoteDrawer({
           </div>
         </div>
 
-        {(surchargesQ.data ?? []).filter((s: any) => s.code !== "late_checkout").length > 0 && (
+        {(surchargesQ.data ?? []).filter((s: any) => s.code !== "late_checkout" && (!/walk/i.test(s.code) || dogCount > 0)).length > 0 && (
           <div className="rounded-xl border border-border p-4">
             <div className={label}>Extras &amp; surcharges</div>
             <div className="grid gap-2 sm:grid-cols-2">
-              {(surchargesQ.data ?? []).filter((s: any) => s.code !== "late_checkout").map((s: any) => {
+              {(surchargesQ.data ?? []).filter((s: any) => s.code !== "late_checkout" && (!/walk/i.test(s.code) || dogCount > 0)).map((s: any) => {
                 const qty = surcharges[s.id] ?? 0;
                 return (
                   <div key={s.id} className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 text-sm">
@@ -460,7 +464,7 @@ export function HotelQuoteDrawer({
                     </div>
                     <input
                       type="number" min={0} step={1} value={qty}
-                      onChange={(e) => setSurcharges({ ...surcharges, [s.id]: Number(e.target.value) })}
+                      onChange={(e) => setSurcharges({ ...surcharges, [s.id]: Math.max(0, Math.round(Number(e.target.value) || 0)) })}
                       className="h-9 w-20 rounded-lg border border-border px-2 text-sm"
                     />
                   </div>
@@ -476,7 +480,7 @@ export function HotelQuoteDrawer({
               <Scissors className="h-3.5 w-3.5 text-sk-coral" /> Grooming during the stay
             </div>
             <div className="space-y-2">
-              {selectedPets.map((p: any) => {
+              {selectedPets.filter(p => p.species === "dog").map((p: any) => {
                 const g = grooming[p.id] ?? { on: false, notes: "" };
                 return (
                   <div key={p.id} className="rounded-lg border border-border p-3">
