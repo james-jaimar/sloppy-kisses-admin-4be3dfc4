@@ -92,6 +92,9 @@ export function GroomingRunSheet({
   const briefCell = (j: (typeof jobs)[number]) => (
     <td className={TD}>
       <div className="font-semibold">{j.package_name ?? "—"}</div>
+      {(briefs[j.id] ?? []).map((line, i) => (
+        <div key={i} className="text-xs print:text-[8pt]">{line}</div>
+      ))}
       {j.notes && <div className="text-xs print:text-[8pt]">{j.notes}</div>}
       {j.pets
         .map((p) => alerts[p.id]?.medical)
