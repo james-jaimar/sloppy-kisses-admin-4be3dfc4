@@ -23,3 +23,9 @@
 - [x] Slice 7: Mixed dog+cat booking/quote accommodation choices use species-compatible rates; public/portal extras use dog-only walks and Stay & Play. Live public price check: two dogs + cat, 11 nights, 22 walks. Rollback database regression verified separate stay rates, quote acceptance without invoice, and one invoice after confirmation. Full suite: 83 tests passed.
 - [ ] Slices 6/7 authenticated smoke check: staff save/reopen and customer portal submission remain unverified because the connected external Supabase has no available managed test session.
 - [ ] Slice 8: Printer failure + portal booking reproduction — both need Charlotte's exact error/browser details before they can be fixed
+
+## Hotel follow-ups (26 Oct, afternoon)
+- [x] Slice 9: Removing a pet from an already-invoiced hotel stay drafts a credit note for that pet's nights (rate, peak and discount aware); invoice untouched. Rollback DB test: 2 dogs + cat, remove cat → draft credit = 11 cat nights.
+- [x] Slice 10: "Separate rooms" option on staff bookings and quotes — each pet charged the full nightly rate instead of the extra-pet rate; accepted quotes carry it into the booking. Rollback DB test verified shared vs separate totals.
+- [x] Slice 11: Transport cards flag cats needing a secure carrier, and a lane banner warns when cats and dogs travel together. Checkout grooming was already per pet (each pet ticked on its own). 86 tests pass.
+- [ ] Signed-in check of slices 9–11 (staff save, quote acceptance) — not available on this external database.
