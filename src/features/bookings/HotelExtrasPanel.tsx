@@ -61,6 +61,7 @@ export function HotelExtrasPanel({
   onDiscountChange,
   separateRooms = false,
   onSeparateRoomsChange,
+  stayPlay,
 }: {
   tenantId: string;
   bookingId: string | null;
@@ -83,6 +84,8 @@ export function HotelExtrasPanel({
   /** Pets of the same species each get their own room at the full nightly rate. */
   separateRooms?: boolean;
   onSeparateRoomsChange?: (v: boolean) => void;
+  /** When set, the Stay & Play check-out button controls the late checkout charge. */
+  stayPlay?: boolean;
 }) {
   const ratesQ = useHotelRateCards(tenantId, { activeOnly: true });
   const surchargesQ = useHotelSurcharges(tenantId, { activeOnly: true });
@@ -240,6 +243,17 @@ export function HotelExtrasPanel({
     setScaledNote(accepted ? `Updated extras: ${changes.join(", ")}.` : "Existing quantities kept. Dog-only walks removed if no dogs remain.");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [counts.pets, counts.dogs, surchargesQ.data, petSizesQ.isLoading]);
+
+  // Stay & Play is driven only by the check-out window button: one per dog.
+  const lateCheckout = (surchargesQ.data ?? []).find(s => s.code === "late_checkout");
+  useEffect(() => {
+    if (stayPlay === undefined || !lateCheckout || existingQ.isLoading) return;
+    const current = selection.find(s => s.surcharge_id === lateCheckout.id);
+    const want = stayPlay && counts.dogs > 0 ? counts.dogs : 0;
+    if (want === 0 && current) onSelectionChange(selection.filter(s => s.surcharge_id !== lateCheckout.id));
+    else if (want > 0 && !current) onSelectionChange([...selection, { surcharge_id: lateCheckout.id, quantity: want, quantity_basis: "catalog" }]);
+    else if (want > 0 && current && current.quantity !== want) onSelectionChange(selection.map(s => s.surcharge_id === lateCheckout.id ? { ...s, quantity: want } : s));
+  }, [stayPlay, lateCheckout?.id, counts.dogs, selection, existingQ.isLoading]);
 
   function toggleSurcharge(id: string) {
     const exists = selection.find((s) => s.surcharge_id === id);
