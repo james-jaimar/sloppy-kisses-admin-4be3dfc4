@@ -28,6 +28,12 @@ const CARDS = [
     icon: FileText,
   },
   {
+    to: "/admin/reports/operations",
+    title: "Operations volume",
+    description: "Bookings per service per day or month — daycare, in-house and mobile grooming (per van), hotel check-ins/outs and transport. CSV export.",
+    icon: BarChart3,
+  },
+  {
     to: "/admin/reports/export",
     title: "Data export",
     description: "Download the full customer and pet lists with their SK and SP numbers, alongside the original Xero name each record came in with. Use it to match our records against Xero.",
