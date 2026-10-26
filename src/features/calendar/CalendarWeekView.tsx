@@ -96,6 +96,56 @@ function dropToStart(clientY: number, columnEl: HTMLElement, dayAnchor: Date, of
   return start;
 }
 
+/**
+ * Side-by-side columns for overlapping events: each overlapping cluster is
+ * split into N equal columns so simultaneous bookings (e.g. 4 grooming
+ * stations at 09:00) are all readable instead of stacked on top of each other.
+ */
+function overlapLayout(items: { id: string; s: number; e: number }[]) {
+  const sorted = [...items].sort((a, b) => a.s - b.s || a.e - b.e);
+  const pos = new Map<string, { col: number; cols: number }>();
+  let cluster: typeof sorted = [];
+  let clusterEnd = -Infinity;
+  const flush = () => {
+    if (!cluster.length) return;
+    const colEnds: number[] = [];
+    for (const it of cluster) {
+      let c = colEnds.findIndex((end) => end <= it.s);
+      if (c === -1) {
+        c = colEnds.length;
+        colEnds.push(it.e);
+      } else {
+        colEnds[c] = it.e;
+      }
+      pos.set(it.id, { col: c, cols: 0 });
+    }
+    for (const it of cluster) pos.get(it.id)!.cols = colEnds.length;
+    cluster = [];
+  };
+  for (const it of sorted) {
+    if (it.s >= clusterEnd) {
+      flush();
+      clusterEnd = it.e;
+    } else {
+      clusterEnd = Math.max(clusterEnd, it.e);
+    }
+    cluster.push(it);
+  }
+  flush();
+  return pos;
+}
+
+/** Absolute-position style for an event within its overlap cluster. */
+function overlapStyle(top: number, height: number, col: number, cols: number) {
+  const w = 100 / Math.max(1, cols);
+  return {
+    top: top + 2,
+    height,
+    left: `calc(${col * w}% + 2px)`,
+    width: `calc(${w}% - 4px)`,
+  } as const;
+}
+
 function hoursRange() {
   return Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i);
 }
@@ -598,16 +648,24 @@ function TimeDayView({
       >
         {hours.map((h) => <div key={h} className="h-14 border-b border-border/60" />)}
         <NowLine dayAnchor={anchor} />
-        {dayBookings.map((b) => {
-          const s = new Date(b.start_at!);
-          const e = b.end_at ? new Date(b.end_at) : new Date(s.getTime() + 60 * 60 * 1000);
-          const { top, height } = positionFor(s, e, anchor);
-          return (
-            <div key={b.id} className="absolute left-1 right-1 z-10" style={{ top: top + 2, height }}>
-              <EventCard b={b} onClick={() => onSelect(b.id)} height={height} />
-            </div>
-          );
-        })}
+        {(() => {
+          const layout = overlapLayout(dayBookings.map((b) => {
+            const s = new Date(b.start_at!).getTime();
+            const e = b.end_at ? new Date(b.end_at).getTime() : s + 60 * 60 * 1000;
+            return { id: b.id, s, e };
+          }));
+          return dayBookings.map((b) => {
+            const s = new Date(b.start_at!);
+            const e = b.end_at ? new Date(b.end_at) : new Date(s.getTime() + 60 * 60 * 1000);
+            const { top, height } = positionFor(s, e, anchor);
+            const p = layout.get(b.id) ?? { col: 0, cols: 1 };
+            return (
+              <div key={b.id} className="absolute z-10" style={overlapStyle(top, height, p.col, p.cols)}>
+                <EventCard b={b} onClick={() => onSelect(b.id)} height={height} />
+              </div>
+            );
+          });
+        })()}
       </div>
     </div>
   );
@@ -684,16 +742,24 @@ function ResourceDayView({
               >
                 {hours.map((h) => <div key={h} className="h-14 border-b border-border/60" />)}
                 <NowLine dayAnchor={anchor} />
-                {colBookings.map((b) => {
-                  const s = new Date(b.start_at!);
-                  const e = b.end_at ? new Date(b.end_at) : new Date(s.getTime() + 60 * 60 * 1000);
-                  const { top, height } = positionFor(s, e, anchor);
-                  return (
-                    <div key={b.id} className="absolute left-1 right-1 z-10" style={{ top: top + 2, height }}>
-                      <EventCard b={b} onClick={() => onSelect(b.id)} height={height} hideResource />
-                    </div>
-                  );
-                })}
+                {(() => {
+                  const layout = overlapLayout(colBookings.map((b) => {
+                    const s = new Date(b.start_at!).getTime();
+                    const e = b.end_at ? new Date(b.end_at).getTime() : s + 60 * 60 * 1000;
+                    return { id: b.id, s, e };
+                  }));
+                  return colBookings.map((b) => {
+                    const s = new Date(b.start_at!);
+                    const e = b.end_at ? new Date(b.end_at) : new Date(s.getTime() + 60 * 60 * 1000);
+                    const { top, height } = positionFor(s, e, anchor);
+                    const p = layout.get(b.id) ?? { col: 0, cols: 1 };
+                    return (
+                      <div key={b.id} className="absolute z-10" style={overlapStyle(top, height, p.col, p.cols)}>
+                        <EventCard b={b} onClick={() => onSelect(b.id)} height={height} hideResource />
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             );
           })}
@@ -764,16 +830,24 @@ function WeekView({
             >
               {hours.map((h) => <div key={h} className="h-14 border-b border-border/60" />)}
               <NowLine dayAnchor={d} />
-              {dayBookings.map((b) => {
-                const s = new Date(b.start_at!);
-                const e = b.end_at ? new Date(b.end_at) : new Date(s.getTime() + 60 * 60 * 1000);
-                const { top, height } = positionFor(s, e, d);
-                return (
-                  <div key={b.id} className="absolute left-1 right-1 z-10" style={{ top: top + 2, height }}>
-                    <EventCard b={b} onClick={() => onSelect(b.id)} height={height} />
-                  </div>
-                );
-              })}
+              {(() => {
+                const layout = overlapLayout(dayBookings.map((b) => {
+                  const s = new Date(b.start_at!).getTime();
+                  const e = b.end_at ? new Date(b.end_at).getTime() : s + 60 * 60 * 1000;
+                  return { id: b.id, s, e };
+                }));
+                return dayBookings.map((b) => {
+                  const s = new Date(b.start_at!);
+                  const e = b.end_at ? new Date(b.end_at) : new Date(s.getTime() + 60 * 60 * 1000);
+                  const { top, height } = positionFor(s, e, d);
+                  const p = layout.get(b.id) ?? { col: 0, cols: 1 };
+                  return (
+                    <div key={b.id} className="absolute z-10" style={overlapStyle(top, height, p.col, p.cols)}>
+                      <EventCard b={b} onClick={() => onSelect(b.id)} height={height} />
+                    </div>
+                  );
+                });
+              })()}
             </div>
           );
         })}
