@@ -9809,6 +9809,10 @@ export type Database = {
         Args: { p_document_id: string }
         Returns: undefined
       }
+      draft_hotel_pet_removal_credit: {
+        Args: { p_booking_id: string; p_old_pets: Json }
+        Returns: string
+      }
       ensure_booking_invoice: {
         Args: { p_booking_id: string }
         Returns: string
