@@ -14,6 +14,11 @@
 - Adding items to an existing invoice: already possible (Invoice detail → add line; POS → attach to open invoice). Walk Charlotte through it.
 
 ## Next logical slices (proposed)
-- [ ] Slice 3: Walk Charlotte's portal booking path end-to-end once we have her error details
-- [ ] Slice 4: Dashboard "today" tiles — dogs in hotel, grooming today, vans out (surfacing existing counts on the admin dashboard)
-- [ ] Slice 5: Invoice due-date rules per service (e.g. hotel deposit vs balance dates) if Charlotte wants more than service-date invoicing
+- [~] Slice 3: Walk Charlotte's portal booking path end-to-end — SKIPPED for now, waiting on her exact error details
+- [x] Slice 4: Dashboard "today" tiles — hotel tile now shows dogs in house + check-ins/outs today; mobile tile shows vans out (verified: typecheck + 71 tests + build OK)
+- [x] Slice 5: Per-service payment terms — new "Payment terms per service" section in Invoicing Settings; same-day/walk-in invoices use the service's own terms (verified against live DB: grooming 0d → due today, transport 30d → due +30; test data removed)
+
+## Next logical slices (proposed, 26 Oct)
+- [ ] Slice 6: Walks/extras quantity prompt — when pets are added to or removed from a hotel booking, prompt to rescale per-dog extras (e.g. 11 walks → 22 for two dogs)
+- [ ] Slice 7: Mixed dog+cat stays in one booking/quote — species-specific rates, rooms and invoice lines (builds on per-pet room allocation)
+- [ ] Slice 8: Printer failure + portal booking reproduction — both need Charlotte's exact error/browser details before they can be fixed
