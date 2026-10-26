@@ -32,6 +32,8 @@ export interface QuoteExtras {
   check_in_window?: string | null;
   check_out_window?: string | null;
   notes?: string | null;
+  /** Hotel: pets of the same species each get their own room at the full rate. */
+  separate_rooms?: boolean;
   surcharges?: { surcharge_id: string; quantity: number; quantity_basis?: "total" | "catalog" }[];
   pets?: {
     pet_id: string;
@@ -165,7 +167,7 @@ export function useHotelStayLines(params: {
 }
 
 /** Quote validity window configured in Hotel workflow settings (defaults to 14 days). */
-export interface StayPetInput { name: string; accommodation_type: string; species?: string }
+export interface StayPetInput { name: string; accommodation_type: string; species?: string; room_group?: string }
 
 /**
  * Per-dog stay pricing: one line per dog using that dog's own accommodation.

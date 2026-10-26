@@ -4298,6 +4298,7 @@ export type Database = {
           id: string
           medication_instructions: string | null
           pickup_required: boolean
+          separate_rooms: boolean
           tenant_id: string
           updated_at: string
         }
@@ -4322,6 +4323,7 @@ export type Database = {
           id?: string
           medication_instructions?: string | null
           pickup_required?: boolean
+          separate_rooms?: boolean
           tenant_id: string
           updated_at?: string
         }
@@ -4346,6 +4348,7 @@ export type Database = {
           id?: string
           medication_instructions?: string | null
           pickup_required?: boolean
+          separate_rooms?: boolean
           tenant_id?: string
           updated_at?: string
         }

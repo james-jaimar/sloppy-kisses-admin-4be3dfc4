@@ -59,6 +59,8 @@ export function HotelExtrasPanel({
   discountPct = 0,
   discountReason = "",
   onDiscountChange,
+  separateRooms = false,
+  onSeparateRoomsChange,
 }: {
   tenantId: string;
   bookingId: string | null;
@@ -78,6 +80,9 @@ export function HotelExtrasPanel({
   discountPct?: number;
   discountReason?: string;
   onDiscountChange?: (pct: number, reason: string) => void;
+  /** Pets of the same species each get their own room at the full nightly rate. */
+  separateRooms?: boolean;
+  onSeparateRoomsChange?: (v: boolean) => void;
 }) {
   const ratesQ = useHotelRateCards(tenantId, { activeOnly: true });
   const surchargesQ = useHotelSurcharges(tenantId, { activeOnly: true });
@@ -154,11 +159,11 @@ export function HotelExtrasPanel({
     if (pets.length > 0) {
       for (const p of pets) {
         const acc = petAcc(p);
-        const key = `${p.species}|${acc}`;
+        const key = `${p.species}|${acc}|${separateRooms ? p.id : ""}`;
         groups.set(key, [...(groups.get(key) ?? []), p.name]);
       }
     } else {
-      groups.set(`${species}|${accommodationType}`, Array.from({ length: Math.max(1, petCount) }, () => "Pet"));
+      groups.set(`${species}|${accommodationType}|`, Array.from({ length: Math.max(1, petCount) }, () => "Pet"));
     }
 
     const stayRows: { label: string; total: number }[] = [];
@@ -333,6 +338,12 @@ export function HotelExtrasPanel({
           <p className="mt-1 text-[11px] text-muted-foreground">
             Two pets in the same area use that area&apos;s extra-pet rate; pets in different areas are each priced at their own nightly rate.
           </p>
+          {onSeparateRoomsChange && (
+            <label className="mt-2 flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-2 text-sm">
+              <input type="checkbox" className="mt-0.5" checked={separateRooms} onChange={(e) => onSeparateRoomsChange(e.target.checked)} />
+              <span><span className="font-medium">Separate rooms</span> — each pet gets its own room at the full nightly rate (no extra-pet rate).</span>
+            </label>
+          )}
         </div>
       )}
 

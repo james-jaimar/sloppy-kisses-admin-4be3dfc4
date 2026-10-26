@@ -1750,6 +1750,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             discountPct={Number(hotel.discount_pct ?? 0)}
             discountReason={hotel.discount_reason ?? ""}
             onDiscountChange={(pct, reason) => setHotel((p) => ({ ...p, discount_pct: pct, discount_reason: reason || null }))}
+            separateRooms={Boolean(hotel.separate_rooms)}
+            onSeparateRoomsChange={(v) => setHotel((p) => ({ ...p, separate_rooms: v }))}
           />
         )}
         {kind === "hotel" && (
