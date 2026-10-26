@@ -1254,25 +1254,6 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 })}
               </div>
             )}
-            {petIds.length > 0 && (
-              <div className="mt-2">
-                <div className="mb-2">
-                  <PetsVaccinationGate
-                    petIds={petIds}
-                    serviceType={serviceType}
-                    onDate={bookingDay || undefined}
-                    mode="staff"
-                  />
-                </div>
-                <HealthGateList
-                  pets={petIds.map((id) => ({
-                    id,
-                    name: petsQ.data?.find((p) => p.id === id)?.name ?? null,
-                  }))}
-                  onDate={bookingDay || undefined}
-                />
-              </div>
-            )}
           </div>
         )}
 
@@ -1914,7 +1895,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
         {!isEdit && kind === "grooming" && (
           <div className="space-y-2">
-            <StepHeading n={3} title="Coming back again?" hint="Optional — book the next visits now." />
+            <StepHeading n={4} title="Coming back again?" hint="Optional — book the next visits now." />
             <GroomingRepeatFields
               value={groomRepeat}
               onChange={(patch) => setGroomRepeat((p) => ({ ...p, ...patch }))}
