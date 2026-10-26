@@ -1,6 +1,7 @@
 import { ArrowRight, ArrowLeft } from "lucide-react";
 import type { TransportLeg } from "./queries";
 import { TransportCard } from "./TransportCard";
+import { CARRIER_LABEL, carrierNotice } from "./carrier";
 import { StayPlayFlagsProvider } from "@/features/daycare/StayPlayBadge";
 import { PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 
@@ -16,9 +17,15 @@ function isDropoff(leg: TransportLeg): boolean {
 export function TransportColumns({ legs, tenantId }: { legs: TransportLeg[]; tenantId: string | null }) {
   const pickups = legs.filter(isPickup);
   const dropoffs = legs.filter(isDropoff);
+  const mixed = [pickups, dropoffs].some((lane) => carrierNotice(lane.flatMap((l) => l.pets)) === "mixed");
   return (
     <PaymentFlagsProvider bookingIds={legs.map((l) => l.id)}>
     <StayPlayFlagsProvider tenantId={tenantId} bookingIds={legs.map((l) => l.id)}>
+    {mixed && (
+      <div className="mb-3 rounded-lg border border-sk-orange/40 bg-sk-orange-soft px-3 py-2 text-sm font-semibold text-sk-orange">
+        {CARRIER_LABEL.mixed}
+      </div>
+    )}
     <div className="grid gap-4 md:grid-cols-2">
       <Column title="Pickups" count={pickups.length} icon={<ArrowRight className="h-4 w-4" />}>
         {pickups.length === 0 ? (
