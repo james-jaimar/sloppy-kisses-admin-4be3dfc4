@@ -5615,6 +5615,7 @@ export type Database = {
           payment_terms_days: number
           prices_include_vat: boolean
           reminder_days: number[]
+          service_terms: Json
           tenant_id: string
           updated_at: string
           vat_number: string | null
@@ -5644,6 +5645,7 @@ export type Database = {
           payment_terms_days?: number
           prices_include_vat?: boolean
           reminder_days?: number[]
+          service_terms?: Json
           tenant_id: string
           updated_at?: string
           vat_number?: string | null
@@ -5673,6 +5675,7 @@ export type Database = {
           payment_terms_days?: number
           prices_include_vat?: boolean
           reminder_days?: number[]
+          service_terms?: Json
           tenant_id?: string
           updated_at?: string
           vat_number?: string | null
