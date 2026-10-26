@@ -1912,6 +1912,24 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           />
         )}
 
+        {petIds.length > 0 && (
+          <div className="space-y-2">
+            <PetsVaccinationGate
+              petIds={petIds}
+              serviceType={serviceType}
+              onDate={bookingDay || undefined}
+              mode="staff"
+            />
+            <HealthGateList
+              pets={petIds.map((id) => ({
+                id,
+                name: petsQ.data?.find((p) => p.id === id)?.name ?? null,
+              }))}
+              onDate={bookingDay || undefined}
+            />
+          </div>
+        )}
+
         <div>
           <div className="mb-1 text-sm font-medium">Internal notes</div>
           {closureHit && (
