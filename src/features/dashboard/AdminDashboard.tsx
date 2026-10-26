@@ -186,6 +186,9 @@ export default function AdminDashboard() {
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div className="mt-4 sk-stat-value tabular-nums">{statsLoading ? "…" : s.value}</div>
+                {s.sub && !statsLoading && (
+                  <div className="mt-0.5 text-[11px] font-medium text-muted-foreground">{s.sub}</div>
+                )}
                 <div className="mt-1 flex items-center justify-between">
                   <span className="sk-stat-label">{s.label}</span>
                   {!statsLoading && s.delta !== 0 && (
