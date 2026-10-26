@@ -1711,6 +1711,38 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 )}
               </div>
             )}
+
+            <div className="pt-2">
+              <StepHeading
+                n={3}
+                title={groomCardKeys.length > 1 ? "Grooming sheets" : "Grooming sheet"}
+                hint="Styling preferences per dog — filled in after the day and time are set."
+              />
+            </div>
+            {groomCardKeys.map((key) => {
+              const pet = key === EDIT_KEY ? null : petsQ.data?.find((p) => p.id === key) ?? null;
+              const plan = planFor(key);
+              const label =
+                pet?.name ??
+                (booking?.booking_pets.map((bp) => bp.pet?.name).filter(Boolean).join(", ") || "This booking");
+              return (
+                <details key={key} open={groomCardKeys.length === 1} className="rounded-2xl border border-border bg-white p-3">
+                  <summary className="cursor-pointer select-none text-sm font-semibold">
+                    Grooming sheet for {label}
+                  </summary>
+                  <div className="mt-2">
+                    <BookingGroomingInstructionsPanel
+                      tenantId={tenantId}
+                      bookingId={isEdit ? booking?.id ?? null : null}
+                      primaryPetId={key === EDIT_KEY ? petIds[0] ?? null : key}
+                      value={plan.instructions}
+                      packageType={packagesQ.data?.find(p => p.id === plan.packageId)?.package_type}
+                      onChange={(v) => updatePlan(key, { instructions: v })}
+                    />
+                  </div>
+                </details>
+              );
+            })}
           </div>
         )}
         {kind === "hotel" && (() => {
