@@ -5,6 +5,7 @@ import { PaymentChip } from "@/features/shared/payments/paymentFlags";
 import { StayPlayChip } from "@/features/daycare/StayPlayBadge";
 import type { TransportLeg } from "./queries";
 import { AddressGateChip } from "@/features/bookings/AddressGate";
+import { CARRIER_LABEL, carrierNotice } from "./carrier";
 
 function fmtTime(iso: string | null): string {
   if (!iso) return "—";
@@ -20,6 +21,7 @@ export function TransportCard({ leg }: { leg: TransportLeg }) {
     ? (leg.details?.pickup_address ?? leg.customer?.home_address)
     : (leg.details?.dropoff_address ?? leg.customer?.home_address);
   const suburb = leg.details?.suburb ?? leg.customer?.suburb ?? null;
+  const carrier = carrierNotice(leg.pets);
 
   return (
     <Link
@@ -63,6 +65,9 @@ export function TransportCard({ leg }: { leg: TransportLeg }) {
         )}
         {dir === "round_trip" && (
           <span className="rounded bg-sk-orange-soft px-1.5 py-0.5 text-sk-orange">Round trip</span>
+        )}
+        {carrier && (
+          <span className="rounded bg-sk-orange-soft px-1.5 py-0.5 font-semibold text-sk-orange">{CARRIER_LABEL[carrier]}</span>
         )}
         <PaymentChip bookingId={leg.id} />
         <StayPlayChip bookingId={leg.id} />
