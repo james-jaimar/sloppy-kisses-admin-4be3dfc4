@@ -63,6 +63,7 @@ export function HotelQuoteDrawer({
   const [endDate, setEndDate] = useState("");
   const [accommodation, setAccommodation] = useState("");
   const [notes, setNotes] = useState("");
+  const [separateRooms, setSeparateRooms] = useState(false);
   const [extraLines, setExtraLines] = useState<Line[]>([]);
   const [expiry, setExpiry] = useState("");
   const [checkOutWindow, setCheckOutWindow] = useState("");
@@ -90,9 +91,9 @@ export function HotelQuoteDrawer({
 
   const stayPets = useMemo(
     () =>
-      selectedPets.map((p: any) => ({ name: p.name as string, accommodation_type: accFor(p.id), species: p.species as string })),
+      selectedPets.map((p: any) => ({ name: p.name as string, accommodation_type: accFor(p.id), species: p.species as string, ...(separateRooms ? { room_group: p.id as string } : {}) })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selectedPets, petAcc, accommodation],
+    [selectedPets, petAcc, accommodation, separateRooms],
   );
 
   const pricedQ = useHotelStayLinesPerPet({
@@ -231,6 +232,7 @@ export function HotelQuoteDrawer({
       check_in_window: CHECK_IN_WINDOWS[0],
       check_out_window: checkOutWindow || null,
       notes: notes || null,
+      separate_rooms: separateRooms,
       surcharges: Object.entries(surcharges)
         .filter(([id, q]) => q > 0 && (dogCount > 0 || !(/walk/i.test((surchargesQ.data ?? []).find(s => s.id === id)?.code ?? "") || (surchargesQ.data ?? []).find(s => s.id === id)?.code === "late_checkout")))
         .map(([surcharge_id, quantity]) => ({ surcharge_id, quantity, quantity_basis: /walk/i.test((surchargesQ.data ?? []).find(s => s.id === surcharge_id)?.code ?? "") ? "total" as const : "catalog" as const })),
@@ -366,6 +368,10 @@ export function HotelQuoteDrawer({
               Dogs and cats use their own accommodation and rates. Two pets of the same species in the
               same area still use that area&apos;s extra-pet rate.
             </p>
+            <label className="mb-3 flex items-start gap-2 rounded-lg border border-border bg-muted/30 p-2 text-sm">
+              <input type="checkbox" className="mt-0.5" checked={separateRooms} onChange={(e) => setSeparateRooms(e.target.checked)} />
+              <span><span className="font-medium">Separate rooms</span> — each pet gets its own room at the full nightly rate (no extra-pet rate).</span>
+            </label>
             <div className="space-y-2">
               {selectedPets.map((p: any) => (
                 <div key={p.id} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:items-center">

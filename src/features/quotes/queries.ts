@@ -32,6 +32,8 @@ export interface QuoteExtras {
   check_in_window?: string | null;
   check_out_window?: string | null;
   notes?: string | null;
+  /** Hotel: pets of the same species each get their own room at the full rate. */
+  separate_rooms?: boolean;
   surcharges?: { surcharge_id: string; quantity: number; quantity_basis?: "total" | "catalog" }[];
   pets?: {
     pet_id: string;

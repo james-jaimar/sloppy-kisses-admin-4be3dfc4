@@ -48,6 +48,7 @@ export interface HotelDetails {
   emergency_notes: string | null;
   discount_pct?: number;
   discount_reason?: string | null;
+  separate_rooms?: boolean;
 }
 
 // ---------- Transport ----------
