@@ -151,7 +151,7 @@ export function HotelQuoteDrawer({
   const surchargeLines: Line[] = useMemo(() => {
     const cat = surchargesQ.data ?? [];
     return Object.entries(surcharges)
-      .filter(([, qty]) => qty > 0)
+      .filter(([id, qty]) => qty > 0 && (dogCount > 0 || !(/walk/i.test((surchargesQ.data ?? []).find(s => s.id === id)?.code ?? "") || (surchargesQ.data ?? []).find(s => s.id === id)?.code === "late_checkout")))
       .map(([id, qty]) => {
         const s: any = cat.find((x: any) => x.id === id);
         if (!s) return null;
@@ -164,7 +164,7 @@ export function HotelQuoteDrawer({
         } as Line;
       })
       .filter(Boolean) as Line[];
-  }, [surcharges, surchargesQ.data, nights]);
+  }, [surcharges, surchargesQ.data, nights, dogCount]);
 
   const allLines = [...stayLines, ...surchargeLines, ...extraLines];
   const total = allLines.reduce((s, l) => s + l.quantity * l.unit_price, 0);
@@ -232,7 +232,7 @@ export function HotelQuoteDrawer({
       check_out_window: checkOutWindow || null,
       notes: notes || null,
       surcharges: Object.entries(surcharges)
-        .filter(([, q]) => q > 0)
+        .filter(([id, q]) => q > 0 && (dogCount > 0 || !(/walk/i.test((surchargesQ.data ?? []).find(s => s.id === id)?.code ?? "") || (surchargesQ.data ?? []).find(s => s.id === id)?.code === "late_checkout")))
         .map(([surcharge_id, quantity]) => ({ surcharge_id, quantity, quantity_basis: /walk/i.test((surchargesQ.data ?? []).find(s => s.id === surcharge_id)?.code ?? "") ? "total" as const : "catalog" as const })),
       pets: selectedPets.map((p: any) => ({
         pet_id: p.id,
