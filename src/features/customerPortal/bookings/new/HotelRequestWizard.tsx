@@ -1,3 +1,4 @@
+import { accommodationForPet } from "@/features/hotelCattery/stayPetRules";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -197,7 +198,10 @@ export default function HotelRequestWizard() {
       .join(", ")}`;
   };
   const activeRate = speciesRates.find((r) => r.accommodation_type === accommodationType) ?? null;
-  const accFor = (petId: string) => petAcc[petId] || ((pets.data ?? []).find(p => p.id === petId)?.species === (isCat ? "cat" : "dog") ? accommodationType : "");
+  const accFor = (petId: string) => {
+    const pet = selectedPets.find(p => p.id === petId);
+    return pet ? accommodationForPet({ species: pet.species, size: pet.size_override ?? pet.size }, ratesQ.data ?? [], petAcc[petId] || accommodationType) : "";
+  };
 
   const extraQuantities = { ...requestedExtras, late_checkout: isStayPlayWindow(form.check_out_window) ? 1 : 0 };
   const extraSelections = (extrasCatalog.data?.surcharges ?? [])
