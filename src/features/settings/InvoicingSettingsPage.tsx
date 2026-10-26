@@ -30,6 +30,7 @@ export default function InvoicingSettingsPage() {
     billing_cycle: "monthly_prepaid", billing_run_day: 22, billing_due_day: 1,
     daycare_prorata_enabled: true,
     estimate_prefix: "QUO", next_estimate_number: 1,
+    service_terms: {} as Record<string, string>,
   });
   const [interestRunning, setInterestRunning] = useState(false);
   const [interestPreview, setInterestPreview] = useState<{ customers: number; total: number; percent: number } | null>(null);
@@ -60,6 +61,9 @@ export default function InvoicingSettingsPage() {
         daycare_prorata_enabled: (d as any).daycare_prorata_enabled ?? true,
         estimate_prefix: (d as any).estimate_prefix ?? "QUO",
         next_estimate_number: Number((d as any).next_estimate_number ?? 1),
+        service_terms: Object.fromEntries(
+          Object.entries(((d as any).service_terms ?? {}) as Record<string, unknown>).map(([k, v]) => [k, String(v)]),
+        ),
       });
     }
   }, [settingsQ.data]);
