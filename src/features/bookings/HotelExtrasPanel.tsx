@@ -373,7 +373,7 @@ export function HotelExtrasPanel({
           <div className="text-[11px] text-muted-foreground">No surcharges configured.</div>
         ) : (
           <div className="space-y-2">
-            {(surchargesQ.data ?? []).map((s) => {
+            {(surchargesQ.data ?? []).filter((s) => !(stayPlay !== undefined && s.code === "late_checkout")).map((s) => {
               const sel = selection.find((x) => x.surcharge_id === s.id);
               return (
                 <div key={s.id} className="flex items-center gap-3 rounded-lg border border-border bg-white px-3 py-2 text-sm">
