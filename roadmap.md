@@ -29,3 +29,7 @@
 - [x] Slice 10: "Separate rooms" option on staff bookings and quotes — each pet charged the full nightly rate instead of the extra-pet rate; accepted quotes carry it into the booking. Rollback DB test verified shared vs separate totals.
 - [x] Slice 11: Transport cards flag cats needing a secure carrier, and a lane banner warns when cats and dogs travel together. Checkout grooming was already per pet (each pet ticked on its own). 86 tests pass.
 - [ ] Signed-in check of slices 9–11 (staff save, quote acceptance) — not available on this external database.
+
+## Hotel extras access repair (30 Oct)
+- [ ] Repair staff surcharge permissions and add customer own-booking read access; verify isolation and staff writes.
+- [ ] Recover BK00326 extras from saved evidence only; leave unknown quantities for Charlotte to confirm.
