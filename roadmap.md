@@ -31,5 +31,7 @@
 - [ ] Signed-in check of slices 9–11 (staff save, quote acceptance) — not available on this external database.
 
 ## Hotel extras access repair (30 Oct)
-- [ ] Repair staff surcharge permissions and add customer own-booking read access; verify isolation and staff writes.
-- [ ] Recover BK00326 extras from saved evidence only; leave unknown quantities for Charlotte to confirm.
+- [x] Repair staff surcharge permissions and add customer own-booking read access. Registered legacy edit permissions for the four staff roles; rollback DB test verified front-desk insert/update/delete, customer own-only reads, blocked customer mutations/anonymous reads, no premature invoice and no retained fixtures. 20 hotel extras tests passed; preview build OK.
+- [x] Restore BK00326 Stay & Play from its saved checkout window: one dog, R250; booking remains draft with no invoice.
+- [ ] BK00326 Walks: no intended quantity retained in saved booking/intake; Charlotte must confirm whether walks were selected and how many.
+- [ ] Signed-in staff/portal screen save and reopen remains unverified: external unmanaged authentication has no available test session.
