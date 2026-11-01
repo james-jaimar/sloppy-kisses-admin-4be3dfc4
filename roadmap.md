@@ -35,3 +35,8 @@
 - [x] Restore BK00326 Stay & Play from its saved checkout window: one dog, R250; booking remains draft with no invoice.
 - [ ] BK00326 Walks: no intended quantity retained in saved booking/intake; Charlotte must confirm whether walks were selected and how many.
 - [ ] Signed-in staff/portal screen save and reopen remains unverified: external unmanaged authentication has no available test session.
+
+## Front desk walkthrough (1 Nov) — see mem://features/front-desk-phases
+- [x] Phase 1: customer/pet booking shortcuts + pet upcoming visits; boards open booking side panel; quick "Add extra" on grooming panel
+- [ ] Phase 2: reschedule slot finder, shift notes on diary cards, quick grooming walk-in
+- [ ] Phase 3: daily front-desk handoff view

@@ -20,6 +20,8 @@ import { SizeOverrideControl, SizeOverrideBadge } from "./SizeOverrideControl";
 import { PetAvatar } from "./photo/PetAvatar";
 import { PetPhotoButton } from "./photo/PetPhotoButton";
 import { PetPhotoHistory } from "./photo/PetPhotoHistory";
+import { BookingFormModal } from "@/features/bookings/BookingFormModal";
+import { PetUpcomingVisits } from "./PetUpcomingVisits";
 
 
 export default function PetDetailPage() {
@@ -29,6 +31,7 @@ export default function PetDetailPage() {
   const confirm = useConfirm();
   const { data: pet, isLoading, isError, error, refetch } = usePet(id, tenant?.id);
   const [editing, setEditing] = useState(false);
+  const [booking, setBooking] = useState(false);
   const del = useDeletePet(tenant?.id);
 
   const customer = (pet as any)?.customers ?? null;
@@ -48,6 +51,12 @@ export default function PetDetailPage() {
                 className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-border bg-white px-4 text-sm font-semibold hover:bg-muted"
               />
 
+              <button
+                onClick={() => setBooking(true)}
+                className="h-10 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-primary-foreground hover:bg-sk-coral-dark"
+              >
+                Book {pet.name ?? "pet"}
+              </button>
               <button
                 onClick={() => setEditing(true)}
                 className="h-10 rounded-xl border border-border bg-white px-4 text-sm font-semibold hover:bg-muted"
@@ -205,6 +214,7 @@ export default function PetDetailPage() {
               )}
             </div>
 
+            {tenant?.id && <PetUpcomingVisits tenantId={tenant.id} petId={pet.id} />}
             <PetDayNotesCard tenantId={tenant?.id ?? null} petId={pet.id} />
 
             {tenant && (
@@ -250,6 +260,14 @@ export default function PetDetailPage() {
         )}
       </div>
 
+      {booking && pet && tenant && customer && (
+        <BookingFormModal
+          tenantId={tenant.id}
+          prefill={{ customer_id: customer.id, pet_ids: [pet.id] }}
+          onClose={() => setBooking(false)}
+          onSaved={() => setBooking(false)}
+        />
+      )}
       {editing && pet && tenant && customer && (
         <PetFormModal
           tenantId={tenant.id}

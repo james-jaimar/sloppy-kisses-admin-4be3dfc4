@@ -1,3 +1,4 @@
+import { useBookingPeekClick } from "@/features/bookings/BookingPeek";
 /**
  * In-house grooming day diary — one lane per groomer.
  *
@@ -57,6 +58,7 @@ function cardMinutes(card: GroomingBoardCard, packageMinutes: Map<string, number
 interface DragPayload { id: string; grabOffsetMin: number }
 
 export function GroomingDiary({ day }: { day: Date }) {
+  const peek = useBookingPeekClick();
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const confirm = useConfirm();
@@ -367,6 +369,7 @@ export function GroomingDiary({ day }: { day: Date }) {
                         <Link
                           key={c.id}
                           to={`/admin/bookings/${c.id}`}
+                          onClick={peek(c.id)}
                           state={{ from: "/admin/grooming" }}
                           draggable
                           onDragStart={(e) => {
@@ -439,6 +442,7 @@ export function GroomingDiary({ day }: { day: Date }) {
                 <Link
                   key={c.id}
                   to={`/admin/bookings/${c.id}`}
+                          onClick={peek(c.id)}
                   state={{ from: "/admin/grooming" }}
                   draggable
                   onDragStart={(e) => {

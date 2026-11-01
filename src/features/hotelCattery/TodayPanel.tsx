@@ -1,3 +1,4 @@
+import { useBookingPeekClick } from "@/features/bookings/BookingPeek";
 import { useMemo } from "react";
 import { HotelRoomLabels } from "./HotelRoomLabels";
 import { toast } from "sonner";
@@ -233,6 +234,7 @@ function Panel({ title, empty, icon, children }: { title: string; empty: string;
 }
 
 function BookingRow({ b, timeLabel, action, tenantId }: { b: HotelBookingRow; timeLabel: string; action: React.ReactNode; tenantId?: string | null }) {
+  const peek = useBookingPeekClick();
   const petName = b.pets[0]?.name ?? "Pet";
   const extraPets = b.pets.length > 1 ? ` +${b.pets.length - 1}` : "";
   return (
@@ -241,6 +243,7 @@ function BookingRow({ b, timeLabel, action, tenantId }: { b: HotelBookingRow; ti
       <div className="flex-1 min-w-0">
         <Link
           to={`/admin/bookings/${b.id}`}
+          onClick={peek(b.id)}
           state={{ from: "/admin/hotel-cattery" }}
           className="text-sm font-medium hover:underline truncate block"
         >

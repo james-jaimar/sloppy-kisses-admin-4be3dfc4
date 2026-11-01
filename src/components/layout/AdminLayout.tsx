@@ -6,6 +6,7 @@ import { MobileTopBar } from "./MobileTopBar";
 import { SendLockBanner } from "./SendLockBanner";
 import { adminNav } from "@/constants/navigation";
 import { QuickAddProvider } from "@/components/quickAdd/QuickAddProvider";
+import { BookingPeekProvider } from "@/features/bookings/BookingPeek";
 
 const STORAGE_KEY = "sk.sidebar.collapsed";
 
@@ -25,6 +26,7 @@ export default function AdminLayout() {
 
   return (
     <QuickAddProvider>
+    <BookingPeekProvider>
     <div
       className={
         "flex w-full bg-sk-bg text-foreground " +
@@ -45,6 +47,7 @@ export default function AdminLayout() {
         <Outlet />
       </div>
     </div>
+    </BookingPeekProvider>
     </QuickAddProvider>
   );
 }

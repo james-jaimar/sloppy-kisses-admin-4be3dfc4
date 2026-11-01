@@ -21,6 +21,7 @@ import { BookingStayPlayBadge, StayPlaySection } from "@/features/daycare/StayPl
 import { AccommodationFormCard } from "@/features/hotelForm/AccommodationFormCard";
 import { HotelRoomLabels } from "@/features/hotelCattery/HotelRoomLabels";
 import { petRoomId } from "@/features/hotelCattery/roomAllocation";
+import { QuickExtraSection } from "./QuickExtraSection";
 
 const STATUS_ACTIONS: { status: BookingStatus; label: string }[] = [
   { status: "confirmed", label: "Confirm" },
@@ -242,6 +243,15 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
 
           {String(booking.service_type).startsWith("hotel") && (
             <AccommodationFormCard bookingId={booking.id} />
+          )}
+
+          {isGrooming && (
+            <QuickExtraSection
+              tenantId={tenantId}
+              bookingId={booking.id}
+              packageId={detailsQ.data?.kind === "grooming" ? ((detailsQ.data.data as any)?.package_id ?? null) : null}
+              locked={["cancelled", "no_show", "completed", "checked_out"].includes(booking.status)}
+            />
           )}
 
           {isGrooming && instrQ.data && catalogQ.data && (

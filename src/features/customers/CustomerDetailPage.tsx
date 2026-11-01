@@ -8,6 +8,7 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useCustomer, useCustomerPets, useCustomerEmailDuplicates, useDeleteCustomer } from "./queries";
 import { CustomerFormModal } from "./CustomerFormModal";
 import { PetFormModal } from "@/features/pets/PetFormModal";
+import { BookingFormModal } from "@/features/bookings/BookingFormModal";
 import { PetAvatar } from "@/features/pets/photo/PetAvatar";
 
 import { format } from "date-fns";
@@ -66,6 +67,7 @@ export default function CustomerDetailPage() {
   const confirm = useConfirm();
   const [tab, setTab] = useState<Tab>("Pets");
   const [editing, setEditing] = useState(false);
+  const [booking, setBooking] = useState(false);
   const [addingPet, setAddingPet] = useState(false);
   const [editingPet, setEditingPet] = useState<PetRow | null>(null);
 
@@ -211,7 +213,10 @@ export default function CustomerDetailPage() {
                   >
                     <FileText className="h-3.5 w-3.5" /> Statement
                   </Link>
-                  <button className="h-9 rounded-lg bg-sk-coral px-3 text-sm font-semibold text-white hover:bg-sk-coral-dark">
+                  <button
+                    onClick={() => setBooking(true)}
+                    className="h-9 rounded-lg bg-sk-coral px-3 text-sm font-semibold text-primary-foreground hover:bg-sk-coral-dark"
+                  >
                     New booking
                   </button>
                   <button
@@ -421,6 +426,14 @@ export default function CustomerDetailPage() {
         )}
       </div>
 
+      {booking && customer && tenant?.id && (
+        <BookingFormModal
+          tenantId={tenant.id}
+          prefill={{ customer_id: customer.id }}
+          onClose={() => setBooking(false)}
+          onSaved={() => setBooking(false)}
+        />
+      )}
       {editing && customer && tenant?.id && (
         <CustomerFormModal
           tenantId={tenant.id}
