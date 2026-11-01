@@ -426,6 +426,14 @@ export default function CustomerDetailPage() {
         )}
       </div>
 
+      {booking && customer && tenant?.id && (
+        <BookingFormModal
+          tenantId={tenant.id}
+          prefill={{ customer_id: customer.id }}
+          onClose={() => setBooking(false)}
+          onSaved={() => setBooking(false)}
+        />
+      )}
       {editing && customer && tenant?.id && (
         <CustomerFormModal
           tenantId={tenant.id}
