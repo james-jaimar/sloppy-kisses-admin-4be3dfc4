@@ -815,6 +815,7 @@ export type Database = {
           service_postcode: string | null
           service_suburb: string | null
           service_type: Database["public"]["Enums"]["service_type"]
+          shift_note: string | null
           source: Database["public"]["Enums"]["booking_source"] | null
           start_at: string | null
           start_date: string | null
@@ -868,6 +869,7 @@ export type Database = {
           service_postcode?: string | null
           service_suburb?: string | null
           service_type: Database["public"]["Enums"]["service_type"]
+          shift_note?: string | null
           source?: Database["public"]["Enums"]["booking_source"] | null
           start_at?: string | null
           start_date?: string | null
@@ -921,6 +923,7 @@ export type Database = {
           service_postcode?: string | null
           service_suburb?: string | null
           service_type?: Database["public"]["Enums"]["service_type"]
+          shift_note?: string | null
           source?: Database["public"]["Enums"]["booking_source"] | null
           start_at?: string | null
           start_date?: string | null

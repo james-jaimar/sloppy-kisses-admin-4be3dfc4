@@ -34,6 +34,7 @@ export interface GroomingBoardCard {
   resource: { id: string; name: string; colour?: string | null } | null;
   /** Set when this dog is part of a multi-dog booking made in one go. */
   booking_group_id: string | null;
+  shift_note: string | null;
   customer: { id: string; full_name: string | null; mobile: string | null } | null;
   pets: { id: string; name: string | null; species: string | null; breed: string | null }[];
   details: {
@@ -68,7 +69,7 @@ export function useGroomingBoardBookings(params: { tenantId: string | null | und
       const { data, error } = await supabase
         .from("bookings")
         .select(`
-          id, booking_number, status, service_type, start_at, end_at, resource_id, booking_group_id,
+          id, booking_number, status, service_type, start_at, end_at, resource_id, booking_group_id, shift_note,
           resource:resources(id, name, colour),
           customer:customers(id, full_name, mobile),
           booking_pets(pet:pets(id, name, species, breed)),
@@ -92,6 +93,7 @@ export function useGroomingBoardBookings(params: { tenantId: string | null | und
         resource_id: b.resource_id,
         resource: b.resource ?? null,
         booking_group_id: b.booking_group_id ?? null,
+        shift_note: b.shift_note ?? null,
         customer: b.customer ?? null,
         pets: (b.booking_pets ?? []).map((bp: any) => bp.pet).filter(Boolean),
         details: Array.isArray(b.details) ? (b.details[0] ?? null) : (b.details ?? null),
