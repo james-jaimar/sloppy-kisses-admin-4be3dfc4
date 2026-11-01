@@ -38,5 +38,5 @@
 
 ## Front desk walkthrough (1 Nov) — see mem://features/front-desk-phases
 - [x] Phase 1: customer/pet booking shortcuts + pet upcoming visits; boards open booking side panel; quick "Add extra" on grooming panel
-- [ ] Phase 2: reschedule slot finder, shift notes on diary cards, quick grooming walk-in
+- [x] Phase 2: reschedule slot finder, shift notes on diary cards, quick grooming walk-in (1 Nov)
 - [ ] Phase 3: daily front-desk handoff view
