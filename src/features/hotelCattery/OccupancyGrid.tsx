@@ -272,6 +272,7 @@ function ResourceRow({
   bookings: HotelBookingRow[];
   assign?: { tenantId: string; resources: HotelResourceRow[]; allBookings: HotelBookingRow[]; today: Date };
 }) {
+  const peek = useBookingPeekClick();
   const today = startOfDay(new Date());
   const { segments, lanes } = buildSegments(bookings, windowStart, windowEnd);
   const bodyHeight = lanes * LANE_H + (lanes - 1) * LANE_GAP + ROW_PAD * 2;

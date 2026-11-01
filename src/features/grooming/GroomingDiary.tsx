@@ -58,6 +58,7 @@ function cardMinutes(card: GroomingBoardCard, packageMinutes: Map<string, number
 interface DragPayload { id: string; grabOffsetMin: number }
 
 export function GroomingDiary({ day }: { day: Date }) {
+  const peek = useBookingPeekClick();
   const { tenant } = useCurrentTenant();
   const tenantId = tenant?.id ?? null;
   const confirm = useConfirm();

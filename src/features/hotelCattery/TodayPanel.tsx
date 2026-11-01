@@ -234,6 +234,7 @@ function Panel({ title, empty, icon, children }: { title: string; empty: string;
 }
 
 function BookingRow({ b, timeLabel, action, tenantId }: { b: HotelBookingRow; timeLabel: string; action: React.ReactNode; tenantId?: string | null }) {
+  const peek = useBookingPeekClick();
   const petName = b.pets[0]?.name ?? "Pet";
   const extraPets = b.pets.length > 1 ? ` +${b.pets.length - 1}` : "";
   return (
