@@ -1,0 +1,2 @@
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS shift_note text;
+COMMENT ON COLUMN public.bookings.shift_note IS 'One-line operational note for staff, shown as a tag on diary cards. Never sent to customers.';
