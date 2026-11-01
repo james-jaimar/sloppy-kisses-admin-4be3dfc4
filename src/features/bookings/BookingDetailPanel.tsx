@@ -22,6 +22,9 @@ import { AccommodationFormCard } from "@/features/hotelForm/AccommodationFormCar
 import { HotelRoomLabels } from "@/features/hotelCattery/HotelRoomLabels";
 import { petRoomId } from "@/features/hotelCattery/roomAllocation";
 import { QuickExtraSection } from "./QuickExtraSection";
+import { ShiftNoteSection } from "./ShiftNoteSection";
+import { RescheduleGroomingDialog } from "@/features/grooming/RescheduleGroomingDialog";
+import { CalendarClock } from "lucide-react";
 
 const STATUS_ACTIONS: { status: BookingStatus; label: string }[] = [
   { status: "confirmed", label: "Confirm" },
@@ -47,6 +50,7 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
   const [failedOpen, setFailedOpen] = useState(false);
   const [earlyOpen, setEarlyOpen] = useState(false);
   const [foodOpen, setFoodOpen] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
   const confirm = useConfirm();
   const updateStatus = useUpdateBookingStatus(tenantId);
   const cancelSeries = useCancelSeriesForward(tenantId);
@@ -141,6 +145,8 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
             </div>
           )}
 
+          <ShiftNoteSection tenantId={tenantId} bookingId={booking.id} value={booking.shift_note} />
+
           <StayPlaySection tenantId={tenantId} bookingId={booking.id} />
 
           <section>
@@ -151,6 +157,14 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
             <div className="text-muted-foreground">
               {start ? format(start, "HH:mm") : "—"} – {end ? format(end, "HH:mm") : "—"}
             </div>
+            {isGrooming && !["cancelled", "no_show", "completed", "checked_out"].includes(booking.status) && (
+              <button
+                onClick={() => setMoveOpen(true)}
+                className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-sk-coral px-3 py-1.5 text-xs font-semibold text-sk-coral-dark hover:bg-sk-coral-soft"
+              >
+                <CalendarClock className="h-3.5 w-3.5" /> Move to another day / time
+              </button>
+            )}
           </section>
 
           <section>
@@ -411,6 +425,19 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
           bookingId={booking.id}
           bookingNumber={booking.booking_number}
           onClose={() => setEarlyOpen(false)}
+        />
+      )}
+      {moveOpen && (
+        <RescheduleGroomingDialog
+          tenantId={tenantId}
+          bookingId={booking.id}
+          bookingNumber={booking.booking_number}
+          petName={booking.booking_pets[0]?.pet?.name}
+          startAt={booking.start_at}
+          endAt={booking.end_at}
+          resourceId={booking.resource_id}
+          mobile={booking.service_type === "grooming_mobile"}
+          onClose={() => setMoveOpen(false)}
         />
       )}
       {foodOpen && (

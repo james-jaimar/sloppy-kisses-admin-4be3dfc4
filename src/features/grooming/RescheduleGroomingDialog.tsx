@@ -39,7 +39,7 @@ export function RescheduleGroomingDialog({
   const move = useRescheduleGrooming(tenantId);
 
   const dateKey = slot?.start.slice(0, 10) ?? null;
-  const availQ = useGroomingDayAvailability(tenantId, dateKey ?? "", mobile ? "mobile" : "inhouse");
+  const availQ = useGroomingDayAvailability(tenantId, dateKey, mobile ? "mobile" : "inhouse");
   const free = useMemo(() => {
     if (!slot || !availQ.data) return [];
     return freeResourcesAt({
