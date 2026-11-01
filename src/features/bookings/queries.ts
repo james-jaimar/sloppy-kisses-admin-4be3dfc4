@@ -51,6 +51,7 @@ export interface BookingListRow {
   resource_id: string | null;
   customer_id: string;
   notes_internal: string | null;
+  shift_note?: string | null;
   notes_customer: string | null;
   requires_transport: boolean;
   requires_grooming: boolean;
@@ -80,7 +81,7 @@ export interface BookingListRow {
 
 const BOOKING_SELECT = `
   id, booking_number, status, service_type, start_at, end_at, start_date, end_date,
-  resource_id, customer_id, notes_internal, notes_customer, requires_transport,
+  resource_id, customer_id, notes_internal, shift_note, notes_customer, requires_transport,
   requires_grooming, service_address_id, service_address_text, service_place_id,
   service_suburb, service_city, service_postcode,
   created_at, updated_at, recurring_rule_id,

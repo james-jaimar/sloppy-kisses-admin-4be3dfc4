@@ -91,6 +91,12 @@ export function GroomingCard({
         <BookingStatusChip status={card.status} />
       </div>
 
+      {card.shift_note && (
+        <div className="truncate rounded bg-sk-orange-soft px-2 py-0.5 text-[11px] font-semibold text-sk-orange" title={card.shift_note}>
+          📌 {card.shift_note}
+        </div>
+      )}
+
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <User className="h-3 w-3" />
         <span className="truncate">{card.customer?.full_name ?? "—"}</span>

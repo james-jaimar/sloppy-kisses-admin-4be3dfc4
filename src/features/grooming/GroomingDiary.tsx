@@ -395,6 +395,11 @@ export function GroomingDiary({ day }: { day: Date }) {
                             {minutesToLabel(startMin)}–{minutesToLabel(startMin + dur)}
                             {pkgName ? ` · ${pkgName}` : ""}
                           </div>
+                          {c.shift_note && (
+                            <div className="mt-0.5 truncate rounded bg-sk-orange-soft px-1 font-semibold text-sk-orange" title={c.shift_note}>
+                              📌 {c.shift_note}
+                            </div>
+                          )}
                           {dur >= 45 && (
                             <div className="mt-1 flex flex-wrap items-center gap-1">
                               <BookingStatusChip status={c.status} />
