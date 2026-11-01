@@ -20,3 +20,4 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 - Hotel pet selection uses the shared stayPetRules helper for species-compatible accommodation and extra rescaling; booking-level service remains a legacy category, never the authority for individual pet rates.
 - Hotel room sharing is a booking-level hotel_booking_details.separate_rooms flag passed to stay pricing as a per-pet room_group; every caller of hotel_stay_lines_pets must forward it so quotes, invoices and credits agree.
 - Hotel extras staff writes use existing bookings.create/bookings.update/hotel.manage permissions and same-tenant hotel booking checks; portal customers have own-booking read access only because mutations pass through validated portal endpoints.
+- Admin boards open bookings via BookingPeekProvider (useBookingPeekClick on real links) so staff keep their place; modified clicks still navigate to the full page.
