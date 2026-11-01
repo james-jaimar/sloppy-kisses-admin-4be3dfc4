@@ -1,3 +1,4 @@
+import { useBookingPeekClick } from "@/features/bookings/BookingPeek";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Clock, PawPrint, User } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -61,6 +62,7 @@ export function GroomingCard({
   onSetPrefs?: () => void;
   inDaycare?: boolean;
 }) {
+  const peek = useBookingPeekClick();
   const pet = card.pets[0];
   const otherPets = card.pets.length - 1;
   const isMobile = card.service_type === "grooming_mobile";
@@ -69,6 +71,7 @@ export function GroomingCard({
   return (
     <Link
       to={`/admin/bookings/${card.id}`}
+      onClick={peek(card.id)}
       state={{ from: "/admin/grooming" }}
       draggable={draggable}
       onDragStart={onDragStart}

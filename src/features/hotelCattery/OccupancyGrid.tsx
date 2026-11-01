@@ -1,3 +1,4 @@
+import { useBookingPeekClick } from "@/features/bookings/BookingPeek";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { hotelResourceType, petsInRoom } from "./roomAllocation";
@@ -313,6 +314,7 @@ function ResourceRow({
                 <Link
                   key={seg.key}
                   to={`/admin/bookings/${b.id}`}
+                  onClick={peek(b.id)}
                   state={{ from: "/admin/hotel-cattery" }}
                   className={`pointer-events-auto absolute flex items-center gap-1.5 truncate rounded-md border px-2 text-xs font-medium shadow-sm transition hover:translate-y-[-1px] hover:shadow-md ${cls} ${held ? "border-dashed opacity-90" : ""}`}
 

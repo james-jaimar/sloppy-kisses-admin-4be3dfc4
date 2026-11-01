@@ -1,3 +1,4 @@
+import { useBookingPeekClick } from "@/features/bookings/BookingPeek";
 /**
  * In-house grooming day diary — one lane per groomer.
  *
@@ -367,6 +368,7 @@ export function GroomingDiary({ day }: { day: Date }) {
                         <Link
                           key={c.id}
                           to={`/admin/bookings/${c.id}`}
+                          onClick={peek(c.id)}
                           state={{ from: "/admin/grooming" }}
                           draggable
                           onDragStart={(e) => {
@@ -439,6 +441,7 @@ export function GroomingDiary({ day }: { day: Date }) {
                 <Link
                   key={c.id}
                   to={`/admin/bookings/${c.id}`}
+                          onClick={peek(c.id)}
                   state={{ from: "/admin/grooming" }}
                   draggable
                   onDragStart={(e) => {
