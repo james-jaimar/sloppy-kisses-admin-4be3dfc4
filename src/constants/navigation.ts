@@ -23,6 +23,7 @@ export const adminNav = [
   { to: "/admin/credit-notes", label: "Credit notes", icon: FileMinus, code: "credit_notes.view" },
   { to: "/admin/comms", label: "Comms", icon: MessageSquare, code: "comms.view" },
   { to: "/admin/shop-stock", label: "Shop & Stock", icon: ShoppingBag, code: "products.view" },
+  { to: "/admin/handover", label: "Handover", icon: ClipboardList, code: "bookings.view" },
   { to: "/admin/lists", label: "Daily lists", icon: ClipboardList, code: "bookings.view" },
   { to: "/admin/reports", label: "Reports", icon: BarChart3, code: "reports.view" },
   { to: "/admin/users", label: "Users & roles", icon: Users, code: "users.manage" },
