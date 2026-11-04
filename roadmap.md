@@ -40,3 +40,8 @@
 - [x] Phase 1: customer/pet booking shortcuts + pet upcoming visits; boards open booking side panel; quick "Add extra" on grooming panel
 - [x] Phase 2: reschedule slot finder, shift notes on diary cards, quick grooming walk-in (1 Nov)
 - [x] Phase 3: daily front-desk handover at /admin/handover (arrivals, hotel departures, unpaid invoices, notes, pending requests)
+
+## Charlotte's November updates (4 Nov) — execute sequentially
+- [ ] Slice 1: uploaded document deletion; per-trip mobile travel pricing; hotel grooming quote lines; pet and mobile-stop reporting counts; dependency checks and tests
+- [ ] Slice 2: mobile address selection; Mon–Sat daycare attendance printing including Stay & Play/trials; Add Unscheduled / Walk-in label; dependency checks and tests
+- [ ] Slice 3: printable stocktake list; validated new-product CSV import with initial-stock audit; dependency checks and tests
