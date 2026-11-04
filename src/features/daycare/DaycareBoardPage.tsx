@@ -91,7 +91,7 @@ export default function DaycareBoardPage() {
                 onClick={() => setWalkInOpen(true)}
                 className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-sk-coral px-3 text-sm font-semibold text-white hover:bg-sk-coral-dark"
               >
-                <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Walk-in</span>
+                <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Add Unscheduled / Walk-in</span>
               </button>
             </Can>
             <div className="inline-flex overflow-hidden rounded-lg border border-border bg-white">

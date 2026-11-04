@@ -64,7 +64,7 @@ export function WalkInDialog({ tenantId, day, onClose, onDone }: Props) {
       <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
-            <h2 className="text-lg font-semibold">Walk-in check-in</h2>
+            <h2 className="text-lg font-semibold">Add Unscheduled / Walk-in</h2>
             <p className="text-xs text-muted-foreground">
               {theDay.toLocaleDateString("en-ZA", { weekday: "long", day: "2-digit", month: "short", year: "numeric" })}
             </p>
