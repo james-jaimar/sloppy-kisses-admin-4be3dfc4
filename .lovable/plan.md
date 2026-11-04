@@ -5,10 +5,14 @@ Make phone bookings, repeat grooming and morning drop-offs easier for Charlotte 
 
 Both options are covered in four slices. Complete and verify each slice before moving on; reuse existing controls rather than rebuilding them.
 
+## What already exists
+Source inspection shows future grooming invoices can already be dated for the visit while being issued and emailed immediately; Slice 1 changes release timing, not just the date printed on the invoice. Saved-address add/edit, new-pet creation and unscheduled daycare check-in already exist. Slices 2 and 4 improve those flows, not replace them. Confirm deployed behavior before implementation.
+
 ## Slice 1 — Predictable grooming billing (Option A)
 - Check when a future grooming invoice is actually created, issued, emailed and made payable. An invoice dated in the future is not the same as holding it until that date.
 - Add an admin-controlled grooming invoice release policy: at booking, on the appointment day, or a configurable number of days beforehand. Proposed starting policy: appointment day; show the chosen release date in the booking review.
 - Keep the initial booking confirmation separate from the later invoice email, preserving per-visit grouping and the staff email opt-out.
+- Keep initial booking-email suppression separate from invoice-email preferences; do not silently make it suppress later invoice delivery. Honour customer email preferences and existing sending controls.
 - Make same-day bookings work immediately. Rescheduling updates any unreleased billing; cancellation prevents later release.
 - Ensure unpaid-booking expiry cannot cancel a future appointment before its payment requirement becomes applicable.
 - Do not rewrite existing issued invoices or bulk-change existing bookings silently. Financial corrections continue through credit notes.
@@ -23,6 +27,7 @@ Both options are covered in four slices. Complete and verify each slice before m
 - Retain Maps validation, customer ownership checks and existing create/update permissions. Failed or cancelled edits leave the booking intact.
 
 **Completion checks:** correct a pet and address during a multi-pet repeat booking, save/reopen both records, and complete the booking without re-entry. Verify no cross-customer selection or unauthorised edits; saved corrections appear in the customer's existing portal records.
+Also revalidate address eligibility and any pet-size-dependent pricing before the final review, keeping reviewed and saved appointment times identical.
 
 ## Slice 3 — Named groomer preference, without losing station capacity (Option B)
 - Add an optional preferred groomer per pet/appointment; retain “No preference”. A preference is a request, not a guarantee.
