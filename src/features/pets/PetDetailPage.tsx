@@ -254,6 +254,11 @@ export default function PetDetailPage() {
                 </div>
               </CollapsibleCard>
             )}
+            {tenant && (
+              <CollapsibleCard title="Documents" storageKey={`admin-documents-${pet.id}`}>
+                <DocumentsPanel tenantId={tenant.id} petId={pet.id} bare />
+              </CollapsibleCard>
+            )}
             {tenant && pet.species === "dog" && (
               <SizeOverrideControl pet={pet as any} />
             )}
