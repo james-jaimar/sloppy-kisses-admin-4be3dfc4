@@ -41,6 +41,7 @@ export interface QuoteExtras {
     accommodation_type?: string | null;
     grooming_required?: boolean;
     grooming_notes?: string | null;
+    grooming_package_id?: string | null;
   }[];
   /** Daycare quotes — read by accept_daycare_estimate to build the enrolment. */
   daycare_plan_id?: string | null;

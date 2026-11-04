@@ -13,6 +13,7 @@ export interface HotelGroomRequest {
   window_start: string | null;
   window_end: string | null;
   customer_notes: string | null;
+  package_id?: string | null;
   status: HotelGroomStatus;
   grooming_booking_id: string | null;
   scheduled_at: string | null;
