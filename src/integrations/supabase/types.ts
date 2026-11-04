@@ -10104,6 +10104,15 @@ export type Database = {
           unit_price: number
         }[]
       }
+      import_new_stock: {
+        Args: {
+          p_import_id: string
+          p_location_id: string
+          p_rows: Json
+          p_tenant_id: string
+        }
+        Returns: number
+      }
       is_closed: {
         Args: {
           p_billable_only?: boolean
