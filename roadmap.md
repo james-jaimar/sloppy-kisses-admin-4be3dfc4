@@ -46,3 +46,10 @@
 - [x] Slice 2: mobile address save/select repair; Mon–Sat register including enrolments/swaps, Stay & Play, trials and unscheduled attendance; clearer walk-in label. Three weekly rule tests passed; signed-in print/save checks unavailable.
 - [x] Slice 3: stocktake print and previewed new-product CSV import with opening receive movements. Five validation tests and authenticated-role rollback DB checks passed (audit, duplicate rejection, atomic rollback, signed-out block); no fixtures retained.
 - [ ] Final signed-in walkthrough and physical printer check for all three slices: unavailable on external unmanaged Supabase; Charlotte's printer/browser details still required.
+
+## Next front-office workflow improvements — options A and B (planning, 4 Nov)
+- [ ] Slice 1 — configurable grooming invoice release timing; verify actual issue/email/payment-hold behavior before changing it.
+- [ ] Slice 2 — inline address and existing-pet corrections without losing the booking; reuse existing add controls.
+- [ ] Slice 3 — optional named groomer preference alongside anonymous stations and verified PIN attribution.
+- [ ] Slice 4 — faster unscheduled daycare check-in using the existing walk-in flow, preserving health/capacity/billing safeguards.
+- Delivery gate: approve the plan, then complete and verify each slice before starting the next; name any unavailable live checks explicitly.
