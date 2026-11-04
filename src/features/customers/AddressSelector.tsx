@@ -38,18 +38,20 @@ export function AddressSelector({
   const mobileMatches = addresses.filter((a) => a.is_mobile_grooming_address);
   // Fall back to every address when nothing is flagged for mobile grooming yet,
   // otherwise customers see an empty picker mid-booking.
-  const filtered = mobileOnly && mobileMatches.length > 0 ? mobileMatches : addresses;
+  const filtered = mobileOnly && mobileMatches.length > 0 ? addresses.filter(a => a.is_mobile_grooming_address || a.id === value) : addresses;
   const selected = addresses.find((a) => a.id === value) ?? null;
 
   const handleSave = async (values: Record<string, any>) => {
+    const payload = mobileOnly ? { ...values, is_mobile_grooming_address: true } : values;
     if (editing) {
-      await updateAddress.mutateAsync({ id: editing.id, patch: values });
+      await updateAddress.mutateAsync({ id: editing.id, patch: payload });
       toast.success("Address confirmed");
       onChange(editing.id);
       setEditing(null);
+      setDrawerOpen(false);
       return;
     }
-    const created = await createAddress.mutateAsync(values);
+    const created = await createAddress.mutateAsync(payload);
     toast.success("Address added");
     onChange(created.id);
     setDrawerOpen(false);
