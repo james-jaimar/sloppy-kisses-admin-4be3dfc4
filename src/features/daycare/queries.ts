@@ -245,7 +245,7 @@ export function useCreateDaySwap(tenantId: string) {
 
 // -------------------- Attendance --------------------
 
-export type AttendanceStatus = "expected" | "checked_in" | "checked_out" | "not_arrived" | "walk_in";
+export type AttendanceStatus = "expected" | "checked_in" | "checked_out" | "not_arrived" | "walk_in" | "cancelled";
 
 export interface AttendanceRow {
   id: string;
