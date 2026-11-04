@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
     groupPets = Array.from(petSet).join(" & ");
   }
 
-  let q = sb.from("notification_events").select("*").eq("status", "pending").limit(20);
+  let q = sb.from("notification_events").select("*").eq("status", "pending").or(`scheduled_for.is.null,scheduled_for.lte.${new Date().toISOString()}`).limit(20);
   if (onlyBookingId) q = q.eq("booking_id", onlyBookingId);
   const { data: events, error } = await q;
 
@@ -208,7 +208,7 @@ Deno.serve(async (req) => {
 
       if (settings && isQuietHours(new Date(), settings.quiet_start ?? "20:00", settings.quiet_end ?? "07:00")) {
         skipped++;
-        await sb.from("notification_events").update({ scheduled_for: new Date(Date.now() + 30 * 60_000).toISOString() }).eq("id", ev.id);
+        await sb.from("notification_events").update({ status: "pending", error: null, scheduled_for: new Date(Date.now() + 30 * 60_000).toISOString() }).eq("id", ev.id);
         continue;
       }
 
