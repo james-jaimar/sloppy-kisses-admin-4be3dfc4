@@ -1,8 +1,14 @@
 import { Link } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { BarChart3, FileText, TrendingUp, Percent, Download } from "lucide-react";
+import { BarChart3, FileText, TrendingUp, Percent, Download, SlidersHorizontal } from "lucide-react";
 
 const CARDS = [
+  {
+    to: "/admin/reports/custom",
+    title: "Custom report builder",
+    description: "Pick any bookings, grooming, hotel, daycare, invoice, customer, pet or shop fields; filter, group by month/breed/suburb/package and export to Excel.",
+    icon: SlidersHorizontal,
+  },
   {
     to: "/admin/reports/revenue",
     title: "Revenue",
