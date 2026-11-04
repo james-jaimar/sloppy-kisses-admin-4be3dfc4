@@ -43,5 +43,6 @@
 
 ## Charlotte's November updates (4 Nov) — execute sequentially
 - [x] Slice 1: document deletion, per-visit travel pricing, hotel grooming quote pricing/package handoff, pet/stop counts. 13 focused tests and rollback travel check passed; confirmation reprices accommodation only. Signed-in checks unavailable on external Supabase.
-- [ ] Slice 2: mobile address selection; Mon–Sat daycare attendance printing including Stay & Play/trials; Add Unscheduled / Walk-in label; dependency checks and tests
-- [ ] Slice 3: printable stocktake list; validated new-product CSV import with initial-stock audit; dependency checks and tests
+- [x] Slice 2: mobile address save/select repair; Mon–Sat register including enrolments/swaps, Stay & Play, trials and unscheduled attendance; clearer walk-in label. Three weekly rule tests passed; signed-in print/save checks unavailable.
+- [x] Slice 3: stocktake print and previewed new-product CSV import with opening receive movements. Five validation tests and authenticated-role rollback DB checks passed (audit, duplicate rejection, atomic rollback, signed-out block); no fixtures retained.
+- [ ] Final signed-in walkthrough and physical printer check for all three slices: unavailable on external unmanaged Supabase; Charlotte's printer/browser details still required.
