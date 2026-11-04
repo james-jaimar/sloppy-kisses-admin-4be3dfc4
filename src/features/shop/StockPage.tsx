@@ -1,5 +1,9 @@
 import { useMemo, useState } from "react";
-import { PackagePlus } from "lucide-react";
+import { PackagePlus, Printer, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useHasPermission } from "@/lib/permissions/permissions";
+import { StockImportDialog } from "./StockImportDialog";
+import { Sheet, TABLE, TH, TD } from "@/features/lists/sheetUi";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useProducts, useStockLocations, useStockOnHand, type Product } from "./queries";
@@ -18,6 +22,8 @@ export default function StockPage() {
   const stockQ = useStockOnHand(tenantId, effectiveLoc || null);
 
   const [adjust, setAdjust] = useState<Product | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const canImport = useHasPermission("products.manage") && useHasPermission("stock.adjust");
 
   const stockByProduct = useMemo(() => {
     const m = new Map<string, { qty: number; last: string | null }>();
@@ -34,8 +40,8 @@ export default function StockPage() {
 
   return (
     <>
-      <AppHeader title="Stock levels" subtitle="Current on-hand per product. Adjust to receive, waste, or correct." />
-      <div className="flex-1 p-6 space-y-4">
+      <div className="print:hidden"><AppHeader title="Stock levels" subtitle="Current on-hand per product. Adjust to receive, waste, or correct." actions={<div className="flex flex-wrap gap-2"><Button variant="outline" disabled={productsQ.isLoading || stockQ.isLoading || Boolean(productsQ.error || stockQ.error)} onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" />Print stocktake</Button>{canImport && <Button disabled={!effectiveLoc} onClick={() => setImportOpen(true)}><Upload className="mr-2 h-4 w-4" />Import CSV</Button>}</div>} /></div>
+      <div className="flex-1 p-6 space-y-4 print:hidden">
         <div className="flex flex-wrap items-center gap-2">
           <select value={effectiveLoc} onChange={(e) => setLocationId(e.target.value)}
             className="h-10 rounded-lg border border-border bg-white px-3 text-sm">
@@ -48,7 +54,7 @@ export default function StockPage() {
           </div>
         </div>
 
-        <div className="sk-card overflow-hidden">
+        <div className="sk-card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-sk-surface-muted text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -91,6 +97,8 @@ export default function StockPage() {
           </table>
         </div>
       </div>
+      <div className="hidden print:block"><Sheet title="Stocktake" subtitle={(locsQ.data ?? []).find(l => l.id === effectiveLoc)?.name} meta={<div>{new Date().toLocaleDateString("en-ZA")} · Counted by: __________</div>}><table className={TABLE}><thead><tr><th className={TH}>Product</th><th className={TH}>SKU / Barcode</th><th className={TH}>On hand</th><th className={TH}>Counted</th><th className={TH}>Difference / notes</th></tr></thead><tbody>{rows.map(p => <tr key={p.id}><td className={TD}>{p.name}</td><td className={TD}>{p.sku ?? p.barcode ?? "—"}</td><td className={TD}>{stockByProduct.get(p.id)?.qty ?? 0}</td><td className={TD} /><td className={TD} /></tr>)}</tbody></table></Sheet></div>
+      {importOpen && tenantId && canImport && <StockImportDialog tenantId={tenantId} locationId={effectiveLoc} onClose={() => setImportOpen(false)} />}
 
       {adjust && tenantId && (
         <StockAdjustmentDrawer
