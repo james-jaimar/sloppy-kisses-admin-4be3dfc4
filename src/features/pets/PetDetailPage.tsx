@@ -22,6 +22,7 @@ import { PetPhotoButton } from "./photo/PetPhotoButton";
 import { PetPhotoHistory } from "./photo/PetPhotoHistory";
 import { BookingFormModal } from "@/features/bookings/BookingFormModal";
 import { PetUpcomingVisits } from "./PetUpcomingVisits";
+import { DocumentsPanel } from "@/features/documents/DocumentsPanel";
 
 
 export default function PetDetailPage() {
