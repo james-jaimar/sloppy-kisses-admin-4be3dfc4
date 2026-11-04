@@ -5476,6 +5476,7 @@ export type Database = {
           pdf_path: string | null
           public_view_token: string
           reminders_paused: boolean
+          scheduled_release_date: string | null
           send_count: number
           sent_at: string | null
           status: Database["public"]["Enums"]["billing_status"]
@@ -5515,6 +5516,7 @@ export type Database = {
           pdf_path?: string | null
           public_view_token?: string
           reminders_paused?: boolean
+          scheduled_release_date?: string | null
           send_count?: number
           sent_at?: string | null
           status?: Database["public"]["Enums"]["billing_status"]
@@ -5554,6 +5556,7 @@ export type Database = {
           pdf_path?: string | null
           public_view_token?: string
           reminders_paused?: boolean
+          scheduled_release_date?: string | null
           send_count?: number
           sent_at?: string | null
           status?: Database["public"]["Enums"]["billing_status"]
@@ -5623,6 +5626,8 @@ export type Database = {
           default_vat_rate: number
           estimate_prefix: string
           footer_notes: string | null
+          grooming_invoice_lead_days: number
+          grooming_invoice_release_mode: string
           id: string
           invoice_prefix: string
           next_credit_note_number: number
@@ -5653,6 +5658,8 @@ export type Database = {
           default_vat_rate?: number
           estimate_prefix?: string
           footer_notes?: string | null
+          grooming_invoice_lead_days?: number
+          grooming_invoice_release_mode?: string
           id?: string
           invoice_prefix?: string
           next_credit_note_number?: number
@@ -5683,6 +5690,8 @@ export type Database = {
           default_vat_rate?: number
           estimate_prefix?: string
           footer_notes?: string | null
+          grooming_invoice_lead_days?: number
+          grooming_invoice_release_mode?: string
           id?: string
           invoice_prefix?: string
           next_credit_note_number?: number
@@ -9943,6 +9952,10 @@ export type Database = {
         Args: { p_day: string; p_tenant_id: string }
         Returns: Json
       }
+      grooming_invoice_release_day: {
+        Args: { p_start: string; p_tenant: string }
+        Returns: string
+      }
       grooming_kiosk_action: {
         Args: {
           p_action: string
@@ -10284,6 +10297,7 @@ export type Database = {
         }
         Returns: string
       }
+      release_due_grooming_invoices: { Args: never; Returns: number }
       release_expired_payment_holds: { Args: never; Returns: number }
       schedule_hotel_groom: {
         Args: {
