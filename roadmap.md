@@ -42,6 +42,6 @@
 - [x] Phase 3: daily front-desk handover at /admin/handover (arrivals, hotel departures, unpaid invoices, notes, pending requests)
 
 ## Charlotte's November updates (4 Nov) — execute sequentially
-- [ ] Slice 1: uploaded document deletion; per-trip mobile travel pricing; hotel grooming quote lines; pet and mobile-stop reporting counts; dependency checks and tests
+- [x] Slice 1: document deletion, per-visit travel pricing, hotel grooming quote pricing/package handoff, pet/stop counts. 13 focused tests and rollback travel check passed; confirmation reprices accommodation only. Signed-in checks unavailable on external Supabase.
 - [ ] Slice 2: mobile address selection; Mon–Sat daycare attendance printing including Stay & Play/trials; Add Unscheduled / Walk-in label; dependency checks and tests
 - [ ] Slice 3: printable stocktake list; validated new-product CSV import with initial-stock audit; dependency checks and tests
