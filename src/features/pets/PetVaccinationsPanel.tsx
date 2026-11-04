@@ -12,6 +12,7 @@ import { SnapUploadButton } from "@/features/uploads/SnapUploadButton";
 import { VaxWaiverBanner } from "./VaxWaiverBanner";
 import { useBookingVaccinationGate, VAX_STATUS_LABEL, type VaxGateRow } from "./vaccinationGate";
 import { Button } from "@/components/ui/button";
+import { DocumentsPanel } from "@/features/documents/DocumentsPanel";
 
 interface Props {
   bookingId?: string;
@@ -216,6 +217,10 @@ export function PetVaccinationsPanel({ bookingId, tenantId, petId, species = nul
           </li>
         ))}
       </ul>
+
+      <DocumentsPanel tenantId={tenantId} petId={petId} uploadedVia={uploadedVia}
+        allowUpload={canManage} title="Vaccination cards"
+        docTypes={[{ value: "vaccination", label: "Vaccination card" }]} />
 
       {editing && (
         <VaccinationModal

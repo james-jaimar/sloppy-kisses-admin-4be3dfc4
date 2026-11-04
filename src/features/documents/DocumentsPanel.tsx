@@ -7,6 +7,8 @@ import { supabase } from "@/lib/supabase/client";
 import { uploadDocumentToS3, getDocumentDownloadUrl } from "./uploadDocument";
 import { SnapUploadButton } from "@/features/uploads/SnapUploadButton";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { Button } from "@/components/ui/button";
+import { deleteDocument } from "./deleteDocument";
 
 type Props = {
   tenantId: string;
@@ -40,6 +42,7 @@ export function DocumentsPanel({
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [docType, setDocType] = useState(docTypes[0]?.value ?? "other");
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const key = ["documents_panel", tenantId, petId, customerId];
   const q = useQuery({
@@ -89,10 +92,12 @@ export function DocumentsPanel({
   async function handleDelete(id: string) {
     const ok = await confirm({ title: "Delete document?", description: "This removes the file for you and staff.", confirmLabel: "Delete", tone: "destructive" });
     if (!ok) return;
-    const { error } = await supabase.from("documents").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Deleted");
-    qc.invalidateQueries({ queryKey: key });
+    setDeleting(id);
+    try {
+      await deleteDocument(id, tenantId, qc);
+      toast.success("Document removed");
+    } catch (err) { toast.error((err as Error).message); }
+    finally { setDeleting(null); }
   }
 
   return (
@@ -160,9 +165,11 @@ export function DocumentsPanel({
               <button onClick={() => handleDownload(d.id)} title="Download" className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground">
                 <Download className="h-4 w-4" />
               </button>
-              <button onClick={() => handleDelete(d.id)} title="Delete" className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-sk-coral-dark">
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {(uploadedVia === "admin" || (d.uploaded_via === "portal" && d.status === "pending")) && (
+                <Button variant="ghost" size="icon" disabled={deleting !== null} onClick={() => handleDelete(d.id)} title="Delete document" aria-label={`Delete ${d.file_name}`} className="text-muted-foreground hover:text-destructive">
+                  {deleting === d.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                </Button>
+              )}
             </li>
           ))}
         </ul>
