@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
+import { hotelDayCounts } from "@/features/reports/operationCounts";
 import { countDaycareExpected } from "@/features/daycare/queries";
 
 function dayRange(date?: Date) {
@@ -37,16 +38,16 @@ async function countBookings(
 }
 
 async function countHotelOverlap(tenantId: string, dayStart: string, dayEnd: string) {
-  const { count, error } = await supabase
+  const { data, error } = await supabase
     .from("bookings")
-    .select("id", { count: "exact", head: true })
+    .select("id, booking_pets(id)")
     .eq("tenant_id", tenantId)
     .in("service_type", ["hotel_dog", "hotel_cat"] as any)
     .lt("start_at", dayEnd)
     .gt("end_at", dayStart)
     .not("status", "in", "(cancelled,no_show)");
   if (error) throw error;
-  return count ?? 0;
+  return (data ?? []).reduce((n, b) => n + b.booking_pets.length, 0);
 }
 
 /** Pets physically in the hotel/cattery on a day, plus that day's arrivals and departures. */
@@ -61,10 +62,7 @@ async function hotelDayDetail(tenantId: string, dayStart: string, dayEnd: string
     .not("status", "in", "(cancelled,no_show)");
   if (error) throw error;
   const rows = (data ?? []) as any[];
-  const dogsIn = rows.reduce((n, b) => n + (b.booking_pets?.length ?? 0), 0);
-  const checkingIn = rows.filter((b) => b.start_at >= dayStart && b.start_at < dayEnd).length;
-  const checkingOut = rows.filter((b) => b.end_at && b.end_at >= dayStart && b.end_at < dayEnd).length;
-  return { dogsIn, checkingIn, checkingOut };
+  return hotelDayCounts(rows.map(b => ({ ...b, pet_count: b.booking_pets?.length ?? 0 })), dayStart, dayEnd);
 }
 
 /** Distinct vans (resources) with at least one mobile grooming job that day. */
