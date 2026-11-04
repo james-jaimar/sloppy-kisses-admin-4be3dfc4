@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
     groupPets = Array.from(petSet).join(" & ");
   }
 
-  let q = sb.from("notification_events").select("*").eq("status", "pending").limit(20);
+  let q = sb.from("notification_events").select("*").eq("status", "pending").or(`scheduled_for.is.null,scheduled_for.lte.${new Date().toISOString()}`).limit(20);
   if (onlyBookingId) q = q.eq("booking_id", onlyBookingId);
   const { data: events, error } = await q;
 
@@ -150,6 +150,14 @@ Deno.serve(async (req) => {
   let processed = 0, sent = 0, failed = 0, skipped = 0;
   for (const ev of events ?? []) {
     processed++;
+    // Scheduled grooming delivery is claimed once, before any SMTP work.
+    // A failed/interrupted delivery remains visible for staff review, not auto-resend.
+    if (ev.payload?.grooming_scheduled_release === true) {
+      const { data: claimed, error: claimError } = await sb.from("notification_events")
+        .update({ status: "failed", error: "Scheduled invoice delivery claimed; awaiting result" })
+        .eq("id", ev.id).eq("status", "pending").select("id").maybeSingle();
+      if (claimError || !claimed) { skipped++; continue; }
+    }
     // A repeat/multi-dog series is still being saved: the booking form sends one
     // combined confirmation when done. Give it 3 minutes before the cron falls back.
     if (!onlyBookingId && ev.event_type === "booking_created" && ev.booking_id &&
@@ -168,6 +176,11 @@ Deno.serve(async (req) => {
         sb.from("message_templates").select("*").eq("tenant_id", ev.tenant_id).eq("event_code", ev.event_type).eq("channel", ev.channel).eq("is_active", true).maybeSingle(),
       ]);
       const settings = settingsRes.data;
+      if (ev.payload?.grooming_scheduled_release === true && (!invoiceRes.data || ["draft", "cancelled"].includes(invoiceRes.data.status))) {
+        await sb.from("notification_events").update({ status: "skipped", error: "Invoice is not available for release" }).eq("id", ev.id);
+        skipped++;
+        continue;
+      }
       let tpl = tplRes.data ?? (ev.event_type === "manual_message" && ev.booking_id && ev.payload?.message ? { subject: "{{payload.subject}}", body: "{{payload.message}}", body_format: "text" } : null);
       const serviceType = bookingRes.data?.service_type;
       const isHotel = serviceType === "hotel_dog" || serviceType === "hotel_cat";
@@ -195,7 +208,7 @@ Deno.serve(async (req) => {
 
       if (settings && isQuietHours(new Date(), settings.quiet_start ?? "20:00", settings.quiet_end ?? "07:00")) {
         skipped++;
-        await sb.from("notification_events").update({ scheduled_for: new Date(Date.now() + 30 * 60_000).toISOString() }).eq("id", ev.id);
+        await sb.from("notification_events").update({ status: "pending", error: null, scheduled_for: new Date(Date.now() + 30 * 60_000).toISOString() }).eq("id", ev.id);
         continue;
       }
 

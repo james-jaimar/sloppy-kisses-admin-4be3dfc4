@@ -48,7 +48,7 @@
 - [ ] Final signed-in walkthrough and physical printer check for all three slices: unavailable on external unmanaged Supabase; Charlotte's printer/browser details still required.
 
 ## Next front-office workflow improvements — options A and B (planning, 4 Nov)
-- [ ] Slice 1 — configurable grooming invoice release timing; verify actual issue/email/payment-hold behavior before changing it.
+- [ ] Slice 1 — release settings and scheduled drafts implemented; date tests and rollback lifecycle checks passed. Final payment-deadline regression, delivery check and signed-in save/reopen still pending; external unmanaged authentication blocks the signed-in check.
 - [ ] Slice 2 — inline address and existing-pet corrections without losing the booking; reuse existing add controls.
 - [ ] Slice 3 — optional named groomer preference alongside anonymous stations and verified PIN attribution.
 - [ ] Slice 4 — faster unscheduled daycare check-in using the existing walk-in flow, preserving health/capacity/billing safeguards.

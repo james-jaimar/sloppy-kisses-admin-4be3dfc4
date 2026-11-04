@@ -27,6 +27,7 @@ BEGIN
  IF (SELECT status FROM public.invoices WHERE id=i)<>'issued' THEN RAISE EXCEPTION 'Due invoice must issue'; END IF;
  IF (SELECT count(*) FROM public.notification_events WHERE invoice_id=i AND payload->>'grooming_scheduled_release'='true')<>1 THEN RAISE EXCEPTION 'Release retry duplicated notification'; END IF;
  IF (SELECT status FROM public.bookings WHERE id=a)<>'pending_payment' OR (SELECT payment_hold_expires_at FROM public.bookings WHERE id=a) IS NULL THEN RAISE EXCEPTION 'Released unpaid visit requires configured hold'; END IF;
+ IF (SELECT payment_hold_expires_at FROM public.bookings WHERE id=a)<((today+20)::timestamp AT TIME ZONE 'Africa/Johannesburg')+interval '48 hours' THEN RAISE EXCEPTION 'Hold expiry must not precede invoice due date plus configured 48 hours'; END IF;
  UPDATE public.bookings SET start_at=((today+30)::text||' 09:00+02')::timestamptz,end_at=((today+30)::text||' 10:00+02')::timestamptz WHERE id=d;
  IF (SELECT scheduled_release_date FROM public.invoices WHERE id=j)<>today+30 THEN RAISE EXCEPTION 'Reschedule must update release'; END IF;
  UPDATE public.bookings SET status='cancelled',cancellation_fee_waived=true WHERE id=d;
