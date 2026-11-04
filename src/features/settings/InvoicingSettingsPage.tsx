@@ -31,6 +31,8 @@ export default function InvoicingSettingsPage() {
     daycare_prorata_enabled: true,
     estimate_prefix: "QUO", next_estimate_number: 1,
     service_terms: {} as Record<string, string>,
+    grooming_invoice_release_mode: "appointment_day",
+    grooming_invoice_lead_days: 1,
   });
   const [interestRunning, setInterestRunning] = useState(false);
   const [interestPreview, setInterestPreview] = useState<{ customers: number; total: number; percent: number } | null>(null);
@@ -64,6 +66,8 @@ export default function InvoicingSettingsPage() {
         service_terms: Object.fromEntries(
           Object.entries(((d as any).service_terms ?? {}) as Record<string, unknown>).map(([k, v]) => [k, String(v)]),
         ),
+        grooming_invoice_release_mode: d.grooming_invoice_release_mode ?? "appointment_day",
+        grooming_invoice_lead_days: d.grooming_invoice_lead_days ?? 1,
       });
     }
   }, [settingsQ.data]);
@@ -87,6 +91,8 @@ export default function InvoicingSettingsPage() {
         auto_invoice_daycare: form.auto_invoice_daycare,
         auto_invoice_hotel: form.auto_invoice_hotel,
         auto_invoice_grooming: form.auto_invoice_grooming,
+        grooming_invoice_release_mode: form.grooming_invoice_release_mode,
+        grooming_invoice_lead_days: form.grooming_invoice_lead_days,
         auto_invoice_transport: form.auto_invoice_transport,
         billing_cycle: form.billing_cycle,
         billing_run_day: form.billing_run_day,
@@ -243,6 +249,19 @@ export default function InvoicingSettingsPage() {
                     className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
                 </Field>
               ))}
+            </div>
+          </Section>
+
+          <Section title="Grooming invoice release">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Release invoices">
+                <select disabled={!canManage} value={form.grooming_invoice_release_mode} onChange={e => setForm({ ...form, grooming_invoice_release_mode: e.target.value })} className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm">
+                  <option value="appointment_day">On the appointment day</option>
+                  <option value="at_booking">At booking</option>
+                  <option value="days_before">Days before the appointment</option>
+                </select>
+              </Field>
+              {form.grooming_invoice_release_mode === "days_before" && <Field label="Days beforehand"><input type="number" min={0} max={365} disabled={!canManage} value={form.grooming_invoice_lead_days} onChange={e => setForm({ ...form, grooming_invoice_lead_days: Number(e.target.value) })} className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm" /></Field>}
             </div>
           </Section>
 

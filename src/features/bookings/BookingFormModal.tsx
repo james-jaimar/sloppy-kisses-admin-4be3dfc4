@@ -7,6 +7,8 @@ import { PetFormModal } from "@/features/pets/PetFormModal";
 import { ModalShell } from "@/components/modals/ModalShell";
 import { Button } from "@/components/ui/button";
 import { emailIssuedInvoice } from "@/features/invoices/autoEmail";
+import { useInvoicingSettings } from "@/features/invoices/queries";
+import { groomingInvoiceReleaseDay } from "@/features/grooming/invoiceRelease";
 import { useCustomerPets } from "@/features/customers/queries";
 import { CustomerCombobox } from "@/components/customers/CustomerCombobox";
 import { AddressSelector } from "@/features/customers/AddressSelector";
@@ -212,6 +214,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [status, setStatus] = useState<BookingStatus>(booking?.status ?? (["hotel_dog", "hotel_cat"].includes(prefill?.service_type ?? "daycare") ? "draft" : "confirmed"));
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [reviewGrooming, setReviewGrooming] = useState(false);
+  const invoiceSettingsQ = useInvoicingSettings(tenantId);
   const [sendGroomingEmails, setSendGroomingEmails] = useState(true);
   const [bookingInProgress, setBookingInProgress] = useState(false);
 
@@ -1986,7 +1989,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       {reviewGrooming && reviewSchedule && (
         <ModalShell
           title="Review grooming booking"
-          subtitle="Check every appointment before booking and issuing invoices."
+          subtitle="Check every appointment before booking."
           onClose={bookingInProgress ? undefined : () => setReviewGrooming(false)}
           overlayClassName="z-[70]"
           footer={
@@ -2010,6 +2013,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 {reviewSchedule.days.map((day, index) => (
                   <div key={day} className="border-l-2 border-primary pl-3">
                     <div className="text-sm font-semibold">Visit {index + 1} · {new Date(`${day}T12:00:00`).toLocaleDateString("en-ZA", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}</div>
+                    <div className="text-xs text-muted-foreground">Invoice release: {new Date(`${groomingInvoiceReleaseDay(day, invoiceSettingsQ.data?.grooming_invoice_release_mode ?? "appointment_day", invoiceSettingsQ.data?.grooming_invoice_lead_days ?? 1)}T12:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}</div>
                     {reviewSchedule.appointments.filter((s) => s.day === day).map((s, petIndex) => {
                       const pet = petsQ.data?.find((p) => p.id === s.petIds[0]);
                       const selectedPlan = planFor(s.key);
@@ -2032,7 +2036,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             </div>
             <label className="flex items-start gap-3 border-t border-border pt-4 text-sm">
               <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" checked={sendGroomingEmails} onChange={(e) => setSendGroomingEmails(e.target.checked)} />
-              <span><span className="font-medium">Send email confirmation and invoices to customer</span><span className="block text-xs text-muted-foreground">{reviewCustomerQ.data?.email ? `To ${reviewCustomerQ.data.email}` : "No email on file — invoices will still be created."}</span></span>
+              <span><span className="font-medium">Send booking confirmation and any invoices ready now</span><span className="block text-xs text-muted-foreground">{reviewCustomerQ.data?.email ? `To ${reviewCustomerQ.data.email}. Scheduled invoices are sent on their release day, subject to customer email preferences.` : "No email on file — invoices will still be created."}</span></span>
             </label>
           </div>
         </ModalShell>
