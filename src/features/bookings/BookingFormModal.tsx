@@ -691,7 +691,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const groomingPlan = useMemo(() => {
     if (!isMultiPetGrooming || !startAt) return null;
     return planDogTimes({
-      mode: timingMode,
+      mode: isMobileVan ? "back_to_back" : timingMode,
       resources: groomingAvailQ.data?.resources ?? [],
       busy: groomingAvailQ.data?.busy ?? [],
       baseStart: new Date(startAt),
@@ -699,7 +699,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       preferredResourceId: resourceId,
       customTimes,
     });
-  }, [isMultiPetGrooming, startAt, groomingAvailQ.data, petSlotRequests, resourceId, timingMode, customTimes]);
+  }, [isMultiPetGrooming, startAt, groomingAvailQ.data, petSlotRequests, resourceId, timingMode, customTimes, isMobileVan]);
 
   function groomingSlots() {
     if (!startAt) return null;
@@ -740,7 +740,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       const addon = addonsCatalogQ.data?.find((a) => a.id === selection.addon_id);
       return sum + groomingAddonPrice(addon?.code ?? "", Number(addon?.price_zar ?? 0), pkg?.package_type) * selection.qty;
     }, 0);
-  }, 0) + (serviceType === "grooming_mobile" ? Number(grooming.travel_fee ?? 0) * (isMultiPetGrooming ? petIds.length : 1) : 0);
+  }, 0) + (serviceType === "grooming_mobile" ? Number(grooming.travel_fee ?? 0) : 0);
 
   async function saveBooking(confirmed = false) {
     if (bookingInProgress) return;
@@ -1591,7 +1591,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 }
               />
             </div>
-            {isMultiPetGrooming && (
+            {isMultiPetGrooming && !isMobileVan && (
               <div>
                 <div className="mb-1.5 text-xs font-medium text-muted-foreground">How should the dogs be groomed?</div>
                 <div className="flex flex-wrap gap-2">
@@ -1628,11 +1628,11 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 value={startAt || null}
                 kind={groomingPoolKind}
                 durationMinutes={
-                  isMultiPetGrooming && timingMode === "back_to_back" ? totalMultiMinutes : durationMins
+                  isMultiPetGrooming && (isMobileVan || timingMode === "back_to_back") ? totalMultiMinutes : durationMins
                 }
                 resourceId={resourceId}
                 excludeBookingId={booking?.id ?? null}
-                petSlots={isMultiPetGrooming && timingMode === "together" ? petSlotRequests : undefined}
+                petSlots={isMultiPetGrooming && !isMobileVan && timingMode === "together" ? petSlotRequests : undefined}
                 onChange={(startLocal) => {
                   if (startLocal) setStartAt(startLocal);
                 }}

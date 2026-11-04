@@ -1,4 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { useGroomingPackages } from "@/features/settings/groomingRateCardQueries";
+import { useHotelWorkflowSettings } from "@/features/hotelCattery/queries";
+import { effectivePetSize, petSizeToBand } from "@/features/pets/sizeUtils";
+import { checkoutGroomLine } from "./checkoutGroomPricing";
 import { accommodationForPet } from "@/features/hotelCattery/stayPetRules";
 import { useNavigate } from "react-router-dom";
 import { Plus, Trash2, Sparkles, AlertTriangle, Scissors, CalendarClock } from "lucide-react";
@@ -68,7 +72,7 @@ export function HotelQuoteDrawer({
   const [expiry, setExpiry] = useState("");
   const [checkOutWindow, setCheckOutWindow] = useState("");
   const [surcharges, setSurcharges] = useState<Record<string, number>>({});
-  const [grooming, setGrooming] = useState<Record<string, { on: boolean; notes: string }>>({});
+  const [grooming, setGrooming] = useState<Record<string, { on: boolean; notes: string; packageId?: string }>>({});
   /** Accommodation per dog — two dogs of different sizes can be in different areas. */
   const [petAcc, setPetAcc] = useState<Record<string, string>>({});
 
@@ -78,6 +82,8 @@ export function HotelQuoteDrawer({
   const validityQ = useQuoteValidityDays(tenantId);
   const holidaysQ = usePublicHolidays(tenantId);
   const create = useCreateQuote(tenantId);
+  const packagesQ = useGroomingPackages(tenantId, { activeOnly: true });
+  const workflowQ = useHotelWorkflowSettings(tenantId);
 
   const species: "dog" | "cat" = serviceType === "hotel_cat" ? "cat" : "dog";
   const rates = (ratesQ.data ?? []).filter((r) => r.species === species);
@@ -167,7 +173,11 @@ export function HotelQuoteDrawer({
       .filter(Boolean) as Line[];
   }, [surcharges, surchargesQ.data, nights, dogCount]);
 
-  const allLines = [...stayLines, ...surchargeLines, ...extraLines];
+  const groomingLines = selectedPets.filter(p => p.species === "dog" && grooming[p.id]?.on).flatMap(p => {
+    const pkg = packagesQ.data?.find(pkg => pkg.id === grooming[p.id]?.packageId);
+    return pkg ? [checkoutGroomLine(p.name ?? "Pet", pkg.name, Number(pkg.price_zar), Number(workflowQ.data?.checkout_groom_discount_pct ?? 0))] : [];
+  });
+  const allLines = [...stayLines, ...surchargeLines, ...groomingLines, ...extraLines];
   const total = allLines.reduce((s, l) => s + l.quantity * l.unit_price, 0);
 
   const sizeWarnings = useMemo(() => {
@@ -228,6 +238,8 @@ export function HotelQuoteDrawer({
     if (checkOutBlock) { toast.error(checkOutBlock); return; }
     if (stayLines.length === 0) { toast.error(pricedQ.error ? String((pricedQ.error as Error).message) : "No price could be worked out"); return; }
 
+    if (selectedPets.some(p => p.species === "dog" && grooming[p.id]?.on && !packagesQ.data?.some(pkg => pkg.id === grooming[p.id]?.packageId)) || workflowQ.isLoading) { toast.error("Choose a grooming package for each requested groom"); return; }
+
     const extras: QuoteExtras = {
       check_in_window: CHECK_IN_WINDOWS[0],
       check_out_window: checkOutWindow || null,
@@ -241,7 +253,7 @@ export function HotelQuoteDrawer({
         name: p.name,
         accommodation_type: accFor(p.id),
         grooming_required: Boolean(grooming[p.id]?.on),
-        grooming_notes: grooming[p.id]?.notes || null,
+        grooming_notes: [grooming[p.id]?.notes, packagesQ.data?.find(pkg => pkg.id === grooming[p.id]?.packageId)?.name].filter(Boolean).join(" — ") || null,
       })),
     };
 
@@ -498,21 +510,25 @@ export function HotelQuoteDrawer({
                       />
                       {p.name} — groom before going home
                     </label>
-                    {g.on && (
+                    {g.on && (<>
+                      <select aria-label={`Grooming package for ${p.name}`} className={input + " mt-2"} value={g.packageId ?? ""}
+                        onChange={e => setGrooming({ ...grooming, [p.id]: { ...g, packageId: e.target.value } })}>
+                        <option value="">Choose package…</option>
+                        {(packagesQ.data ?? []).filter(pkg => pkg.species === p.species && (!pkg.size_band || pkg.size_band === petSizeToBand(effectivePetSize(p)))).map(pkg => <option key={pkg.id} value={pkg.id}>{pkg.name} — R{Number(pkg.price_zar).toFixed(2)}</option>)}
+                      </select>
                       <input
                         value={g.notes}
                         onChange={(e) => setGrooming({ ...grooming, [p.id]: { ...g, notes: e.target.value } })}
                         placeholder="What the groomer should know"
                         className={input + " mt-2"}
                       />
-                    )}
+                    </>)}
                   </div>
                 );
               })}
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Groom requests are created when the quote is accepted and are priced separately at check-out
-              (check-out groom discount applies).
+              Checkout grooming is included in this quote total with the configured discount. It is scheduled and invoiced separately from accommodation.
             </p>
           </div>
         )}
@@ -554,7 +570,7 @@ export function HotelQuoteDrawer({
           )}
 
           <div className="space-y-2">
-            {[...stayLines, ...surchargeLines].map((l, i) => (
+            {[...stayLines, ...surchargeLines, ...groomingLines].map((l, i) => (
               <div key={`s${i}`} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
                 <span>{l.description}</span>
                 <span className="font-semibold">R{(l.quantity * l.unit_price).toFixed(2)}</span>

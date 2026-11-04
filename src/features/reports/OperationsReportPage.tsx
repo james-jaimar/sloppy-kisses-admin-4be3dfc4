@@ -5,9 +5,12 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { supabase } from "@/integrations/supabase/client";
 
+import { mobileStopKey, saDay, type VolumeBooking } from "./operationCounts";
+import { Button } from "@/components/ui/button";
+
 type GroupBy = "day" | "month";
 
-interface BookingRow {
+interface BookingRow extends VolumeBooking {
   id: string;
   service_type: string;
   start_at: string | null;
@@ -19,7 +22,8 @@ interface BookingRow {
 const COLS = [
   { key: "daycare", label: "Daycare" },
   { key: "grooming_inhouse", label: "Grooming (in-house)" },
-  { key: "grooming_mobile", label: "Mobile grooming" },
+  { key: "grooming_mobile", label: "Mobile dogs" },
+  { key: "mobile_stops", label: "Mobile stops" },
   { key: "hotel_in", label: "Hotel check-ins" },
   { key: "hotel_out", label: "Hotel check-outs" },
   { key: "pickup_dropoff", label: "Transport" },
@@ -33,7 +37,8 @@ function isoDay(d: Date) {
 }
 
 function bucketKey(iso: string, groupBy: GroupBy) {
-  return groupBy === "day" ? iso.slice(0, 10) : iso.slice(0, 7);
+  const day = saDay(iso);
+  return groupBy === "day" ? day : day.slice(0, 7);
 }
 
 function bucketLabel(key: string, groupBy: GroupBy) {
@@ -64,20 +69,21 @@ export default function OperationsReportPage() {
     queryKey: ["reports", "operations", tenantId, from, to],
     queryFn: async (): Promise<BookingRow[]> => {
       // Include hotel stays that end inside the range too, so check-outs show.
-      const { data, error } = await supabase!
+      if (!tenantId) return [];
+      const { data, error } = await supabase
         .from("bookings")
-        .select("id, service_type, start_at, end_at, status, resource:resources(name)")
-        .eq("tenant_id", tenantId!)
+        .select("id, service_type, start_at, end_at, status, customer_id, service_address_id, resource_id, booking_group_id, booking_pets(id), resource:resources(name)")
+        .eq("tenant_id", tenantId)
         .not("status", "in", "(cancelled,no_show)")
         .or(
-          `and(start_at.gte.${from}T00:00:00,start_at.lte.${to}T23:59:59),` +
-            `and(service_type.in.(hotel_dog,hotel_cat),end_at.gte.${from}T00:00:00,end_at.lte.${to}T23:59:59)`,
+          `and(start_at.gte.${from}T00:00:00+02:00,start_at.lte.${to}T23:59:59+02:00),` +
+            `and(service_type.in.(hotel_dog,hotel_cat),end_at.gte.${from}T00:00:00+02:00,end_at.lte.${to}T23:59:59+02:00)`,
         )
         .order("start_at", { ascending: true })
         .limit(10000);
       if (error) throw error;
       return (data ?? []).map((r: any) => ({
-        id: r.id,
+        id: r.id, customer_id: r.customer_id, service_address_id: r.service_address_id, resource_id: r.resource_id, booking_group_id: r.booking_group_id, pet_count: r.booking_pets?.length ?? 0,
         service_type: r.service_type,
         start_at: r.start_at,
         end_at: r.end_at,
@@ -89,30 +95,32 @@ export default function OperationsReportPage() {
 
   const rows = useMemo(() => {
     const buckets = new Map<string, Record<ColKey, number>>();
-    const bump = (key: string, col: ColKey) => {
+    const stops = new Set<string>();
+    const bump = (key: string, col: ColKey, amount = 1) => {
       const b = buckets.get(key) ?? {
         daycare: 0,
         grooming_inhouse: 0,
-        grooming_mobile: 0,
+        grooming_mobile: 0, mobile_stops: 0,
         hotel_in: 0,
         hotel_out: 0,
         pickup_dropoff: 0,
       };
-      b[col] += 1;
+      b[col] += amount;
       buckets.set(key, b);
     };
     for (const b of q.data ?? []) {
-      if (b.start_at) {
+      if (b.start_at && saDay(b.start_at) >= from && saDay(b.start_at) <= to) {
         const key = bucketKey(b.start_at, groupBy);
-        if (b.service_type === "hotel_dog" || b.service_type === "hotel_cat") bump(key, "hotel_in");
-        else if (COLS.some((c) => c.key === b.service_type)) bump(key, b.service_type as ColKey);
+        if (b.service_type === "hotel_dog" || b.service_type === "hotel_cat") bump(key, "hotel_in", b.pet_count);
+        else if (COLS.some((c) => c.key === b.service_type)) bump(key, b.service_type as ColKey, b.pet_count);
+        if (b.service_type === "grooming_mobile") { const stop = mobileStopKey(b); if (!stops.has(stop)) { bump(key, "mobile_stops"); stops.add(stop); } }
       }
       if (
         (b.service_type === "hotel_dog" || b.service_type === "hotel_cat") &&
         b.end_at &&
-        bucketKey(b.end_at, groupBy) !== (b.start_at ? bucketKey(b.start_at, groupBy) : null)
+        saDay(b.end_at) >= from && saDay(b.end_at) <= to
       ) {
-        bump(bucketKey(b.end_at, groupBy), "hotel_out");
+        bump(bucketKey(b.end_at, groupBy), "hotel_out", b.pet_count);
       }
     }
     return [...buckets.entries()]
@@ -123,14 +131,15 @@ export default function OperationsReportPage() {
         counts,
         total: COLS.reduce((sum, c) => sum + counts[c.key], 0),
       }));
-  }, [q.data, groupBy]);
+  }, [q.data, groupBy, from, to]);
 
   const vanRows = useMemo(() => {
-    const m = new Map<string, number>();
+    const m = new Map<string, { dogs: number; stops: Set<string> }>();
     for (const b of q.data ?? []) {
       if (b.service_type !== "grooming_mobile" || !b.start_at) continue;
       const name = b.resource_name ?? "Unassigned";
-      m.set(name, (m.get(name) ?? 0) + 1);
+      const entry = m.get(name) ?? { dogs: 0, stops: new Set<string>() };
+      entry.dogs += b.pet_count; entry.stops.add(mobileStopKey(b)); m.set(name, entry);
     }
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [q.data]);
@@ -139,7 +148,7 @@ export default function OperationsReportPage() {
     const t: Record<ColKey, number> = {
       daycare: 0,
       grooming_inhouse: 0,
-      grooming_mobile: 0,
+      grooming_mobile: 0, mobile_stops: 0,
       hotel_in: 0,
       hotel_out: 0,
       pickup_dropoff: 0,
@@ -262,7 +271,7 @@ export default function OperationsReportPage() {
               {vanRows.map(([name, count]) => (
                 <div key={name} className="rounded-xl border border-border px-4 py-2 text-sm">
                   <span className="font-medium">{name}</span>
-                  <span className="ml-2 tabular-nums text-muted-foreground">{count} booking{count === 1 ? "" : "s"}</span>
+                  <span className="ml-2 tabular-nums text-muted-foreground">{count.dogs} dogs · {count.stops.size} stops</span>
                 </div>
               ))}
             </div>
