@@ -179,6 +179,7 @@ import RevenueReportPage from "@/features/reports/RevenueReportPage";
 import VatReportPage from "@/features/reports/VatReportPage";
 import DataExportPage from "@/features/reports/DataExportPage";
 import OperationsReportPage from "@/features/reports/OperationsReportPage";
+import CustomReportPage from "@/features/reports/custom/CustomReportPage";
 
 const queryClient = new QueryClient();
 
@@ -266,6 +267,7 @@ const App = () => (
                   <Route path="/admin/reports/vat" element={<VatReportPage />} />
                   <Route path="/admin/reports/export" element={<DataExportPage />} />
                   <Route path="/admin/reports/operations" element={<OperationsReportPage />} />
+                  <Route path="/admin/reports/custom" element={<CustomReportPage />} />
                 </Route>
                 <Route element={<RequirePermission code="users.manage" />}>
                   <Route path="/admin/users" element={<UsersPage />} />
