@@ -24,3 +24,4 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 - Checkout-groom quote selections carry package IDs into hotel grooming requests; accommodation confirmation reprices stay/extras only, and scheduled grooming issues its own invoice to avoid double billing.
 - Mobile visit travel fees are deduplicated within a booking group, local service day, address and van; reporting groups stops by local day, van, customer and address.
 - Weekly daycare printing combines enrolment weekdays/swaps, recorded attendance, hotel/grooming Stay & Play and assessment bookings in a Monday–Saturday grid; scheduling settings remain authoritative.
+- New-stock CSV imports use an atomic caller-authenticated RPC with product/stock permission checks, duplicate-code validation and receive movements; Retail settings supply VAT defaults and existing products are never overwritten.

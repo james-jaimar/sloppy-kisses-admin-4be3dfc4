@@ -1,0 +1,1 @@
+ALTER FUNCTION public.import_new_stock(uuid,uuid,jsonb,uuid) SECURITY INVOKER;
