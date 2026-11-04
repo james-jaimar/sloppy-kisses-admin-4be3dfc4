@@ -1591,7 +1591,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 }
               />
             </div>
-            {isMultiPetGrooming && (
+            {isMultiPetGrooming && !isMobileVan && (
               <div>
                 <div className="mb-1.5 text-xs font-medium text-muted-foreground">How should the dogs be groomed?</div>
                 <div className="flex flex-wrap gap-2">
@@ -1628,11 +1628,11 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 value={startAt || null}
                 kind={groomingPoolKind}
                 durationMinutes={
-                  isMultiPetGrooming && timingMode === "back_to_back" ? totalMultiMinutes : durationMins
+                  isMultiPetGrooming && (isMobileVan || timingMode === "back_to_back") ? totalMultiMinutes : durationMins
                 }
                 resourceId={resourceId}
                 excludeBookingId={booking?.id ?? null}
-                petSlots={isMultiPetGrooming && timingMode === "together" ? petSlotRequests : undefined}
+                petSlots={isMultiPetGrooming && !isMobileVan && timingMode === "together" ? petSlotRequests : undefined}
                 onChange={(startLocal) => {
                   if (startLocal) setStartAt(startLocal);
                 }}
