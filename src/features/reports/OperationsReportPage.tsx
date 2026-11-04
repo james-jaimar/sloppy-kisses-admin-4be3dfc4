@@ -129,7 +129,7 @@ export default function OperationsReportPage() {
         key,
         label: bucketLabel(key, groupBy),
         counts,
-        total: COLS.reduce((sum, c) => sum + counts[c.key], 0),
+        total: COLS.reduce((sum, c) => sum + (c.key === "mobile_stops" ? 0 : counts[c.key]), 0),
       }));
   }, [q.data, groupBy, from, to]);
 
