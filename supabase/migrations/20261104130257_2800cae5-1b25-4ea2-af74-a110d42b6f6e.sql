@@ -1,0 +1,40 @@
+ALTER TABLE public.invoicing_settings ADD COLUMN grooming_invoice_release_mode text NOT NULL DEFAULT 'appointment_day', ADD COLUMN grooming_invoice_lead_days integer NOT NULL DEFAULT 1;
+ALTER TABLE public.invoices ADD COLUMN scheduled_release_date date;
+CREATE OR REPLACE FUNCTION public.validate_grooming_release_settings() RETURNS trigger LANGUAGE plpgsql SET search_path=public AS $$ BEGIN IF NEW.grooming_invoice_release_mode NOT IN ('at_booking','appointment_day','days_before') OR NEW.grooming_invoice_lead_days<0 OR NEW.grooming_invoice_lead_days>365 THEN RAISE EXCEPTION 'Choose a valid grooming release policy and 0–365 lead days'; END IF; RETURN NEW; END $$;
+CREATE TRIGGER validate_grooming_release_settings BEFORE INSERT OR UPDATE ON public.invoicing_settings FOR EACH ROW EXECUTE FUNCTION public.validate_grooming_release_settings();
+CREATE OR REPLACE FUNCTION public.grooming_invoice_release_day(p_tenant uuid,p_start timestamptz) RETURNS date LANGUAGE sql STABLE SECURITY DEFINER SET search_path=public AS $$ SELECT CASE WHEN COALESCE(s.grooming_invoice_release_mode,'appointment_day')='at_booking' THEN (now() AT TIME ZONE 'Africa/Johannesburg')::date ELSE COALESCE((p_start AT TIME ZONE 'Africa/Johannesburg')::date,(now() AT TIME ZONE 'Africa/Johannesburg')::date) - CASE WHEN s.grooming_invoice_release_mode='days_before' THEN s.grooming_invoice_lead_days ELSE 0 END END FROM (SELECT 1) seed LEFT JOIN public.invoicing_settings s ON s.tenant_id=p_tenant $$;
+REVOKE ALL ON FUNCTION public.grooming_invoice_release_day(uuid,timestamptz) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.grooming_invoice_release_day(uuid,timestamptz) TO service_role;
+DO $patch$ DECLARE d text; BEGIN
+ SELECT pg_get_functiondef('public.ensure_booking_invoice_before_hotel_review(uuid)'::regprocedure) INTO d;
+ d:=replace(d,'v_service_key text;','v_service_key text; v_release date; v_defer boolean;');
+ d:=replace(d,'-- Multi-pet groups share a single invoice for the owner.', 'PERFORM pg_advisory_xact_lock(hashtextextended(COALESCE(v_b.booking_group_id,v_b.id)::text,0)); SELECT invoice_id INTO v_id FROM public.bookings WHERE id=p_booking_id; IF v_id IS NOT NULL THEN RETURN v_id; END IF; -- Multi-pet groups share a single invoice for the owner.');
+ d:=replace(d,'AND s.invoice_id IS NOT NULL','AND s.invoice_id IS NOT NULL AND (s.start_at AT TIME ZONE ''Africa/Johannesburg'')::date IS NOT DISTINCT FROM (v_b.start_at AT TIME ZONE ''Africa/Johannesburg'')::date');
+ d:=replace(d,'v_num := public.next_invoice_number(v_b.tenant_id);','v_release:=public.grooming_invoice_release_day(v_b.tenant_id,v_b.start_at); v_defer:=v_b.service_type IN (''grooming_inhouse'',''grooming_mobile'') AND v_release>(now() AT TIME ZONE ''Africa/Johannesburg'')::date; IF v_b.service_type IN (''grooming_inhouse'',''grooming_mobile'') THEN v_issue:=GREATEST(v_release,(now() AT TIME ZONE ''Africa/Johannesburg'')::date); v_due:=GREATEST(v_issue,COALESCE((v_b.start_at AT TIME ZONE ''Africa/Johannesburg'')::date,v_issue)); END IF; v_num := public.next_invoice_number(v_b.tenant_id);');
+ d:=replace(d,'status, notes, issue_date, due_date','status, notes, issue_date, due_date, scheduled_release_date');
+ d:=replace(d,'''issued'',\n    ''Booking ''','CASE WHEN v_defer THEN ''draft''::public.billing_status ELSE ''issued''::public.billing_status END,\n    ''Booking ''');
+ d:=replace(d,'v_issue, v_due\n  )','v_issue, v_due, CASE WHEN v_defer THEN v_release ELSE NULL END\n  )');
+ -- PostgreSQL strings above may contain literal backslashes: use explicit newline replacements as well.
+ d:=replace(d,E'''issued'',\n    ''Booking ''',E'CASE WHEN v_defer THEN ''draft''::public.billing_status ELSE ''issued''::public.billing_status END,\n    ''Booking ''');
+ d:=replace(d,E'v_issue, v_due\n  )',E'v_issue, v_due, CASE WHEN v_defer THEN v_release ELSE NULL END\n  )');
+ IF position('scheduled_release_date' in d)=0 OR position('CASE WHEN v_defer THEN' in d)=0 THEN RAISE EXCEPTION 'Invoice helper patch did not match'; END IF; EXECUTE d;
+ SELECT pg_get_functiondef('public.bookings_payment_gate()'::regprocedure) INTO d;
+ d:=replace(d,'IF NEW.status::text <> ''confirmed'' THEN RETURN NEW; END IF;', 'IF NEW.service_type IN (''grooming_inhouse'',''grooming_mobile'') AND NEW.invoice_id IS NULL AND public.grooming_invoice_release_day(NEW.tenant_id,NEW.start_at)>(now() AT TIME ZONE ''Africa/Johannesburg'')::date THEN NEW.payment_hold_expires_at:=NULL; RETURN NEW; END IF; IF NEW.status::text <> ''confirmed'' THEN RETURN NEW; END IF;'); EXECUTE d;
+END $patch$;
+ALTER POLICY invoices_customer_select_own ON public.invoices USING (customer_id=public.current_customer_id(tenant_id) AND NOT (status='draft' AND scheduled_release_date IS NOT NULL));
+CREATE OR REPLACE FUNCTION public.reschedule_grooming_invoice_release() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ DECLARE rd date; BEGIN IF NEW.service_type NOT IN ('grooming_inhouse','grooming_mobile') OR NEW.invoice_id IS NULL OR NEW.start_at IS NOT DISTINCT FROM OLD.start_at THEN RETURN NEW; END IF;
+ SELECT MIN(public.grooming_invoice_release_day(b.tenant_id,b.start_at)) INTO rd FROM public.bookings b WHERE b.invoice_id=NEW.invoice_id AND b.status NOT IN ('cancelled','no_show');
+ UPDATE public.invoices SET scheduled_release_date=rd,issue_date=GREATEST(rd,(now() AT TIME ZONE 'Africa/Johannesburg')::date),due_date=GREATEST(rd,(NEW.start_at AT TIME ZONE 'Africa/Johannesburg')::date) WHERE id=NEW.invoice_id AND status='draft' AND scheduled_release_date IS NOT NULL;
+ RETURN NEW; END $$;
+REVOKE ALL ON FUNCTION public.reschedule_grooming_invoice_release() FROM PUBLIC,anon,authenticated;
+CREATE TRIGGER reschedule_grooming_invoice_release AFTER UPDATE OF start_at ON public.bookings FOR EACH ROW EXECUTE FUNCTION public.reschedule_grooming_invoice_release();
+CREATE OR REPLACE FUNCTION public.release_due_grooming_invoices() RETURNS integer LANGUAGE plpgsql SECURITY DEFINER SET search_path=public AS $$ DECLARE r record; n integer:=0; BEGIN FOR r IN SELECT i.id,i.tenant_id,i.customer_id FROM public.invoices i WHERE i.status='draft' AND i.scheduled_release_date<=(now() AT TIME ZONE 'Africa/Johannesburg')::date ORDER BY i.scheduled_release_date LIMIT 500 FOR UPDATE SKIP LOCKED LOOP
+ IF NOT EXISTS(SELECT 1 FROM public.bookings b WHERE b.invoice_id=r.id AND b.service_type IN ('grooming_inhouse','grooming_mobile') AND b.status NOT IN ('cancelled','no_show')) THEN CONTINUE; END IF;
+ IF NOT COALESCE(public._auto_invoice_enabled(r.tenant_id,'grooming'),true) THEN CONTINUE; END IF;
+ UPDATE public.invoices SET status='issued',scheduled_release_date=NULL WHERE id=r.id;
+ INSERT INTO public.notification_events(tenant_id,customer_id,invoice_id,event_type,channel,status,payload) VALUES(r.tenant_id,r.customer_id,r.id,'invoice_issued','email','pending',jsonb_build_object('grooming_scheduled_release',true));
+ UPDATE public.bookings b SET status='confirmed',payment_hold_expires_at=NULL WHERE b.invoice_id=r.id AND b.status IN ('confirmed','pending_payment'); n:=n+1;
+ END LOOP; RETURN n; END $$;
+REVOKE ALL ON FUNCTION public.release_due_grooming_invoices() FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.release_due_grooming_invoices() TO service_role;
+SELECT cron.schedule('release-grooming-invoices-daily','0 5 * * *','SELECT public.release_due_grooming_invoices();');
