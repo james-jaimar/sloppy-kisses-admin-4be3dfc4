@@ -5,6 +5,7 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useCustomerContactVisibility } from "@/lib/privacy/useCustomerContactVisibility";
 import { isoDay } from "./queries";
 import { DaycareRegisterSheet } from "./DaycareRegisterSheet";
+import { WeeklyDaycareSheet } from "./WeeklyDaycareSheet";
 import { GroomingRunSheet } from "./GroomingRunSheet";
 import { HotelDailySheet } from "./HotelDailySheet";
 import { VanRunSheet } from "./VanRunSheet";
@@ -26,12 +27,13 @@ export default function DailyListsPage() {
   const tenantId = tenant?.id ?? null;
   const [day, setDay] = useState<Date>(() => startOfDay(new Date()));
   const [dept, setDept] = useState<Dept>("daycare");
+  const [weekly, setWeekly] = useState(true);
   const { canSeeCustomerPhone } = useCustomerContactVisibility();
 
   const dayLabel = day.toLocaleDateString("en-ZA", {
     weekday: "long", day: "2-digit", month: "long", year: "numeric",
   });
-  const landscape = TABS.find((t) => t.key === dept)?.landscape ?? false;
+  const landscape = (dept === "daycare" && weekly) || (TABS.find((t) => t.key === dept)?.landscape ?? false);
 
   // @page can't be targeted by a class, so the paper orientation is injected.
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function DailyListsPage() {
       <div className="mx-auto w-full max-w-5xl p-4 sm:p-6 print:max-w-none print:p-0">
         <div className="mb-4 flex flex-wrap items-center gap-2 print:hidden">
           <button
-            onClick={() => setDay((d) => addDays(d, -1))}
+            onClick={() => setDay((d) => addDays(d, dept === "daycare" && weekly ? -7 : -1))}
             aria-label="Previous day"
             className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-white hover:bg-muted"
           >
@@ -79,7 +81,7 @@ export default function DailyListsPage() {
             className="h-10 rounded-xl border border-border bg-white px-3 text-sm"
           />
           <button
-            onClick={() => setDay((d) => addDays(d, 1))}
+            onClick={() => setDay((d) => addDays(d, dept === "daycare" && weekly ? 7 : 1))}
             aria-label="Next day"
             className="grid h-10 w-10 place-items-center rounded-xl border border-border bg-white hover:bg-muted"
           >
@@ -91,10 +93,11 @@ export default function DailyListsPage() {
           >
             Today
           </button>
+          {dept === "daycare" && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={weekly} onChange={e => setWeekly(e.target.checked)} />Monday–Saturday register</label>}
         </div>
 
         {dept === "daycare" && (
-          <DaycareRegisterSheet tenantId={tenantId} day={day} dayLabel={dayLabel} />
+          weekly ? <WeeklyDaycareSheet tenantId={tenantId} day={day} /> : <DaycareRegisterSheet tenantId={tenantId} day={day} dayLabel={dayLabel} />
         )}
         {dept === "grooming" && (
           <GroomingRunSheet tenantId={tenantId} day={day} dayLabel={dayLabel} showPhone={canSeeCustomerPhone} />

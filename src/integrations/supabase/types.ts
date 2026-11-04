@@ -4621,6 +4621,7 @@ export type Database = {
           handled_by: string | null
           hotel_booking_id: string
           id: string
+          package_id: string | null
           pet_id: string | null
           pet_name: string | null
           scheduled_at: string | null
@@ -4639,6 +4640,7 @@ export type Database = {
           handled_by?: string | null
           hotel_booking_id: string
           id?: string
+          package_id?: string | null
           pet_id?: string | null
           pet_name?: string | null
           scheduled_at?: string | null
@@ -4657,6 +4659,7 @@ export type Database = {
           handled_by?: string | null
           hotel_booking_id?: string
           id?: string
+          package_id?: string | null
           pet_id?: string | null
           pet_name?: string | null
           scheduled_at?: string | null
@@ -4693,6 +4696,13 @@ export type Database = {
             columns: ["hotel_booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hotel_grooming_requests_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "grooming_packages"
             referencedColumns: ["id"]
           },
           {

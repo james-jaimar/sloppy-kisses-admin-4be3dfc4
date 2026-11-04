@@ -253,6 +253,7 @@ export function HotelQuoteDrawer({
         name: p.name,
         accommodation_type: accFor(p.id),
         grooming_required: Boolean(grooming[p.id]?.on),
+        grooming_package_id: grooming[p.id]?.on ? grooming[p.id]?.packageId ?? null : null,
         grooming_notes: [grooming[p.id]?.notes, packagesQ.data?.find(pkg => pkg.id === grooming[p.id]?.packageId)?.name].filter(Boolean).join(" — ") || null,
       })),
     };
