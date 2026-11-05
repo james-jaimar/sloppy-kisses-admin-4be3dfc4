@@ -396,10 +396,12 @@ export function GroomingDiary({ day }: { day: Date }) {
                             e.dataTransfer.setData("text/plain", c.id);
                             e.dataTransfer.effectAllowed = "move";
                           }}
-                          className="absolute inset-x-1 cursor-grab overflow-hidden rounded-lg border bg-white p-1.5 text-[11px] shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing"
+                          className="absolute inset-x-1 cursor-grab overflow-hidden rounded-lg border bg-white p-1.5 text-[11px] shadow-sm transition-shadow hover:shadow-lg active:cursor-grabbing"
                           style={{
                             top: (startMin - openMin) * PX_PER_MIN,
-                            height: Math.max(28, dur * PX_PER_MIN - 2),
+                            height: expanded ? undefined : cardH,
+                            minHeight: cardH,
+                            zIndex: expanded ? 30 : 1,
                             borderColor: colour,
                             borderLeftWidth: 4,
                           }}
@@ -418,7 +420,7 @@ export function GroomingDiary({ day }: { day: Date }) {
                               📌 {c.shift_note}
                             </div>
                           )}
-                          {dur >= 45 && (
+                          {showChips && (
                             <div className="mt-1 flex flex-wrap items-center gap-1">
                               <BookingStatusChip status={c.status} />
                               <PaymentChip bookingId={c.id} />
@@ -431,7 +433,7 @@ export function GroomingDiary({ day }: { day: Date }) {
                               )}
                             </div>
                           )}
-                          {dur < 45 && isMissing(c) && (
+                          {!showChips && isMissing(c) && (
                             <div className="mt-0.5">
                               <GroomingPrefsChip state="missing" onClick={() => setPrefsCard(c)} compact />
                             </div>
