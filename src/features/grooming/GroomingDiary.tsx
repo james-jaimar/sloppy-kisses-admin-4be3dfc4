@@ -23,7 +23,11 @@ import { useGroomingPrefsStates } from "./instructions/prefsQueries";
 import { GroomingPrefsChip } from "./instructions/GroomingPrefsChip";
 import { BookingGroomingPrefsDialog } from "./instructions/BookingGroomingPrefsDialog";
 
-const PX_PER_MIN = 1.15;
+// 2 px per minute = 120 px per hour, so a 30-minute groom gets a ~58 px card —
+// tall enough for pet name, time, package and status chips without clipping.
+const PX_PER_MIN = 2;
+// A card this tall can fit the status / payment / preferences chip row.
+const CHIP_ROW_MIN_HEIGHT = 52;
 const SNAP = 15;
 const FALLBACK_COLOUR = "#F97362";
 const HIDDEN_KEY = "sk.grooming.diary.hiddenGroomers";
@@ -97,6 +101,7 @@ export function GroomingDiary({ day }: { day: Date }) {
   const [prefsCard, setPrefsCard] = useState<GroomingBoardCard | null>(null);
   const [newSlot, setNewSlot] = useState<{ startIso: string; resourceId: string } | null>(null);
   const [onlyMissingPrefs, setOnlyMissingPrefs] = useState(false);
+  const [hoverCard, setHoverCard] = useState<string | null>(null);
   const isMissing = (c: GroomingBoardCard) =>
     !prefs.isLoading && prefs.forBooking(c.id, c.pets.map((p) => p.id)) === "missing";
 
@@ -296,7 +301,7 @@ export function GroomingDiary({ day }: { day: Date }) {
         </div>
 
         <div className="overflow-x-auto rounded-2xl border border-border bg-white p-3">
-          <div className="flex min-w-[720px] gap-2">
+          <div className="flex min-w-[720px] gap-2 pb-12">
             {/* Time gutter */}
             <div className="w-14 shrink-0 pt-9">
               <div className="relative" style={{ height: gridHeight }}>
@@ -365,12 +370,25 @@ export function GroomingDiary({ day }: { day: Date }) {
                       if (startMin == null) return null;
                       const dur = cardMinutes(c, packageMinutes);
                       const pkgName = c.details?.package_id ? packageNames.get(c.details.package_id) : null;
+                      const cardH = Math.max(34, dur * PX_PER_MIN - 2);
+                      const showChips = cardH >= CHIP_ROW_MIN_HEIGHT;
+                      const expanded = hoverCard === c.id;
+                      const summary = [
+                        c.pets.map((p) => p.name).join(", ") || c.booking_number,
+                        `${minutesToLabel(startMin)}–${minutesToLabel(startMin + dur)}`,
+                        pkgName,
+                        c.status,
+                        c.shift_note,
+                      ].filter(Boolean).join(" · ");
                       return (
                         <Link
                           key={c.id}
                           to={`/admin/bookings/${c.id}`}
                           onClick={peek(c.id)}
                           state={{ from: "/admin/grooming" }}
+                          title={summary}
+                          onMouseEnter={() => setHoverCard(c.id)}
+                          onMouseLeave={() => setHoverCard((cur) => (cur === c.id ? null : cur))}
                           draggable
                           onDragStart={(e) => {
                             const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
@@ -378,10 +396,12 @@ export function GroomingDiary({ day }: { day: Date }) {
                             e.dataTransfer.setData("text/plain", c.id);
                             e.dataTransfer.effectAllowed = "move";
                           }}
-                          className="absolute inset-x-1 cursor-grab overflow-hidden rounded-lg border bg-white p-1.5 text-[11px] shadow-sm transition-shadow hover:shadow-md active:cursor-grabbing"
+                          className="absolute inset-x-1 cursor-grab overflow-hidden rounded-lg border bg-white p-1.5 text-[11px] shadow-sm transition-shadow hover:shadow-lg active:cursor-grabbing"
                           style={{
                             top: (startMin - openMin) * PX_PER_MIN,
-                            height: Math.max(28, dur * PX_PER_MIN - 2),
+                            height: expanded ? undefined : cardH,
+                            minHeight: cardH,
+                            zIndex: expanded ? 30 : 1,
                             borderColor: colour,
                             borderLeftWidth: 4,
                           }}
@@ -400,7 +420,7 @@ export function GroomingDiary({ day }: { day: Date }) {
                               📌 {c.shift_note}
                             </div>
                           )}
-                          {dur >= 45 && (
+                          {showChips && (
                             <div className="mt-1 flex flex-wrap items-center gap-1">
                               <BookingStatusChip status={c.status} />
                               <PaymentChip bookingId={c.id} />
@@ -413,7 +433,7 @@ export function GroomingDiary({ day }: { day: Date }) {
                               )}
                             </div>
                           )}
-                          {dur < 45 && isMissing(c) && (
+                          {!showChips && isMissing(c) && (
                             <div className="mt-0.5">
                               <GroomingPrefsChip state="missing" onClick={() => setPrefsCard(c)} compact />
                             </div>
