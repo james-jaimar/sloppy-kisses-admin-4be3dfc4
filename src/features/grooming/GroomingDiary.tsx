@@ -301,7 +301,7 @@ export function GroomingDiary({ day }: { day: Date }) {
         </div>
 
         <div className="overflow-x-auto rounded-2xl border border-border bg-white p-3">
-          <div className="flex min-w-[720px] gap-2">
+          <div className="flex min-w-[720px] gap-2 pb-12">
             {/* Time gutter */}
             <div className="w-14 shrink-0 pt-9">
               <div className="relative" style={{ height: gridHeight }}>
