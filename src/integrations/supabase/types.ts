@@ -4611,6 +4611,47 @@ export type Database = {
           },
         ]
       }
+      hotel_desk_prep: {
+        Row: {
+          booking_id: string
+          checkin_card: boolean
+          gift: boolean
+          notes: string | null
+          ribbon_made: boolean
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          booking_id: string
+          checkin_card?: boolean
+          gift?: boolean
+          notes?: string | null
+          ribbon_made?: boolean
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          booking_id?: string
+          checkin_card?: boolean
+          gift?: boolean
+          notes?: string | null
+          ribbon_made?: boolean
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hotel_desk_prep_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hotel_grooming_requests: {
         Row: {
           created_at: string

@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Scissors } from "lucide-react";
+import { Scissors, LayoutGrid, List } from "lucide-react";
+import { HotelListView } from "./HotelListView";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHotelGroomPendingCount } from "@/features/hotelGrooming/queries";
 import { BookingFormModal } from "@/features/bookings/BookingFormModal";
@@ -38,6 +39,8 @@ export default function HotelBoardPage() {
   const bookingsQ = useHotelBookingsInWindow({ tenantId, windowStart, windowEnd });
   const quotesQ = useHotelQuotesInWindow({ tenantId, windowStart, windowEnd });
 
+  const [view, setViewState] = useState<"grid" | "list">(() => (localStorage.getItem("sk.hotel.view") === "list" ? "list" : "grid"));
+  const setView = (v: "grid" | "list") => { setViewState(v); localStorage.setItem("sk.hotel.view", v); };
   const [showQuotes, setShowQuotes] = useState(true);
   const [showUnpaid, setShowUnpaid] = useState(true);
   const [showCancelled, setShowCancelled] = useState(false);
@@ -105,6 +108,14 @@ export default function HotelBoardPage() {
       <div className="flex-1 space-y-6 p-6">
         <HotelReviewNotice tenantId={tenantId} />
         <div className="flex flex-wrap items-center gap-2">
+          <div className="mr-2 inline-flex overflow-hidden rounded-lg border border-border bg-card" role="group" aria-label="Hotel view">
+            {([["grid", "Grid", LayoutGrid], ["list", "List", List]] as const).map(([v, l, Icon]) => (
+              <button key={v} onClick={() => setView(v)} aria-pressed={view === v}
+                className={`inline-flex h-8 items-center gap-1.5 px-3 text-xs font-semibold ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
+                <Icon className="h-3.5 w-3.5" /> {l}
+              </button>
+            ))}
+          </div>
           <span className="text-xs font-medium text-muted-foreground">Show:</span>
           {([
             ["quotes", "Quotes (held dates)", showQuotes, setShowQuotes],
@@ -124,6 +135,7 @@ export default function HotelBoardPage() {
             </button>
           ))}
         </div>
+        {view === "list" ? <HotelListView tenantId={tenantId} showCancelled={showCancelled} /> : (
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
           <OccupancyGrid
             tenantId={tenantId}
@@ -142,6 +154,7 @@ export default function HotelBoardPage() {
             today={today}
           />
         </div>
+        )}
       </div>
 
       {stayOpen && tenantId && <BookingFormModal tenantId={tenantId} prefill={{ service_type: "hotel_dog" }} onClose={() => setStayOpen(false)} onSaved={() => { setStayOpen(false); bookingsQ.refetch(); }} />}

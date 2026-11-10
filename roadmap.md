@@ -59,3 +59,7 @@
 - [x] Visible save state, serialized intake auto-save with failed-save retry, and a persistent staff confirmation action retain existing gates and waiver permissions.
 - [x] Focused intake/vaccination/readiness regressions: 15 passed; preview build OK and signed-out browser had no runtime errors.
 - [ ] Live authenticated save/upload/confirmation and desktop/mobile workspace visual checks: blocked by external unmanaged authentication; preview redirects to login.
+
+## Hotel list view (10 Nov)
+- [x] Grid/List toggle on Dog & Cat Hotel; monthly arrivals register with ribbon/card/gift/notes prep
+- [ ] Signed-in visual check (external sign-in unavailable)
