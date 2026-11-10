@@ -25,6 +25,7 @@ export default function HotelBoardPage() {
   const { tenant } = useCurrentTenant();
   const { hasPermission } = useCurrentUser();
   const [trialOpen, setTrialOpen] = useState(false);
+  const [stayOpen, setStayOpen] = useState(false);
   const tenantId = tenant?.id ?? null;
   const groomQ = useHotelGroomPendingCount(tenantId);
   const reviewCounts = useHotelReviewCounts(tenantId);
@@ -60,6 +61,7 @@ export default function HotelBoardPage() {
         subtitle="Occupancy across kennels, runs and cattery pens."
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            {hasPermission("bookings.create") && <Button onClick={() => setStayOpen(true)}>+ New hotel stay</Button>}
             {hasPermission("bookings.create") && <Button variant="outline" onClick={() => setTrialOpen(true)}>Book trial day</Button>}
             <Button variant="outline" asChild><Link to="/admin/hotel-cattery/pipeline">Pipeline & approvals{reviewCounts.data?.total ? ` (${reviewCounts.data.total})` : ""}</Link></Button>
             <Link
@@ -142,6 +144,7 @@ export default function HotelBoardPage() {
         </div>
       </div>
 
+      {stayOpen && tenantId && <BookingFormModal tenantId={tenantId} prefill={{ service_type: "hotel_dog" }} onClose={() => setStayOpen(false)} onSaved={() => { setStayOpen(false); bookingsQ.refetch(); }} />}
       {trialOpen && tenantId && <BookingFormModal tenantId={tenantId} prefill={{ service_type: "daycare_assessment", notes_customer: "Hotel trial day" }} onClose={() => setTrialOpen(false)} onSaved={() => setTrialOpen(false)} />}
     </>
   );

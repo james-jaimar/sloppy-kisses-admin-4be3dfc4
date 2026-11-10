@@ -211,6 +211,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     Object.fromEntries((booking?.booking_pets ?? []).filter(bp => bp.pet && bp.resource_id).map(bp => [bp.pet?.id ?? "", bp.resource_id ?? ""])),
   );
   const [roomIssues, setRoomIssues] = useState<Record<string, CapacityIssue | null>>({});
+  const [departureGroom, setDepartureGroom] = useState(false);
   const [status, setStatus] = useState<BookingStatus>(booking?.status ?? (["hotel_dog", "hotel_cat"].includes(prefill?.service_type ?? "daycare") ? "draft" : "confirmed"));
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [reviewGrooming, setReviewGrooming] = useState(false);
@@ -1027,6 +1028,20 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
         await saveDetails(res.id);
         if (kind === "hotel") await persistSurcharges(res.id);
         if (kind === "hotel") await persistAccommodation(res.id);
+        if (kind === "hotel" && departureGroom) {
+          const dogs = (petsQ.data ?? []).filter((p) => petIds.includes(p.id) && p.species !== "cat");
+          if (dogs.length) {
+            const dayStart = new Date(endComputed); dayStart.setHours(8, 0, 0, 0);
+            const { error: gErr } = await supabase.from("hotel_grooming_requests" as any).insert(
+              dogs.map((p) => ({
+                tenant_id: tenantId, hotel_booking_id: res.id, pet_id: p.id, customer_id: customerId,
+                pet_name: p.name, window_start: dayStart.toISOString(), window_end: endComputed.toISOString(),
+                customer_notes: "Departure groom added by staff", status: "pending",
+              })),
+            );
+            if (gErr) toast.error(`Stay saved, but the departure groom wasn't added: ${gErr.message}`);
+          }
+        }
         toast.success(`Booking ${res.booking_number} created`);
         onSaved?.(res.id);
       }
@@ -1270,6 +1285,14 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               ))}
             </select>
           </div>
+          {kind === "hotel" && !isEdit ? (
+          <div>
+            <div className="mb-1 text-sm font-medium">Status</div>
+            <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
+              Quote / draft — moves on automatically as the customer accepts and staff confirm
+            </div>
+          </div>
+          ) : (
           <div>
             <div className="mb-1 text-sm font-medium">Status</div>
             <select value={status} onChange={(e) => setStatus(e.target.value as BookingStatus)} className={inputCls}>
@@ -1278,6 +1301,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               ))}
             </select>
           </div>
+          )}
           {kind !== "grooming" && (
           <div>
             <div className="mb-1 text-sm font-medium">{isDaycare ? "Day" : "Start"}</div>
@@ -1459,6 +1483,15 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           </div>}
         </div>
 
+        {kind === "hotel" && !isEdit && (
+          <label className="flex items-start gap-3 rounded-lg border-2 border-primary/40 bg-primary/5 p-3 text-sm">
+            <input type="checkbox" className="mt-1" checked={departureGroom} onChange={(e) => setDepartureGroom(e.target.checked)} />
+            <span>
+              <span className="font-semibold">Departure groom (discounted)</span>
+              <span className="block text-muted-foreground">Ask: "Would you like your dog bathed or groomed on checkout morning?" Ticking adds each dog to Grooms to schedule with the stay discount.</span>
+            </span>
+          </label>
+        )}
         {kind === "hotel" && <HotelPetRooms tenantId={tenantId} pets={(petsQ.data ?? []).filter(p => petIds.includes(p.id))} assignments={petRooms} onChange={(id, room) => setPetRooms(prev => ({ ...prev, [id]: room }))} startAt={startIso} endAt={endIso} bookingId={booking?.id ?? null} onIssueChange={(room, issue) => setRoomIssues(prev => JSON.stringify(prev[room]) === JSON.stringify(issue) ? prev : { ...prev, [room]: issue })} />}
 
         {kind === "grooming" && (

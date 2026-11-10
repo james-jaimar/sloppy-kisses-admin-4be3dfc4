@@ -360,7 +360,7 @@ function ResourceRow({
 
       </div>
 
-      {assign && bookings.length > 0 && (
+      {assign && bookings.length > 0 && resource.id === "__unassigned" && (
         <AssignPanel
           tenantId={assign.tenantId}
           resources={assign.resources}
