@@ -48,4 +48,22 @@ describe("Hotel intake saves", () => {
     expect(state.saved.acknowledgement).toEqual({ accepted: true, signed_name: "Owner signature", signed_at: "2026-10-24T10:00:00Z", signed_place: "Bryanston" });
     expect(state.saved.emergency_notes).toBe("Call the emergency contact first");
   });
+  it("automatically persists a partial edit without requiring a save click", async () => {
+    render(<HotelIntakeEditor {...props} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Emergency contact/ }));
+    fireEvent.change(screen.getByDisplayValue("Emergency"), { target: { value: "Auto-saved contact" } });
+    await waitFor(() => expect(state.mutate).toHaveBeenCalledTimes(1), { timeout: 2500 });
+    expect(state.saved.emergency_contact.full_name).toBe("Auto-saved contact");
+    expect(state.saved.acknowledgement.accepted).toBe(false);
+  });
+  it("retains failed edits and retries the same payload", async () => {
+    state.mutate.mockRejectedValueOnce(new Error("Save unavailable"));
+    render(<HotelIntakeEditor {...props} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Emergency contact/ }));
+    fireEvent.change(screen.getByDisplayValue("Emergency"), { target: { value: "Retry contact" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save intake" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Retry save" }));
+    await waitFor(() => expect(state.mutate).toHaveBeenCalledTimes(2));
+    expect(state.saved.emergency_contact.full_name).toBe("Retry contact");
+  });
 });

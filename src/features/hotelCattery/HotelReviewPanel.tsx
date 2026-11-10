@@ -1,8 +1,9 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { StageBand } from "@/features/hotelForm/StageBand";
 import { AUTO_CHECKLIST_CODES, checklistFromReadiness } from "@/features/hotelForm/intakeReadiness";
-import type { IntakeStatus } from "@/features/hotelForm/HotelIntakeEditor";
+import type { IntakeStatus, IntakeFocus } from "@/features/hotelForm/HotelIntakeEditor";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -27,11 +28,24 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
   stay?: ReactNode; vaxOverridden?: boolean; checkedIn?: boolean;
 }) {
   const [status, setStatus] = useState<IntakeStatus | null>(null);
+  const [focus, setFocus] = useState<IntakeFocus>();
+  const container = useRef<HTMLDivElement>(null);
+  const [barBounds, setBarBounds] = useState({ left: 0, width: 0 });
+  const review = useHotelReview(bookingId, portal);
+  const settings = useHotelWorkflowSettings(portal ? null : tenantId);
+  useEffect(() => {
+    const element = container.current;
+    if (!element) return;
+    const measure = () => { const rect = element.getBoundingClientRect(); setBarBounds({ left: rect.left, width: rect.width }); };
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    window.addEventListener("resize", measure);
+    measure();
+    return () => { observer.disconnect(); window.removeEventListener("resize", measure); };
+  }, [review.isLoading, settings.isLoading]);
   const { hasPermission } = useCurrentUser();
   const canEdit = !portal && hasPermission("bookings.edit");
   const canOverride = canEdit && hasPermission("settings.hotel.manage");
-  const review = useHotelReview(bookingId, portal);
-  const settings = useHotelWorkflowSettings(portal ? null : tenantId);
   const action = useHotelReviewAction(bookingId);
   const confirm = useConfirm();
   const [checks, setChecks] = useState<Record<string, boolean>>({});
@@ -75,7 +89,7 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
       toast.success(kind === "receipt" ? "Payment allocated and invoice issued" : kind === "approve" ? "Approved — pro forma ready" : "Hotel review saved");
     } catch (e) { toast.error(e instanceof Error ? e.message : "Could not update review"); }
   }
-  async function document(send = false) {
+  async function handleDocument(send = false) {
     if (!estimate) return;
     setBusy(true);
     try {
@@ -93,10 +107,11 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
   const doneCount = required.filter(i => i.done).length;
   const manualCodes = checklist.filter(c => !AUTO_CHECKLIST_CODES.includes(c.code));
   const ready = Boolean(status) && required.every(i => i.done) && manualCodes.every(c => checks[c.code]) && !status?.dirty;
+  const remaining = required.filter(i => !i.done).length + manualCodes.filter(c => !checks[c.code]).length;
   const confirmed = Boolean(r?.confirmed_at) || paid;
   const stageIndex = checkedIn ? 3 : confirmed ? 2 : 1;
   const stages = ["Request received", "Gathering info · staff review", "Confirmed · invoiced", "Checked in"];
-  return <div className="space-y-4">
+  return <div ref={container} className={cn("space-y-4", canEdit && !confirmed && "pb-36 sm:pb-24")}>
     <section className="rounded-2xl border-2 border-sk-border bg-sk-surface p-4 sm:p-5" aria-label="Stay progress">
       <ol className="grid gap-2 sm:grid-cols-4">{stages.map((s, i) => <li key={s} className={cn("rounded-lg px-3 py-2 text-sm font-semibold", i < stageIndex ? "bg-sk-green-soft text-sk-green" : i === stageIndex ? "bg-primary text-primary-foreground" : "bg-sk-surface-muted text-muted-foreground")}>{i + 1}. {s}</li>)}</ol>
       {status && <div className="mt-4">
@@ -104,13 +119,13 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
           <h2 className="text-base font-semibold">{portal ? "What we still need from you" : "What's outstanding"}</h2>
           <span className={cn("rounded-full px-3 py-1 text-sm font-semibold", doneCount === required.length ? "bg-sk-green-soft text-sk-green" : "bg-sk-orange-soft text-sk-orange")}>{doneCount} of {required.length} done</span>
         </div>
-        <ul className="grid gap-1.5 sm:grid-cols-2">{items.map(i => <li key={i.code}><a href={`#${i.section}`} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted">
+        <ul className="grid gap-2 sm:grid-cols-2">{items.map(i => <li key={i.code} className={cn("flex min-w-0 items-center gap-2 border-l-4 px-3 py-2 text-sm", i.done ? "border-sk-green bg-sk-green-soft/40" : i.optional ? "border-border bg-muted" : "border-sk-orange bg-sk-orange-soft")}>
           {i.done ? <CheckCircle2 className="h-4 w-4 shrink-0 text-sk-green" /> : <CircleAlert className={cn("h-4 w-4 shrink-0", i.optional ? "text-muted-foreground" : "text-sk-orange")} />}
-          <span className={i.done ? "text-muted-foreground" : "font-medium"}>{i.label}{i.optional && !i.done ? " (optional)" : ""}</span></a></li>)}</ul>
+          <span className={cn("min-w-0 flex-1 break-words", i.done ? "text-muted-foreground" : "font-medium")}>{i.label}{i.optional && !i.done ? " (optional)" : ""}</span>{!i.done && <Button type="button" variant="outline" size="sm" className="shrink-0 bg-background" onClick={() => setFocus(previous => ({ code: i.code, sequence: (previous?.sequence ?? 0) + 1 }))}>{i.code === "care" ? "Add feeding" : i.code === "tick_flea" ? "Record treatment" : i.code === "vaccinations" ? "Review vaccines" : i.code === "terms" ? "Review terms" : "Review"}</Button>}</li>)}</ul>
       </div>}
     </section>
     {stay}
-    <HotelIntakeEditor key={bookingId} bookingId={bookingId} tenantId={tenantId} customerId={customerId} pets={pets} portal={portal} vaxOverridden={vaxOverridden} onStatus={setStatus} />
+    <HotelIntakeEditor key={bookingId} bookingId={bookingId} tenantId={tenantId} customerId={customerId} pets={pets} portal={portal} vaxOverridden={vaxOverridden} onStatus={setStatus} focus={focus} />
     <StageBand id="stay-approval" step={5} title={portal ? "Confirmation & invoice" : "Confirm booking & invoice"} tone="green" done={confirmed ? true : undefined} status={confirmed ? "Confirmed · invoice issued" : undefined}>
     {portal && message && <p className="whitespace-pre-wrap rounded-lg bg-background p-4 text-sm">{message}</p>}
     {portal && !confirmed && <p className="text-sm text-muted-foreground">Your stay is not confirmed yet. Our team must review your intake and documents before confirming it and emailing your invoice.</p>}
@@ -120,13 +135,17 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
       <label className="block text-sm">Agreed collection time<input type="time" value={collection} onChange={e => setCollection(e.target.value)} className="ml-3 rounded-md border border-input bg-background p-2" /></label>
       {canOverride && <><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={override} onChange={e => setOverride(e.target.checked)} />Override payment requirement</label>{override && <div className="grid gap-3 sm:grid-cols-[100px_1fr]"><input aria-label="Payment percentage" type="number" min={0} max={100} value={percent} onChange={e => setPercent(Number(e.target.value))} className="rounded-md border border-input bg-background p-2" /><input aria-label="Override reason" placeholder="Override reason" value={reason} onChange={e => setReason(e.target.value)} className="rounded-md border border-input bg-background p-2" /></div>}</>}
       {!r?.approved_at && !ready && <p className="text-sm text-sk-orange">{status?.dirty ? "Save the intake before confirming." : "Finish the outstanding items above to confirm this stay."}</p>}
-      <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={action.isPending} onClick={() => run("save")}><Save className="mr-2 h-4 w-4" />Save notes</Button><Button variant="outline" disabled={action.isPending || !message.trim()} onClick={() => run("needs_info")}>Request information</Button><Button variant="outline" disabled={action.isPending} onClick={() => run("estimate")}>Create estimate</Button><Button size="lg" className="h-auto min-h-12 whitespace-normal bg-primary px-6 py-3 text-base font-bold text-primary-foreground hover:bg-sk-coral-dark disabled:opacity-100" disabled={action.isPending || !checklist.length || !ready} onClick={() => run("confirm")}><CheckCircle2 className="mr-2 h-5 w-5 shrink-0" />Confirm booking & issue invoice</Button></div>
+      <div className="flex flex-wrap items-center gap-3"><Button variant="outline" disabled={action.isPending} onClick={() => run("save")}><Save className="mr-2 h-4 w-4" />Save notes</Button><Button variant="outline" disabled={action.isPending || !message.trim()} onClick={() => run("needs_info")}>Request information</Button><Button variant="outline" disabled={action.isPending} onClick={() => run("estimate")}>Create estimate</Button></div>
     </div>}
-    {estimate && !confirmed && <div className="space-y-3 border-y border-border py-4"><div className="flex flex-wrap justify-between gap-2"><span className="font-semibold">{r?.approved_at ? "Pro forma" : "Estimate"} {estimate.estimate_number}</span><span className="font-semibold">{money(Number(estimate.total))}</span></div><div className="text-sm">{requiredPct}% payable now · {money(Number(estimate.total) * requiredPct / 100)}</div><p className="text-xs text-muted-foreground">Not a tax invoice. Use the document’s bank details and reference for EFT.</p><div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy} onClick={() => document()}><FileDown className="mr-2 h-4 w-4" />Download</Button>{canEdit && hasPermission("invoices.send") && <Button variant="outline" disabled={busy} onClick={() => document(true)}><Mail className="mr-2 h-4 w-4" />Email document</Button>}</div></div>}
+    {estimate && !confirmed && <div className="space-y-3 border-y border-border py-4"><div className="flex flex-wrap justify-between gap-2"><span className="font-semibold">{r?.approved_at ? "Pro forma" : "Estimate"} {estimate.estimate_number}</span><span className="font-semibold">{money(Number(estimate.total))}</span></div><div className="text-sm">{requiredPct}% payable now · {money(Number(estimate.total) * requiredPct / 100)}</div><p className="text-xs text-muted-foreground">Not a tax invoice. Use the document’s bank details and reference for EFT.</p><div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy} onClick={() => handleDocument()}><FileDown className="mr-2 h-4 w-4" />Download</Button>{canEdit && hasPermission("invoices.send") && <Button variant="outline" disabled={busy} onClick={() => handleDocument(true)}><Mail className="mr-2 h-4 w-4" />Email document</Button>}</div></div>}
     {canEdit && r?.approved_at && !confirmed && hasPermission("payments.create") && <div className="space-y-3"><h3 className="font-semibold">Verify received payment</h3><HotelReceiptForm bookingId={bookingId} suggested={Number(estimate?.total ?? 0) * requiredPct / 100} /><select aria-label="Received payment" value={payment} onChange={e => setPayment(e.target.value)} className="w-full rounded-md border border-input bg-background p-3"><option value="">Or select an existing unallocated receipt</option>{receipts.data?.map(p => <option key={p.id} value={p.id}>{p.paid_at?.slice(0, 10)} · {money(Number(p.amount))} · {p.payment_reference ?? p.payment_method}</option>)}</select><Button disabled={!payment || action.isPending} onClick={() => run("receipt")}>Verify existing receipt & issue invoice</Button></div>}
     {confirmed && !portal && <p className="text-sm text-muted-foreground">The tax invoice is issued. Record payments against it under Invoice below — {requiredPct}% is payable now{requiredPct < 100 ? ", the balance before arrival" : ""}.</p>}
     {r?.approved_at && <HotelPaymentProof tenantId={tenantId} customerId={customerId} bookingId={bookingId} portal={portal} />}
     </StageBand>
+    {canEdit && !confirmed && barBounds.width > 0 && createPortal(<div style={barBounds} className="fixed bottom-0 z-20 flex flex-wrap items-center justify-between gap-3 border-t-2 border-primary bg-background p-3 shadow-lg" aria-label="Booking confirmation">
+      <div role="status" className="min-w-0 text-sm font-semibold">{!status ? "Checking requirements…" : status.dirty ? "Intake changes must finish saving" : remaining ? `${remaining} required ${remaining === 1 ? "item" : "items"} outstanding` : "All required items complete"}<p className="text-xs font-normal text-muted-foreground">{remaining ? "Awaiting information · stay not confirmed" : "Staff confirmation issues the tax invoice"}</p></div>
+      <Button size="lg" className="h-auto min-h-12 max-w-full whitespace-normal bg-primary px-6 py-3 text-base font-bold text-primary-foreground hover:bg-sk-coral-dark disabled:opacity-100" disabled={action.isPending || !checklist.length || !ready} onClick={() => run("confirm")}><CheckCircle2 className="mr-2 h-5 w-5 shrink-0" />Confirm booking & issue invoice</Button>
+    </div>, document.body)}
   </div>;
 }
 

@@ -110,7 +110,7 @@ function Tile({
 
 /** Photo + vaccination card for one pet — real uploads, not a tick box. */
 export function PetAttachments({
-  tenantId, petId, petName, uploadedVia = "portal", photoAction, vaccinationAction,
+  tenantId, petId, petName, uploadedVia = "portal", photoAction, vaccinationAction, compactPhoto = false,
 }: {
   tenantId: string;
   petId: string;
@@ -118,13 +118,15 @@ export function PetAttachments({
   uploadedVia?: "portal" | "admin";
   photoAction?: ReactNode;
   vaccinationAction?: ReactNode;
+  compactPhoto?: boolean;
 }) {
   const qc = useQueryClient();
   const refresh = () => { for (const key of ["pet_attachment_status", "pet_vax_cards", "pet_vax_docs", "pet_photo_status", "booking_photo_gate", "booking_vax_gate", "pet_vax_status", "pets_vax_status", "vax_outstanding"]) void qc.invalidateQueries({ queryKey: [key] }); };
   return (
-    <div className="grid gap-3 md:col-span-2 md:grid-cols-2">
-      <Tile kind="pet_photo" petId={petId} petName={petName} tenantId={tenantId} onDone={refresh} uploadedVia={uploadedVia} action={photoAction} />
+    <div className={compactPhoto ? "space-y-3" : "grid gap-3 md:col-span-2 md:grid-cols-2"}>
+      {!compactPhoto && <Tile kind="pet_photo" petId={petId} petName={petName} tenantId={tenantId} onDone={refresh} uploadedVia={uploadedVia} action={photoAction} />}
       <Tile kind="vaccination" petId={petId} petName={petName} tenantId={tenantId} onDone={refresh} uploadedVia={uploadedVia} action={vaccinationAction} />
+      {compactPhoto && <details className="border-t border-border py-2"><summary className="cursor-pointer text-sm text-muted-foreground">Pet photo · optional</summary><div className="mt-2"><Tile kind="pet_photo" petId={petId} petName={petName} tenantId={tenantId} onDone={refresh} uploadedVia={uploadedVia} action={photoAction} /></div></details>}
     </div>
   );
 }

@@ -53,3 +53,9 @@
 - [ ] Slice 3 — optional named groomer preference alongside anonymous stations and verified PIN attribution.
 - [ ] Slice 4 — faster unscheduled daycare check-in using the existing walk-in flow, preserving health/capacity/billing safeguards.
 - Delivery gate: approve the plan, then complete and verify each slice before starting the next; name any unavailable live checks explicitly.
+
+## Guided hotel intake (10 Nov)
+- [x] Actionable outstanding items open the relevant pet/requirement; contrasting single-pet tabs and collapsed optional photos preserve shared controls.
+- [x] Visible save state, serialized intake auto-save with failed-save retry, and a persistent staff confirmation action retain existing gates and waiver permissions.
+- [x] Focused intake/vaccination/readiness regressions: 15 passed; preview build OK and signed-out browser had no runtime errors.
+- [ ] Live authenticated save/upload/confirmation and desktop/mobile workspace visual checks: blocked by external unmanaged authentication; preview redirects to login.

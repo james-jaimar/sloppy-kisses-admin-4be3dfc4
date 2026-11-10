@@ -1,5 +1,6 @@
 import { ReactNode, useEffect, useState } from "react";
-import { ChevronDown, CheckCircle2 } from "lucide-react";
+import { ChevronDown, CheckCircle2, Cat, Dog } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PetAttachments } from "@/features/uploads/PetAttachments";
 import { AddressSelector } from "@/features/customers/AddressSelector";
@@ -64,7 +65,7 @@ export function Check({ label, checked, onChange }: { label: string; checked: bo
 
 /** Section wrapper. `collapsible` renders a tap-to-open header with an "on file" state. */
 export function Section({
-  title, children, collapsible = false, complete = false, summary, defaultOpen,
+  title, children, collapsible = false, complete = false, summary, defaultOpen, revealKey,
 }: {
   title: string;
   children: ReactNode;
@@ -72,8 +73,10 @@ export function Section({
   complete?: boolean;
   summary?: string;
   defaultOpen?: boolean;
+  revealKey?: number;
 }) {
   const [open, setOpen] = useState(defaultOpen ?? !collapsible);
+  useEffect(() => { if (revealKey) setOpen(true); }, [revealKey]);
   if (!collapsible) {
     return (
       <section className="sk-card space-y-4 p-4 md:p-6">
@@ -234,13 +237,14 @@ type FormProps = {
   form: AccommodationFormPayload;
   setForm: (f: AccommodationFormPayload) => void;
   collapsible?: boolean;
+  revealKey?: number;
 };
 
-export function OwnerSection({ form, setForm, collapsible }: FormProps) {
+export function OwnerSection({ form, setForm, collapsible, revealKey }: FormProps) {
   const set = (patch: Partial<AccommodationFormPayload["owner"]>) =>
     setForm({ ...form, owner: { ...form.owner, ...patch } });
   return (
-    <Section title="Owner information" collapsible={collapsible} complete={isOwnerComplete(form)} summary={form.owner.full_name || undefined}>
+    <Section title="Owner information" revealKey={revealKey} collapsible={collapsible} complete={isOwnerComplete(form)} summary={form.owner.full_name || undefined}>
       <div className="grid gap-4 md:grid-cols-2">
         <Text label="Full name" value={form.owner.full_name} onChange={(v) => set({ full_name: v })} />
         <Text label="ID number" value={form.owner.id_number} onChange={(v) => set({ id_number: v })} />
@@ -252,11 +256,11 @@ export function OwnerSection({ form, setForm, collapsible }: FormProps) {
   );
 }
 
-export function EmergencySection({ form, setForm, collapsible }: FormProps) {
+export function EmergencySection({ form, setForm, collapsible, revealKey }: FormProps) {
   const set = (patch: Partial<AccommodationFormPayload["emergency_contact"]>) =>
     setForm({ ...form, emergency_contact: { ...form.emergency_contact, ...patch } });
   return (
-    <Section title="Emergency contact" collapsible={collapsible} complete={isEmergencyComplete(form)} summary={form.emergency_contact.full_name || "Not on file"}>
+    <Section title="Emergency contact" revealKey={revealKey} collapsible={collapsible} complete={isEmergencyComplete(form)} summary={form.emergency_contact.full_name || "Not on file"}>
       <div className="grid gap-4 md:grid-cols-2">
         <Text label="Full name" value={form.emergency_contact.full_name} onChange={(v) => set({ full_name: v })} />
         <Select label="Relationship" options={["Family", "Friend", "Neighbour", "Other"]} value={form.emergency_contact.relationship} onChange={(v) => set({ relationship: v })} />
@@ -267,10 +271,10 @@ export function EmergencySection({ form, setForm, collapsible }: FormProps) {
   );
 }
 
-export function VetSection({ form, setForm, collapsible }: FormProps) {
+export function VetSection({ form, setForm, collapsible, revealKey }: FormProps) {
   const set = (patch: Partial<AccommodationFormPayload["vet"]>) => setForm({ ...form, vet: { ...form.vet, ...patch } });
   return (
-    <Section title="Veterinary details / medical aid" collapsible={collapsible} complete={isVetComplete(form)} summary={form.vet.vet_name || "Not on file"}>
+    <Section title="Veterinary details / medical aid" revealKey={revealKey} collapsible={collapsible} complete={isVetComplete(form)} summary={form.vet.vet_name || "Not on file"}>
       <div className="grid gap-4 md:grid-cols-2">
         <Text label="Vet name" value={form.vet.vet_name} onChange={(v) => set({ vet_name: v })} />
         <Text label="Vet contact number" value={form.vet.contact_number} onChange={(v) => set({ contact_number: v })} />
@@ -404,8 +408,8 @@ export function StayWindowSection({
 
 
 export function PetSections({
-  form, setForm, collapsible, tenantId, uploadedVia = "portal", renderChecks,
-}: FormProps & { tenantId?: string | null; uploadedVia?: "portal" | "admin"; renderChecks?: (pet: FormPet) => ReactNode }) {
+  form, setForm, collapsible, tenantId, uploadedVia = "portal", renderChecks, activePetId, onSelectPet, petIndicators, species,
+}: FormProps & { tenantId?: string | null; uploadedVia?: "portal" | "admin"; renderChecks?: (pet: FormPet) => ReactNode; activePetId?: string; onSelectPet?: (id: string) => void; petIndicators?: Record<string, number>; species?: Record<string, string> }) {
   function patchPet(i: number, patch: Partial<FormPet>) {
     setForm({ ...form, pets: form.pets.map((p, idx) => (idx === i ? { ...p, ...patch } : p)) });
   }
@@ -414,11 +418,19 @@ export function PetSections({
   }
   return (
     <>
-      {form.pets.map((p, i) => (
+      {onSelectPet && <div role="tablist" aria-label="Stay pets" className="flex flex-wrap gap-2 border-b border-border pb-3">{form.pets.map((p, i) => {
+        const id = p.pet_id ?? String(i);
+        const isCat = species?.[id] === "cat";
+        const Icon = isCat ? Cat : Dog;
+        const count = petIndicators?.[id] ?? 0;
+        return <Button key={id} type="button" role="tab" aria-selected={id === activePetId} aria-controls={`intake-pet-${id}`} variant="outline" onClick={() => onSelectPet(id)} className={cn("h-auto min-h-12 max-w-full gap-2 whitespace-normal border-2 px-3 py-2 text-left", isCat ? "border-sk-turquoise bg-sk-turquoise-soft text-sk-turquoise-dark" : "border-sk-orange bg-sk-orange-soft text-foreground", id === activePetId ? "ring-2 ring-ring ring-offset-2" : "opacity-75")}><Icon className="h-5 w-5 shrink-0" /><span className="min-w-0 break-words font-semibold">{p.name || "Pet"}<span className="block text-xs font-normal">{count ? `${count} outstanding` : "All clear"}</span></span>{!count && <CheckCircle2 className="h-4 w-4 shrink-0 text-sk-green" />}</Button>;
+      })}</div>}
+      {form.pets.map((p, i) => (!onSelectPet || (p.pet_id ?? String(i)) === activePetId) && (
+        <div key={p.pet_id ?? i} id={`intake-pet-${p.pet_id ?? i}`} role={onSelectPet ? "tabpanel" : undefined} aria-label={p.name || "Pet"} className={cn("min-w-0 border-l-4 pl-3", onSelectPet && species?.[p.pet_id ?? ""] === "cat" ? "border-sk-turquoise" : "border-sk-orange")}>
         <Section
           key={p.pet_id ?? i}
           title={`Pet details${p.name ? ` — ${p.name}` : ` ${i + 1}`}`}
-          collapsible={collapsible}
+          collapsible={onSelectPet ? false : collapsible}
           complete={Boolean(p.breed && p.size)}
           summary={[p.breed, p.size].filter(Boolean).join(" · ") || undefined}
         >
@@ -456,7 +468,7 @@ export function PetSections({
             {!renderChecks && <Text label="Kennel cough date" type="date" value={p.vax_kennel_cough} onChange={(v) => patchPet(i, { vax_kennel_cough: v })} />}
             {!renderChecks && <Text label="Tick & flea product" value={p.tick_flea_product} onChange={(v) => patchPet(i, { tick_flea_product: v })} />}
             {!renderChecks && <Text label="Tick & flea date" type="date" value={p.tick_flea_date} onChange={(v) => patchPet(i, { tick_flea_date: v })} />}
-            <Area label="Feeding instructions" value={p.feeding_instructions ?? ""} onChange={(v) => patchPet(i, { feeding_instructions: v })} />
+            <div id={`intake-feeding-${p.pet_id ?? i}`} className="scroll-mt-24 md:col-span-2"><Area label="Feeding instructions" value={p.feeding_instructions ?? ""} onChange={(v) => patchPet(i, { feeding_instructions: v })} /></div>
             <Area label="Medication instructions" value={p.medication_instructions ?? ""} onChange={(v) => patchPet(i, { medication_instructions: v })} />
             <div className="md:col-span-2">
               <Check
@@ -472,6 +484,7 @@ export function PetSections({
           </div>
           {renderChecks?.(p)}
         </Section>
+        </div>
       ))}
     </>
   );
