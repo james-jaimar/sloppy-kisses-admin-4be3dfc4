@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { BookingStatusChip } from "./statusMeta";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -144,10 +145,6 @@ const DEFAULT_DURATION: Record<ServiceType, number> = {
 /** Daycare runs to fixed times, so the form never asks for a start time. */
 const DAYCARE_START_TIME = "08:00";
 
-const STATUSES: BookingStatus[] = [
-  "draft", "requested", "needs_info", "approved", "confirmed",
-  "checked_in", "in_progress", "ready", "checked_out", "completed", "cancelled", "no_show",
-];
 
 function toLocalInput(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -1285,23 +1282,13 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               ))}
             </select>
           </div>
-          {kind === "hotel" && !isEdit ? (
           <div>
             <div className="mb-1 text-sm font-medium">Status</div>
-            <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
-              Quote / draft — moves on automatically as the customer accepts and staff confirm
+            <div className="flex min-h-[38px] items-center gap-2 rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
+              <BookingStatusChip status={status} />
+              <span className="truncate">{isEdit ? "Updates automatically as the booking progresses" : kind === "hotel" ? "Moves on as the customer accepts and staff confirm" : "Added straight to the schedule"}</span>
             </div>
           </div>
-          ) : (
-          <div>
-            <div className="mb-1 text-sm font-medium">Status</div>
-            <select value={status} onChange={(e) => setStatus(e.target.value as BookingStatus)} className={inputCls}>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
-              ))}
-            </select>
-          </div>
-          )}
           {kind !== "grooming" && (
           <div>
             <div className="mb-1 text-sm font-medium">{isDaycare ? "Day" : "Start"}</div>
