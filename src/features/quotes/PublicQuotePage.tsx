@@ -52,7 +52,7 @@ export default function PublicQuotePage() {
     setError(null);
     try {
       const res = await fetch(
-        `${(import.meta as any).env.VITE_SUPABASE_URL}/functions/v1/public-quote-accept`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/public-quote-accept`,
         { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) },
       );
       const body = await res.json();

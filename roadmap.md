@@ -1,9 +1,10 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
 ## Hotel quote-first enquiry flow (11 Nov)
-- [ ] Generate a quote after a quick enquiry saves; expose email, public WhatsApp link and phone acceptance before intake.
-- [ ] Keep intake and confirmation after acceptance; preserve no-login public acceptance and no invoice until staff confirmation.
-- [ ] Run focused regressions and verify available public and staff flows; identify unavailable live checks.
+- [x] Generate a quote after a quick enquiry saves; expose email, public WhatsApp link and phone acceptance before intake, with a post-save Send quote shortcut.
+- [x] Keep intake and confirmation after acceptance; retain accepted quote and needs_info when notes save, no invoice until staff confirmation. Public acceptance button environment access corrected after browser reproduction.
+- [x] Focused frontend regressions and rollback hotel lifecycle checks passed; public acceptance screen exercised with test responses on desktop/mobile without login or runtime errors.
+- [ ] Live staff save/send and real email/WhatsApp acceptance: external unmanaged authentication has no available staff session; public browser check used test responses, not a real customer's quote.
 
 ## POS full bill and Yoco preparation (11 Nov)
 - [x] Full itemised bill before payment and after sale, including existing invoice lines, VAT, discounts and prior payments.
