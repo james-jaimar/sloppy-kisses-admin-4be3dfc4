@@ -1,8 +1,10 @@
 import { format } from "date-fns";
-import { X, Send, XCircle } from "lucide-react";
+import { CheckCircle2, Send, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useCancelNotification, useResendNotification, type NotificationEvent } from "./queries";
+import { useCancelNotification, useClearNotificationWarning, useResendNotification, type NotificationEvent } from "./queries";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { Button } from "@/components/ui/button";
+import { ModalShell } from "@/components/modals/ModalShell";
 
 interface Props {
   tenantId: string;
@@ -15,18 +17,11 @@ export function CommsEventDrawer({ tenantId, event, onClose }: Props) {
   const canSend = hasPermission("comms.send");
   const resend = useResendNotification(tenantId);
   const cancel = useCancelNotification(tenantId);
+  const clear = useClearNotificationWarning(tenantId);
+  const busy = resend.isPending || cancel.isPending || clear.isPending;
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-black/40" onClick={onClose}>
-      <div className="h-full w-full max-w-lg overflow-y-auto bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between border-b border-border px-5 py-3">
-          <div>
-            <div className="text-xs uppercase tracking-wide text-muted-foreground">{event.channel} · {event.event_type}</div>
-            <div className="text-base font-semibold">{event.subject ?? "(no subject)"}</div>
-          </div>
-          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
-        </div>
-
+    <ModalShell title={event.subject ?? "(no subject)"} subtitle={`${event.channel} · ${event.event_type}`} onClose={busy ? undefined : onClose} closeOnBackdrop>
         <div className="space-y-4 p-5 text-sm">
           <Row label="Status">{event.status}{event.error ? ` — ${event.error}` : ""}</Row>
           <Row label="Recipient">{event.recipient_email ?? event.recipient_phone ?? event.customer?.email ?? "—"}</Row>
@@ -43,25 +38,30 @@ export function CommsEventDrawer({ tenantId, event, onClose }: Props) {
 
           {canSend && (
             <div className="flex flex-wrap gap-2 border-t border-border pt-4">
-              <button
-                disabled={resend.isPending || event.status === "pending"}
+              <Button
+                disabled={busy || event.status === "pending"}
                 onClick={async () => { try { await resend.mutateAsync(event.id); toast.success("Queued for resend"); onClose(); } catch (e: any) { toast.error(e?.message); } }}
-                className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-3 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
+                >
                 <Send className="h-4 w-4" /> Resend
-              </button>
+              </Button>
+              {event.status === "failed" && (
+                <Button variant="outline" disabled={busy}
+                  onClick={async () => { try { await clear.mutateAsync(event.id); toast.success("Warning cleared; message retained in All"); onClose(); } catch (e: any) { toast.error(e?.message); } }}>
+                  <CheckCircle2 className="h-4 w-4" /> {clear.isPending ? "Clearing…" : "Clear warning"}
+                </Button>
+              )}
               {event.status === "pending" && (
-                <button
-                  disabled={cancel.isPending}
+                <Button variant="outline"
+                  disabled={busy}
                   onClick={async () => { try { await cancel.mutateAsync(event.id); toast.success("Cancelled"); onClose(); } catch (e: any) { toast.error(e?.message); } }}
-                  className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted">
+                  >
                   <XCircle className="h-4 w-4" /> Cancel send
-                </button>
+                </Button>
               )}
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 

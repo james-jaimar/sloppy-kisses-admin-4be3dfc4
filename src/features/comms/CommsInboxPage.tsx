@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useNotificationEvents, useAuthEmailLog, type NotificationEvent } from "./queries";
 import { CommsEventDrawer } from "./CommsEventDrawer";
+import { Button } from "@/components/ui/button";
 
 const TABS = [
   { key: "pending", label: "Outbox", icon: Inbox },
@@ -30,20 +31,21 @@ export default function CommsInboxPage() {
   const [selected, setSelected] = useState<NotificationEvent | null>(null);
 
   const eventsQ = useNotificationEvents(tenantId, {
-    status: tab as any,
+    status: tab === "auth" ? "all" : tab,
     channel: channel || undefined,
   });
+  const summaryQ = useNotificationEvents(tenantId, { status: "all" });
   const authQ = useAuthEmailLog(tenantId, { limit: 200, kind: logKind });
 
   const stats = useMemo(() => {
-    const rows = eventsQ.data ?? [];
+    const rows = summaryQ.data ?? [];
     const today = new Date().toISOString().slice(0, 10);
     return {
       queued: rows.filter((r) => r.status === "pending").length,
       sentToday: rows.filter((r) => r.status === "sent" && (r.sent_at ?? "").slice(0, 10) === today).length,
       failed: rows.filter((r) => r.status === "failed").length,
     };
-  }, [eventsQ.data]);
+  }, [summaryQ.data]);
 
   if (!canView) {
     return (
@@ -66,15 +68,14 @@ export default function CommsInboxPage() {
 
         <div className="sk-card overflow-hidden">
           <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
-            <div className="flex gap-1">
+            <div className="flex flex-wrap gap-1">
               {TABS.map((t) => {
                 const Icon = t.icon;
                 const active = tab === t.key;
                 return (
-                  <button key={t.key} onClick={() => setTab(t.key)}
-                    className={"inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium " + (active ? "bg-sk-coral text-white" : "hover:bg-muted")}>
+                  <Button key={t.key} size="sm" variant={active ? "default" : "ghost"} onClick={() => setTab(t.key)}>
                     <Icon className="h-4 w-4" /> {t.label}
-                  </button>
+                  </Button>
                 );
               })}
             </div>

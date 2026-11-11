@@ -61,7 +61,12 @@ export function useResendNotification(tenantId: string) {
         .eq("tenant_id", tenantId);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notification_events"] }),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["notification_events"] }),
+        qc.invalidateQueries({ queryKey: ["nav-badges", "comms_failed", tenantId] }),
+      ]);
+    },
   });
 }
 
@@ -73,10 +78,39 @@ export function useCancelNotification(tenantId: string) {
         .from("notification_events")
         .update({ status: "skipped", error: "Cancelled by operator" })
         .eq("id", eventId)
-        .eq("tenant_id", tenantId);
+        .eq("tenant_id", tenantId)
+        .eq("status", "pending");
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["notification_events"] }),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["notification_events"] }),
+        qc.invalidateQueries({ queryKey: ["nav-badges", "comms_failed", tenantId] }),
+      ]);
+    },
+  });
+}
+
+export function useClearNotificationWarning(tenantId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (eventId: string) => {
+      const { data, error } = await supabase
+        .from("notification_events")
+        .update({ status: "skipped" })
+        .eq("id", eventId)
+        .eq("tenant_id", tenantId)
+        .eq("status", "failed")
+        .select("id");
+      if (error) throw error;
+      if (!data?.length) throw new Error("This message has changed. Refresh and check its current status.");
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["notification_events"] }),
+        qc.invalidateQueries({ queryKey: ["nav-badges", "comms_failed", tenantId] }),
+      ]);
+    },
   });
 }
 
