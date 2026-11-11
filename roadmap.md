@@ -63,3 +63,8 @@
 ## Hotel list view (10 Nov)
 - [x] Grid/List toggle on Dog & Cat Hotel; monthly arrivals register with ribbon/card/gift/notes prep
 - [ ] Signed-in visual check (external sign-in unavailable)
+
+## Hotel Today register (11 Nov)
+- [x] Today/Month switch, combined arrivals/departures, movement filters and isolated A4 landscape day sheet; grid-only date controls hidden in List.
+- [x] Seven tests passed, including Johannesburg day boundaries, earlier-month departures, same-day movements and Today filter interaction; preview build OK.
+- [ ] Live signed-in list/printing and desktop/mobile visual checks: external unmanaged Supabase redirects to login; no available authenticated session.

@@ -78,7 +78,7 @@ export default function HotelBoardPage() {
                 </span>
               )}
             </Link>
-            <button
+            {view === "grid" && <><button
               onClick={() => setAnchor(startOfDay(new Date()))}
               className="h-9 rounded-lg border border-border bg-white px-3 text-sm font-medium hover:bg-sk-surface-muted"
             >
@@ -101,7 +101,7 @@ export default function HotelBoardPage() {
               className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-white hover:bg-sk-surface-muted"
             >
               <RefreshCw className="h-4 w-4" />
-            </button>
+            </button></>}
           </div>
         }
       />
@@ -110,10 +110,10 @@ export default function HotelBoardPage() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="mr-2 inline-flex overflow-hidden rounded-lg border border-border bg-card" role="group" aria-label="Hotel view">
             {([["grid", "Grid", LayoutGrid], ["list", "List", List]] as const).map(([v, l, Icon]) => (
-              <button key={v} onClick={() => setView(v)} aria-pressed={view === v}
-                className={`inline-flex h-8 items-center gap-1.5 px-3 text-xs font-semibold ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
+              <Button variant="ghost" key={v} onClick={() => setView(v)} aria-pressed={view === v}
+                className={`inline-flex h-8 items-center gap-1.5 rounded-none px-3 text-xs font-semibold ${view === v ? "bg-primary text-primary-foreground hover:bg-primary" : "text-muted-foreground hover:bg-muted"}`}>
                 <Icon className="h-3.5 w-3.5" /> {l}
-              </button>
+              </Button>
             ))}
           </div>
           <span className="text-xs font-medium text-muted-foreground">Show:</span>
