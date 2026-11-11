@@ -11,7 +11,7 @@ interface HotelReviewData {
   payment_verified?: boolean;
   payment_percent_override: number | null;
   override_reason?: string | null;
-  estimate: { id: string; estimate_number: string; total: number; extras: unknown } | null;
+  estimate: { id: string; estimate_number: string; total: number; extras: unknown; status?: string; accepted_at?: string | null } | null;
   public_settings?: { approval_checklist: { code: string; label: string }[]; payment_cutoff_days: number; advance_deposit_pct: number };
 }
 export function useHotelReview(bookingId: string, portal = false) {
@@ -21,7 +21,7 @@ export function useHotelReview(bookingId: string, portal = false) {
       if (error) throw error;
       return data as unknown as HotelReviewData | null;
     }
-    const { data, error } = await supabase.from("hotel_booking_reviews").select("*, estimate:estimates(id, estimate_number, total, extras)").eq("booking_id", bookingId).maybeSingle();
+    const { data, error } = await supabase.from("hotel_booking_reviews").select("*, estimate:estimates(id, estimate_number, total, extras, status, accepted_at)").eq("booking_id", bookingId).maybeSingle();
     if (error) throw error;
     return data as unknown as HotelReviewData | null;
   }});
@@ -33,6 +33,6 @@ export function useHotelReviewAction(bookingId: string) {
     if (error) throw error;
     return result;
   }, onSuccess: async () => {
-    await Promise.all(["hotel_review", "hotel_pipeline", "hotel_receipts", "bookings", "booking_invoice", "hotel_bookings", "hotel_money", "portal_booking", "estimates", "invoices", "payments"].map(key => qc.invalidateQueries({ queryKey: [key] })));
+    await Promise.all(["hotel_review", "hotel_quote_actions", "hotel_quote_stage", "hotel_pipeline", "hotel_receipts", "bookings", "booking_invoice", "hotel_bookings", "hotel_money", "portal_booking", "estimates", "invoices", "payments"].map(key => qc.invalidateQueries({ queryKey: [key] })));
   }});
 }

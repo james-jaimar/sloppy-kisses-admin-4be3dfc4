@@ -994,6 +994,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             await saveDetails(b.id);
             if (kind === "hotel") await persistSurcharges(b.id);
             if (kind === "hotel") await persistAccommodation(b.id);
+            if (kind === "hotel") {
+              const { error } = await supabase.rpc("hotel_review_action", { p_booking_id: b.id, p_action: "estimate", p_data: {} });
+              if (error) toast.warning(`Enquiry saved; quote needs preparing on the booking: ${error.message}`);
+            }
           }
           toast.success(`Created ${res.bookings.length} bookings in series`);
           onSaved?.(res.bookings[0]?.id);
@@ -1031,7 +1035,14 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             if (gErr) toast.error(`Stay saved, but the departure groom wasn't added: ${gErr.message}`);
           }
         }
-        toast.success(`Booking ${res.booking_number} created`);
+        if (kind === "hotel") {
+          const { error } = await supabase.rpc("hotel_review_action", { p_booking_id: res.id, p_action: "estimate", p_data: {} });
+          if (error) toast.warning(`Enquiry ${res.booking_number} saved; quote needs preparing on the booking: ${error.message}`, { duration: 10000 });
+          else toast.success(`Enquiry ${res.booking_number} saved — quote ready`, {
+            duration: 10000,
+            action: { label: "Send quote", onClick: () => window.location.assign(`/admin/bookings/${res.id}`) },
+          });
+        } else toast.success(`Booking ${res.booking_number} created`);
         onSaved?.(res.id);
       }
       onClose();
