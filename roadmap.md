@@ -1,5 +1,11 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## POS full bill and Yoco preparation (11 Nov)
+- [ ] Full itemised bill before payment and after sale, including existing invoice lines, VAT, discounts and prior payments.
+- [ ] Automatic paid receipt through existing notifications, respecting email preferences and avoiding duplicate sends.
+- [ ] Yoco setup preparation and accounting mapping; terminal activation waits for model, credentials and confirmed Yoco access.
+- [ ] Focused tests and available live checks; report unavailable authenticated or terminal checks.
+
 - [x] Slice 1a: Date edit sticks — picking a new day in the grooming slot picker now moves the booking, keeping the chosen time
 - [x] Slice 1b: Repeat invoices dated per service date (advance bookings issue/due on service date; same-day keeps payment terms); grooming invoice lines show the service date
 - [x] Slice 1c: Booking form flow reordered — package/extras → day & time → grooming sheets → repeats → vaccination/health checks at the bottom
