@@ -37,6 +37,10 @@ export function HotelQuoteActions({ bookingId, estimateId, tenantId }: { booking
       if (kind === "copy") {
         const appUrl = (currentTenant as unknown as { app_url?: string | null } | null)?.app_url;
         await navigator.clipboard.writeText(publicHotelQuoteLink(appUrl, q.public_token));
+        if (q.status === "draft") {
+          const { error } = await supabase.from("estimates").update({ status: "sent", sent_at: q.sent_at ?? new Date().toISOString() }).eq("tenant_id", tenantId).eq("id", q.id);
+          if (error) throw error;
+        }
         toast.success("Customer quote link copied — ready for WhatsApp");
       }
       if (kind === "download") await downloadQuotePdf(q.id, `${q.estimate_number}.pdf`);
