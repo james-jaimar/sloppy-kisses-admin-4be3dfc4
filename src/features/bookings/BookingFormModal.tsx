@@ -80,14 +80,7 @@ import { useSaveBookingInstructions } from "@/features/grooming/instructions/que
 import { useInstructionCatalog } from "@/features/grooming/instructions/queries";
 import type { GroomingInstructionsValue } from "@/features/grooming/instructions/GroomingInstructionsForm";
 import {
-  AcknowledgementSection,
-  AttachmentsSection,
-  CareSection,
-  EmergencySection,
-  OwnerSection,
-  PetSections,
   StayWindowSection,
-  VetSection,
   buildAccommodationForm,
   emptyAccommodationForm,
   syncFormPets,
@@ -103,7 +96,6 @@ import {
   isStayPlayWindow,
   type AccommodationFormPayload,
 } from "@/features/hotelForm/accommodationForm";
-import { GuidelinesSection } from "@/features/hotelForm/GuidelinesSection";
 import { supabase } from "@/lib/supabase/client";
 
 const SERVICE_TYPES: { value: ServiceType; label: string; resourceType?: ResourceType }[] = [
@@ -1755,44 +1747,14 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           );
         })()}
         {kind === "hotel" && (
-          <HotelExtrasPanel
-            tenantId={tenantId}
-            bookingId={booking?.id ?? null}
-            species={serviceType === "hotel_cat" ? "cat" : "dog"}
-            accommodationType={hotel.accommodation_type ?? ""}
-            onAccommodationChange={(v) => setHotel((p) => ({ ...p, accommodation_type: v || null }))}
-            petAccommodations={petAcc}
-            onPetAccommodationChange={(petId, acc) => setPetAcc((prev) => ({ ...prev, [petId]: acc }))}
-            startAt={startAt ? new Date(startAt).toISOString() : null}
-            endAt={endAtLocal ? new Date(endAtLocal).toISOString() : null}
-            petCount={petIds.length || 1}
-            petIds={petIds}
-            selectedPets={(petsQ.data ?? []).filter(p => petIds.includes(p.id)).map(p => ({ id: p.id, name: p.name, species: p.species, size: p.size_override ?? p.size }))}
-            selection={hotelSurcharges}
-            onSelectionChange={setHotelSurcharges}
-            discountPct={Number(hotel.discount_pct ?? 0)}
-            discountReason={hotel.discount_reason ?? ""}
-            onDiscountChange={(pct, reason) => setHotel((p) => ({ ...p, discount_pct: pct, discount_reason: reason || null }))}
-            separateRooms={Boolean(hotel.separate_rooms)}
-            onSeparateRoomsChange={(v) => setHotel((p) => ({ ...p, separate_rooms: v }))}
-            stayPlay={isStayPlayWindow(accom.check_out_window || hotel.check_out_window)}
-          />
-        )}
-        {kind === "hotel" && (
           <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
             <div className="flex items-baseline justify-between gap-2">
-              <div className="text-sm font-semibold">Accommodation form</div>
-              <div className="text-xs text-muted-foreground">Prefilled from the customer & pet records</div>
+              <div className="text-sm font-semibold">Arrival & collection</div>
+              <div className="text-xs text-muted-foreground">Check-in, check-out window and van transport</div>
             </div>
-            {!isEdit && <>
-            <OwnerSection form={accom} setForm={patchAccom} collapsible />
-            <EmergencySection form={accom} setForm={patchAccom} collapsible />
-            <VetSection form={accom} setForm={patchAccom} collapsible />
-            </>}
             <StayWindowSection
               form={accom}
               setForm={patchAccom}
-              collapsible
               checkOutDate={endAtLocal ? endAtLocal.slice(0, 10) : null}
               customerId={customerId || null}
               tenantId={tenantId}
@@ -1843,14 +1805,32 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 )}
               </div>
             )}
-            {isEdit ? <p className="text-xs text-muted-foreground">Contacts, vet, pet health, care and terms are completed on the booking page.</p> : <>
-            <PetSections form={accom} setForm={patchAccom} collapsible tenantId={tenantId} uploadedVia="admin" />
-            <CareSection form={accom} setForm={patchAccom} collapsible />
-            <AttachmentsSection form={accom} setForm={patchAccom} collapsible />
-            <GuidelinesSection tenantId={tenantId} collapsible />
-            <AcknowledgementSection form={accom} setForm={patchAccom} collapsible />
-            </>}
+            <p className="text-xs text-muted-foreground">Emergency contacts, vet, pet health, care, vaccinations and terms are gathered on the booking page once the quote is accepted.</p>
           </div>
+        )}
+        {kind === "hotel" && (
+          <HotelExtrasPanel
+            tenantId={tenantId}
+            bookingId={booking?.id ?? null}
+            species={serviceType === "hotel_cat" ? "cat" : "dog"}
+            accommodationType={hotel.accommodation_type ?? ""}
+            onAccommodationChange={(v) => setHotel((p) => ({ ...p, accommodation_type: v || null }))}
+            petAccommodations={petAcc}
+            onPetAccommodationChange={(petId, acc) => setPetAcc((prev) => ({ ...prev, [petId]: acc }))}
+            startAt={startAt ? new Date(startAt).toISOString() : null}
+            endAt={endAtLocal ? new Date(endAtLocal).toISOString() : null}
+            petCount={petIds.length || 1}
+            petIds={petIds}
+            selectedPets={(petsQ.data ?? []).filter(p => petIds.includes(p.id)).map(p => ({ id: p.id, name: p.name, species: p.species, size: p.size_override ?? p.size }))}
+            selection={hotelSurcharges}
+            onSelectionChange={setHotelSurcharges}
+            discountPct={Number(hotel.discount_pct ?? 0)}
+            discountReason={hotel.discount_reason ?? ""}
+            onDiscountChange={(pct, reason) => setHotel((p) => ({ ...p, discount_pct: pct, discount_reason: reason || null }))}
+            separateRooms={Boolean(hotel.separate_rooms)}
+            onSeparateRoomsChange={(v) => setHotel((p) => ({ ...p, separate_rooms: v }))}
+            stayPlay={isStayPlayWindow(accom.check_out_window || hotel.check_out_window)}
+          />
         )}
         {kind === "transport" && (
           <TransportFields
