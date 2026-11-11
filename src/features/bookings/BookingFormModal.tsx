@@ -201,6 +201,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   );
   const [roomIssues, setRoomIssues] = useState<Record<string, CapacityIssue | null>>({});
   const [departureGroom, setDepartureGroom] = useState(false);
+  /** Per-dog departure groom: package (express/full) and optional quoted extras. */
+  const [departurePlans, setDeparturePlans] = useState<Record<string, { packageId: string; addonIds: string[]; showExtras: boolean }>>({});
+  const setDeparturePlan = (petId: string, patch: Partial<{ packageId: string; addonIds: string[]; showExtras: boolean }>) =>
+    setDeparturePlans((prev) => ({ ...prev, [petId]: { packageId: "", addonIds: [], showExtras: false, ...prev[petId], ...patch } }));
   const [status, setStatus] = useState<BookingStatus>(booking?.status ?? (["hotel_dog", "hotel_cat"].includes(prefill?.service_type ?? "daycare") ? "draft" : "confirmed"));
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [reviewGrooming, setReviewGrooming] = useState(false);
@@ -742,6 +746,10 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       const p = (petsQ.data ?? []).find(p => p.id === id);
       return !p || !accommodationForPet({ species: p.species, size: p.size_override ?? p.size }, hotelRatesQ.data ?? [], petAcc[id] || hotel.accommodation_type);
     })) return toast.error("Choose species-compatible accommodation for every pet before saving");
+    if (kind === "hotel" && !isEdit && departureGroom) {
+      const dogNoPkg = (petsQ.data ?? []).find((p) => petIds.includes(p.id) && p.species !== "cat" && !departurePlans[p.id]?.packageId);
+      if (dogNoPkg) return toast.error(`Choose Express or Full groom for ${dogNoPkg.name}`);
+    }
     if (kind === "grooming") {
       const missing = groomCardKeys.find((k) => !planHasWork(k));
       if (missing !== undefined) {
@@ -1030,6 +1038,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                 tenant_id: tenantId, hotel_booking_id: res.id, pet_id: p.id, customer_id: customerId,
                 pet_name: p.name, window_start: dayStart.toISOString(), window_end: endComputed.toISOString(),
                 customer_notes: "Departure groom added by staff", status: "pending",
+                package_id: departurePlans[p.id]?.packageId || null,
+                addon_ids: departurePlans[p.id]?.addonIds ?? [],
               })),
             );
             if (gErr) toast.error(`Stay saved, but the departure groom wasn't added: ${gErr.message}`);
@@ -1478,9 +1488,50 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             <input type="checkbox" className="mt-1" checked={departureGroom} onChange={(e) => setDepartureGroom(e.target.checked)} />
             <span>
               <span className="font-semibold">Departure groom (discounted)</span>
-              <span className="block text-muted-foreground">Ask: "Would you like your dog bathed or groomed on checkout morning?" Ticking adds each dog to Grooms to schedule with the stay discount.</span>
+              <span className="block text-muted-foreground">Ask: "Would you like your dog bathed or groomed on checkout morning?" Pick Express or Full per dog — it goes on the quote with the stay discount and into Grooms to schedule.</span>
             </span>
           </label>
+        )}
+        {kind === "hotel" && !isEdit && departureGroom && (
+          <div className="space-y-3 rounded-lg border border-primary/30 bg-card p-3">
+            {(petsQ.data ?? []).filter((p) => petIds.includes(p.id) && p.species !== "cat").map((p) => {
+              const plan = departurePlans[p.id] ?? { packageId: "", addonIds: [], showExtras: false };
+              const pkg = (packagesQ.data ?? []).find((x) => x.id === plan.packageId);
+              const extras = (addonsCatalogQ.data ?? []).filter((a: any) => groomingAddonPrice(a.code, Number(a.price_zar), pkg?.package_type) > 0);
+              return (
+                <div key={p.id} className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="min-w-24 text-sm font-semibold">{p.name}</span>
+                    <select value={plan.packageId} onChange={(e) => setDeparturePlan(p.id, { packageId: e.target.value })} className="h-9 flex-1 rounded-md border border-input bg-background px-2 text-sm" aria-label={`Departure groom package for ${p.name}`}>
+                      <option value="">Choose Express or Full…</option>
+                      {(packagesQ.data ?? []).filter((x) => x.species === "dog" && ["express", "full"].includes(x.package_type ?? "")).map((x) => (
+                        <option key={x.id} value={x.id}>{x.name} · R{Number(x.price_zar).toFixed(0)}</option>
+                      ))}
+                    </select>
+                    {plan.packageId && (
+                      <Button type="button" variant="outline" size="sm" onClick={() => setDeparturePlan(p.id, { showExtras: !plan.showExtras })}>
+                        {plan.showExtras ? "Hide optional extras" : plan.addonIds.length ? `Optional extras (${plan.addonIds.length})` : "Add optional extras now?"}
+                      </Button>
+                    )}
+                  </div>
+                  {plan.packageId && plan.showExtras && (
+                    <div className="flex flex-wrap gap-1.5 pl-1">
+                      {extras.map((a: any) => {
+                        const on = plan.addonIds.includes(a.id);
+                        return (
+                          <button key={a.id} type="button" onClick={() => setDeparturePlan(p.id, { addonIds: on ? plan.addonIds.filter((x) => x !== a.id) : [...plan.addonIds, a.id] })}
+                            className={"rounded-full border px-2.5 py-1 text-xs " + (on ? "border-primary bg-primary/10 font-semibold" : "border-border hover:bg-muted")}>
+                            {a.name} · R{Number(a.price_zar).toFixed(0)}
+                          </button>
+                        );
+                      })}
+                      <p className="w-full text-xs text-muted-foreground">Ticked extras appear on the quote so there are no surprises. You can still add more later.</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
         {kind === "hotel" && <HotelPetRooms tenantId={tenantId} pets={(petsQ.data ?? []).filter(p => petIds.includes(p.id))} assignments={petRooms} onChange={(id, room) => setPetRooms(prev => ({ ...prev, [id]: room }))} startAt={startIso} endAt={endIso} bookingId={booking?.id ?? null} onIssueChange={(room, issue) => setRoomIssues(prev => JSON.stringify(prev[room]) === JSON.stringify(issue) ? prev : { ...prev, [room]: issue })} />}
 

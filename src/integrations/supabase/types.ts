@@ -4654,6 +4654,7 @@ export type Database = {
       }
       hotel_grooming_requests: {
         Row: {
+          addon_ids: string[]
           created_at: string
           customer_id: string | null
           customer_notes: string | null
@@ -4673,6 +4674,7 @@ export type Database = {
           window_start: string | null
         }
         Insert: {
+          addon_ids?: string[]
           created_at?: string
           customer_id?: string | null
           customer_notes?: string | null
@@ -4692,6 +4694,7 @@ export type Database = {
           window_start?: string | null
         }
         Update: {
+          addon_ids?: string[]
           created_at?: string
           customer_id?: string | null
           customer_notes?: string | null
