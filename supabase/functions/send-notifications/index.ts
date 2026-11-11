@@ -196,7 +196,16 @@ Deno.serve(async (req) => {
         if (reviewError) throw reviewError;
         staffConfirmed = Boolean(review?.confirmed_at);
       }
-      const templateCode = hotelNotificationTemplate(ev.event_type, serviceType, ev.payload?.to, staffConfirmed);
+      // Staff-captured hotel enquiries: no "received" email until the customer accepts the quote.
+      if (isHotel && ev.event_type === "booking_created" && ev.payload?.quote_accepted !== true &&
+          bookingRes.data?.source === "staff_capture") {
+        await sb.from("notification_events").update({ status: "skipped", error: "Staff enquiry: waits for quote acceptance" }).eq("id", ev.id);
+        skipped++;
+        continue;
+      }
+      const templateCode = isHotel && ev.event_type === "booking_created" && ev.payload?.quote_accepted === true
+        ? "hotel_quote_accepted"
+        : hotelNotificationTemplate(ev.event_type, serviceType, ev.payload?.to, staffConfirmed);
       if (!templateCode) {
         await sb.from("notification_events").update({ status: "skipped", error: "Hotel stay not confirmed by staff" }).eq("id", ev.id);
         skipped++;
