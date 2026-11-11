@@ -1,0 +1,1 @@
+UPDATE public.hotel_workflow_settings SET payment_cutoff_days = 30 WHERE payment_cutoff_days <> 30;

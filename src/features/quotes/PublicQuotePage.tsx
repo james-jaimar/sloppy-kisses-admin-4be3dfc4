@@ -87,7 +87,8 @@ export default function PublicQuotePage() {
   const total = Number(quote?.total ?? 0);
   const isDaycare = quote?.service_type === "daycare";
   // Daycare places are billed in full for the first month — no 50% deposit.
-  const deposit = isDaycare ? total : Math.round(total * 50) / 100;
+  const paymentPct = Number(quote?.extras?.payment_percent ?? 50);
+  const deposit = isDaycare ? total : Math.round(total * paymentPct) / 100;
   const nights = quote?.start_at && quote?.end_at
     ? Math.max(1, Math.round((new Date(quote.end_at).getTime() - new Date(quote.start_at).getTime()) / 86400000))
     : null;

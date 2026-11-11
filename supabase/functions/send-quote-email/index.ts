@@ -97,7 +97,19 @@ Deno.serve(async (req) => {
   const total = Number(q.total ?? 0);
   const isDaycare = q.service_type === "daycare";
   // Daycare places are billed in full for the first month — there is no 50% deposit.
-  const paymentPct = Number(extras.payment_percent ?? 50);
+  let paymentPct = Number(extras.payment_percent ?? 50);
+  let cutoffDays = 30;
+  let fullPaymentRule = false;
+  if (!isDaycare && q.start_at && String(q.service_type ?? "").startsWith("hotel")) {
+    const { data: ws } = await admin.from("hotel_workflow_settings").select("payment_cutoff_days, advance_deposit_pct").eq("tenant_id", q.tenant_id).maybeSingle();
+    const { data: rv } = q.booking_id ? await admin.from("hotel_booking_reviews").select("payment_percent_override").eq("booking_id", q.booking_id).maybeSingle() : { data: null };
+    cutoffDays = Number(ws?.payment_cutoff_days ?? 30);
+    const jhb = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" });
+    const days = Math.round((Date.parse(jhb(new Date(q.start_at)) + "T00:00:00Z") - Date.parse(jhb(new Date()) + "T00:00:00Z")) / 86400000);
+    const override = rv?.payment_percent_override;
+    paymentPct = override != null ? Number(override) : (days > cutoffDays ? Number(ws?.advance_deposit_pct ?? 50) : 100);
+    fullPaymentRule = override == null && paymentPct === 100;
+  }
   const isProforma = extras.document_kind === "proforma";
   const isReviewEstimate = extras.document_kind === "estimate" && Boolean(q.booking_id);
   const deposit = isDaycare ? total : Math.round(total * paymentPct) / 100;
@@ -124,7 +136,7 @@ Deno.serve(async (req) => {
   };
 
   const useTpl = tpl && tpl.is_active !== false && String(tpl.body ?? "").trim().length > 0;
-  const intro = isProforma ? `Hi ${firstName},\n\nYour hotel stay has been approved. Your pro forma is attached. ${paymentPct}% (${fmtZar(deposit)}) is payable now. Please use the bank details and reference on the document and upload your payment proof in your booking. A tax invoice is issued once staff verify received payment.` : isReviewEstimate ? `Hi ${firstName},\n\nYour hotel quote ${q.estimate_number} for ${ctx.quote.dates} is attached. Click the link below to review and accept it — no sign-in is needed. Accepting the quote does not confirm your stay or issue a tax invoice. Our staff will contact you to gather the outstanding information and documents. Once reviewed, staff will confirm your stay and send your tax invoice with the applicable deposit and payment dates.` : render(useTpl ? String(tpl!.body) : DEFAULT_QUOTE_INTRO, ctx);
+  const intro = isProforma ? `Hi ${firstName},\n\nYour hotel stay has been approved. Your pro forma is attached. ${paymentPct}% (${fmtZar(deposit)}) is payable now. Please use the bank details and reference on the document and upload your payment proof in your booking. A tax invoice is issued once staff verify received payment.` : isReviewEstimate ? `Hi ${firstName},\n\nYour hotel quote ${q.estimate_number} for ${ctx.quote.dates} is attached. Click the link below to review and accept it — no sign-in is needed. Accepting the quote does not confirm your stay or issue a tax invoice. Our staff will contact you to gather the outstanding information and documents. Once reviewed, staff will confirm your stay and send your tax invoice with the applicable deposit and payment dates.${fullPaymentRule ? `\n\nPlease note: your stay starts in less than ${cutoffDays} days. Our policy is that stays beginning within ${cutoffDays} days are payable in full (100%, ${fmtZar(total)}) once the quote is accepted, rather than a 50% deposit.` : ''}` : render(useTpl ? String(tpl!.body) : DEFAULT_QUOTE_INTRO, ctx);
   const subject = isProforma ? `Hotel pro forma ${q.estimate_number} from ${tenant?.name ?? "us"}` : useTpl && tpl!.subject
     ? render(String(tpl!.subject), ctx)
     : `Your stay quote ${q.estimate_number} from ${tenant?.name ?? "us"}`;
@@ -156,7 +168,7 @@ Deno.serve(async (req) => {
       body_html: render(c.body_html ?? "", ctx),
     })),
   };
-  if (isReviewEstimate) { settings.hero_label = "ESTIMATE"; settings.hero_headline = "Your hotel stay quote"; settings.deposit_label = `${paymentPct}% after staff confirmation`; settings.cta_label = "Review & accept this quote"; settings.cta_subtext = "No sign-in required. Staff will gather your information before confirming the stay."; settings.hold_line = "This quote is not a confirmed booking or a tax invoice."; }
+  if (isReviewEstimate) { settings.hero_label = "ESTIMATE"; settings.hero_headline = "Your hotel stay quote"; settings.deposit_label = fullPaymentRule ? `100% payable — stay starts within ${cutoffDays} days` : `${paymentPct}% after staff confirmation`; settings.cta_label = "Review & accept this quote"; settings.cta_subtext = "No sign-in required. Staff will gather your information before confirming the stay."; settings.hold_line = "This quote is not a confirmed booking or a tax invoice."; }
   if (isProforma) {
     settings.hero_label = "PRO FORMA";
     settings.hero_headline = "Your stay is approved";
