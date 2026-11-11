@@ -1,10 +1,12 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
 ## POS full bill and Yoco preparation (11 Nov)
-- [ ] Full itemised bill before payment and after sale, including existing invoice lines, VAT, discounts and prior payments.
-- [ ] Automatic paid receipt through existing notifications, respecting email preferences and avoiding duplicate sends.
-- [ ] Yoco setup preparation and accounting mapping; terminal activation waits for model, credentials and confirmed Yoco access.
-- [ ] Focused tests and available live checks; report unavailable authenticated or terminal checks.
+- [x] Full itemised bill before payment and after sale, including existing invoice lines, VAT, discounts and prior payments.
+- [x] Automatic paid PDF receipt through existing notifications; existing dispatcher deployed, email preferences respected, repeat sends prevented, settings toggle permission-checked.
+- [x] Yoco setup preparation with counter/model/device fields and existing Yoco accounting mapping labelled correctly; no assumed API-key authentication or terminal compatibility.
+- [x] Four frontend tests and rollback receipt tests passed (partial/full payment, opt-out, duplicate protection, disabled setting); no fixtures retained, preview build OK.
+- [ ] Live signed-in checkout, email delivery and printing: external unmanaged sign-in unavailable; browser redirects to login without runtime errors.
+- [ ] Yoco terminal activation: awaiting Charlotte’s model, Yoco Web POS authorisation/credentials and terminal test; ordinary online secret key is not confirmed sufficient.
 
 - [x] Slice 1a: Date edit sticks — picking a new day in the grooming slot picker now moves the booking, keeping the chosen time
 - [x] Slice 1b: Repeat invoices dated per service date (advance bookings issue/due on service date; same-day keeps payment terms); grooming invoice lines show the service date

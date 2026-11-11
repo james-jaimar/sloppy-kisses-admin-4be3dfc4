@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { useCurrentTenant } from "@/lib/tenant/TenantContext";
+import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useRetailSettings, useStockLocations, useUpdateRetailSettings } from "@/features/shop/queries";
 import { useResources } from "@/features/bookings/queries";
 import { Switch } from "@/components/ui/switch";
 
 export default function RetailSettingsPage() {
   const { tenant } = useCurrentTenant();
+  const { hasPermission } = useCurrentUser();
   const tenantId = tenant?.id ?? null;
   const settingsQ = useRetailSettings(tenantId);
   const update = useUpdateRetailSettings(tenantId ?? "");
@@ -86,7 +87,7 @@ export default function RetailSettingsPage() {
           </label>
           <div className="border-t border-border pt-5 space-y-5">
             <div className="text-sm font-semibold">Point of sale</div>
-            <label className="flex items-center justify-between gap-4 text-sm"><span>Automatically email paid receipts</span><Switch checked={form.auto_email_paid_receipt} onCheckedChange={value => setForm({ ...form, auto_email_paid_receipt: value })} /></label>
+            <label className="flex items-center justify-between gap-4 text-sm"><span>Automatically email paid receipts</span><Switch disabled={!hasPermission("settings.manage")} checked={form.auto_email_paid_receipt} onCheckedChange={value => setForm({ ...form, auto_email_paid_receipt: value })} /></label>
             <label className="block">
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Till name</div>
               <input value={form.till_name}
