@@ -20,7 +20,9 @@ BEGIN
   eid:=public.hotel_review_action(b,'estimate','{}');
   SELECT public_token INTO token FROM public.estimates WHERE id=eid;
   IF token IS NULL OR (SELECT e.total FROM public.estimates e WHERE e.id=eid)<=0 THEN RAISE EXCEPTION 'Basic dates/pet quote must have a public token and price without intake'; END IF;
+  PERFORM set_config('request.jwt.claim.sub','',true);
   accepted:=public.accept_public_quote(token);
+  PERFORM set_config('request.jwt.claim.sub',actor::text,true);
   IF NOT COALESCE((accepted->>'ok')::boolean,false) OR (accepted->>'booking_id')::uuid<>b THEN RAISE EXCEPTION 'Public acceptance must reuse the existing booking'; END IF;
   IF (SELECT status FROM public.estimates WHERE id=eid)<>'accepted' OR (SELECT accepted_at FROM public.estimates WHERE id=eid) IS NULL THEN RAISE EXCEPTION 'Linked quote acceptance must be recorded'; END IF;
   IF (SELECT status FROM public.bookings WHERE id=b)<>'needs_info' THEN RAISE EXCEPTION 'Accepted hotel quote must enter information gathering, not confirmation'; END IF;
@@ -28,6 +30,9 @@ BEGIN
   IF (public.accept_public_quote(token)->>'booking_id')::uuid<>b THEN RAISE EXCEPTION 'Repeat acceptance must reuse booking'; END IF;
   SELECT jsonb_object_agg(x->>'code',true) INTO checklist FROM public.hotel_workflow_settings w CROSS JOIN LATERAL jsonb_array_elements(w.approval_checklist) x WHERE w.tenant_id=t;
   PERFORM public.hotel_review_action(b,'save',jsonb_build_object('checklist',checklist));
+  IF (SELECT estimate_id FROM public.hotel_booking_reviews WHERE booking_id=b) IS DISTINCT FROM eid THEN RAISE EXCEPTION 'Intake notes must retain the accepted quote'; END IF;
+  IF (SELECT status FROM public.estimates WHERE id=eid)<>'accepted' THEN RAISE EXCEPTION 'Intake notes must not expire customer acceptance'; END IF;
+  IF (SELECT status FROM public.bookings WHERE id=b)<>'needs_info' THEN RAISE EXCEPTION 'Accepted stay must remain in information gathering after notes save'; END IF;
   IF (SELECT invoice_id FROM public.bookings WHERE id=b) IS NOT NULL THEN RAISE EXCEPTION 'Saving intake must not create invoice'; END IF;
   inv:=public.hotel_review_action(b,'confirm','{}');
   IF inv IS NULL OR NOT EXISTS(SELECT 1 FROM public.invoices i WHERE i.id=inv AND i.total>0 AND i.status='issued') THEN RAISE EXCEPTION 'Confirming must issue a priced invoice'; END IF;
