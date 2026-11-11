@@ -4,7 +4,11 @@ import { toast } from "sonner";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { resolveLogoUrl } from "@/lib/branding/BrandingProvider";
 import { useSendInvoiceEmail } from "@/features/invoices/queries";
-import { lineTotal, lineUnitPrice, vatPortion, type PosLine, type PosSaleResult, type PosTender } from "./queries";
+import { type PosLine, type PosSaleResult, type PosTender } from "./queries";
+import { FullBillContent, FullBillDialog } from "./FullBillView";
+import ReceiptEmailStatus from "./ReceiptEmailStatus";
+import { Button } from "@/components/ui/button";
+import { FileText } from "lucide-react";
 
 interface Props {
   tenantId: string;
@@ -27,13 +31,11 @@ export default function ReceiptView({
   const { tenant } = useCurrentTenant();
   const [logo, setLogo] = useState<string | null>(null);
   const sendEmail = useSendInvoiceEmail(tenantId);
+  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
     resolveLogoUrl(tenant?.logo_url).then(setLogo);
   }, [tenant?.logo_url]);
-
-  const subtotal = lines.reduce((s, l) => s + lineTotal(l), 0);
-  const vat = vatPortion(lines);
 
   async function emailReceipt() {
     if (!customerEmail) {
@@ -41,7 +43,7 @@ export default function ReceiptView({
       return;
     }
     try {
-      await sendEmail.mutateAsync({ invoice_id: result.invoice_id, to: customerEmail });
+      await sendEmail.mutateAsync({ invoice_id: result.invoice_id });
       toast.success(`Receipt emailed to ${customerEmail}`);
     } catch (err: any) {
       toast.error(err?.message ?? "Could not send the receipt");
@@ -72,20 +74,8 @@ export default function ReceiptView({
           <Divider />
           <div>Customer: {customerName}</div>
           <Divider />
-          {lines.map((l) => (
-            <div key={l.product.id} className="flex justify-between gap-2">
-              <span className="min-w-0 flex-1 truncate">
-                {l.qty} × {l.product.name}
-                <span className="block text-[10px] opacity-70">@ R {lineUnitPrice(l).toFixed(2)}</span>
-              </span>
-              <span className="tabular-nums">{lineTotal(l).toFixed(2)}</span>
-            </div>
-          ))}
+          <FullBillContent tenantId={tenantId} invoiceId={result.invoice_id} customerName={customerName} />
           <Divider />
-          <Row label="Subtotal" value={subtotal} />
-          {discount > 0 && <Row label="Discount" value={-discount} />}
-          <Row label="VAT included" value={vat} />
-          {priorAmount > 0 && <Row label="Earlier on this bill" value={priorAmount} />}
           <div className="flex justify-between text-sm font-bold">
             <span>TOTAL</span>
             <span className="tabular-nums">R {result.total.toFixed(2)}</span>
@@ -106,6 +96,8 @@ export default function ReceiptView({
         </div>
 
         <div className="mt-4 grid gap-2 print:hidden">
+          <ReceiptEmailStatus tenantId={tenantId} invoiceId={result.invoice_id} />
+          <Button variant="outline" onClick={() => setPreview(true)}><FileText className="mr-2 h-4 w-4" />View full invoice</Button>
           <button onClick={() => window.print()} className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-border bg-white text-base font-semibold">
             <Printer className="h-5 w-5" /> Print receipt
           </button>
@@ -114,13 +106,15 @@ export default function ReceiptView({
             disabled={!customerEmail || sendEmail.isPending}
             className="inline-flex h-14 items-center justify-center gap-2 rounded-2xl border border-border bg-white text-base font-semibold disabled:opacity-40"
           >
-            <Mail className="h-5 w-5" /> {sendEmail.isPending ? "Sending…" : "Email receipt"}
+            <Mail className="h-5 w-5" /> {sendEmail.isPending ? "Sending…" : "Resend receipt"}
           </button>
           <button onClick={onNewSale} className="inline-flex h-16 items-center justify-center gap-2 rounded-2xl bg-sk-coral text-lg font-bold text-white">
             <RotateCcw className="h-5 w-5" /> New sale
           </button>
         </div>
       </div>
+
+      {preview && <FullBillDialog tenantId={tenantId} invoiceId={result.invoice_id} customerName={customerName} onClose={() => setPreview(false)} />}
 
       <style>{`
         @media print {

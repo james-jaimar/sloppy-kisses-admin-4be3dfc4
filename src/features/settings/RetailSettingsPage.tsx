@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useRetailSettings, useStockLocations, useUpdateRetailSettings } from "@/features/shop/queries";
 import { useResources } from "@/features/bookings/queries";
+import { Switch } from "@/components/ui/switch";
 
 export default function RetailSettingsPage() {
   const { tenant } = useCurrentTenant();
@@ -15,11 +16,12 @@ export default function RetailSettingsPage() {
   const resourcesQ = useResources(tenantId);
   const tills = (resourcesQ.data ?? []).filter((r) => String(r.type) === "retail_till");
 
-  const [form, setForm] = useState({ default_vat_rate: 15, allow_negative_stock: false, low_stock_notify_emails: "", till_name: "", receipt_footer: "", pos_location_id: "", pos_page_size: 24, unknown_barcode_action: "link" as "link" | "warn", scan_beep: true, allow_multi_barcode: false, till_resource_id: "", label_width_mm: 62, label_height_mm: 30 });
+  const [form, setForm] = useState({ auto_email_paid_receipt: true, default_vat_rate: 15, allow_negative_stock: false, low_stock_notify_emails: "", till_name: "", receipt_footer: "", pos_location_id: "", pos_page_size: 24, unknown_barcode_action: "link" as "link" | "warn", scan_beep: true, allow_multi_barcode: false, till_resource_id: "", label_width_mm: 62, label_height_mm: 30 });
 
   useEffect(() => {
     const d = settingsQ.data;
     if (d) setForm({
+      auto_email_paid_receipt: d.auto_email_paid_receipt !== false,
       default_vat_rate: Number(d.default_vat_rate ?? 15),
       allow_negative_stock: !!d.allow_negative_stock,
       low_stock_notify_emails: d.low_stock_notify_emails ?? "",
@@ -39,6 +41,7 @@ export default function RetailSettingsPage() {
   async function save() {
     try {
       await update.mutateAsync({
+        auto_email_paid_receipt: form.auto_email_paid_receipt,
         default_vat_rate: form.default_vat_rate,
         allow_negative_stock: form.allow_negative_stock,
         low_stock_notify_emails: form.low_stock_notify_emails || null,
@@ -83,6 +86,7 @@ export default function RetailSettingsPage() {
           </label>
           <div className="border-t border-border pt-5 space-y-5">
             <div className="text-sm font-semibold">Point of sale</div>
+            <label className="flex items-center justify-between gap-4 text-sm"><span>Automatically email paid receipts</span><Switch checked={form.auto_email_paid_receipt} onCheckedChange={value => setForm({ ...form, auto_email_paid_receipt: value })} /></label>
             <label className="block">
               <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Till name</div>
               <input value={form.till_name}

@@ -20,6 +20,7 @@ import PosSalePanel from "./PosSalePanel";
 import CustomerSalePanel from "./CustomerSalePanel";
 import TenderDialog from "./TenderDialog";
 import ReceiptView from "./ReceiptView";
+import { FullBillDialog, usePosInvoice } from "./FullBillView";
 import BarcodeLinkSheet from "./BarcodeLinkSheet";
 import { useRecordUnknownBarcode } from "./barcodeQueries";
 import { playTone, useBarcodeScanner } from "./useBarcodeScanner";
@@ -44,6 +45,7 @@ export default function PosPage() {
   const [showCustomer, setShowCustomer] = useState(false);
   const [attachInvoice, setAttachInvoice] = useState<{ id: string; invoice_number: string; balance_due: number } | null>(null);
   const [showTender, setShowTender] = useState(false);
+  const [showFullBill, setShowFullBill] = useState(false);
   const [tenderMethod, setTenderMethod] = useState<string | undefined>();
   const [showParked, setShowParked] = useState(false);
   const [showRecent, setShowRecent] = useState(false);
@@ -76,6 +78,8 @@ export default function PosPage() {
   const parkSale = useParkSale(tenantId);
   const deleteParked = useDeleteParkedSale(tenantId);
   const sale = usePosSale(tenantId);
+  const fullInvoice = usePosInvoice(tenantId, attachInvoice?.id);
+  const currentInvoice = attachInvoice && fullInvoice.data ? { ...attachInvoice, balance_due: Number(fullInvoice.data.balance_due) } : attachInvoice;
 
   const walkInId = settings?.walkin_customer_id ?? null;
   const isWalkIn = !customerId || customerId === walkInId;
@@ -149,7 +153,7 @@ export default function PosPage() {
     if (unknownAction === "link") setUnknownCode(code);
   }
 
-  useBarcodeScanner(handleScan, { enabled: !showTender && !receipt && !unknownCode });
+  useBarcodeScanner(handleScan, { enabled: !showTender && !showFullBill && !receipt && !unknownCode });
 
 
   function resetSale() {
@@ -210,7 +214,7 @@ export default function PosPage() {
   }
 
   const total = Math.max(0, cartTotal(lines) - discount);
-  const dueTotal = Number((total + (attachInvoice?.balance_due ?? 0)).toFixed(2));
+  const dueTotal = Number((total + (currentInvoice?.balance_due ?? 0)).toFixed(2));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-sk-surface-muted/40">
@@ -311,9 +315,10 @@ export default function PosPage() {
             onPickCustomer={() => setShowCustomer(true)}
             onCharge={() => { setTenderMethod(undefined); setShowTender(true); }}
             onQuickTender={(m) => { setTenderMethod(m); setShowTender(true); }}
-            busy={sale.isPending}
+            busy={sale.isPending || Boolean(attachInvoice && !fullInvoice.data)}
             saleNumberHint={settings?.till_name ?? undefined}
-            attachInvoice={attachInvoice}
+            attachInvoice={currentInvoice}
+            onPreview={() => setShowFullBill(true)}
             onDetachInvoice={() => setAttachInvoice(null)}
             onAddOnly={() => completeSale([], true)}
           />
@@ -421,8 +426,14 @@ export default function PosPage() {
           busy={sale.isPending}
           onClose={() => setShowTender(false)}
           onConfirm={completeSale}
+          invoiceId={attachInvoice?.id}
+          lines={lines}
+          discount={discount}
+          customerName={customerName}
         />
       )}
+
+      {showFullBill && <FullBillDialog tenantId={tenantId} invoiceId={attachInvoice?.id} lines={lines} discount={discount} customerName={customerName} onClose={() => setShowFullBill(false)} />}
 
       {receipt && (
         <ReceiptView

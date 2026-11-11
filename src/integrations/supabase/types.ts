@@ -7841,6 +7841,7 @@ export type Database = {
         Row: {
           allow_multi_barcode: boolean
           allow_negative_stock: boolean
+          auto_email_paid_receipt: boolean
           created_at: string
           default_vat_rate: number
           label_height_mm: number
@@ -7861,6 +7862,7 @@ export type Database = {
         Insert: {
           allow_multi_barcode?: boolean
           allow_negative_stock?: boolean
+          auto_email_paid_receipt?: boolean
           created_at?: string
           default_vat_rate?: number
           label_height_mm?: number
@@ -7881,6 +7883,7 @@ export type Database = {
         Update: {
           allow_multi_barcode?: boolean
           allow_negative_stock?: boolean
+          auto_email_paid_receipt?: boolean
           created_at?: string
           default_vat_rate?: number
           label_height_mm?: number

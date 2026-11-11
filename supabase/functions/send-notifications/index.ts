@@ -5,7 +5,7 @@
 // Trigger with `supabase.functions.invoke("send-notifications")` or via cron.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { loadTransport, loadTenantBrand, renderBrandedHtml, sendMail } from "../_shared/comms-transport.ts";
+import { loadTransport, loadTenantBrand, renderBrandedHtml, sendMail, type MailAttachment } from "../_shared/comms-transport.ts";
 import { htmlToText, looksLikeHtml } from "../_shared/html-email.ts";
 import { hotelNotificationTemplate } from "../_shared/hotel-notifications.ts";
 
@@ -152,9 +152,9 @@ Deno.serve(async (req) => {
     processed++;
     // Scheduled grooming delivery is claimed once, before any SMTP work.
     // A failed/interrupted delivery remains visible for staff review, not auto-resend.
-    if (ev.payload?.grooming_scheduled_release === true) {
+    if (ev.payload?.grooming_scheduled_release === true || ev.payload?.pos_paid_receipt === true) {
       const { data: claimed, error: claimError } = await sb.from("notification_events")
-        .update({ status: "failed", error: "Scheduled invoice delivery claimed; awaiting result" })
+        .update({ status: "failed", error: "Invoice delivery claimed; awaiting result" })
         .eq("id", ev.id).eq("status", "pending").select("id").maybeSingle();
       if (claimError || !claimed) { skipped++; continue; }
     }
@@ -176,6 +176,11 @@ Deno.serve(async (req) => {
         sb.from("message_templates").select("*").eq("tenant_id", ev.tenant_id).eq("event_code", ev.event_type).eq("channel", ev.channel).eq("is_active", true).maybeSingle(),
       ]);
       const settings = settingsRes.data;
+      if (ev.payload?.pos_paid_receipt === true && (!invoiceRes.data || invoiceRes.data.status !== "paid" || Number(invoiceRes.data.balance_due) > 0)) {
+        await sb.from("notification_events").update({ status: "skipped", error: "Invoice is no longer paid" }).eq("id", ev.id);
+        skipped++;
+        continue;
+      }
       if (ev.payload?.grooming_scheduled_release === true && (!invoiceRes.data || ["draft", "cancelled"].includes(invoiceRes.data.status))) {
         await sb.from("notification_events").update({ status: "skipped", error: "Invoice is not available for release" }).eq("id", ev.id);
         skipped++;
@@ -294,6 +299,15 @@ Deno.serve(async (req) => {
           await logEmail(sb, ev.tenant_id, recipient, subject ?? "(no subject)", "failed", errMsg, `notify.${ev.event_type}`);
           continue;
         }
+        let attachments: MailAttachment[] | undefined;
+        if (ev.payload?.pos_paid_receipt === true && invoiceRes.data) {
+          const pdf = await fetch(`${SUPABASE_URL}/functions/v1/generate-invoice-pdf`, {
+            method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY },
+            body: JSON.stringify({ invoice_id: ev.invoice_id }),
+          });
+          if (!pdf.ok) throw new Error(`Receipt PDF failed (${pdf.status}): ${await pdf.text()}`);
+          attachments = [{ filename: `${invoiceRes.data.invoice_number}.pdf`, content: new Uint8Array(await pdf.arrayBuffer()), contentType: "application/pdf", encoding: "binary" }];
+        }
         const result = await sendMail(transport, recipient, subject, body, html, {
           admin: sb,
           tenantId: ev.tenant_id,
@@ -301,7 +315,7 @@ Deno.serve(async (req) => {
           customerId: ev.customer_id ?? null,
           bookingId: ev.booking_id ?? null,
           invoiceId: ev.invoice_id ?? null,
-        });
+        }, attachments);
         if (result.ok) {
           sent++;
           await sb.from("notification_events").update({
@@ -328,7 +342,7 @@ Deno.serve(async (req) => {
                 customerId: ev.customer_id ?? null,
                 bookingId: ev.booking_id ?? null,
                 invoiceId: ev.invoice_id ?? null,
-              });
+              }, attachments);
               await logEmail(
                 sb, ev.tenant_id, cc, subject,
                 copy.ok ? "sent" : (copy as { blocked?: boolean }).blocked ? "blocked" : "failed",

@@ -79,6 +79,7 @@ export interface RetailSettings {
   low_stock_notify_emails: string | null;
   till_name: string | null;
   receipt_footer: string | null;
+  auto_email_paid_receipt?: boolean;
   pos_location_id: string | null;
   walkin_customer_id: string | null;
   prices_include_vat?: boolean | null;

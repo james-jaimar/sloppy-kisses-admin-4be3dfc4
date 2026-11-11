@@ -355,7 +355,7 @@ export default function XeroSettingsPage() {
               <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {PAYMENT_METHODS.map((m) => (
                   <div key={m}>
-                    <div className={label}>{m}</div>
+                    <div className={label}>{m === "yoko" ? "Yoco" : m}</div>
                     {(bankAccounts.data?.length ?? 0) > 0 ? (
                       <select className={input} disabled={!canManage}
                         value={form.payment_accounts?.[m] ?? ""}

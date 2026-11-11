@@ -1,4 +1,6 @@
 import { Minus, Percent, Plus, Trash2, User, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileText } from "lucide-react";
 import { useProductImageUrls } from "@/features/shop/productImages";
 import { cartTotal, lineTotal, lineUnitPrice, vatPortion, type PosLine } from "./queries";
 
@@ -20,12 +22,13 @@ interface Props {
   attachInvoice?: { id: string; invoice_number: string; balance_due: number } | null;
   onDetachInvoice?: () => void;
   onAddOnly?: () => void;
+  onPreview: () => void;
 }
 
 export default function PosSalePanel({
   lines, discount, customerLabel, onChangeQty, onRemove, onDiscount, onClearDiscount,
   onPickCustomer, onCharge, onQuickTender, saleNumberHint, busy,
-  attachInvoice, onDetachInvoice, onAddOnly,
+  attachInvoice, onDetachInvoice, onAddOnly, onPreview,
 }: Props) {
   const subtotal = cartTotal(lines);
   const total = Math.max(0, Number((subtotal - discount).toFixed(2)));
@@ -120,6 +123,7 @@ export default function PosSalePanel({
       </div>
 
       <div className="shrink-0 space-y-2 border-t border-border bg-white p-3 xl:space-y-3 xl:p-4">
+        <Button variant="outline" className="w-full" onClick={onPreview}><FileText className="mr-2 h-4 w-4" />View full bill</Button>
         <button
           onClick={discount > 0 ? onClearDiscount : onDiscount}
           className="flex w-full items-center justify-between rounded-xl border border-dashed border-border px-3 py-2 text-sm"

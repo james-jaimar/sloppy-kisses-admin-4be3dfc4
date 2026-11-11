@@ -288,6 +288,9 @@ export function usePosSale(tenantId: string) {
       };
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pos_full_bill"] });
+      // The paid receipt is durable in notification_events; this only prompts delivery.
+      void supabase.functions.invoke("send-notifications").catch(() => undefined);
       qc.invalidateQueries({ queryKey: ["invoices"] });
       qc.invalidateQueries({ queryKey: ["payments"] });
       qc.invalidateQueries({ queryKey: ["stock_on_hand"] });

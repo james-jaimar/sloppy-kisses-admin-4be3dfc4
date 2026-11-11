@@ -6,6 +6,8 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import { usePaymentProviders, useUpsertPaymentProvider, type PaymentProviderRow } from "@/features/refunds/queries";
 import PayFastConnectDialog from "./PayFastConnectDialog";
+import YocoSetupDialog from "./YocoSetupDialog";
+import { Button } from "@/components/ui/button";
 
 type ProviderMeta = {
   code: string;
@@ -32,7 +34,7 @@ const PROVIDERS: ProviderMeta[] = [
   {
     code: "yoco",
     label: "Yoco",
-    description: "Yoco's card machine is a stand-alone terminal. API-based refunds are only available on Yoco Online / Yoco Business — worth checking Charlotte's plan before wiring up.",
+    description: "Terminal payments await the confirmed model and Yoco Web POS authorisation.",
     status: "coming-soon",
   },
   {
@@ -51,6 +53,7 @@ export default function PaymentProvidersPage() {
   const rowsQ = usePaymentProviders(tenantId);
   const upsert = useUpsertPaymentProvider(tenantId ?? "");
   const [payfastDialog, setPayfastDialog] = useState(false);
+  const [yocoDialog, setYocoDialog] = useState(false);
 
   const rowsByCode = new Map((rowsQ.data ?? []).map((r) => [r.provider, r]));
 
@@ -138,6 +141,7 @@ export default function PaymentProvidersPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
+                      {p.code === "yoco" && canManage && <Button variant="outline" size="sm" onClick={() => setYocoDialog(true)}><Settings2 className="mr-2 h-4 w-4" />Prepare setup</Button>}
                       {isPayfast && canManage && (
                         <button onClick={() => setPayfastDialog(true)}
                           className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-white px-3 text-xs font-semibold">
@@ -165,7 +169,7 @@ export default function PaymentProvidersPage() {
                       </button>
                     </div>
                   </div>
-                  {isGateway && (
+                  {isGateway && p.code !== "yoco" && (
                     <div className="mt-3 rounded-lg border border-dashed border-border bg-sk-surface-muted p-3 text-xs text-muted-foreground">
                       Gateway wiring is stubbed and ready. When you connect this provider, the refund UI will call the gateway edge function
                       instead of writing manual rows — no changes needed elsewhere in the app.
@@ -185,6 +189,7 @@ export default function PaymentProvidersPage() {
           onClose={() => setPayfastDialog(false)}
         />
       )}
+      {yocoDialog && tenantId && <YocoSetupDialog tenantId={tenantId} existing={rowsByCode.get("yoco")} onClose={() => setYocoDialog(false)} />}
     </>
   );
 }

@@ -3,10 +3,18 @@ import { Banknote, CreditCard, Delete, Plus, UserCheck, X } from "lucide-react";
 import { toast } from "sonner";
 import { usePaymentMethods } from "@/features/invoices/queries";
 import type { PosTender } from "./queries";
+import type { PosLine } from "./queries";
+import { FullBillDialog } from "./FullBillView";
+import { Button } from "@/components/ui/button";
+import { FileText } from "lucide-react";
 
 interface Props {
   tenantId: string;
   total: number;
+  invoiceId?: string | null;
+  lines: PosLine[];
+  discount: number;
+  customerName: string;
   /** Charge-to-account is only possible for a real (non walk-in) customer. */
   allowAccount: boolean;
   initialMethod?: string;
@@ -17,7 +25,8 @@ interface Props {
 
 const QUICK_NOTES = [50, 100, 200, 500];
 
-export default function TenderDialog({ tenantId, total, allowAccount, initialMethod, busy, onClose, onConfirm }: Props) {
+export default function TenderDialog({ tenantId, total, allowAccount, initialMethod, busy, onClose, onConfirm, invoiceId, lines, discount, customerName }: Props) {
+  const [preview, setPreview] = useState(false);
   const methodsQ = usePaymentMethods(tenantId, { activeOnly: true });
   const methods = useMemo(() => {
     const rows = (methodsQ.data ?? []) as any[];
@@ -143,6 +152,7 @@ export default function TenderDialog({ tenantId, total, allowAccount, initialMet
 
         {/* Summary */}
         <div className="w-full md:w-80 xl:w-96">
+          <Button variant="outline" className="mb-3 w-full" onClick={() => setPreview(true)}><FileText className="mr-2 h-4 w-4" />View full bill</Button>
           <div className="rounded-2xl border border-border bg-white p-4">
             <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tenders</div>
             {tenders.length === 0 && <div className="text-sm text-muted-foreground">Nothing captured yet.</div>}
@@ -195,6 +205,7 @@ export default function TenderDialog({ tenantId, total, allowAccount, initialMet
           )}
         </div>
       </div>
+      {preview && <FullBillDialog tenantId={tenantId} invoiceId={invoiceId} lines={lines} discount={discount} customerName={customerName} onClose={() => setPreview(false)} />}
     </div>
   );
 }
