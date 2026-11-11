@@ -136,6 +136,10 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
       <div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sk-green" /><div><p className="text-base font-bold text-sk-green">Quote {estimate.estimate_number} accepted by customer</p><p className="text-sm text-foreground">{estimate.accepted_at ? new Date(estimate.accepted_at).toLocaleString("en-ZA", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Johannesburg" }) : "Accepted"} · Next: gather outstanding info, then confirm & invoice.</p></div></div>
       <div className="rounded-xl bg-background px-4 py-2 text-right"><p className="text-xs font-medium text-muted-foreground">{requiredPct >= 100 ? "Full payment due on confirmation" : `${requiredPct}% deposit due on confirmation`}</p><p className="text-lg font-extrabold">{money(Math.round(Number(estimate.total) * requiredPct) / 100)}</p><p className="text-xs text-muted-foreground">of {money(Number(estimate.total))} total</p></div>
     </section>}
+    {!portal && !confirmed && awaitingAcceptance && estimate && !estimate.sent_at && <section aria-label="Quote not sent" className="flex items-start gap-3 rounded-2xl border-2 border-destructive/40 bg-sk-red-soft p-4 sm:p-5">
+      <CircleAlert className="mt-0.5 h-6 w-6 shrink-0 text-destructive" />
+      <div><p className="text-base font-bold text-destructive">Quote {estimate.estimate_number} is prepared but has not been sent yet</p><p className="text-sm text-foreground">Email it to the customer or copy the WhatsApp link below — they can't accept it until they receive it.</p></div>
+    </section>}
     {awaitingAcceptance && <HotelQuoteActions bookingId={bookingId} estimateId={estimate?.id} tenantId={tenantId} />}
     {stay}
     {!awaitingAcceptance && <>
