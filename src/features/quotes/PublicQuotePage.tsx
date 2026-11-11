@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Loader2, CheckCircle2, CalendarDays, Clock } from "lucide-react";
+const logo = "/brand/logo.png";
 import { format } from "date-fns";
 import { supabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -96,13 +97,20 @@ export default function PublicQuotePage() {
 
   return (
     <div className="min-h-screen bg-sk-surface-muted py-6 sm:py-10">
-      <div className="mx-auto max-w-2xl px-4">
+      <div className="mx-auto w-full max-w-6xl px-4 lg:w-[75vw]">
         <div className="sk-card overflow-hidden">
-          <div className="bg-primary px-6 py-6 text-center sm:px-8">
-            <div className="text-xs font-bold uppercase text-primary-foreground">
-              {isDaycare ? "Daycare quote" : "Hotel quote"} {quote?.estimate_number}
+          <div className="flex flex-wrap items-center justify-between gap-4 bg-primary px-6 py-6 sm:px-8">
+            <div className="flex items-center gap-4">
+              <img src={logo} alt={tenant?.name ?? "Logo"} className="h-14 w-14 rounded-2xl bg-background object-contain p-1" />
+              <div>
+                <div className="text-2xl font-extrabold text-primary-foreground">{tenant?.name}</div>
+                <div className="text-sm text-primary-foreground/90">{[tenant?.contact_phone, tenant?.contact_email].filter(Boolean).join(" · ")}</div>
+              </div>
             </div>
-            <div className="mt-1 text-2xl font-extrabold text-primary-foreground">{tenant?.name}</div>
+            <div className="text-right text-primary-foreground">
+              <div className="text-xs font-bold uppercase">{isDaycare ? "Daycare quote" : "Hotel quote"}</div>
+              <div className="text-xl font-extrabold">{quote?.estimate_number}</div>
+            </div>
           </div>
 
           {done ? (
@@ -147,7 +155,8 @@ export default function PublicQuotePage() {
               )}
             </div>
           ) : (
-            <div className="p-6 sm:p-8">
+            <div className="grid gap-6 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+              <div className="min-w-0">
               <p className="text-sm text-muted-foreground">
                 Hi {(customer?.full_name ?? "there").split(/\s+/)[0]}, here is your quote for{" "}
                 {pets.map((p) => p.name).join(", ") || "your dog"}.
@@ -195,7 +204,9 @@ export default function PublicQuotePage() {
                 </div>
               )}
 
-              <div className="mt-5 grid gap-4 rounded-lg border border-border p-4 sm:grid-cols-2">
+              </div>
+              <aside className="lg:sticky lg:top-6 lg:self-start">
+              <div className="grid gap-4 rounded-lg border border-border p-4 sm:grid-cols-2 lg:grid-cols-1">
                 <div>
                   <div className="text-xs text-muted-foreground">
                     {isDaycare ? "First invoice" : "Total for the stay"}
@@ -239,6 +250,7 @@ export default function PublicQuotePage() {
                   </div>
                 </div>
               )}
+              </aside>
             </div>
           )}
 

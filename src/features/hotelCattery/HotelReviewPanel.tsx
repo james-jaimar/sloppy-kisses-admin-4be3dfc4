@@ -132,6 +132,10 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
           <span className={cn("min-w-0 flex-1 break-words", i.done ? "text-muted-foreground" : "font-medium")}>{i.label}{i.optional && !i.done ? " (optional)" : ""}</span>{!i.done && <Button type="button" variant="outline" size="sm" className="shrink-0 bg-background" onClick={() => setFocus(previous => ({ code: i.code, sequence: (previous?.sequence ?? 0) + 1 }))}>{i.code === "care" ? "Add feeding" : i.code === "tick_flea" ? "Record treatment" : i.code === "vaccinations" ? "Review vaccines" : i.code === "terms" ? "Review terms" : "Review"}</Button>}</li>)}</ul>
       </div>}
     </section>
+    {!portal && !confirmed && !awaitingAcceptance && estimate && (estimate.accepted_at || estimate.status === "accepted") && <section aria-label="Quote accepted" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-sk-green bg-sk-green-soft p-4 sm:p-5">
+      <div className="flex items-start gap-3"><CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-sk-green" /><div><p className="text-base font-bold text-sk-green">Quote {estimate.estimate_number} accepted by customer</p><p className="text-sm text-foreground">{estimate.accepted_at ? new Date(estimate.accepted_at).toLocaleString("en-ZA", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Johannesburg" }) : "Accepted"} · Next: gather outstanding info, then confirm & invoice.</p></div></div>
+      <div className="rounded-xl bg-background px-4 py-2 text-right"><p className="text-xs font-medium text-muted-foreground">{requiredPct >= 100 ? "Full payment due on confirmation" : `${requiredPct}% deposit due on confirmation`}</p><p className="text-lg font-extrabold">{money(Math.round(Number(estimate.total) * requiredPct) / 100)}</p><p className="text-xs text-muted-foreground">of {money(Number(estimate.total))} total</p></div>
+    </section>}
     {awaitingAcceptance && <HotelQuoteActions bookingId={bookingId} estimateId={estimate?.id} tenantId={tenantId} />}
     {stay}
     {!awaitingAcceptance && <>
