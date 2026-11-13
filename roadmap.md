@@ -1,5 +1,11 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## AWS Amplify preparation (13 Nov)
+- [x] Bundle the four existing public/login images so Amplify does not need Lovable's asset proxy; original CDN objects retained for older deployments.
+- [x] Add lockfile-matched Amplify build settings and a domain cutover checklist, including APP_BASE_URL and SPA rewrite configuration.
+- [x] Verify local image rendering with Lovable proxy blocked on login/signup/public hotel pages; 130 tests passed and preview build OK. Hosting preparation committed.
+- [ ] Live Amplify deployment and domain cutover: awaiting James's AWS/DNS configuration; existing Supabase remains in place.
+
 ## Hotel quote-first enquiry flow (11 Nov)
 - [x] Generate a quote after a quick enquiry saves; expose email, public WhatsApp link and phone acceptance before intake, with a post-save Send quote shortcut.
 - [x] Keep intake and confirmation after acceptance; retain accepted quote and needs_info when notes save, no invoice until staff confirmation. Public acceptance button environment access corrected after browser reproduction.

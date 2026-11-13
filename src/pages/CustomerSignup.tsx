@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import { Logo } from "@/components/layout/Logo";
-import loginBg from "@/assets/login-dogs.jpg.asset.json";
+import loginBg from "@/assets/login-dogs.jpg";
 
 export default function CustomerSignup() {
   const navigate = useNavigate();
@@ -62,7 +62,7 @@ export default function CustomerSignup() {
   return (
     <div
       className="relative grid min-h-screen place-items-center px-4 bg-sk-bg bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: `url(${loginBg.url})` }}
+      style={{ backgroundImage: `url(${loginBg})` }}
     >
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/40" aria-hidden />
       <div className="relative w-full max-w-md rounded-2xl border border-border bg-white/95 backdrop-blur p-8 shadow-xl">

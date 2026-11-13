@@ -1,14 +1,14 @@
 import { Camera, MapPin, Trophy, Images } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
-import daycare from "@/assets/booking/daycare.png.asset.json";
-import puppy from "@/assets/booking/puppy.jpg.asset.json";
-import dalmatian from "@/assets/booking/dalmatian.jpg.asset.json";
+import daycare from "@/assets/booking/daycare.png";
+import puppy from "@/assets/booking/puppy.jpg";
+import dalmatian from "@/assets/booking/dalmatian.jpg";
 
 export const bookingPhotos = [
-  { url: daycare.url, alt: "Dogs playing outdoors", label: "Playtime" },
-  { url: dalmatian.url, alt: "A Dalmatian enjoying a cuddle", label: "A little love" },
-  { url: puppy.url, alt: "A small puppy", label: "Little guests" },
+  { url: daycare, alt: "Dogs playing outdoors", label: "Playtime" },
+  { url: dalmatian, alt: "A Dalmatian enjoying a cuddle", label: "A little love" },
+  { url: puppy, alt: "A small puppy", label: "Little guests" },
 ];
 
 export function AwardPlaceholder() {
