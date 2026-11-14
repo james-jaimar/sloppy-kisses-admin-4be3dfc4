@@ -81,6 +81,29 @@ export default function XeroCustomersPage() {
     } catch (e: any) { toast.error(e?.message ?? "Linking failed"); }
   }
 
+  const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
+  async function onLinkAllReady() {
+    if (!tenantId) return;
+    try {
+      const ids: string[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await (supabase as any).from("xero_contacts_staging").select("id")
+          .eq("tenant_id", tenantId).eq("match_state", "suggested").not("matched_customer_id", "is", null)
+          .order("id").range(from, from + 999);
+        if (error) throw error;
+        ids.push(...(data ?? []).map((d: any) => d.id));
+        if (!data || data.length < 1000) break;
+      }
+      if (!ids.length) { toast.info("Nothing ready to link"); return; }
+      if (!window.confirm(`Link all ${ids.length} ready contacts to their SK customers? This runs in batches of 50 and takes a few minutes.`)) return;
+      const r = await link.mutateAsync({ ids, onProgress: (done, total) => setBulk({ done, total }) });
+      counts.refetch();
+      toast.success(`${r.linked} customers linked to Xero`);
+    } catch (e: any) {
+      toast.error(`${e?.message ?? "Linking stopped"} — already-linked batches are saved; press again to continue.`);
+    } finally { setBulk(null); }
+  }
+
   async function onImport(ids: string[]) {
     if (!ids.length) return;
     try {
@@ -204,6 +227,14 @@ export default function XeroCustomersPage() {
                 disabled={!canManage || !rows.length || link.isPending}
                 className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-3 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
                 <CheckCircle2 className="h-4 w-4" /> Link all shown
+              </button>
+            )}
+            {state === "suggested" && (
+              <button onClick={onLinkAllReady}
+                disabled={!canManage || !(counts.data?.suggested) || link.isPending}
+                className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-3 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
+                {bulk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                {bulk ? `Linking ${bulk.done} of ${bulk.total}…` : `Link all ready (${counts.data?.suggested ?? 0})`}
               </button>
             )}
           </div>
