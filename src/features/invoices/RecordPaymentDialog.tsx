@@ -85,22 +85,21 @@ export function RecordPaymentDialog({ tenantId, invoiceId, customerId, suggested
               onChange={(e) => setAmount(Number(e.target.value))}
               className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
           </Field>
-          <Field label="Method">
-            <select value={method} onChange={(e) => setMethod(e.target.value)}
-              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm">
-              {(methodsQ.data ?? []).map((m: any) => (
-                <option key={m.id} value={m.code}>{m.label}</option>
+          <div>
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Method</div>
+            <div role="radiogroup" aria-label="Payment method" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {((methodsQ.data ?? []).length > 0
+                ? (methodsQ.data ?? []).map((m: any) => ({ code: m.code, label: m.code === "yoko" ? "Yoco card" : m.label }))
+                : [{ code: "yoko", label: "Yoco card" }, { code: "cash", label: "Cash" }, { code: "eft", label: "EFT" }, { code: "card", label: "Other card" }, { code: "other", label: "Other" }]
+              ).map((m) => (
+                <button key={m.code} type="button" role="radio" aria-checked={method === m.code} onClick={() => setMethod(m.code)}
+                  className={`h-11 rounded-lg border text-sm font-semibold ${method === m.code ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted"}`}>
+                  {m.label}
+                </button>
               ))}
-              {(methodsQ.data ?? []).length === 0 && (
-                <>
-                  <option value="cash">Cash</option>
-                  <option value="eft">EFT</option>
-                  <option value="card">Card</option>
-                  <option value="other">Other</option>
-                </>
-              )}
-            </select>
-          </Field>
+            </div>
+            {method === "yoko" && <p className="mt-2 text-xs text-muted-foreground">Take the card on the Yoco machine, then enter the slip reference below. Automatic sending to the machine switches on once Yoco approves access.</p>}
+          </div>
           <Field label="Date">
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
               className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
