@@ -1,78 +1,98 @@
-# Yoco payments: front desk and shop
+# Faster front-desk collections and payments
 
-## Outcome
-Give the ladies clear payment buttons on invoices and at the till, send the chosen amount to Yoco, and record payment only after Yoco confirms success. Start in test mode; keep ordinary cash, EFT and manual card recording available.
+## Result
+Staff can recognise the customer and pet, see what is outstanding, and take payment without leaving their working screen. Build all three improvements as one connected experience, delivered in three sequential slices.
 
-## Important correction and dependency
-Yoco **does** publish a Web POS API, but it is separate from online Checkout. Web POS requires an OAuth application with `business/webpos:read` and `business/webpos:write`; an online `sk_test_…` key alone is not sufficient. The Web POS response opens Yoco's payment session for terminal selection/confirmation, so we must not promise that clicking our button immediately wakes a particular machine without merchant input.
+**Example:** Kerry opens the grooming booking → sees the customer, dog and “Outstanding R…” → taps **Take payment** → records it using the existing payment-method buttons → returns to the same booking with its updated balance. If staff only know the customer or dog's name, search brings them into that same experience.
 
-James has identified the machine as **Khumo**. Its exact variant and compatibility still need checking: Yoco's help page specifically mentions **Khumo Print by request** and **Neo Touch**, not every Khumo. Online test card details are for online checkout unless Yoco confirms otherwise; physical-terminal testing is a separate gate.
+## Shared approach across all three slices
+- One definition of invoice/payment state, reused by booking panels, search, customer profiles and grooming cards. No competing balance calculations.
+- Clearly distinguish **this visit's invoices** from **other outstanding invoices on the customer's account**. A shared invoice can cover several visits: show its actual balance, not an invented per-dog debt, and count each invoice once.
+- Separate financial state from operational readiness. Paid does not mean the dog is ready; ready does not mean paid. Neither automatically checks the dog out.
+- Missing, draft, cancelled and failed-to-load invoices must never appear as “Paid” or “Nothing outstanding”. Use explicit states and retry where needed.
+- Reuse the existing payment recording, allocation, credit, receipts and accounting workflows. These slices improve access and presentation; they do not introduce a new financial write path.
+- After payment, refresh every affected invoice, customer total, booking summary, search result and board indicator, including all invoices receiving an allocation.
+- Respect existing invoice-view and payment-record permissions and tenant boundaries. No financial information for staff who cannot view invoices.
+- Keep configured payment methods and operational rules in their existing Settings screens. No new fixed rates, workflow columns or permission system.
+- Yoco remains explicitly **manual card recording** until the separate approved terminal-integration work is available. This plan does not activate terminal charging.
 
-Build the independent screens and safeguards first. Hold terminal activation until access and compatibility are verified. Do not silently substitute online checkout for the requested terminal experience or build a native mobile bridge.
+## Slice 1 — payment at the booking
+**Staff experience**
+- Put customer/pet identification and a compact payment summary near the top of the shared booking side panel, before lengthy service details.
+- Show linked invoice number, status, actual remaining balance and a clear **Take payment** action for payable issued invoices.
+- Open the existing payment dialog with the correct customer, invoice and remaining amount already selected. No need to find the invoice again.
+- Keep the panel and original board position underneath. Cancelling returns there unchanged; a successful payment updates the displayed balance without leaving the board.
+- When more than one payable invoice is linked, present a short invoice list rather than silently choosing one. Offer other customer balances separately, without replacing the visit's amount with the account total.
+- Show drafts as not yet issued, paid invoices as paid, and unavailable data as unavailable. Do not create or issue an invoice from this shortcut; hotel confirmation and scheduled grooming release remain authoritative.
+- Reuse this payment presentation/action in the existing booking invoice panel so the full booking page and side panel agree.
 
-## Slice 1 — fast payment buttons
-- Replace the invoice payment-method dropdown with clear icon-and-label buttons using the active methods from existing Payment Methods settings.
-- Present Cash, EFT, manual Card and manual Yoco where configured; label **Yoco terminal** separately so recording a machine payment manually cannot be mistaken for charging a card.
-- Align shop tender buttons and invoice/front-desk payment entry points. Preserve dates, references, notes, customer credit and allocation across invoices.
-- Default connected payments to the current outstanding balance; allow an explicit smaller amount. Disabled/unconfigured terminal payments must not fall through to manual recording.
-- Verify method selection and unchanged manual payment behaviour on desktop and tablet/mobile.
+**Dependency work delivered here**
+- Establish the shared booking-invoice resolution, payment-state presentation and refresh behaviour that slices 2 and 3 consume.
+- Resolve both direct booking invoice links and invoice-item booking links; deduplicate invoice IDs. The current side-panel invoice query and board indicators use different link paths, so their results must be reconciled before reuse.
+- Ensure the payment dialog appears above the side panel, with clear invoice/customer identity and safe loading/error states.
 
-## Slice 2 — test connection and counter setup
-- Extend Admin → Settings → Payment providers → Yoco with separate connection state, test/live environment, terminal compatibility and enabled state.
-- Keep the owner in control; staff taking payments see only safe connection status, never credentials.
-- Provide the supported Yoco authorisation flow, connection check and named Web POS counter registration. A counter ID represents a station/browser, not a terminal serial number.
-- Show the required callback address and requested access before authorisation. Confirm exact Khumo variant and terminal selection through Yoco's session.
-- Keep online Checkout credentials visibly separate if supplied; do not claim they activate Web POS or add an unrelated online payment flow without approval.
-- Completion gate: sandbox access confirmed, counter registered, compatible-terminal route established. If access is missing, complete the screens and report the precise outstanding Yoco requirement.
+**Verification gate**
+- Open an existing grooming booking, confirm its persisted invoice/balance, record a partial payment, then read back the smaller balance through the same panel and invoice screen.
+- Repeat for a fully settled visit, multiple linked invoices, a shared invoice, no invoice and a scheduled draft; preserve hotel no-invoice-before-confirmation behaviour.
+- Test cancellation, failed saving, multi-invoice allocation and restricted staff access. Verify that selecting Yoco does not charge the terminal.
+- Check desktop and phone/tablet presentation and dialog layering; run focused payment/link/state regressions.
 
-## Slice 3 — safe payment processing
-- Persist each attempt before contacting Yoco: tenant, staff member, counter, environment, intended amount, invoice/sale and allocation snapshot.
-- Calculate/validate payable amounts on the server from current balances and persisted sale details; send integer ZAR cents, not browser-supplied totals alone.
-- Prevent simultaneous duplicate requests and reuse/recover the same attempt after double-clicks, refreshes and interrupted responses.
-- Fetch the result from Yoco on the server. A browser return, closed window or waiting timeout never proves payment success or failure.
-- On verified success, record one payment and its allocations atomically using the existing billing lifecycle; retain Yoco's reference and the internal `yoko` method for existing accounting compatibility.
-- Pending/unknown outcomes remain recoverable and block a fresh charge until reconciled. Only an authoritative failed outcome permits an ordinary retry; do not promise a remote cancellation endpoint without documented support.
-- Isolate sandbox outcomes from real invoice balances, stock, customer receipts and Xero pushes. Use clearly marked test fixtures/dry-run state and keep existing live/manual payments untouched.
+## Slice 2 — find the person and act immediately
+**Staff experience**
+- Enhance global search results with recognisable customer and pet context: customer name/number and pet names, service/date for visits, and outstanding amounts where permitted.
+- Searching by customer or pet name should surface relevant visits, not require a booking number. Prioritise today's relevant visits, while keeping older results identifiable and accessible.
+- Clicking a booking result opens the same side panel from slice 1; staff keep their underlying screen. Customer and pet results retain their normal destinations, with clear visit/payment actions where relevant.
+- Put an outstanding-invoice total, invoice count and **Take payment** shortcut near the top of the customer profile, without needing the Invoices tab.
+- Preselect the customer in the existing Take Payment dialog. With one payable invoice, go directly to payment; with several, show the short chooser so staff deliberately select the invoice.
+- Label this as the customer's outstanding invoices, not the price of today's grooming. Show available customer credit separately where permitted; do not silently net or allocate it.
 
-## Slice 4 — invoice and front-desk terminal flow
-- Selecting Yoco terminal shows the amount and counter, then a clear **Send to Yoco** action.
-- Open the supported Yoco session; show waiting, successful, failed and still-checking states, plus recovery after closing/reloading.
-- Confirm partial and full payments, including allocation across the customer's selected invoices. Refresh balances/status only after server-confirmed recording.
-- Keep manual Card/Yoco fallback explicit and separate; never switch methods automatically while an attempt is unresolved.
-- Verification gate: a real authorised staff session starts a test payment and reads the outcome back through the invoice screen.
+**Integration with slice 1**
+- Use the shared invoice eligibility and balance states established in slice 1, and the same payment dialog/action.
+- Refresh profile totals and search balances after any payment/allocation. Keep the booking panel as the common visit workspace rather than building another payment screen.
+- Load enrichment only for matched customers/pets/visits, in bounded batches; avoid a whole-customer-database balance scan or a separate query per search result.
 
-## Slice 5 — shop/till terminal flow
-- Use the same Yoco payment experience for walk-in and named-customer sales, including a service invoice plus retail items in one total.
-- Persist/freeze the payable basket before charging, preserving invoice lines, VAT, discounts and any existing balances. Do not rely on a browser-only basket after card approval.
-- Support split cash/card payments and charge only the remaining Yoco portion.
-- Finalise the sale exactly once after confirmed payment; prevent duplicate stock movements and payment rows. If finalisation fails after card approval, recover that sale without charging again.
-- Retain the existing full bill preview, paid receipt queue and customer email opt-out. Never show a successful payment as merely an unsaved tender that can be deleted.
-- Verification gate: test an existing invoice plus retail, a walk-in sale and a split payment; reload and confirm the persisted sale/payment/stock result.
+**Verification gate**
+- Find an existing customer by name, number and mobile; find their visit by dog name. Confirm the displayed identity and amount against persisted invoices.
+- Exercise search → booking panel → payment and customer profile → preselected payment; verify updated balances on both paths.
+- Test same-name customers/pets, no matching visit, no outstanding invoices, multiple invoices, unavailable financial data and invoice-view/payment permission differences.
+- Check keyboard selection, modified-click navigation where supported, loading/error states and desktop/mobile layouts; run focused search and customer-summary rule tests.
 
-## Slice 6 — verification and controlled go-live
-- Test success, decline, interrupted session, duplicate clicks, reopened page, delayed success, changed balance, wrong tenant and unauthorised staff.
-- Confirm correct cents conversion, partial-payment balances, single receipt, single sale/stock movement and the Yoco Xero account mapping. Do not enable Xero automatically or push sandbox data.
-- Test with James's Yoco sandbox credentials using secure entry, then separately on the actual supported terminal with Kerry/Charlotte.
-- Verify desktop/tablet/mobile presentation and callback/return links on the Amplify address and intended custom domain.
-- Live activation remains off until James explicitly approves, live authorisation is verified and the physical-terminal check succeeds. Provide a short front-desk checklist and retain a manual fallback.
+## Slice 3 — grooming collection status at a glance
+**Staff experience**
+- Make Ready-column grooming cards clearly show pet, owner, operational readiness and payment state together.
+- Show **Ready · Paid** when linked issued invoices are settled, or **Ready · Outstanding R…** when payment remains. Clearly identify draft/no-invoice/unavailable states instead of implying all is settled.
+- When a shared invoice covers several visits, identify the outstanding amount as an invoice balance so staff do not collect the full amount repeatedly for each pet.
+- Card clicks continue to open the slice 1 panel; payment stays there. No extra invoice-page detour or new collection page.
+- Preserve the existing daycare return indication: a dog returning to daycare must not be labelled as waiting for customer collection merely because grooming is ready.
+- Keep existing drag/drop, workflow states, health checks, Stay & Play and collection actions unchanged. Payment does not automatically complete or release the booking.
+
+**Integration with slices 1 and 2**
+- Reuse the shared invoice resolution/state rather than extending the existing independent “worst status wins” calculation with another balance interpretation.
+- Fetch payment information once for the board's booking set. Refresh all affected cards after payments, including shared invoices and payments allocated across several invoices.
+- Confirm that the same invoice reads identically on the Ready card, booking panel, search and customer profile, with visit/account labels retaining their distinct meanings.
+
+**Verification gate**
+- Walk the complete collection scenario: find a Ready dog → open booking → record partial/full payment → return to the same board → confirm the card and search/profile summaries update.
+- Repeat for paid, shared-invoice, multi-pet, draft/unissued, unavailable-data and daycare-return bookings; verify readiness and payment remain independent.
+- Run shared-state regressions and check desktop/mobile cards, wrapping, colour contrast, board navigation and preserved drag/drop.
 
 ## Technical implementation
-- Frontend scope: `RecordPaymentDialog`, shared payment selection/attempt UI, `TenderDialog`/POS flow, and `YocoSetupDialog`/Payment Providers settings. Reuse existing Button, modal and semantic theme patterns.
-- Use authenticated Supabase Edge Functions for create/check/register/finalise operations with tenant and permission checks; use only credential-free status responses for normal payment staff. Apply required Supabase grants/RLS guidance before migrations.
-- Keep tenant-owner credential management in Payment Providers, consistent with existing project policy. Audit current credential reads first; migrate Yoco sensitive values behind server-only storage and masked write/rotate operations rather than returning a settings object containing tokens to the browser. Keep non-secret counter/status metadata separate. No secrets in source, chat, local storage or logs.
-- Follow Yoco's supported OAuth application approval and refresh lifecycle; verify callback state and tenant binding. Deploy any needed callback before requesting setup. Do not request keys until the correct access type is established.
-- Web POS endpoints: `POST /v1/webpos/`, `POST /v1/webpos/{id}/payments`, `GET /v1/webpos/{id}/payments/{payment_id}`. Production host `https://api.yoco.com`; sandbox `https://api.yocosandbox.com`. Request money shape: `{ amount: integerCents, currency: "ZAR" }`. Provider statuses: `pending`, `successful`, `failed`.
-- Adapt the existing `payment_attempts`, allocation and atomic POS mechanisms instead of introducing parallel invoice or receipt systems. Add durable sale preparation/recovery where required by the current one-step `complete_pos_sale` flow.
-- Use provider-supported idempotency only after verifying its endpoint contract, alongside database uniqueness/locking. Poll/reconcile server-side status; add webhooks only if the Web POS event contract is confirmed, with verified signatures and duplicate protection.
-- Add focused rule tests beside existing tests and transaction/permission regressions. Run each slice's tests and relevant user flow before moving on; distinguish simulations from actual authorised Yoco/terminal checks.
+- Extend the existing React/TanStack Query patterns: `BookingPeek`, `BookingDetailPanel`, `BookingInvoicePanel`, invoice queries and payment dialogs, `useGlobalSearch`/`GlobalSearch`, `CustomerDetailPage`, and shared payment flags used by `GroomingCard`.
+- Establish small shared invoice-resolution/state helpers and tenant-scoped batched read hooks; derive financial eligibility from the existing invoice status/balance rules, not UI colour or booking status.
+- Return explicit loading/error/empty states from shared reads. Add tenant predicates to booking/invoice lookup paths and gate financial reads/actions using the existing permission codes.
+- Extend payment mutation invalidation to cover booking invoice reads, board payment flags, matched search results, account summaries and every allocated invoice; include relevant existing credit/account query keys where affected.
+- Use existing Button/dialog components, semantic theme tokens and a body-level portal for payment dialogs above the booking panel. Do not add decorative nested cards or unrelated screen redesigns.
+- Start with frontend/shared reads. No new database tables, financial mutations, notification types or Settings capability are planned. If a required read cannot be safely expressed through existing tenant-scoped access, investigate first and apply Supabase grants/RLS guidance before proposing any database change.
+- Add concrete rule tests beside existing tests for invoice-link deduplication, payable/draft/missing/error states, distinct visit/account totals, refresh targets and readiness independence. Do not test cosmetic copy or snapshots.
 
-## Delivery order
-Proceed through all six slices after plan approval, without asking for routine reconfirmation between slices. Stop only the parts awaiting credentials, Yoco approval, physical device access or explicit live activation. Report completed slices and exact remaining blockers; do not call an untested connection ready.
+## Delivery order and completion standard
+1. Approve this combined plan, then implement and verify slice 1.
+2. Carry its shared foundations into slice 2; complete and verify it before starting slice 3.
+3. Complete slice 3, then perform the cross-screen collection walkthrough.
 
-## Sources checked 18 November 2026
-- [Yoco scopes: Web POS is OAuth-only](https://developer.yoco.com/docs/api/authentication/scopes.md)
-- [Register a Web POS counter](https://developer.yoco.com/api-reference/yoco-api/web-pos/create-web-pos-device-v-1-webpos-post.md)
-- [Create a Web POS payment](https://developer.yoco.com/api-reference/yoco-api/web-pos/create-web-pos-payment-v-1-webpos-webpos-device-id-payments-post.md)
-- [Fetch payment outcome](https://developer.yoco.com/api-reference/yoco-api/web-pos/fetch-web-pos-payment-v-1-webpos-webpos-device-id-payments-payment-id-get.md)
-- [Yoco help: supported SalonBridge machine integration](https://support.yoco.help/en/articles/670728-yoco-salonbridge-integration)
-- [Online Checkout is separate](https://developer.yoco.com/online/api-reference/checkout/payments/accept-payments/)
+Proceed between slices without routine reconfirmation. Fix issues found in the shared foundations before building the next slice. Record completion and exact outstanding checks in the roadmap.
+
+A successful compile or a mocked payment is not a live collection test. Authenticated end-to-end checks have previously been unavailable on this external Supabase connection; reassess when implementing. If still unavailable, complete the safe source/test work, explicitly mark real staff payment/readback verification blocked, and do not claim that slice fully verified. Yoco approval and physical-terminal tests remain separate dependencies, not prerequisites for these manual-payment improvements.
+
+## Out of scope
+New collections dashboard, automatic checkout, changed invoice release/approval policies, automated Yoco charging, new payment defaults, bulk account settlement without invoice selection, new financial calculations and unrelated front-desk improvements.

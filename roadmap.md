@@ -1,5 +1,12 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## Faster front-desk collections and payments (18 Nov 2026)
+- [x] Plan all three improvements together, including shared invoice resolution, payment states, permissions and cross-screen refresh.
+- [ ] Slice 1: booking side-panel invoice/balance and direct prefilled payment; verify before slice 2. Implementation awaits combined-plan approval.
+- [ ] Slice 2: customer/pet search with visit/payment context and customer-profile outstanding balance/payment shortcut; reuse slice 1 foundations.
+- [ ] Slice 3: Ready grooming cards show readiness and paid/owing state; reuse the same booking payment path and verify the complete collection workflow.
+- Verification gate: complete and check each slice sequentially; reassess staff-session availability and explicitly report any blocked real payment/readback checks. Automatic Yoco charging remains separate.
+
 ## Yoco payments — staged integration (18 Nov 2026)
 - [x] Investigate existing invoice/POS/settings flows and current official Yoco Web POS documentation; prepare the staged plan.
 - [ ] Slice 1: payment-method buttons across invoices and POS; preserve manual methods and distinguish manual Yoco from connected Yoco.
