@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
   } catch { /* ignore */ }
 
   // 1. Find or create the auth user
-  const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 200 });
+  const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
   const existing = list?.users?.find((u) => (u.email ?? "").toLowerCase() === email);
   let authUserId: string | null = existing?.id ?? null;
   const fullName = cust.full_name || [cust.first_name, cust.last_name].filter(Boolean).join(" ").trim() || null;
@@ -131,6 +131,19 @@ Deno.serve(async (req) => {
     .update({ linked_profile_id: profileId, portal_access_enabled: true, signup_status: "active" })
     .eq("id", cust.id);
   if (linkErr) return json(500, { error: `Link: ${linkErr.message}` });
+
+  // Already-registered customers: access is linked, nothing to send or log.
+  const alreadyRegistered = !!(existing && (existing.email_confirmed_at || (existing as any).confirmed_at || existing.last_sign_in_at));
+  if (alreadyRegistered) {
+    return json(200, {
+      ok: true,
+      already_registered: true,
+      auth_user_id: authUserId,
+      profile_id: profileId,
+      email_sent: false,
+      email_error: null,
+    });
+  }
 
   // 4. Send branded invite email
   const origin = req.headers.get("origin") ?? req.headers.get("referer") ?? "";
