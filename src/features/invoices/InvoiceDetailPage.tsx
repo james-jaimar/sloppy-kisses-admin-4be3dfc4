@@ -4,7 +4,6 @@ import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Downl
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
-import { SyncToXeroButton } from "@/features/xero/SyncToXeroButton";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useInvoice, useIssueInvoice, useVoidInvoice, useUpsertInvoiceItem, useDeleteInvoiceItem, useInvoicingSettings, useUpdateInvoice, useInvoiceEvents, useSendInvoiceEmail, type InvoiceEvent } from "./queries";
 import { InvoiceStatusChip, fmtZar } from "./status";
@@ -155,14 +154,6 @@ export default function InvoiceDetailPage() {
                 </button>
               </Can>
             )}
-            {inv && !isDraft && inv.status !== "cancelled" && (
-              <SyncToXeroButton
-                entityType="invoice"
-                entityId={inv.id}
-                synced={Boolean((inv as any).xero_invoice_id)}
-                className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted disabled:opacity-50"
-              />
-            )}
             {inv && !isDraft && inv.status !== "cancelled" && balance > 0 && (
               <Can code="payments.create">
                 <button onClick={() => setPayOpen(true)}
@@ -229,7 +220,7 @@ export default function InvoiceDetailPage() {
                         </span>
                       )}
                     </div>
-                    <div className="mt-1"><InvoiceStatusChip status={inv.status} /></div>
+                    <div className="mt-1"><InvoiceStatusChip status={inv.status} size="lg" /></div>
                   </div>
                   <div className="text-right">
                     <div className="text-xs uppercase tracking-wide text-muted-foreground">Balance due</div>
@@ -489,7 +480,7 @@ export default function InvoiceDetailPage() {
                 )}
                 <div className="mt-3 flex justify-between border-t border-border pt-3 text-sm">
                   <span className="text-muted-foreground">Paid</span>
-                  <span className="tabular-nums">{fmtZar(inv.amount_paid)}</span>
+                  <span className="tabular-nums font-semibold">{fmtZar(inv.amount_paid)}</span>
                 </div>
                 {creditsApplied > 0 && (
                   <div className="mt-1 flex justify-between text-sm">

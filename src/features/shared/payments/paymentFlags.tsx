@@ -86,10 +86,10 @@ export function PaymentChip({
   const { Icon } = meta;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-semibold ${meta.className}`}
+      className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-bold ${meta.className}`}
       title={flag.invoiceNumber ? `Invoice ${flag.invoiceNumber}` : undefined}
     >
-      <Icon className="h-3 w-3" />
+      <Icon className="h-3.5 w-3.5" />
       {collection && ["unpaid", "overdue"].includes(flag.status) ? `${flag.shared ? "Shared invoice" : "Outstanding"} ${fmtZar(flag.balanceDue)}` : meta.label}
     </span>
   );

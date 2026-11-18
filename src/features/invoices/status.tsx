@@ -26,11 +26,15 @@ export const INVOICE_STATUS_TONE: Record<string, string> = {
   expired: "bg-muted text-muted-foreground",
 };
 
-export function InvoiceStatusChip({ status }: { status: string }) {
+export function InvoiceStatusChip({ status, size = "sm" }: { status: string; size?: "sm" | "lg" }) {
   const tone = INVOICE_STATUS_TONE[status] ?? "bg-muted text-muted-foreground";
   const label = INVOICE_STATUS_LABEL[status] ?? status;
+  const sizing =
+    size === "lg"
+      ? "px-4 py-1.5 text-base font-bold tracking-wide"
+      : "px-2.5 py-0.5 text-xs font-semibold";
   return (
-    <span className={"inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium " + tone}>
+    <span className={"inline-flex items-center rounded-full " + sizing + " " + tone}>
       {label}
     </span>
   );
