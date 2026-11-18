@@ -1,5 +1,14 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## Yoco payments — staged integration (18 Nov 2026)
+- [x] Investigate existing invoice/POS/settings flows and current official Yoco Web POS documentation; prepare the staged plan.
+- [ ] Slice 1: payment-method buttons across invoices and POS; preserve manual methods and distinguish manual Yoco from connected Yoco.
+- [ ] Slice 2: permission-gated Yoco test setup, safe credential handling, connection checks and counter registration; Web POS requires OAuth access, not Checkout keys alone.
+- [ ] Slice 3: durable payment attempts, server-verified results, atomic allocations and duplicate-safe recovery; isolate test payments from live balances, stock, receipts and Xero.
+- [ ] Slice 4: invoice/front-desk Yoco payment flow with progress, partial payments and recovery.
+- [ ] Slice 5: POS Yoco flow, including split payments and existing invoice plus retail; recover confirmed card payments without duplicate sales or stock movements.
+- [ ] Slice 6: sandbox checks, real compatible-terminal check, receipts/Xero mapping and explicit live activation. Credentials, OAuth approval, exact Khumo variant and physical testing remain external dependencies.
+
 ## AWS Amplify preparation (13 Nov)
 - [x] Bundle the four existing public/login images so Amplify does not need Lovable's asset proxy; original CDN objects retained for older deployments.
 - [x] Add lockfile-matched Amplify build settings and a domain cutover checklist, including APP_BASE_URL and SPA rewrite configuration.
