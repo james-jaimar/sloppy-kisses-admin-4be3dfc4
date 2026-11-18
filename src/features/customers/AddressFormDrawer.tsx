@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import AddressField from "@/components/address/AddressField";
@@ -73,6 +74,7 @@ export default function AddressFormDrawer({ tenantId, customerId, address, onClo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     try {
       const payload: Record<string, any> = { ...form };
       if (!form.google_place_id) {
@@ -88,12 +90,12 @@ export default function AddressFormDrawer({ tenantId, customerId, address, onClo
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40">
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex justify-end bg-black/40">
       <div className="h-full w-full max-w-md overflow-y-auto bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{address ? "Edit address" : "Add address"}</h2>
-          <button onClick={onClose} className="rounded-lg p-1 hover:bg-muted">
+          <button type="button" onClick={onClose} className="rounded-lg p-1 hover:bg-muted">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -200,5 +202,7 @@ export default function AddressFormDrawer({ tenantId, customerId, address, onClo
         </form>
       </div>
     </div>
+  ,
+    document.body,
   );
 }
