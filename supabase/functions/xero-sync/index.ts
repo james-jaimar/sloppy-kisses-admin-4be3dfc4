@@ -3,10 +3,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { pace, xero, xeroConnections, xeroDate } from "../_shared/xero.ts";
 import { assertFeature } from "../_shared/features.ts";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { PAYMENT_SYNC_DISABLED, withPaymentSync } from "./paymentSyncPolicy.ts";
 
 const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  ...corsHeaders,
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -22,6 +23,7 @@ type Settings = {
   tenant_id: string;
   enabled: boolean;
   auto_push: boolean;
+  sync_payments: boolean;
   xero_tenant_id: string | null;
   default_sales_account: string;
   service_account_codes: Record<string, string>;
@@ -276,6 +278,12 @@ const contactCache = new Map<string, string>();
 
 // ---------- Payments ----------
 async function pushPayment(s: Settings, paymentId: string, actor: string | null) {
+  // Re-read before any provider call: disabling the setting also stops a
+  // worker invocation that loaded its settings before the change.
+  const { data: current, error: settingsError } = await admin.from("xero_settings")
+    .select("sync_payments").eq("tenant_id", s.tenant_id).maybeSingle();
+  if (settingsError) throw new Error(settingsError.message);
+  if (current?.sync_payments !== true) return { skipped: true, reason: PAYMENT_SYNC_DISABLED };
   const ctx = { tenantId: s.xero_tenant_id! };
   const { data: p, error } = await admin
     .from("payments")
@@ -393,7 +401,7 @@ async function pushCreditNote(s: Settings, creditNoteId: string, actor: string |
 async function pushOne(s: Settings, type: string, id: string, actor: string | null) {
   if (type === "customer") return await pushCustomer(s, id, actor);
   if (type === "invoice") return await pushInvoice(s, id, actor);
-  if (type === "payment") return await pushPayment(s, id, actor);
+  if (type === "payment") return await withPaymentSync(s, () => pushPayment(s, id, actor));
   if (type === "credit_note") return await pushCreditNote(s, id, actor);
   throw new Error(`Unknown entity type ${type}`);
 }
@@ -793,6 +801,9 @@ Deno.serve(async (req) => {
         if (Date.now() > deadline) { stoppedEarly = true; break; }
         try {
           const r = await pushOne(s, type, id, actor);
+          if (type === "payment" && typeof r === "object" && r?.skipped) {
+            await logSync({ tenant_id: tenantId, entity_type: type, entity_id: id, action: "skip", status: "skipped", error_message: r.reason ?? "Payment not pushed", triggered_by: actor });
+          }
           results.push({ id, ok: true, ...(typeof r === "object" ? r : { xero_id: r }) });
           await pace();
         } catch (e) {
@@ -904,8 +915,12 @@ Deno.serve(async (req) => {
       for (const item of items ?? []) {
         if (Date.now() > deadline) break;
         try {
-          await pushOne(s, item.entity_type, item.entity_id, null);
-          await admin.from("xero_sync_queue").update({ status: "done", last_error: null }).eq("id", item.id);
+          const result = await pushOne(s, item.entity_type, item.entity_id, null);
+          const skipped = typeof result === "object" && result?.skipped;
+          if (skipped && item.entity_type === "payment") {
+            await logSync({ tenant_id: tenantId, entity_type: "payment", entity_id: item.entity_id, action: "skip", status: "skipped", error_message: result.reason ?? "Payment not pushed" });
+          }
+          await admin.from("xero_sync_queue").update({ status: "done", last_error: skipped ? item.last_error : null }).eq("id", item.id);
           done++;
         } catch (e) {
           const msg = String((e as Error).message);

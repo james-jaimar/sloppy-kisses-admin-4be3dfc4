@@ -9297,6 +9297,7 @@ export type Database = {
           line_amount_type: string
           payment_accounts: Json
           service_account_codes: Json
+          sync_payments: boolean
           tenant_id: string
           updated_at: string
           xero_tenant_id: string | null
@@ -9316,6 +9317,7 @@ export type Database = {
           line_amount_type?: string
           payment_accounts?: Json
           service_account_codes?: Json
+          sync_payments?: boolean
           tenant_id: string
           updated_at?: string
           xero_tenant_id?: string | null
@@ -9335,6 +9337,7 @@ export type Database = {
           line_amount_type?: string
           payment_accounts?: Json
           service_account_codes?: Json
+          sync_payments?: boolean
           tenant_id?: string
           updated_at?: string
           xero_tenant_id?: string | null

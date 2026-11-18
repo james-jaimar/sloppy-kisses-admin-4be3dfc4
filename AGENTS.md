@@ -34,3 +34,4 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 - Comms warning dismissal conditionally moves only failed tenant-scoped events to skipped while preserving delivery errors; dismissal and retry invalidate both inbox and sidebar counts so history is retained without stale alerts.
 
 - Front-desk booking balances resolve direct and invoice-item links through shared desk invoice reads; invoice-state helpers and payment refresh keys are shared across panels, search and boards so collection screens agree without new financial writes.
+- Xero payment pushes must pass both the tenant enqueue flag and the shared worker/manual policy, rechecking settings before provider calls; invoices carry no payments so app collection and Xero reconciliation remain independent.

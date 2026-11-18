@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { AlertTriangle, ArrowLeft, Loader2, RefreshCw, PlugZap, Users, FileText, ListChecks, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { Switch } from "@/components/ui/switch";
 import { useCurrentTenant, useCurrentUser } from "@/lib/tenant/TenantContext";
 import {
   useXeroSettings, useSaveXeroSettings, useXeroOrganisations, useXeroTest,
@@ -70,7 +71,7 @@ export default function XeroSettingsPage() {
     if (settingsQ.data) setForm(settingsQ.data);
     else if (settingsQ.isFetched && !settingsQ.data) {
       setForm({
-        enabled: false, auto_push: false, xero_tenant_id: null, xero_tenant_name: null,
+        enabled: false, auto_push: false, sync_payments: false, xero_tenant_id: null, xero_tenant_name: null,
         default_sales_account: "200", service_account_codes: {}, default_tax_type: "OUTPUT3",
         zero_rated_tax_type: "ZERORATED", line_amount_type: "Inclusive", payment_accounts: {},
       });
@@ -83,7 +84,7 @@ export default function XeroSettingsPage() {
     if (!canManage || !form) return;
     try {
       await save.mutateAsync({
-        enabled: form.enabled, auto_push: form.auto_push,
+        enabled: form.enabled, auto_push: form.auto_push, sync_payments: form.sync_payments === true,
         xero_tenant_id: form.xero_tenant_id, xero_tenant_name: form.xero_tenant_name,
         default_sales_account: form.default_sales_account || "200",
         service_account_codes: form.service_account_codes ?? {},
@@ -185,7 +186,7 @@ export default function XeroSettingsPage() {
     <>
       <AppHeader
         title="Xero"
-        subtitle="Push customers, invoices, payments and credit notes into Xero."
+        subtitle="Customers, invoices and credit notes · payment syncing optional."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link to="/admin/settings/xero-customers" className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted">
@@ -259,9 +260,20 @@ export default function XeroSettingsPage() {
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={!!form.auto_push} disabled={!canManage || !form.enabled}
                     onChange={(e) => set({ auto_push: e.target.checked })} />
-                  Push new invoices, payments and credit notes automatically
+                  Push new invoices and credit notes automatically
                 </label>
               </div>
+              <div className="mt-4 flex items-center gap-3 border-t border-border pt-4">
+                <Switch id="sync-payments" checked={form.sync_payments === true}
+                  disabled={!canManage || !form.enabled}
+                  onCheckedChange={(checked) => set({ sync_payments: checked })} />
+                <label htmlFor="sync-payments" className="text-sm font-semibold">Sync payments to Xero</label>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {form.sync_payments
+                  ? "Payments will be posted to the mapped Xero accounts. Automatic payment pushes also require auto-push to be on."
+                  : "Off — payments stay recorded here; invoices are sent without payments for bank reconciliation in Xero."}
+              </p>
             </div>
 
             {/* Account mapping */}
@@ -338,6 +350,7 @@ export default function XeroSettingsPage() {
                 ))}
               </div>
 
+              {form.sync_payments === true && <>
               <div className="mt-5 text-sm font-semibold">Bank account per payment method</div>
               <p className="text-xs text-muted-foreground">
                 Payments recorded here post to these Xero accounts. A payment with no mapped account cannot sync.
@@ -361,10 +374,10 @@ export default function XeroSettingsPage() {
                         value={form.payment_accounts?.[m] ?? ""}
                         onChange={(e) => set({ payment_accounts: { ...(form.payment_accounts ?? {}), [m]: e.target.value } })}>
                         <option value="">Not mapped</option>
-                        {bankAccounts.data!.map((a) => (
+                        {(bankAccounts.data ?? []).map((a) => (
                           <option key={a.code} value={a.code}>{a.code} — {a.name}</option>
                         ))}
-                        {form.payment_accounts?.[m] && !bankAccounts.data!.some((a) => a.code === form.payment_accounts[m]) && (
+                        {form.payment_accounts?.[m] && !(bankAccounts.data ?? []).some((a) => a.code === form.payment_accounts[m]) && (
                           <option value={form.payment_accounts[m]}>{form.payment_accounts[m]}</option>
                         )}
                       </select>
@@ -376,7 +389,7 @@ export default function XeroSettingsPage() {
                   </div>
                 ))}
               </div>
-
+              </>}
               <div className="mt-5 flex justify-end">
                 <button onClick={onSave} disabled={!canManage || save.isPending}
                   className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">

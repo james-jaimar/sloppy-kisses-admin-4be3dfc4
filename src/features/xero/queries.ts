@@ -6,6 +6,7 @@ export type XeroSettings = {
   tenant_id: string;
   enabled: boolean;
   auto_push: boolean;
+  sync_payments: boolean;
   xero_tenant_id: string | null;
   xero_tenant_name: string | null;
   default_sales_account: string;
@@ -66,7 +67,11 @@ export function useSaveXeroSettings(tenantId: string | null) {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["xero_settings", tenantId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["xero_settings", tenantId] });
+      qc.invalidateQueries({ queryKey: ["xero_queue", tenantId] });
+      qc.invalidateQueries({ queryKey: ["xero_log", tenantId] });
+    },
   });
 }
 

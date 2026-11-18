@@ -1,9 +1,10 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
 ## Xero open-invoice reconciliation (18 Nov 2026)
-- [ ] Add permission-gated payment-sync setting, off by default, without changing invoice/customer/item sync or app balances.
-- [ ] Block automatic and manual payment pushes; retire pending/failed payment queue entries without removing error history.
-- [ ] Verify database gates and worker regressions; deploy and check preview build. Live staff settings/Xero readback requires external sign-in.
+- [x] Add permission-gated payment-sync setting, off by default, without changing invoice/customer/item sync or app balances.
+- [x] Block automatic and manual payment pushes; retire ten failed payment queue entries with original errors and skipped logs preserved; two already-synced payments untouched.
+- [x] Verify persisted setting/queue state, six payment-policy tests, deploy worker and check preview build OK.
+- [ ] Live staff settings save/reopen and Xero reconciliation readback: external unmanaged sign-in unavailable; no live Xero payment or invoice was created for testing.
 
 ## Faster front-desk collections and payments (18 Nov 2026)
 - [x] Plan all three improvements together, including shared invoice resolution, payment states, permissions and cross-screen refresh.
