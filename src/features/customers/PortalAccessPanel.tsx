@@ -71,8 +71,7 @@ export default function PortalAccessPanel({ customer }: Props) {
       return data;
     },
     onSuccess: (data: any) => {
-      if (data.already_registered) toast.success("Customer already has an active account — portal access linked");
-      else if (data.email_sent) toast.success("Password reset email sent");
+      if (data.email_sent) toast.success("Password reset email sent");
       else toast.error(`Reset email failed: ${data.email_error ?? "unknown"}`);
     },
     onError: (e: any) => toast.error(e?.message ?? "Reset failed"),
