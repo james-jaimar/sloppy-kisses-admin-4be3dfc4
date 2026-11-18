@@ -2,10 +2,12 @@
 
 ## Faster front-desk collections and payments (18 Nov 2026)
 - [x] Plan all three improvements together, including shared invoice resolution, payment states, permissions and cross-screen refresh.
-- [ ] Slice 1: booking side-panel invoice/balance and direct prefilled payment; verify before slice 2. Implementation awaits combined-plan approval.
-- [ ] Slice 2: customer/pet search with visit/payment context and customer-profile outstanding balance/payment shortcut; reuse slice 1 foundations.
-- [ ] Slice 3: Ready grooming cards show readiness and paid/owing state; reuse the same booking payment path and verify the complete collection workflow.
-- Verification gate: complete and check each slice sequentially; reassess staff-session availability and explicitly report any blocked real payment/readback checks. Automatic Yoco charging remains separate.
+- [x] Slice 1 implementation: shared direct/item invoice resolution, booking summary and prefilled payment above the panel; partial-payment, permissions, shared/draft/no-invoice tests passed.
+- [x] Slice 2 implementation: customer/pet-name visit search, booking side-panel search links, customer outstanding total/credit and preselected payment shortcut.
+- [x] Slice 3 implementation: Ready cards show paid/outstanding/shared-invoice states, with daycare return kept separate; batched shared reads and payment refresh reused.
+- [x] Focused automated verification: 27 tests passed; preview build OK; signed-out browser reached login with no runtime errors.
+- [ ] Real staff payment/readback and desktop/mobile collection walkthrough for all three slices: blocked by external unmanaged authentication; no signed-in session is available. No live payment or authenticated visual result is claimed. Automatic Yoco charging remains separate.
+
 
 ## Yoco payments — staged integration (18 Nov 2026)
 - [x] Investigate existing invoice/POS/settings flows and current official Yoco Web POS documentation; prepare the staged plan.

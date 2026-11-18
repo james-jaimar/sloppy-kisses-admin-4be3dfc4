@@ -1,3 +1,4 @@
+import { BookingPaymentSummary } from "@/features/shared/payments/BookingPaymentSummary";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -144,6 +145,9 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
               </ul>
             </div>
           )}
+
+          <div className="space-y-1"><p className="font-semibold">{booking.customer?.full_name ?? "Unnamed customer"}</p><p className="text-muted-foreground">{booking.booking_pets.map(bp => bp.pet?.name).filter(Boolean).join(", ")}</p></div>
+          {booking.customer && <BookingPaymentSummary key={booking.id} tenantId={tenantId} bookingId={booking.id} customerId={booking.customer.id} />}
 
           <ShiftNoteSection tenantId={tenantId} bookingId={booking.id} value={booking.shift_note} />
 

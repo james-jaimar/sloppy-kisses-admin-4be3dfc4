@@ -1,3 +1,4 @@
+import { CustomerPaymentSummary } from "@/features/shared/payments/CustomerPaymentSummary";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -148,6 +149,7 @@ export default function CustomerDetailPage() {
 
         {customer && (
           <>
+            {tenant && <CustomerPaymentSummary tenantId={tenant.id} customerId={customer.id} />}
             <PinnedNotesBanner customerId={customer.id} tenantId={tenant?.id} />
             <CustomerVaxFlag customerId={customer.id} tenantId={tenant?.id} />
             {emailDupes && emailDupes.length > 0 && (

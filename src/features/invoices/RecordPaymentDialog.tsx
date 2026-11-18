@@ -1,3 +1,6 @@
+import { createPortal } from "react-dom";
+import { useCurrentUser } from "@/lib/tenant/TenantContext";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
 import { X, Loader2 } from "lucide-react";
@@ -8,11 +11,14 @@ interface Props {
   invoiceId: string;
   customerId: string;
   suggested: number;
+  invoiceLabel?: string;
   onClose: () => void;
   onDone: () => void;
 }
 
-export function RecordPaymentDialog({ tenantId, invoiceId, customerId, suggested, onClose, onDone }: Props) {
+export function RecordPaymentDialog({ tenantId, invoiceId, customerId, suggested, invoiceLabel, onClose, onDone }: Props) {
+  const { hasPermission, profile } = useCurrentUser();
+  const canRecord = profile?.user_type === "platform" || hasPermission("payments.create");
   const methodsQ = usePaymentMethods(tenantId, { activeOnly: true });
   const openQ = useCustomerOpenInvoices(tenantId, customerId);
   const record = useRecordPayment(tenantId);
@@ -24,6 +30,8 @@ export function RecordPaymentDialog({ tenantId, invoiceId, customerId, suggested
   const [allocs, setAllocs] = useState<Record<string, number>>({ [invoiceId]: suggested });
 
   const openInvoices = (openQ.data ?? []) as any[];
+  const selectedInvoice = openInvoices.find(inv => inv.id === invoiceId);
+  const methodAvailable = (methodsQ.data ?? []).some(m => m.code === method);
   const multi = openInvoices.length > 1;
   const allocatedSum = Object.values(allocs).reduce((s, n) => s + (Number(n) || 0), 0);
   const remainder = Math.round((amount - allocatedSum) * 100) / 100;
@@ -45,8 +53,9 @@ export function RecordPaymentDialog({ tenantId, invoiceId, customerId, suggested
   }
 
   async function submit() {
+    if (!canRecord || openQ.isFetching || openQ.isError || record.isPending || !selectedInvoice || !methodAvailable) return;
     if (!amount || amount <= 0) { toast.error("Amount must be greater than zero"); return; }
-    if (allocatedSum > amount + 0.005) { toast.error("Allocations exceed payment amount"); return; }
+    if (multi && allocatedSum > amount + 0.005) { toast.error("Allocations exceed payment amount"); return; }
     try {
       const allocations = multi
         ? Object.entries(allocs)
@@ -72,33 +81,32 @@ export function RecordPaymentDialog({ tenantId, invoiceId, customerId, suggested
     } catch (err: any) { toast.error(err?.message ?? "Failed"); }
   }
 
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[80] grid place-items-center bg-black/40 p-4">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl max-h-[90vh] flex flex-col">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
-          <h2 className="text-lg font-semibold">Record payment</h2>
-          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-muted"><X className="h-4 w-4" /></button>
+          <div><h2 className="text-lg font-semibold">Record payment</h2><p className="text-sm text-muted-foreground">{invoiceLabel ?? openInvoices.find(inv => inv.id === invoiceId)?.invoice_number}</p></div>
+          <Button variant="ghost" aria-label="Close payment" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-muted"><X className="h-4 w-4" /></Button>
         </div>
         <div className="space-y-4 p-5 overflow-y-auto">
+          {methodsQ.isError && <p className="text-destructive">Payment methods unavailable. <Button variant="link" onClick={() => methodsQ.refetch()}>Retry</Button></p>}
+          {openQ.isError && <p className="text-destructive">Could not load current balances. <Button variant="link" onClick={() => openQ.refetch()}>Retry</Button></p>}
           <Field label="Amount (ZAR)">
             <input type="number" step="0.01" min={0} value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
+              onChange={(e) => { const value = Number(e.target.value); setAmount(value); if (Object.entries(allocs).every(([id, a]) => id === invoiceId || a === 0)) setAllocs({ [invoiceId]: Math.min(value, Number(selectedInvoice?.balance_due ?? suggested)) }); }}
               className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm" />
           </Field>
           <div>
             <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Method</div>
             <div role="radiogroup" aria-label="Payment method" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {((methodsQ.data ?? []).length > 0
-                ? (methodsQ.data ?? []).map((m: any) => ({ code: m.code, label: m.code === "yoko" ? "Yoco card" : m.label }))
-                : [{ code: "yoko", label: "Yoco card" }, { code: "cash", label: "Cash" }, { code: "eft", label: "EFT" }, { code: "card", label: "Other card" }, { code: "other", label: "Other" }]
-              ).map((m) => (
-                <button key={m.code} type="button" role="radio" aria-checked={method === m.code} onClick={() => setMethod(m.code)}
+              {(methodsQ.data ?? []).map(m => ({ code: m.code, label: m.code === "yoko" ? "Yoco card" : m.label })).map((m) => (
+                <Button variant={method === m.code ? "default" : "outline"} key={m.code} type="button" role="radio" aria-checked={method === m.code} onClick={() => setMethod(m.code)}
                   className={`h-11 rounded-lg border text-sm font-semibold ${method === m.code ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted"}`}>
                   {m.label}
-                </button>
+                </Button>
               ))}
             </div>
-            {method === "yoko" && <p className="mt-2 text-xs text-muted-foreground">Take the card on the Yoco machine, then enter the slip reference below. Automatic sending to the machine switches on once Yoco approves access.</p>}
+            {method === "yoko" && <p className="mt-2 text-xs text-muted-foreground">Yoco card · manual recording</p>}
           </div>
           <Field label="Date">
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
@@ -119,10 +127,10 @@ export function RecordPaymentDialog({ tenantId, invoiceId, customerId, suggested
                 <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Allocate across invoices
                 </div>
-                <button type="button" onClick={autoFill}
+                <Button type="button" onClick={autoFill}
                   className="text-xs font-semibold text-sk-coral-dark hover:underline">
                   Auto-fill oldest first
-                </button>
+                </Button>
               </div>
               <div className="space-y-2">
                 {openInvoices.map((inv) => {
@@ -155,14 +163,14 @@ export function RecordPaymentDialog({ tenantId, invoiceId, customerId, suggested
           )}
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
-          <button onClick={onClose} className="rounded-lg border border-border px-3 py-2 text-sm">Cancel</button>
-          <button disabled={record.isPending} onClick={submit}
+          <Button variant="outline" onClick={onClose} className="rounded-lg border border-border px-3 py-2 text-sm">Cancel</Button>
+          <Button disabled={record.isPending || openQ.isFetching || openQ.isError || !canRecord || !selectedInvoice || !methodAvailable} onClick={submit}
             className="inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 py-2 text-sm font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">
             {record.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Record
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </div>, document.body
   );
 }
 

@@ -1,10 +1,11 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { createContext, useContext, type ReactNode } from "react";
+import { useDeskBookingInvoices } from "./deskInvoiceQueries";
+import { invoiceState, visitInvoiceState, outstandingTotal } from "./invoiceSummary";
 import { AlertCircle, BadgeCheck, CircleDollarSign } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
+import { fmtZar } from "@/features/invoices/status";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 
-export type PaymentFlagStatus = "paid" | "unpaid" | "overdue" | "draft" | "none";
+export type PaymentFlagStatus = "paid" | "unpaid" | "overdue" | "draft" | "none" | "unavailable" | "loading";
 
 export interface PaymentFlag {
   status: PaymentFlagStatus;
@@ -12,59 +13,29 @@ export interface PaymentFlag {
   invoiceNumber: string | null;
   balanceDue: number;
   dueDate: string | null;
+  shared?: boolean;
 }
 
 const EMPTY: Record<string, PaymentFlag> = {};
 const PaymentFlagsContext = createContext<Record<string, PaymentFlag>>(EMPTY);
 
-function deriveStatus(status: string, balanceDue: number, dueDate: string | null): PaymentFlagStatus {
-  if (status === "paid" || balanceDue <= 0) return "paid";
-  if (status === "draft") return "draft";
-  if (status === "void" || status === "cancelled") return "none";
-  if (dueDate && new Date(dueDate) < new Date(new Date().toDateString())) return "overdue";
-  return "unpaid";
-}
-
-/** Fetches invoice status for a set of bookings. Safe to call with an empty list. */
+/** Board and booking panel share direct and invoice-item link resolution. */
 export function useBookingPaymentFlags(bookingIds: string[]): Record<string, PaymentFlag> {
   const { currentTenant, hasPermission, profile } = useCurrentUser();
-  const tenantId = currentTenant?.id ?? null;
   const canSee = profile?.user_type === "platform" || hasPermission("invoices.view");
-  const ids = useMemo(() => Array.from(new Set(bookingIds.filter(Boolean))).sort(), [bookingIds]);
-
-  const q = useQuery({
-    queryKey: ["booking-payment-flags", tenantId, ids],
-    enabled: Boolean(tenantId) && canSee && ids.length > 0,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("invoice_items")
-        .select("booking_id, invoice:invoices(id, invoice_number, status, due_date, balance_due)")
-        .eq("tenant_id", tenantId as string)
-        .in("booking_id", ids);
-      if (error) throw error;
-      const map: Record<string, PaymentFlag> = {};
-      for (const row of (data ?? []) as any[]) {
-        const inv = row.invoice;
-        if (!row.booking_id || !inv) continue;
-        const balance = Number(inv.balance_due ?? 0);
-        const flag: PaymentFlag = {
-          status: deriveStatus(String(inv.status), balance, inv.due_date ?? null),
-          invoiceId: inv.id,
-          invoiceNumber: inv.invoice_number ?? null,
-          balanceDue: balance,
-          dueDate: inv.due_date ?? null,
-        };
-        const existing = map[row.booking_id];
-        // Worst status wins so a part-paid booking still shows as outstanding.
-        const rank: Record<PaymentFlagStatus, number> = { overdue: 4, unpaid: 3, draft: 2, paid: 1, none: 0 };
-        if (!existing || rank[flag.status] > rank[existing.status]) map[row.booking_id] = flag;
-      }
-      return map;
-    },
-  });
-
-  return q.data ?? EMPTY;
+  const q = useDeskBookingInvoices(currentTenant?.id, bookingIds);
+  if (!canSee) return EMPTY;
+  const map: Record<string, PaymentFlag> = {};
+  for (const id of bookingIds) {
+    const invoices = q.data?.[id] ?? [];
+    const state = q.isError ? "unavailable" : q.isLoading ? "loading" : visitInvoiceState(invoices);
+    const first = invoices[0];
+    const overdue = invoices.some(inv => invoiceState(inv) === "outstanding" && inv.due_date && inv.due_date < new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Johannesburg" }));
+    map[id] = { status: state === "outstanding" ? overdue ? "overdue" : "unpaid" : state === "cancelled" ? "none" : state,
+      invoiceId: first?.id ?? null, invoiceNumber: first?.invoice_number ?? null,
+      balanceDue: outstandingTotal(invoices), dueDate: first?.due_date ?? null, shared: invoices.some(inv => inv.shared) };
+  }
+  return map;
 }
 
 /** Wrap a board so its cards can render payment chips without each one querying. */
@@ -93,21 +64,25 @@ const CHIP_META: Record<
   draft: { label: "Not invoiced", className: "bg-muted text-muted-foreground", Icon: CircleDollarSign },
   paid: { label: "Paid", className: "bg-sk-green-soft text-sk-green", Icon: BadgeCheck },
   none: null,
+  unavailable: { label: "Balances unavailable", className: "bg-muted text-muted-foreground", Icon: AlertCircle },
+  loading: { label: "Loading balances…", className: "bg-muted text-muted-foreground", Icon: CircleDollarSign },
 };
 
 /** Small inline chip for board cards. Renders nothing when there's no invoice. */
 export function PaymentChip({
   bookingId,
   showPaid = false,
+  collection = false,
 }: {
   bookingId: string | null | undefined;
   showPaid?: boolean;
+  collection?: boolean;
 }) {
   const flag = usePaymentFlag(bookingId);
   if (!flag) return null;
   if (flag.status === "paid" && !showPaid) return null;
   const meta = CHIP_META[flag.status];
-  if (!meta) return null;
+  if (!meta) return collection ? <span className="text-xs text-muted-foreground">No active invoice</span> : null;
   const { Icon } = meta;
   return (
     <span
@@ -115,7 +90,7 @@ export function PaymentChip({
       title={flag.invoiceNumber ? `Invoice ${flag.invoiceNumber}` : undefined}
     >
       <Icon className="h-3 w-3" />
-      {meta.label}
+      {collection && ["unpaid", "overdue"].includes(flag.status) ? `${flag.shared ? "Shared invoice" : "Outstanding"} ${fmtZar(flag.balanceDue)}` : meta.label}
     </span>
   );
 }

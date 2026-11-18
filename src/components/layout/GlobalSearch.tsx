@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useBookingPeekClick } from "@/features/bookings/BookingPeek";
+import { Button } from "@/components/ui/button";
+import { Link, useNavigate } from "react-router-dom";
 import { Loader2, Search } from "lucide-react";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useGlobalSearch, GROUP_LABEL, type GlobalSearchHit } from "@/lib/search/useGlobalSearch";
 
 export function GlobalSearch() {
+  const peek = useBookingPeekClick();
   const navigate = useNavigate();
   const { currentTenant, hasPermission } = useCurrentUser();
   const tenantId = currentTenant?.id ?? null;
@@ -12,6 +15,7 @@ export function GlobalSearch() {
   const [debounced, setDebounced] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const resultRefs = useRef<Record<string, HTMLAnchorElement | null>>({});
   const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -53,7 +57,7 @@ export function GlobalSearch() {
     const map = new Map<string, GlobalSearchHit[]>();
     for (const h of hits) {
       if (!map.has(h.group)) map.set(h.group, []);
-      map.get(h.group)!.push(h);
+      map.get(h.group)?.push(h);
     }
     return Array.from(map.entries());
   }, [hits]);
@@ -81,7 +85,9 @@ export function GlobalSearch() {
           } else if (e.key === "Enter") {
             if (hits[active]) {
               e.preventDefault();
-              go(hits[active]);
+              const hit = hits[active];
+              if (hit.group === "bookings") resultRefs.current[`${hit.group}${hit.id}`]?.click();
+              else go(hit);
             }
           } else if (e.key === "Escape") {
             setOpen(false);
@@ -97,7 +103,8 @@ export function GlobalSearch() {
               <Loader2 className="h-4 w-4 animate-spin" /> Searching…
             </div>
           )}
-          {!searchQ.isFetching && hits.length === 0 && (
+          {searchQ.isError && <div className="px-3 py-4 text-sm text-destructive">Search unavailable <Button variant="link" onClick={() => searchQ.refetch()}>Retry</Button></div>}
+          {!searchQ.isError && !searchQ.isFetching && hits.length === 0 && (
             <div className="px-3 py-4 text-sm text-muted-foreground">No matches for “{debounced}”</div>
           )}
           {grouped.map(([group, rows]) => (
@@ -108,10 +115,16 @@ export function GlobalSearch() {
               {rows.map((h) => {
                 const idx = hits.indexOf(h);
                 return (
-                  <button
+                  <Link
+                    to={h.to}
+                    ref={el => { resultRefs.current[`${h.group}${h.id}`] = el; }}
                     key={h.group + h.id}
                     onMouseEnter={() => setActive(idx)}
-                    onClick={() => go(h)}
+                    onClick={(e) => {
+                      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                      if (h.group === "bookings") { peek(h.id)(e); if (e.defaultPrevented) { setOpen(false); setTerm(""); return; } }
+                      e.preventDefault(); go(h);
+                    }}
                     className={
                       "flex w-full flex-col items-start rounded-lg px-3 py-2 text-left " +
                       (idx === active ? "bg-sk-surface-muted" : "hover:bg-sk-surface-muted")
@@ -119,7 +132,9 @@ export function GlobalSearch() {
                   >
                     <span className="text-sm font-medium">{h.title}</span>
                     {h.subtitle && <span className="text-xs text-muted-foreground">{h.subtitle}</span>}
-                  </button>
+                    {h.invoiceState && h.invoiceState !== "outstanding" && <span className="text-xs text-muted-foreground">{h.invoiceState === "draft" ? "Not yet issued" : h.invoiceState === "paid" ? "Paid" : h.invoiceState === "unavailable" ? "Balance needs review" : "No active invoice"}</span>}
+                    {h.financialUnavailable ? <span className="text-xs text-muted-foreground">Balances unavailable</span> : h.balance !== undefined && <span className="text-xs font-semibold text-sk-orange">{h.group === "bookings" ? "Visit invoice balance" : "Customer outstanding"} R{h.balance.toFixed(2)}</span>}
+                  </Link>
                 );
               })}
             </div>

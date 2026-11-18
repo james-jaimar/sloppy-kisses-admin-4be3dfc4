@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
+import { paymentRefreshKeys, invoiceState } from "@/features/shared/payments/invoiceSummary";
+
 type InvoiceRow = Database["public"]["Tables"]["invoices"]["Row"];
 type ItemRow = Database["public"]["Tables"]["invoice_items"]["Row"];
 type PaymentRow = Database["public"]["Tables"]["payments"]["Row"];
@@ -290,10 +292,7 @@ export function useRecordPayment(tenantId: string) {
       }
     },
     onSuccess: (_r, v) => {
-      qc.invalidateQueries({ queryKey: ["invoice", tenantId, v.invoice_id] });
-      qc.invalidateQueries({ queryKey: ["invoices"] });
-      qc.invalidateQueries({ queryKey: ["payments"] });
-      qc.invalidateQueries({ queryKey: ["customer-open-invoices"] });
+      for (const queryKey of paymentRefreshKeys(tenantId, v.invoice_id, v.allocations ?? [])) qc.invalidateQueries({ queryKey });
     },
   });
 }
@@ -311,7 +310,7 @@ export function useCustomerOpenInvoices(tenantId: string | null | undefined, cus
         .not("status", "in", "(draft,cancelled,paid)")
         .order("due_date", { ascending: true, nullsFirst: false });
       if (error) throw error;
-      return (data ?? []).filter((r: any) => Number(r.balance_due ?? 0) > 0);
+      return (data ?? []).filter((r: any) => invoiceState(r) === "outstanding");
     },
   });
 }
@@ -489,12 +488,12 @@ export function useBookingInvoice(tenantId: string | null | undefined, bookingId
     enabled: Boolean(tenantId && bookingId),
     queryFn: async () => {
       const { data: b, error: bErr } = await supabase
-        .from("bookings").select("invoice_id, status").eq("id", bookingId as string).maybeSingle();
+        .from("bookings").select("invoice_id, status").eq("tenant_id", tenantId as string).eq("id", bookingId as string).maybeSingle();
       if (bErr) throw bErr;
       if (!b?.invoice_id) return { booking: b, invoice: null as any };
       const { data: inv, error } = await supabase.from("invoices")
         .select("id, invoice_number, status, total, amount_paid, balance_due, issue_date, due_date")
-        .eq("id", b.invoice_id).maybeSingle();
+        .eq("tenant_id", tenantId as string).eq("id", b.invoice_id).maybeSingle();
       if (error) throw error;
       return { booking: b, invoice: inv };
     },

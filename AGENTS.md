@@ -32,3 +32,5 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 - Hotel Today register queries both arrival and departure endpoints using Johannesburg day boundaries, independent of the arrival month, so earlier stays departing today are not missed.
 - POS bill previews read persisted invoice lines and balances, adding unsaved cart lines only before sale; paid receipts are queued by an invoice trigger and sent through the existing dispatcher to survive till closure without duplicate automatic sends.
 - Comms warning dismissal conditionally moves only failed tenant-scoped events to skipped while preserving delivery errors; dismissal and retry invalidate both inbox and sidebar counts so history is retained without stale alerts.
+
+- Front-desk booking balances resolve direct and invoice-item links through shared desk invoice reads; invoice-state helpers and payment refresh keys are shared across panels, search and boards so collection screens agree without new financial writes.

@@ -1,3 +1,4 @@
+import { collectionDestination } from "@/features/shared/payments/invoiceSummary";
 import { useBookingPeekClick } from "@/features/bookings/BookingPeek";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Clock, PawPrint, User } from "lucide-react";
@@ -66,6 +67,7 @@ export function GroomingCard({
   const pet = card.pets[0];
   const otherPets = card.pets.length - 1;
   const isMobile = card.service_type === "grooming_mobile";
+  const destination = collectionDestination(card.status === "ready", Boolean(inDaycare));
   const hasResource = Boolean(card.resource);
 
   return (
@@ -90,6 +92,8 @@ export function GroomingCard({
         </div>
         <BookingStatusChip status={card.status} />
       </div>
+
+      {destination && <div className="text-xs font-semibold text-sk-turquoise-dark">{destination === "daycare" ? "Ready · return to daycare" : "Ready for collection"}</div>}
 
       {card.shift_note && (
         <div className="truncate rounded bg-sk-orange-soft px-2 py-0.5 text-[11px] font-semibold text-sk-orange" title={card.shift_note}>
@@ -124,7 +128,7 @@ export function GroomingCard({
           </span>
         )}
         {inDaycare && <InDaycareChip status={card.status} />}
-        <PaymentChip bookingId={card.id} />
+        <PaymentChip bookingId={card.id} showPaid={card.status === "ready"} collection={card.status === "ready"} />
         {prefsState && <GroomingPrefsChip state={prefsState} onClick={onSetPrefs} compact />}
         <StayPlayBadge sessions={stayPlay} graceMinutes={stayPlayGraceMinutes} />
         {card.details?.actual_start_at && !card.details?.actual_end_at && (
