@@ -73,7 +73,7 @@ import {
 
 const EDIT_KEY = "__booking__";
 import { effectivePetSize } from "@/features/pets/sizeUtils";
-import { useSetBookingGroomingAddons } from "@/features/grooming/workflowQueries";
+import { useSetBookingGroomingAddons, useGroomingWorkflowSettings } from "@/features/grooming/workflowQueries";
 import { useGroomingPackages, useGroomingAddons } from "@/features/settings/groomingRateCardQueries";
 import { BookingGroomingInstructionsPanel } from "@/features/grooming/instructions/BookingGroomingInstructionsPanel";
 import { useSaveBookingInstructions } from "@/features/grooming/instructions/queries";
@@ -209,6 +209,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number } | null>(null);
   const [reviewGrooming, setReviewGrooming] = useState(false);
   const invoiceSettingsQ = useInvoicingSettings(tenantId);
+  const groomingWfQ = useGroomingWorkflowSettings(tenantId);
   const [sendGroomingEmails, setSendGroomingEmails] = useState(true);
   const [bookingInProgress, setBookingInProgress] = useState(false);
 
@@ -737,7 +738,11 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       const addon = addonsCatalogQ.data?.find((a) => a.id === selection.addon_id);
       return sum + groomingAddonPrice(addon?.code ?? "", Number(addon?.price_zar ?? 0), pkg?.package_type) * selection.qty;
     }, 0);
-  }, 0) + (serviceType === "grooming_mobile" ? Number(grooming.travel_fee ?? 0) : 0);
+  }, 0);
+  const reviewTravelFee = serviceType === "grooming_mobile"
+    ? Number(grooming.travel_fee ?? groomingWfQ.data?.default_mobile_travel_fee_zar ?? 0)
+    : 0;
+  const estimateTotalPerVisit = estimatePerVisit + reviewTravelFee;
 
   async function saveBooking(confirmed = false) {
     if (bookingInProgress) return;
@@ -2092,8 +2097,12 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
               </div>
             </div>
             <div className="border-t border-border pt-4 text-sm">
-              <div className="flex justify-between gap-4"><span>Estimated per visit</span><span>R{estimatePerVisit.toFixed(2)}</span></div>
-              <div className="mt-1 flex justify-between gap-4 font-semibold"><span>Estimated series total</span><span>R{(estimatePerVisit * reviewSchedule.days.length).toFixed(2)}</span></div>
+              <div className="flex justify-between gap-4"><span>Grooming</span><span>R{estimatePerVisit.toFixed(2)}</span></div>
+              {reviewTravelFee > 0 && <div className="mt-1 flex justify-between gap-4"><span>Mobile travel fee</span><span>R{reviewTravelFee.toFixed(2)}</span></div>}
+              {reviewSchedule.days.length > 1 ? <>
+                <div className="mt-1 flex justify-between gap-4 font-semibold"><span>Per visit</span><span>R{estimateTotalPerVisit.toFixed(2)}</span></div>
+                <div className="mt-1 flex justify-between gap-4 font-semibold"><span>Total ({reviewSchedule.days.length} visits)</span><span>R{(estimateTotalPerVisit * reviewSchedule.days.length).toFixed(2)}</span></div>
+              </> : <div className="mt-1 flex justify-between gap-4 text-base font-semibold"><span>Total (VAT incl.)</span><span>R{estimateTotalPerVisit.toFixed(2)}</span></div>}
               <p className="mt-1 text-xs text-muted-foreground">Final invoices may differ if discounts or other charges apply.</p>
             </div>
             <label className="flex items-start gap-3 border-t border-border pt-4 text-sm">
