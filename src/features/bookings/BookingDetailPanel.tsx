@@ -1,3 +1,4 @@
+import { CapturedBy } from "@/features/shared/audit/CapturedBy";
 import { BookingPaymentSummary } from "@/features/shared/payments/BookingPaymentSummary";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -114,6 +115,7 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
               <BookingStatusChip status={booking.status} />
               <BookingStayPlayBadge tenantId={tenantId} bookingId={booking.id} />
             </div>
+            <CapturedBy table="bookings" id={booking.id} verb="Booked" className="mt-2" />
             {(booking as any).recurring_rule_id && (
               <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-sk-turquoise-soft px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sk-turquoise-dark">
                 <Repeat className="h-3 w-3" /> Part of a series

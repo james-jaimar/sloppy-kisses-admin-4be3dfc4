@@ -1,3 +1,4 @@
+import { CapturedBy } from "@/features/shared/audit/CapturedBy";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Trash2, Send, Ban, CreditCard, Save, X, Loader2, Download, Mail, Link as LinkIcon, BellOff, Bell, FileMinus, RotateCcw, Undo2 } from "lucide-react";
@@ -221,6 +222,7 @@ export default function InvoiceDetailPage() {
                       )}
                     </div>
                     <div className="mt-1"><InvoiceStatusChip status={inv.status} size="lg" /></div>
+                    <CapturedBy table="invoices" id={inv.id} verb="Created" className="mt-2" />
                   </div>
                   <div className="text-right">
                     <div className="text-xs uppercase tracking-wide text-muted-foreground">Balance due</div>
@@ -433,6 +435,7 @@ export default function InvoiceDetailPage() {
                                 {p.payment_reference ? " · " + p.payment_reference : ""}
                                 {refundedOnP > 0 && <> · <span className="text-sk-coral-dark">Refunded {fmtZar(refundedOnP)}</span></>}
                               </div>
+                              <CapturedBy table="payments" id={p.id} verb="Recorded" />
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="text-sm font-semibold tabular-nums">{fmtZar(p.amount)}</div>
