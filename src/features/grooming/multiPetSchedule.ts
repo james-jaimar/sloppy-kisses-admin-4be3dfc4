@@ -232,3 +232,21 @@ export function poolHours(resources: GroomerResource[], fallback = { openHour: 8
     closeHour: closes.length ? Math.max(...closes) / 60 : fallback.closeHour,
   };
 }
+
+/**
+ * Pick a station for a job when staff left "Auto-assign": the first groomer
+ * (in board order, preferred first) free for the exact window; if everyone is
+ * busy, the first groomer working then, else the first groomer — so a booking
+ * is never saved Unassigned while stations exist.
+ */
+export function pickGroomingStation(args: FreeResourcesArgs & { preferredResourceId?: string | null }): string | null {
+  const { resources, preferredResourceId = null } = args;
+  if (resources.length === 0) return null;
+  const ordered = preferredResourceId
+    ? [...resources].sort((a, b) => (a.id === preferredResourceId ? -1 : b.id === preferredResourceId ? 1 : 0))
+    : resources;
+  const { free } = freeResourcesAt({ ...args, resources: ordered });
+  if (free.length) return free[0].id;
+  const working = ordered.find((r) => withinWorkingHours(r, args.start, args.end));
+  return (working ?? ordered[0]).id;
+}

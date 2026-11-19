@@ -54,7 +54,7 @@ import { GroomingExtrasPanel, type GroomingAddonSelection } from "./GroomingExtr
 import { GroomingSlotPicker } from "@/features/grooming/GroomingSlotPicker";
 import { groomingAddonPrice, pensionerEligible } from "@/features/grooming/priceListRules";
 import { useGroomingDayAvailability } from "@/features/grooming/availabilityQueries";
-import { freeResourcesAt, layoutGroomingAppointments, type PetSlotRequest } from "@/features/grooming/multiPetSchedule";
+import { freeResourcesAt, pickGroomingStation, type PetSlotRequest } from "@/features/grooming/multiPetSchedule";
 import {
   applyInstructionAddons,
   clockOf,
@@ -703,15 +703,17 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     if (!startAt) return null;
     const baseStart = new Date(startAt);
     const endComputed = new Date(baseStart.getTime() + durationMins * 60000);
-    const autoResource = resourceId ?? layoutGroomingAppointments({
+    const stationFor = (start: Date, end: Date) => pickGroomingStation({
       resources: groomingAvailQ.data?.resources ?? [],
       busy: groomingAvailQ.data?.busy ?? [],
-      baseStart,
-      pets: [{ petId: petIds[0] ?? "pet", durationMinutes: durationMins }],
+      start,
+      end,
+      excludeBookingIds: booking?.id ? [booking.id] : [],
       preferredResourceId: preferredGroomerId,
-    })?.[0]?.resourceId ?? null;
+    });
+    const autoResource = resourceId ?? stationFor(baseStart, endComputed);
     const slots = isMultiPetGrooming && groomingPlan
-      ? groomingPlan.map((s) => ({ key: s.petId, petIds: [s.petId], start: s.start, end: s.end, resourceId: s.resourceId ?? resourceId }))
+      ? groomingPlan.map((s) => ({ key: s.petId, petIds: [s.petId], start: s.start, end: s.end, resourceId: s.resourceId ?? resourceId ?? stationFor(s.start, s.end) }))
       : [{ key: groomCardKeys[0] ?? EDIT_KEY, petIds, start: baseStart, end: endComputed, resourceId: autoResource }];
     const firstDay = startAt.slice(0, 10);
     const days = [firstDay, ...repeatDates(groomRepeat, firstDay)];
@@ -882,7 +884,9 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             status,
             start_at: new Date(startAt).toISOString(),
             end_at: endComputed.toISOString(),
-            resource_id: resourceId,
+            resource_id: kind === "grooming" && !resourceId
+              ? (groomingSlots()?.appointments[0]?.resourceId ?? null)
+              : resourceId,
             notes_internal: notesInternalValue,
             notes_customer: notesCustomer.trim() || null,
             service_address_id: serviceAddressId,
