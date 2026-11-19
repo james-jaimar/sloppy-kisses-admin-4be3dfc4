@@ -1,3 +1,4 @@
+import { CapturedBy } from "@/features/shared/audit/CapturedBy";
 import { format, parseISO } from "date-fns";
 import { FileDown } from "lucide-react";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ export function HotelQuoteViewModal({ estimateId, onClose }: { estimateId: strin
 
         {q && (
           <>
+            <CapturedBy table="estimates" id={q.id} verb="Quoted" />
             {expired && (
               <div className="rounded-lg border border-sk-orange/40 bg-sk-orange-soft p-3 text-sm text-sk-orange">
                 This quote expired on {q.expiry_date ? format(parseISO(q.expiry_date), "dd MMM yyyy") : ""}. Prices may need re-checking.

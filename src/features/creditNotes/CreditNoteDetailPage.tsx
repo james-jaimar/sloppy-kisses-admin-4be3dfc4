@@ -1,3 +1,4 @@
+import { CapturedBy } from "@/features/shared/audit/CapturedBy";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { format } from "date-fns";
@@ -134,6 +135,7 @@ export default function CreditNoteDetailPage() {
                   <div>
                     <div className="text-xs uppercase tracking-wide text-muted-foreground">{cn.credit_note_number}</div>
                     <div className="mt-1"><CreditNoteStatusChip status={cn.status} /></div>
+                    <CapturedBy table="credit_notes" id={cn.id} verb="Created" className="mt-2" />
                     {cn.invoice && (
                       <div className="mt-2 text-xs text-muted-foreground">
                         Against invoice{" "}
