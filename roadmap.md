@@ -1,5 +1,10 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## Imported hotel grooming and Stay & Play (22 Nov 2026)
+- [ ] Add dog-only Stay & Play for five late-collection stays without adding charges.
+- [ ] Put imported grooming requests on the board with provisional station slots, preserving repeats and notes, avoiding closed days and duplicate billing.
+- [ ] Verify saved appointments, sessions and unchanged financial records; retain any past-date exception for staff review.
+
 ## Hotel desk usability (22 Nov 2026)
 - [x] Added overlapping-stay periods, movement/species/grooming/balance filters and chronological/client/pet sorting; retained isolated prep writes and filtered printing.
 - [x] Brought today's overview above occupancy and placed arrivals/departures alongside the grid at desk widths, independent of the grid's selected dates.
