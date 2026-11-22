@@ -35,3 +35,4 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 
 - Front-desk booking balances resolve direct and invoice-item links through shared desk invoice reads; invoice-state helpers and payment refresh keys are shared across panels, search and boards so collection screens agree without new financial writes.
 - Xero payment pushes must pass both the tenant enqueue flag and the shared worker/manual policy, rechecking settings before provider calls; invoices carry no payments so app collection and Xero reconciliation remain independent.
+- Offline Xero customer reconciliation uses pure account-number/date/phone rules in xeroCustomerReconciliation.ts; provider reads and writes stay explicit and ambiguous or already-numbered duplicates are held to avoid cross-account corruption.
