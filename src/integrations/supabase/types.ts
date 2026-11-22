@@ -5181,6 +5181,36 @@ export type Database = {
         }
         Relationships: []
       }
+      import_source_evidence: {
+        Row: {
+          batch: string
+          booking_id: string
+          created_at: string
+          evidence: Json
+          id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          batch: string
+          booking_id: string
+          created_at?: string
+          evidence: Json
+          id?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          batch?: string
+          booking_id?: string
+          created_at?: string
+          evidence?: Json
+          id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       incident_photos: {
         Row: {
           created_at: string
