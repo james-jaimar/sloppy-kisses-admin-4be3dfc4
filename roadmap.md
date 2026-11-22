@@ -1,5 +1,10 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## Imported hotel transport (22 Nov 2026)
+- [ ] Add the verified pickup/return legs for six stays, preserving pets, source notes and existing hotel billing; retain Nicolette's past pickup as completed.
+- [ ] Verify dates, vehicle/address links, no duplicate legs and unchanged financial/customer-message queues.
+- [ ] Signed-in transport board walkthrough: external unmanaged authentication has no available staff session.
+
 ## Imported hotel grooming and Stay & Play (22 Nov 2026)
 - [x] Added eight dog-only Stay & Play sessions across the five missing late-collection stays, with no added fees.
 - [x] Added 80 provisional station appointments from 79 requests across imported stays; retained Tia's 5 Dec/5 Jan repeats and all notes, avoided Sundays/closures/overlaps.
