@@ -231,13 +231,38 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
     });
   if (!lines.length) throw new Error("Invoice has no line items");
 
+  // Manual Xero invoices may already use our next number: skip to a free one.
+  if (!inv.xero_invoice_id) {
+    for (let i = 0; i < 50; i++) {
+      const hit = await xero(ctx, `Invoices?InvoiceNumbers=${encodeURIComponent(inv.invoice_number)}&summaryOnly=true`);
+      if (!(hit?.Invoices ?? []).length) break;
+      const { data: num, error: nErr } = await admin.rpc("next_invoice_number", { target_tenant_id: s.tenant_id });
+      if (nErr || !num) throw new Error(nErr?.message ?? "Could not allocate a new invoice number");
+      const taken = inv.invoice_number;
+      const { error: uErr } = await admin.from("invoices").update({ invoice_number: num }).eq("id", inv.id);
+      if (uErr) throw new Error(`Renumber failed: ${uErr.message}`);
+      await logSync({ tenant_id: s.tenant_id, entity_type: "invoice", entity_id: inv.id, entity_label: String(num),
+        action: "renumber", status: "success", error_message: `${taken} already exists in Xero; renumbered to ${num}`, triggered_by: actor });
+      inv.invoice_number = num as string;
+    }
+  }
+  const { data: cust } = await admin.from("customers").select("customer_number").eq("id", inv.customer_id).maybeSingle();
+  const services = Object.values(serviceByBooking);
+  const label = services.includes("grooming_mobile") ? "Mobile"
+    : services.includes("grooming_inhouse") ? "Groom"
+    : services.some((x) => x.startsWith("hotel")) ? "Hotel"
+    : services.some((x) => x.startsWith("daycare")) ? "Daycare"
+    : services.includes("pickup_dropoff") ? "Transport" : "Sales";
+  const reference = [String(inv.invoice_number).replace(/\D/g, "") || inv.invoice_number, label, cust?.customer_number]
+    .filter(Boolean).join("-");
+
   const payload: Record<string, unknown> = {
     Type: "ACCREC",
     Contact: { ContactID: contactId },
     Date: xeroDate(inv.issue_date),
     DueDate: xeroDate(inv.due_date),
     InvoiceNumber: inv.invoice_number,
-    Reference: inv.invoice_number,
+    Reference: reference,
     LineAmountTypes: s.line_amount_type,
     Status: "AUTHORISED",
     LineItems: lines,
