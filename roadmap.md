@@ -1,5 +1,11 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## Hotel spreadsheet go-live import (22 Nov 2026)
+- [ ] Clarify four cancellation candidates: Xero shows applied overpayments, not credit notes; hold Caryn Bell (5–6 Dec), Wilma Bodemer, Jamie Bishop (26–30 Nov) and Jan Beutes (23–28 Dec) until James confirms exclusion.
+- [ ] Match current/future spreadsheet stays against Xero quotes/invoices and existing customers/pets; hold uncertain identities.
+- [ ] Import verified stays, existing invoice links and quote-only estimates without duplicate invoicing, customer messages or Xero payment pushes.
+- [ ] Read back stay dates, pets, amounts and links; report exceptions and unavailable staff-screen verification.
+
 ## Xero customer SK reconciliation (22 Nov 2026)
 - [x] Phase 1: read 79 creation histories and 4,686 numbered Xero contacts against 4,376 app customers; exclude 41 supplier/expense contacts, three older contacts, and hold numbered duplicates and two uncertain name matches.
 - [x] Phase 2: created and verified 66 unmatched customers, SK05084–SK05149, using the tenant allocator lock and retaining Xero IDs, source names and original creation dates; existing accounts untouched.
