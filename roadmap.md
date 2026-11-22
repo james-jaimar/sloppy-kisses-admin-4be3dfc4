@@ -1,6 +1,7 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
 ## Hotel spreadsheet go-live import (22 Nov 2026)
+- [ ] Archive original spreadsheet notes privately; remove raw rows from 123 stays and linked quotes/invoices, retain useful desk notes, and verify unchanged dates and billing.
 - [x] Added Kitler's stay to separate company SK05083, matching Xero's existing number with five-digit padding; shared email retained as a company contact, not a second portal login.
 - [x] Added Rebecca's Charlie stay to SK00495; James confirmed Rebecca Jordan and Rebecca Jordaan are the same customer.
 - [x] James confirmed keeping Caryn Bell (5–6 Dec), Wilma Bodemer, Jamie Bishop (26–30 Nov) and Jan Beutes (23–28 Dec); Xero settled these invoices using earlier overpayments, not cancellation credits.
