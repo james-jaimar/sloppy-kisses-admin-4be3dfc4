@@ -1,6 +1,8 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
 ## Hotel spreadsheet go-live import (22 Nov 2026)
+- [ ] Add Kitler's stay under Mushroom Productions' separate company account; retain the existing Xero account number, without merging Landy's personal account.
+- [ ] Add Rebecca's Charlie stay to SK00495; James confirmed Rebecca Jordan and Rebecca Jordaan are the same customer.
 - [x] James confirmed keeping Caryn Bell (5–6 Dec), Wilma Bodemer, Jamie Bishop (26–30 Nov) and Jan Beutes (23–28 Dec); Xero settled these invoices using earlier overpayments, not cancellation credits.
 - [ ] Match current/future spreadsheet stays against Xero quotes/invoices and existing customers/pets; hold uncertain identities.
 - [ ] Import verified stays, existing invoice links and quote-only estimates without duplicate invoicing, customer messages or Xero payment pushes.
