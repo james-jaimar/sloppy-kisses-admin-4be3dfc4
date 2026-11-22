@@ -2,6 +2,7 @@
 
 ## Imported hotel transport (22 Nov 2026)
 - [ ] Add the verified pickup/return legs for six stays, preserving pets, source notes and existing hotel billing; retain Nicolette's past pickup as completed.
+- [ ] Apply James's address answers: Adrian has no address yet (retain pending); Blu uses the saved home address for both trips.
 - [ ] Verify dates, vehicle/address links, no duplicate legs and unchanged financial/customer-message queues.
 - [ ] Signed-in transport board walkthrough: external unmanaged authentication has no available staff session.
 
