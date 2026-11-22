@@ -12,20 +12,7 @@ import {
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { PaymentChip, PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 import { StayPlayChip, StayPlayFlagsProvider } from "@/features/daycare/StayPlayBadge";
-
-function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
-function endOfDay(d: Date) { const c = new Date(d); c.setHours(23,59,59,999); return c; }
-function withinDay(t: string | null, day: Date) {
-  if (!t) return false;
-  const ts = new Date(t).getTime();
-  return ts >= startOfDay(day).getTime() && ts <= endOfDay(day).getTime();
-}
-function inHouse(b: HotelBookingRow, day: Date) {
-  // In-house if checked_in/in_progress and start_at <= end of today and (no end_at or end_at > start of today)
-  const startsBy = new Date(b.start_at).getTime() <= endOfDay(day).getTime();
-  const endsAfter = !b.end_at || new Date(b.end_at).getTime() > startOfDay(day).getTime();
-  return startsBy && endsAfter && (b.status === "checked_in" || b.status === "in_progress" || b.status === "grooming");
-}
+import { hotelListRange, hotelTodayRows } from "./hotelListScope";
 
 export function TodayPanel({
   tenantId, bookings, quotes = [], resources, today,
@@ -41,17 +28,9 @@ export function TodayPanel({
   const settingsQ = useHotelWorkflowSettings(tenantId);
   const gateMode = settingsQ.data?.vax_gate_mode ?? "soft";
 
-  const arrivals = useMemo(
-    () =>
-      bookings.filter(
-        (b) =>
-          withinDay(b.start_at, today) &&
-          ["confirmed", "approved", "requested", "pending_payment"].includes(b.status),
-      ),
-    [bookings, today],
-  );
+  const { arrivals, departures, inHouse: currentlyInHouse } = useMemo(() => hotelTodayRows(bookings, today), [bookings, today]);
   const upcomingQuotes = useMemo(() => {
-    const from = startOfDay(today).getTime();
+    const from = Date.parse(hotelListRange("today", today, today).start);
     const to = from + 7 * 86_400_000;
     return quotes
       .filter((q) => {
@@ -61,11 +40,6 @@ export function TodayPanel({
       .sort((a, z) => new Date(a.start_at).getTime() - new Date(z.start_at).getTime());
   }, [quotes, today]);
 
-  const departures = useMemo(
-    () => bookings.filter((b) => withinDay(b.end_at, today) && b.status !== "checked_out" && b.status !== "cancelled" && b.status !== "completed"),
-    [bookings, today],
-  );
-  const currentlyInHouse = useMemo(() => bookings.filter((b) => inHouse(b, today)), [bookings, today]);
 
   // Count pets, not bookings — a family booking of 3 dogs uses 3 spaces.
   const petsInHouse = useMemo(
@@ -77,6 +51,7 @@ export function TodayPanel({
   const utilisation = totalCapacity ? Math.round((petsInHouse / totalCapacity) * 100) : 0;
 
   async function doCheckIn(b: HotelBookingRow) {
+    if (!tenantId) return;
     if (gateMode !== "off" && b.pets.length) {
       const check = await checkVaccinations(b.pets.map((p) => p.id));
       if (!check.ok) {
@@ -89,7 +64,7 @@ export function TodayPanel({
         }
         if (!(await confirm({ title: "Vaccinations not up to date", description: `${parts.join(" · ")}. Continue and log override?`, confirmLabel: "Continue & override" }))) return;
         try {
-          await logVaccinationOverride({ tenantId: tenantId!, bookingId: b.id, note: `Hotel check-in override. ${parts.join(" · ")}` });
+          await logVaccinationOverride({ tenantId, bookingId: b.id, note: `Hotel check-in override. ${parts.join(" · ")}` });
         } catch (err: any) {
           toast.error(err?.message ?? "Failed to log override");
         }

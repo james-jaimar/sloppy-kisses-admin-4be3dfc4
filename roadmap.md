@@ -1,5 +1,11 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## Hotel desk usability (22 Nov 2026)
+- [x] Added overlapping-stay periods, movement/species/grooming/balance filters and chronological/client/pet sorting; retained isolated prep writes and filtered printing.
+- [x] Brought today's overview above occupancy and placed arrivals/departures alongside the grid at desk widths, independent of the grid's selected dates.
+- [x] All 32 register/date/filter/payment regressions passed; preview build OK. No booking or billing records changed.
+- [ ] Signed-in desktop/mobile visual and filtered-print walkthrough: external unmanaged sign-in has no available staff browser session; browser checks reached the sign-in gate without runtime errors.
+
 ## Hotel spreadsheet go-live import (22 Nov 2026)
 - [x] Archived 184 original spreadsheet rows and full original records privately across 123 stays; cleaned 117 quotes and 67 invoices, retained care/review notes. Eight live data/access checks and four import tests passed; dates, billing, payments and queues unchanged. Staff-screen checks remain unavailable under external unmanaged sign-in.
 - [x] Added Kitler's stay to separate company SK05083, matching Xero's existing number with five-digit padding; shared email retained as a company contact, not a second portal login.

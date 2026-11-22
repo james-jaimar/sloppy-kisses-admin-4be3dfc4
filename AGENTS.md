@@ -29,7 +29,7 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 - New-stock CSV imports use an atomic caller-authenticated RPC with product/stock permission checks, duplicate-code validation and receive movements; Retail settings supply VAT defaults and existing products are never overwritten.
 - New grooming billing uses scheduled draft invoices with per-visit grouping; the daily release transaction issues them and activates payment holds, leaving already-issued invoices and hotel lifecycle untouched.
 - Hotel list view is a read-only register over existing bookings/invoices/quotes; only desk prep ticks/notes are written, to hotel_desk_prep, so it never alters booking or billing state.
-- Hotel Today register queries both arrival and departure endpoints using Johannesburg day boundaries, independent of the arrival month, so earlier stays departing today are not missed.
+- Hotel registers query overlapping stays using Johannesburg day boundaries and share pure movement/sort helpers; today's overview queries independently of the occupancy window so date navigation cannot hide current guests.
 - POS bill previews read persisted invoice lines and balances, adding unsaved cart lines only before sale; paid receipts are queued by an invoice trigger and sent through the existing dispatcher to survive till closure without duplicate automatic sends.
 - Comms warning dismissal conditionally moves only failed tenant-scoped events to skipped while preserving delivery errors; dismissal and retry invalidate both inbox and sidebar counts so history is retained without stale alerts.
 

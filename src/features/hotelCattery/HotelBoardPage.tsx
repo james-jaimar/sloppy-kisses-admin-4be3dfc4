@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
-import { Scissors, LayoutGrid, List } from "lucide-react";
+import { Scissors, LayoutGrid, List, Hotel, LogIn, LogOut } from "lucide-react";
 import { HotelListView } from "./HotelListView";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useHotelGroomPendingCount } from "@/features/hotelGrooming/queries";
@@ -13,6 +13,7 @@ import { HotelReviewNotice } from "./HotelReviewNotice";
 import { useHotelReviewCounts } from "./useHotelReviewCounts";
 import { TodayPanel } from "./TodayPanel";
 import { useHotelBookingsInWindow, useHotelQuotesInWindow, useHotelResources } from "./queries";
+import { hotelListRange, hotelTodayRows } from "./hotelListScope";
 
 function startOfDay(d: Date) { const c = new Date(d); c.setHours(0,0,0,0); return c; }
 function addDays(d: Date, n: number) { const c = new Date(d); c.setDate(c.getDate() + n); return c; }
@@ -38,6 +39,11 @@ export default function HotelBoardPage() {
   const resourcesQ = useHotelResources(tenantId);
   const bookingsQ = useHotelBookingsInWindow({ tenantId, windowStart, windowEnd });
   const quotesQ = useHotelQuotesInWindow({ tenantId, windowStart, windowEnd });
+  const todayRange = hotelListRange("today", new Date());
+  const todayStart = new Date(todayRange.start);
+  const todayEnd = new Date(todayRange.end);
+  const todayBookingsQ = useHotelBookingsInWindow({ tenantId, windowStart: todayStart, windowEnd: todayEnd });
+  const todayQuotesQ = useHotelQuotesInWindow({ tenantId, windowStart: todayStart, windowEnd: addDays(todayStart, 7) });
 
   const [view, setViewState] = useState<"grid" | "list">(() => (localStorage.getItem("sk.hotel.view") === "list" ? "list" : "grid"));
   const setView = (v: "grid" | "list") => { setViewState(v); localStorage.setItem("sk.hotel.view", v); };
@@ -54,7 +60,13 @@ export default function HotelBoardPage() {
     });
   }, [bookingsQ.data, showCancelled, showUnpaid]);
 
-  const today = startOfDay(new Date());
+  const today = todayStart;
+  const todayRows = hotelTodayRows(todayBookingsQ.data ?? [], today);
+  const todayStats = [
+    { label: "Pets in-house", count: todayRows.inHouse.reduce((sum, b) => sum + Math.max(1, b.pets.length), 0), Icon: Hotel, tone: "text-sk-orange" },
+    { label: "Arrivals today", count: todayRows.arrivals.length, Icon: LogIn, tone: "text-sk-green" },
+    { label: "Departures today", count: todayRows.departures.length, Icon: LogOut, tone: "text-sk-turquoise" },
+  ];
 
 
   return (
@@ -107,6 +119,10 @@ export default function HotelBoardPage() {
       />
       <div className="flex-1 space-y-6 p-6">
         <HotelReviewNotice tenantId={tenantId} />
+        <div className="grid grid-cols-1 gap-3 border-y border-border py-3 sm:grid-cols-3" aria-label="Hotel today overview">
+          {todayStats.map(({ label, count, Icon, tone }) => <div key={label} className="flex items-center gap-3"><Icon className={`h-5 w-5 shrink-0 ${tone}`} /><div className="text-2xl font-bold tabular-nums">{todayBookingsQ.isLoading || todayBookingsQ.isError ? "—" : count}</div><span className="text-sm font-medium text-muted-foreground">{label}</span></div>)}
+          {todayBookingsQ.isError && <div className="text-sm text-destructive sm:col-span-3">Today's overview couldn't load. <Button variant="outline" size="sm" onClick={() => todayBookingsQ.refetch()}>Retry</Button></div>}
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="mr-2 inline-flex overflow-hidden rounded-lg border border-border bg-card" role="group" aria-label="Hotel view">
             {([["grid", "Grid", LayoutGrid], ["list", "List", List]] as const).map(([v, l, Icon]) => (
@@ -136,7 +152,8 @@ export default function HotelBoardPage() {
           ))}
         </div>
         {view === "list" ? <HotelListView tenantId={tenantId} showCancelled={showCancelled} /> : (
-        <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="min-w-0">
           <OccupancyGrid
             tenantId={tenantId}
             resources={resourcesQ.data ?? []}
@@ -146,13 +163,16 @@ export default function HotelBoardPage() {
             windowDays={WINDOW_DAYS}
             loading={resourcesQ.isLoading || bookingsQ.isLoading}
           />
+          </div>
+          <div className="order-first min-w-0 lg:order-none">
           <TodayPanel
             tenantId={tenantId}
-            bookings={bookingsQ.data ?? []}
-            quotes={quotesQ.data ?? []}
+            bookings={todayBookingsQ.data ?? []}
+            quotes={todayQuotesQ.data ?? []}
             resources={resourcesQ.data ?? []}
             today={today}
           />
+          </div>
         </div>
         )}
       </div>
