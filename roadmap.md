@@ -4,6 +4,7 @@
 - [x] Phase 1: read 79 creation histories and 4,686 numbered Xero contacts against 4,376 app customers; exclude 41 supplier/expense contacts, three older contacts, and hold numbered duplicates and two uncertain name matches.
 - [x] Phase 2: created and verified 65 unmatched customers, SK05084–SK05148, using the tenant allocator lock and retaining Xero IDs, source names and original creation dates; existing accounts untouched.
 - [ ] Phase 3: write missing account numbers to existing Xero contacts and verify readback against Sloppy Kisses.
+- [ ] Laura/Louwra confirmed same customer: reuse the existing account; check numbered Xero contact before any write.
 
 ## Xero open-invoice reconciliation (18 Nov 2026)
 - [x] Add permission-gated payment-sync setting, off by default, without changing invoice/customer/item sync or app balances.
