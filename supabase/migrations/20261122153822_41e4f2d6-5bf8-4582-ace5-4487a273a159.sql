@@ -1,0 +1,1 @@
+UPDATE public.invoicing_settings SET next_number = 70001 WHERE tenant_id = '75cc6a9e-9d17-4268-92ee-8b595c842dee' AND next_number < 70001;
