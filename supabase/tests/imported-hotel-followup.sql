@@ -1,7 +1,7 @@
 -- Live, readback-focused regression checks for the approved November import.
 -- The invoice guard calls below must return NULL without any financial writes.
 DO $tests$
-DECLARE t uuid:='75cc6a9e-9d17-4268-92ee-8b595c842dee'; r record; n integer; before_invoices integer;
+DECLARE t uuid:='75cc6a9e-9d17-4268-92ee-8b595c842dee'; groom record; n integer; before_invoices integer;
 BEGIN
  SELECT count(*) INTO n FROM public.bookings WHERE tenant_id=t AND notes_internal LIKE '%Imported hotel groom request:%';
  IF n<>80 THEN RAISE EXCEPTION 'Expected 80 appointments, got %',n; END IF;
@@ -17,8 +17,8 @@ BEGIN
  IF NOT EXISTS(SELECT 1 FROM public.hotel_grooming_requests WHERE id='ae75dc6d-9312-5f59-83e7-4ff0d17d31ca' AND status='pending' AND grooming_booking_id IS NULL) THEN RAISE EXCEPTION 'Past Chance groom needs review, not a manufactured appointment'; END IF;
  SELECT count(*) INTO before_invoices FROM public.invoices WHERE tenant_id=t;
  n:=0;
- FOR r IN SELECT DISTINCT b.id FROM public.bookings b JOIN public.estimates e ON e.booking_id=b.parent_booking_id AND e.tenant_id=b.tenant_id WHERE b.tenant_id=t AND b.invoice_id IS NULL AND b.notes_internal LIKE '%Imported hotel groom request:%' AND e.created_via='hotel_sheet_import' AND (EXISTS(SELECT 1 FROM public.booking_pets bp WHERE bp.booking_id=b.id AND (e.extras->'legacy_hotel_import'->'billed_groom_pet_ids') ? bp.pet_id::text) OR EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(nullif(e.extras->'legacy_hotel_import'->'source_invoice','null'::jsonb),e.extras->'legacy_hotel_import'->'source_quote')->'LineItems') li WHERE coalesce(li->>'ItemCode','') ~* '^(DG|CG)')) LOOP
-  IF public.ensure_booking_invoice(r.id) IS NOT NULL THEN RAISE EXCEPTION 'Already-quoted groom generated a second invoice'; END IF;
+ FOR groom IN SELECT DISTINCT b.id FROM public.bookings b JOIN public.estimates e ON e.booking_id=b.parent_booking_id AND e.tenant_id=b.tenant_id WHERE b.tenant_id=t AND b.invoice_id IS NULL AND b.notes_internal LIKE '%Imported hotel groom request:%' AND e.created_via='hotel_sheet_import' AND (EXISTS(SELECT 1 FROM public.booking_pets bp WHERE bp.booking_id=b.id AND (e.extras->'legacy_hotel_import'->'billed_groom_pet_ids') ? bp.pet_id::text) OR EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(nullif(e.extras->'legacy_hotel_import'->'source_invoice','null'::jsonb),e.extras->'legacy_hotel_import'->'source_quote')->'LineItems') li WHERE coalesce(li->>'ItemCode','') ~* '^(DG|CG)')) LOOP
+  IF public.ensure_booking_invoice(groom.id) IS NOT NULL THEN RAISE EXCEPTION 'Already-quoted groom generated a second invoice'; END IF;
   n:=n+1;
  END LOOP;
  IF n=0 THEN RAISE EXCEPTION 'Invoice guard test must exercise real quoted grooms'; END IF;
