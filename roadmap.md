@@ -2,11 +2,11 @@
 
 ## Xero customer SK reconciliation (22 Nov 2026)
 - [x] Phase 1: read 79 creation histories and 4,686 numbered Xero contacts against 4,376 app customers; exclude 41 supplier/expense contacts, three older contacts, and hold numbered duplicates and two uncertain name matches.
-- [x] Phase 2: created and verified 65 unmatched customers, SK05084–SK05148, using the tenant allocator lock and retaining Xero IDs, source names and original creation dates; existing accounts untouched.
-- [x] Phase 3: updated 65 existing Xero contacts in three batches and verified all SK05084–SK05148 numbers by fresh API readback; recorded successes and review/exclusion notes in Xero sync history. Four numbering/date/phone tests passed; preview build OK.
+- [x] Phase 2: created and verified 66 unmatched customers, SK05084–SK05149, using the tenant allocator lock and retaining Xero IDs, source names and original creation dates; existing accounts untouched.
+- [x] Phase 3: updated 66 existing Xero contacts in controlled batches and verified all SK05084–SK05149 numbers by fresh API readback; recorded successes and review/exclusion notes in Xero sync history. Four numbering/date/phone tests passed; preview build OK.
 - [x] Laura/Louwra confirmed same customer: verified SK00958 already belongs to her account in both systems; no second account or number allocated.
 - [ ] Resolve ten duplicate/conflicting Xero contacts: Chanelle, Susan, Clint, Nick, Andrew, Steven Kernick/Leanne, Laura, Tarryn, Mavis and Vanishkah. Blocked on identity/account ownership review and Xero duplicate merge decisions; existing numbers and links left untouched. Mavis is SK04576 in app versus SK04977 in Xero.
-- [ ] Trisha Govender confirmed different from Nerisha: allocate the next free account, save her profile and verify the matching Xero update; preserve Nerisha's existing account.
+- [x] Trisha Govender confirmed different from Nerisha: created SK05149 and verified Xero readback; Nerisha SK01334 unchanged, initial review note retained and marked resolved.
 
 ## Xero open-invoice reconciliation (18 Nov 2026)
 - [x] Add permission-gated payment-sync setting, off by default, without changing invoice/customer/item sync or app balances.
