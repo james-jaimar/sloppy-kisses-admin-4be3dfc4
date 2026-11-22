@@ -1,0 +1,1 @@
+CREATE POLICY "Internal service only" ON public.import_source_evidence FOR ALL TO service_role USING (true) WITH CHECK (true);
