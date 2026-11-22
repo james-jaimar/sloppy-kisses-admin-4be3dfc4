@@ -10167,6 +10167,7 @@ export type Database = {
           unit_price: number
         }[]
       }
+      import_hotel_sheet_20261122: { Args: { p_data: Json }; Returns: Json }
       import_new_stock: {
         Args: {
           p_import_id: string

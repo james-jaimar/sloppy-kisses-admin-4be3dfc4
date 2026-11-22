@@ -5,6 +5,7 @@ import { pace, xero, xeroConnections, xeroDate } from "../_shared/xero.ts";
 import { assertFeature } from "../_shared/features.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { PAYMENT_SYNC_DISABLED, withPaymentSync } from "./paymentSyncPolicy.ts";
+import { isImportedXeroHotelInvoice } from "../_shared/legacyHotelImport.ts";
 
 const cors = {
   ...corsHeaders,
@@ -171,9 +172,15 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
   const ctx = { tenantId: s.xero_tenant_id! };
   const { data: inv, error } = await admin
     .from("invoices")
-    .select("id, tenant_id, invoice_number, status, issue_date, due_date, notes, customer_id, xero_invoice_id, invoice_items(id, description, quantity, unit_price, discount_pct, line_total, xero_account_code, item_code, vat_rate, sort_order, booking_id, product:products(external_code, xero_account_code))")
+    .select("id, tenant_id, invoice_number, status, issue_date, due_date, notes, customer_id, xero_invoice_id, invoice_items(id, description, quantity, unit_price, discount_pct, line_total, xero_account_code, item_code, vat_rate, sort_order, booking_id, source_type, product:products(external_code, xero_account_code))")
     .eq("id", invoiceId).single();
   if (error || !inv) throw new Error(error?.message ?? "Invoice not found");
+  if (isImportedXeroHotelInvoice(inv)) {
+    await logSync({ tenant_id: s.tenant_id, entity_type: "invoice", entity_id: inv.id, entity_label: inv.invoice_number,
+      action: "skip", status: "skipped", xero_id: inv.xero_invoice_id,
+      error_message: "Existing Xero hotel invoice retained; local payment updates do not rewrite it.", triggered_by: actor });
+    return { skipped: true, reason: "Existing Xero hotel invoice" };
+  }
   if (!PUSHABLE_INVOICE_STATUSES.includes(String(inv.status))) {
     await logSync({ tenant_id: s.tenant_id, entity_type: "invoice", entity_id: inv.id, entity_label: inv.invoice_number,
       action: "skip", status: "skipped", error_message: `Status ${inv.status} is not pushed to Xero`, triggered_by: actor });

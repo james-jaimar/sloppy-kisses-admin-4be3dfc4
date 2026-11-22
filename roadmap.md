@@ -1,7 +1,7 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
 ## Hotel spreadsheet go-live import (22 Nov 2026)
-- [ ] Clarify four cancellation candidates: Xero shows applied overpayments, not credit notes; hold Caryn Bell (5–6 Dec), Wilma Bodemer, Jamie Bishop (26–30 Nov) and Jan Beutes (23–28 Dec) until James confirms exclusion.
+- [x] James confirmed keeping Caryn Bell (5–6 Dec), Wilma Bodemer, Jamie Bishop (26–30 Nov) and Jan Beutes (23–28 Dec); Xero settled these invoices using earlier overpayments, not cancellation credits.
 - [ ] Match current/future spreadsheet stays against Xero quotes/invoices and existing customers/pets; hold uncertain identities.
 - [ ] Import verified stays, existing invoice links and quote-only estimates without duplicate invoicing, customer messages or Xero payment pushes.
 - [ ] Read back stay dates, pets, amounts and links; report exceptions and unavailable staff-screen verification.
