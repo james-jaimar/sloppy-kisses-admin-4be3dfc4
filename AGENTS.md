@@ -38,3 +38,4 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 - Offline Xero customer reconciliation uses pure account-number/date/phone rules in xeroCustomerReconciliation.ts; provider reads and writes stay explicit and ambiguous or already-numbered duplicates are held to avoid cross-account corruption.
 - Hotel spreadsheet imports retain source evidence and invoice-line provenance; Xero skips already-linked legacy invoices so local collections cannot rewrite bank reconciliation history. Temporary import endpoints and their service-only RPCs are retired after use.
 - Raw spreadsheet evidence belongs in service-role-only import_source_evidence, never customer quote/invoice notes; operational notes retain readable care and review details.
+- Imported hotel grooming placeholders use requested bookings linked to the parent stay and existing requests; quoted/billed grooms are guarded in invoice creation so later package edits cannot charge them again.

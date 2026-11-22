@@ -5,6 +5,13 @@
 - [ ] Put imported grooming requests on the board with provisional station slots, preserving repeats and notes, avoiding closed days and duplicate billing.
 - [ ] Verify saved appointments, sessions and unchanged financial records; retain any past-date exception for staff review.
 
+## Imported hotel grooming and Stay & Play (22 Nov 2026)
+- [x] Added eight dog-only Stay & Play sessions across the five missing late-collection stays, with no added fees.
+- [x] Added 80 provisional station appointments from 79 requests across imported stays; retained Tia's 5 Dec/5 Jan repeats and all notes, avoided Sundays/closures/overlaps.
+- [x] Transaction assertions verified unchanged invoices, invoice lines, quotes, payments, notifications and Xero queue; restored normal grooming billing and retained payment sync off.
+- [ ] Chance: requested groom was 21 Nov and the stay ends 22 Nov; retained pending for staff to confirm whether it already happened rather than inventing a past appointment.
+- [ ] Signed-in board/daycare walkthrough: external unmanaged sign-in has no available staff session; saved-data checks are available, live staff-screen checks are not.
+
 ## Hotel desk usability (22 Nov 2026)
 - [x] Added overlapping-stay periods, movement/species/grooming/balance filters and chronological/client/pet sorting; retained isolated prep writes and filtered printing.
 - [x] Brought today's overview above occupancy and placed arrivals/departures alongside the grid at desk widths, independent of the grid's selected dates.
