@@ -1,12 +1,16 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
 ## Hotel spreadsheet go-live import (22 Nov 2026)
-- [ ] Add Kitler's stay under Mushroom Productions' separate company account; retain the existing Xero account number, without merging Landy's personal account.
-- [ ] Add Rebecca's Charlie stay to SK00495; James confirmed Rebecca Jordan and Rebecca Jordaan are the same customer.
+- [x] Added Kitler's stay to separate company SK05083, matching Xero's existing number with five-digit padding; shared email retained as a company contact, not a second portal login.
+- [x] Added Rebecca's Charlie stay to SK00495; James confirmed Rebecca Jordan and Rebecca Jordaan are the same customer.
 - [x] James confirmed keeping Caryn Bell (5–6 Dec), Wilma Bodemer, Jamie Bishop (26–30 Nov) and Jan Beutes (23–28 Dec); Xero settled these invoices using earlier overpayments, not cancellation credits.
-- [ ] Match current/future spreadsheet stays against Xero quotes/invoices and existing customers/pets; hold uncertain identities.
-- [ ] Import verified stays, existing invoice links and quote-only estimates without duplicate invoicing, customer messages or Xero payment pushes.
-- [ ] Read back stay dates, pets, amounts and links; report exceptions and unavailable staff-screen verification.
+- [x] Matched the 125 current/future spreadsheet stays; imported 123 with 181 pet links, 67 existing Xero invoices and 117 original quotes. Historical stays excluded; two accounting exceptions held.
+- [x] Preserved R511,024.22 invoice value, R445,228.47 settled and R65,795.75 outstanding; no new Xero invoices/payments or customer messages. Retained 70001 as the next invoice, payment sync off and restored automatic billing/push settings.
+- [x] Read back every imported identity, date, pet and financial link; 15 frontend tests, three payment-policy tests and rollback-only quote/duplicate-groom billing checks passed. Temporary import endpoint and service-only RPC removed; build OK.
+- [ ] Emile Govender/Loki, QU-4808 / INV-68436: R660 of CN-67162 is allocated to this stay, from a R3,300 historical credit note. Held pending a verified credit-note carry-over approach that preserves the remaining allocation history rather than recording a credit as cash.
+- [ ] Sandra Naidoo/Scottie, QU-4870 / INV-68464: Xero invoice is still R0 against a R645 spreadsheet quote. Held pending bookkeeper confirmation of the intended bill; no duplicate invoice issued.
+- [ ] Company primary-email/portal access: James confirmed the shared Landy email; it is stored in customer_contacts, while the company primary email remains unset because existing account email uniqueness must not be bypassed. Shared-login access needs a separately agreed approach.
+- [ ] Signed-in hotel list, quote confirmation and collection walkthrough: external unmanaged Supabase has no available staff browser session; saved-data and rollback checks were verified, not a live staff-screen flow.
 
 ## Xero customer SK reconciliation (22 Nov 2026)
 - [x] Phase 1: read 79 creation histories and 4,686 numbered Xero contacts against 4,376 app customers; exclude 41 supplier/expense contacts, three older contacts, and hold numbered duplicates and two uncertain name matches.
