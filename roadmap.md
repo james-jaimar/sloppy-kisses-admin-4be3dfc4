@@ -1,9 +1,14 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
 ## Master daycare register import (23 Nov 2026)
-- [ ] Revalidate weekly worksheet identities, duplicate rows, notes and configured plans against live records.
-- [ ] Import missing customers/pets and active enrolments without retrospective invoices or customer notices; populate 23–27 November attendance.
-- [ ] Verify saved identities, weekday counts, notes and unchanged financial/comms records; retain any staff-review exceptions.
+- [x] Revalidated all 150 source rows: Zoey appears twice, yielding 149 dogs across 109 accounts; source breeds resolve Kelly/Mila duplicate profiles without merging them.
+- [x] Added two customers and nine pets; imported 149 active enrolments and 240 expected visits for 23–27 November (47/45/55/41/52). Private batch evidence retains source rows and mappings.
+- [x] Transaction assertions confirmed unchanged invoices, quotes, payments, messages, Xero queues/settings; normal pro-rata billing restored and payment sync remains off.
+- [x] All 17 saved-data regressions passed; service-only evidence access verified and preview build OK.
+- [ ] Signed-in daycare screen/printed worksheet walkthrough: external unmanaged authentication has no staff session; browser reached login without runtime errors.
+- [ ] Capacity review: Wednesday 55 and Friday 52 exceed the configured 50; owner/staff must decide capacity, which was not changed by the import.
+- [ ] Ocean/Knox weekdays and Tugg breed: staff/customer confirmation required; provisional schedule and existing breed retained with explicit notes.
+- [ ] Three transport and two repeat grooming requests: captured as approved notes, awaiting staff route/time and appointment confirmation; no extra bookings or charges invented.
 
 ## Imported hotel transport (22 Nov 2026)
 - [x] Added ten legs across six stays with twenty pet-trip links and Terence's vehicle; nine future trips remain requested for staff route/time review, and Nicolette's past pickup is completed.

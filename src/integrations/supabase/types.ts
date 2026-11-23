@@ -5184,7 +5184,7 @@ export type Database = {
       import_source_evidence: {
         Row: {
           batch: string
-          booking_id: string
+          booking_id: string | null
           created_at: string
           evidence: Json
           id: string
@@ -5193,7 +5193,7 @@ export type Database = {
         }
         Insert: {
           batch: string
-          booking_id: string
+          booking_id?: string | null
           created_at?: string
           evidence: Json
           id?: string
@@ -5202,7 +5202,7 @@ export type Database = {
         }
         Update: {
           batch?: string
-          booking_id?: string
+          booking_id?: string | null
           created_at?: string
           evidence?: Json
           id?: string
