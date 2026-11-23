@@ -1,5 +1,10 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## Master daycare register import (23 Nov 2026)
+- [ ] Revalidate weekly worksheet identities, duplicate rows, notes and configured plans against live records.
+- [ ] Import missing customers/pets and active enrolments without retrospective invoices or customer notices; populate 23–27 November attendance.
+- [ ] Verify saved identities, weekday counts, notes and unchanged financial/comms records; retain any staff-review exceptions.
+
 ## Imported hotel transport (22 Nov 2026)
 - [x] Added ten legs across six stays with twenty pet-trip links and Terence's vehicle; nine future trips remain requested for staff route/time review, and Nicolette's past pickup is completed.
 - [x] Applied James's address answers: Adrian has no address yet (retained pending); Blu uses the saved home address for both trips.
