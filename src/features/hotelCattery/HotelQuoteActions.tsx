@@ -35,7 +35,7 @@ export function HotelQuoteActions({ bookingId, estimateId, tenantId }: { booking
         return;
       }
       if (!q) return;
-      if (kind === "email") { await send.mutateAsync(q.id); toast.success("Quote emailed with a no-sign-in acceptance link"); }
+      if (kind === "email") { await send.mutateAsync(q.id); toast.success("Quote sent successfully"); }
       if (kind === "copy") {
         const appUrl = (currentTenant as unknown as { app_url?: string | null } | null)?.app_url;
         await navigator.clipboard.writeText(publicHotelQuoteLink(appUrl, q.public_token));

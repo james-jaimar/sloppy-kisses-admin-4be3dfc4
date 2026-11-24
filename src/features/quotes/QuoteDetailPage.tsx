@@ -26,7 +26,7 @@ export default function QuoteDetailPage() {
     if (!id) return;
     try {
       await send.mutateAsync(id);
-      toast.success("Quote emailed to the customer");
+      toast.success("Quote sent successfully");
     } catch (err: any) {
       toast.error(err?.message ?? "Could not send the quote");
     }
