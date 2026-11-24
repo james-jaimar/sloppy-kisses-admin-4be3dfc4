@@ -1,6 +1,7 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
 ## Cancellation VAT correction (24 Nov 2026)
+- [ ] Related-flow sweep: manual full credits, daycare endings, linked transport, draft retained fees, payment refresh and Xero credit exports; preserve settled records.
 - [x] Corrected cancellation quotes, issued credits and remaining draft totals to include VAT without changing cancellation policies.
 - [x] Five rollback-only scenarios passed for full/partial credits, retained fees, retries and shared draft invoices; 11 related display/state tests passed and preview build OK.
 - [x] Reconciled unsynced CN-00052 to R545 with its original R473.91 application retained and a R71.09 correction application; invoice unchanged, cash paid R0, balance R0, audit entry recorded and document locks restored.

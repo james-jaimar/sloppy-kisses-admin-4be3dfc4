@@ -6,6 +6,7 @@ import { assertFeature } from "../_shared/features.ts";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { PAYMENT_SYNC_DISABLED, withPaymentSync } from "./paymentSyncPolicy.ts";
 import { isImportedXeroHotelInvoice } from "../_shared/legacyHotelImport.ts";
+import { creditAmountType } from "./creditAmountType.ts";
 
 const cors = {
   ...corsHeaders,
@@ -395,7 +396,7 @@ async function pushCreditNote(s: Settings, creditNoteId: string, actor: string |
     Contact: { ContactID: contactId },
     Date: xeroDate(cn.issue_date),
     CreditNoteNumber: cn.credit_note_number,
-    LineAmountTypes: s.line_amount_type,
+    LineAmountTypes: creditAmountType(cn.xero_credit_note_id, s.line_amount_type),
     Status: "AUTHORISED",
     LineItems: lines,
   };

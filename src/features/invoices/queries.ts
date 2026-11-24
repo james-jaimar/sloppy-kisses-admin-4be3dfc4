@@ -36,7 +36,7 @@ export function useInvoices(tenantId: string | null | undefined, opts?: { status
       if (error) throw error;
       let rows = (data ?? []) as any as InvoiceListItem[];
       if (opts?.unpaidOnly) {
-        rows = rows.filter((r) => Number(r.total) > Number(r.amount_paid) && r.status !== "cancelled" && r.status !== "draft");
+        rows = rows.filter((r) => Number(r.balance_due) > 0 && r.status !== "cancelled" && r.status !== "draft");
       }
       return rows;
     },
@@ -77,30 +77,13 @@ export function useInvoice(id: string | undefined, tenantId: string | null | und
   });
 }
 
-/** Recompute subtotal/total/amount_paid/balance and persist. Simple sum(line_total) = subtotal = total for now. */
+/** Reconcile payments and credits through the same operation used by payment triggers. */
 async function recomputeInvoiceTotals(invoiceId: string, tenantId: string) {
-  // Line totals (subtotal/tax_total/total) are maintained by a DB trigger on
-  // invoice_items. Here we only reconcile payment-derived fields.
-  const [{ data: pays, error: pErr }, { data: inv, error: invErr }] = await Promise.all([
-    supabase.from("payments").select("amount").eq("invoice_id", invoiceId).eq("tenant_id", tenantId),
-    supabase.from("invoices").select("total, status, due_date").eq("id", invoiceId).maybeSingle(),
-  ]);
-  if (pErr) throw pErr;
-  if (invErr) throw invErr;
-  const total = Number(inv?.total ?? 0);
-  const paid = (pays ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0);
-  const balance = Math.max(0, total - paid);
-  let nextStatus = inv?.status ?? "draft";
-  if (nextStatus !== "draft" && nextStatus !== "cancelled") {
-    if (total > 0 && paid >= total) nextStatus = "paid";
-    else if (paid > 0) nextStatus = "part_paid";
-    else if (inv?.due_date && inv.due_date < new Date().toISOString().slice(0, 10)) nextStatus = "overdue";
-  }
-  const { error } = await supabase
-    .from("invoices")
-    .update({ amount_paid: paid, balance_due: balance, status: nextStatus })
-    .eq("id", invoiceId)
-    .eq("tenant_id", tenantId);
+  const { data: invoice, error: readError } = await supabase.from("invoices")
+    .select("id").eq("id", invoiceId).eq("tenant_id", tenantId).maybeSingle();
+  if (readError) throw readError;
+  if (!invoice) throw new Error("Invoice not found");
+  const { error } = await supabase.rpc("recompute_invoice_payments", { p_invoice_id: invoiceId });
   if (error) throw error;
 }
 
