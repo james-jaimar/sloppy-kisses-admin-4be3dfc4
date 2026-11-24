@@ -3253,6 +3253,7 @@ export type Database = {
           total: number
           updated_at: string
           updated_by: string | null
+          xero_quote_id: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -3286,6 +3287,7 @@ export type Database = {
           total?: number
           updated_at?: string
           updated_by?: string | null
+          xero_quote_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -3319,6 +3321,7 @@ export type Database = {
           total?: number
           updated_at?: string
           updated_by?: string | null
+          xero_quote_id?: string | null
         }
         Relationships: [
           {

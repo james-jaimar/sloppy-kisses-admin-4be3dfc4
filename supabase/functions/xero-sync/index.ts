@@ -453,11 +453,78 @@ async function pushCreditNote(s: Settings, creditNoteId: string, actor: string |
   return { xero_id: saved.CreditNoteID };
 }
 
+const QUOTE_STATUS: Record<string, string> = { draft: "DRAFT", sent: "SENT", accepted: "ACCEPTED", declined: "DECLINED", expired: "SENT" };
+
+/** App quotes are mirrored to Xero so numbers stay unique if staff ever quote manually there. */
+async function pushQuote(s: Settings, estimateId: string, actor: string | null) {
+  const ctx = { tenantId: s.xero_tenant_id! };
+  const { data: q, error } = await admin.from("estimates")
+    .select("id, tenant_id, estimate_number, status, issue_date, expiry_date, customer_id, total, created_via, xero_quote_id, estimate_items(description, quantity, unit_price, sort_order)")
+    .eq("id", estimateId).single();
+  if (error || !q) throw new Error(error?.message ?? "Quote not found");
+  const log = (row: Record<string, unknown>) => logSync({ tenant_id: s.tenant_id, entity_type: "quote", entity_id: q.id, entity_label: q.estimate_number, triggered_by: actor, ...row });
+  if (q.created_via === "hotel_sheet_import") { await log({ action: "skip", status: "skipped", error_message: "Imported from Xero; already there" }); return { skipped: true }; }
+  const target = QUOTE_STATUS[String(q.status)];
+  if (!target) { await log({ action: "skip", status: "skipped", error_message: `Status ${q.status} is not pushed` }); return { skipped: true }; }
+
+  // A manual Xero quote may already hold our number: move ours to the next free one.
+  if (!q.xero_quote_id) {
+    for (let i = 0; i < 50; i++) {
+      const hit = await xero(ctx, `Quotes?QuoteNumber=${encodeURIComponent(q.estimate_number)}`);
+      if (!(hit?.Quotes ?? []).some((x: any) => x.QuoteNumber === q.estimate_number)) break;
+      const { data: num, error: nErr } = await admin.rpc("next_estimate_number", { target_tenant_id: s.tenant_id });
+      if (nErr || !num) throw new Error(nErr?.message ?? "Could not allocate a new quote number");
+      const taken = q.estimate_number;
+      const { error: uErr } = await admin.from("estimates").update({ estimate_number: num }).eq("id", q.id);
+      if (uErr) throw new Error(`Renumber failed: ${uErr.message}`);
+      q.estimate_number = num as string;
+      await log({ action: "renumber", status: "success", error_message: `${taken} already exists in Xero; renumbered to ${num}` });
+    }
+  }
+
+  let current: string | null = null;
+  if (q.xero_quote_id) {
+    const got = await xero(ctx, `Quotes/${q.xero_quote_id}`);
+    current = got?.Quotes?.[0]?.Status ?? null;
+  }
+  const contactId = await ensureContact(s, q.customer_id as string, actor);
+  const lines = (q.estimate_items ?? [])
+    .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((l: any) => ({ Description: l.description || "Service", Quantity: Number(l.quantity ?? 1), UnitAmount: Number(l.unit_price ?? 0), AccountCode: s.default_sales_account, TaxType: s.default_tax_type }));
+  if (!lines.length) lines.push({ Description: `Quote ${q.estimate_number}`, Quantity: 1, UnitAmount: Number(q.total ?? 0), AccountCode: s.default_sales_account, TaxType: s.default_tax_type });
+
+  const post = async (body: Record<string, unknown>) => {
+    const res = await xero(ctx, "Quotes", { method: "POST", body: { Quotes: [body] } });
+    const saved = res?.Quotes?.[0];
+    if (!saved?.QuoteID) throw new Error(`Xero did not return a quote: ${JSON.stringify(res).slice(0, 400)}`);
+    return saved;
+  };
+  // Xero only lets content change while a quote is DRAFT or SENT.
+  const editable = !current || current === "DRAFT" || current === "SENT";
+  const base: Record<string, unknown> = { Contact: { ContactID: contactId }, Date: xeroDate(q.issue_date), QuoteNumber: q.estimate_number };
+  if (q.xero_quote_id) base.QuoteID = q.xero_quote_id;
+  let saved: any;
+  if (editable) {
+    const content = { ...base, Reference: `${q.estimate_number} (Sloppy Kisses app)`, ExpiryDate: q.expiry_date ? xeroDate(q.expiry_date) : undefined, LineAmountTypes: s.line_amount_type, LineItems: lines };
+    // New quotes step DRAFT -> SENT -> final, the order Xero accepts.
+    const first = target === "DRAFT" ? "DRAFT" : "SENT";
+    saved = await post({ ...content, Status: first });
+    if (target !== first) saved = await post({ ...base, QuoteID: saved.QuoteID, Status: target });
+  } else if (current !== target) {
+    saved = await post({ ...base, Status: target });
+  } else saved = { QuoteID: q.xero_quote_id };
+
+  await admin.from("estimates").update({ xero_quote_id: saved.QuoteID }).eq("id", q.id);
+  await log({ action: q.xero_quote_id ? "update" : "create", status: "success", xero_id: saved.QuoteID });
+  return { xero_id: saved.QuoteID };
+}
+
 async function pushOne(s: Settings, type: string, id: string, actor: string | null) {
   if (type === "customer") return await pushCustomer(s, id, actor);
   if (type === "invoice") return await pushInvoice(s, id, actor);
   if (type === "payment") return await withPaymentSync(s, () => pushPayment(s, id, actor));
   if (type === "credit_note") return await pushCreditNote(s, id, actor);
+  if (type === "quote") return await pushQuote(s, id, actor);
   throw new Error(`Unknown entity type ${type}`);
 }
 
