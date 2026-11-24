@@ -507,9 +507,11 @@ async function pushQuote(s: Settings, estimateId: string, actor: string | null) 
   if (editable) {
     const content = { ...base, Reference: `${q.estimate_number} (Sloppy Kisses app)`, ExpiryDate: q.expiry_date ? xeroDate(q.expiry_date) : undefined, LineAmountTypes: s.line_amount_type, LineItems: lines };
     // New quotes step DRAFT -> SENT -> final, the order Xero accepts.
-    const first = target === "DRAFT" ? "DRAFT" : "SENT";
-    saved = await post({ ...content, Status: first });
-    if (target !== first) saved = await post({ ...base, QuoteID: saved.QuoteID, Status: target });
+    // Xero creates quotes as DRAFT; step DRAFT -> SENT -> final status.
+    saved = await post({ ...content, Status: current ?? "DRAFT" });
+    let at = current ?? "DRAFT";
+    if (target !== "DRAFT" && at === "DRAFT") { saved = await post({ ...base, QuoteID: saved.QuoteID, Status: "SENT" }); at = "SENT"; }
+    if (target !== at) saved = await post({ ...base, QuoteID: saved.QuoteID, Status: target });
   } else if (current !== target) {
     saved = await post({ ...base, Status: target });
   } else saved = { QuoteID: q.xero_quote_id };
