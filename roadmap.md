@@ -175,5 +175,5 @@
 - [x] Seven tests passed, including Johannesburg day boundaries, earlier-month departures, same-day movements and Today filter interaction; preview build OK.
 - [ ] Live signed-in list/printing and desktop/mobile visual checks: external unmanaged Supabase redirects to login; no available authenticated session.
 
-- [ ] Stale PDF/chunk error after new deploy: auto-reload once (24 Nov)
-- [ ] Xero stock baseline (24 Nov)
+- [x] Stale PDF/chunk error after new deploy: auto-reload once (24 Nov)
+- [x] Xero stock baseline (24 Nov): 58 added, 134 counts aligned, 4 prices; push-back to Xero not built yet
