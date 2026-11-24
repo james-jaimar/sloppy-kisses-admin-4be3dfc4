@@ -40,7 +40,7 @@ BEGIN
      IF cn IS NOT NULL OR (SELECT balance_due FROM public.invoices WHERE id=i)<>545 THEN RAISE EXCEPTION '100%% fee must not create a credit'; END IF;
     ELSE
      IF cn IS NULL THEN RAISE EXCEPTION '%: credit note missing',scenario; END IF;
-     IF (SELECT total FROM public.credit_notes WHERE id=cn)<>CASE WHEN scenario='hotel_half' THEN 272.50 ELSE 545 END THEN
+     IF (SELECT total FROM public.credit_notes WHERE id=cn)<>(CASE WHEN scenario='hotel_half' THEN 272.50 ELSE 545 END) THEN
       RAISE EXCEPTION '%: wrong VAT-inclusive credit',scenario;
      END IF;
      applied:=CASE WHEN scenario='hotel_half' THEN 272.50 ELSE 545-paid END;
