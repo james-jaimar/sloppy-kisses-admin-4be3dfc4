@@ -174,3 +174,6 @@
 - [x] Today/Month switch, combined arrivals/departures, movement filters and isolated A4 landscape day sheet; grid-only date controls hidden in List.
 - [x] Seven tests passed, including Johannesburg day boundaries, earlier-month departures, same-day movements and Today filter interaction; preview build OK.
 - [ ] Live signed-in list/printing and desktop/mobile visual checks: external unmanaged Supabase redirects to login; no available authenticated session.
+
+- [ ] Stale PDF/chunk error after new deploy: auto-reload once (24 Nov)
+- [ ] Xero stock baseline (24 Nov)
