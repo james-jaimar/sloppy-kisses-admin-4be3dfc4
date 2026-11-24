@@ -1,7 +1,9 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
 ## Cancellation VAT correction (24 Nov 2026)
-- [ ] Related-flow sweep: manual full credits, daycare endings, linked transport, draft retained fees, payment refresh and Xero credit exports; preserve settled records.
+- [x] Related-flow sweep: manual full credits, daycare endings, linked transport/source removals, draft retained fees, payment refresh and new Xero credit exports now include VAT once; settled records unchanged.
+- [x] Sweep checks: 20 frontend tests, five cancellation and seven related rollback-only database scenarios passed.
+- [ ] Hotel pet-removal draft credits use stay prices before VAT; correct only after confirming whether hotel prices include VAT, so existing quotes are not reinterpreted.
 - [x] Corrected cancellation quotes, issued credits and remaining draft totals to include VAT without changing cancellation policies.
 - [x] Five rollback-only scenarios passed for full/partial credits, retained fees, retries and shared draft invoices; 11 related display/state tests passed and preview build OK.
 - [x] Reconciled unsynced CN-00052 to R545 with its original R473.91 application retained and a R71.09 correction application; invoice unchanged, cash paid R0, balance R0, audit entry recorded and document locks restored.
