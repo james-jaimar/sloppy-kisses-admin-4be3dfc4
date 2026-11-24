@@ -5,6 +5,7 @@ import { X, Plus, Trash2 } from "lucide-react";
 import { useInvoice } from "@/features/invoices/queries";
 import { useCreateCreditNote } from "./queries";
 import { fmtZar } from "./status";
+import { fullInvoiceCreditLines } from "./fullInvoiceCredit";
 
 interface Props {
   tenantId: string;
@@ -28,11 +29,7 @@ export function IssueCreditNoteDrawer({ tenantId, invoiceId, onClose }: Props) {
   useEffect(() => {
     if (!inv) return;
     if (mode === "full") {
-      setLines(inv.items.map((it) => ({
-        description: it.description,
-        quantity: Number(it.quantity),
-        unit_price: Number(it.unit_price),
-      })));
+      setLines(fullInvoiceCreditLines(inv.items));
     } else if (lines.length === 0) {
       setLines([{ description: "", quantity: 1, unit_price: 0 }]);
     }
