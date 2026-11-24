@@ -499,22 +499,22 @@ async function pushQuote(s: Settings, estimateId: string, actor: string | null) 
     if (!saved?.QuoteID) throw new Error(`Xero did not return a quote: ${JSON.stringify(res).slice(0, 400)}`);
     return saved;
   };
-  // Xero only lets content change while a quote is DRAFT or SENT.
+  // Every post carries the full quote: Xero renumbers or resets fields that are omitted.
+  // Content is editable only while DRAFT/SENT; statuses step DRAFT -> SENT -> final.
   const editable = !current || current === "DRAFT" || current === "SENT";
-  const base: Record<string, unknown> = { Contact: { ContactID: contactId }, Date: xeroDate(q.issue_date), QuoteNumber: q.estimate_number };
-  if (q.xero_quote_id) base.QuoteID = q.xero_quote_id;
-  let saved: any;
-  if (editable) {
-    const content = { ...base, Reference: `${q.estimate_number} (Sloppy Kisses app)`, ExpiryDate: q.expiry_date ? xeroDate(q.expiry_date) : undefined, LineAmountTypes: s.line_amount_type, LineItems: lines };
-    // New quotes step DRAFT -> SENT -> final, the order Xero accepts.
-    // Xero creates quotes as DRAFT; step DRAFT -> SENT -> final status.
-    saved = await post({ ...content, Status: current ?? "DRAFT" });
-    let at = current ?? "DRAFT";
-    if (target !== "DRAFT" && at === "DRAFT") { saved = await post({ ...base, QuoteID: saved.QuoteID, Status: "SENT" }); at = "SENT"; }
-    if (target !== at) saved = await post({ ...base, QuoteID: saved.QuoteID, Status: target });
-  } else if (current !== target) {
-    saved = await post({ ...base, Status: target });
-  } else saved = { QuoteID: q.xero_quote_id };
+  const full: Record<string, unknown> = {
+    Contact: { ContactID: contactId }, Date: xeroDate(q.issue_date), QuoteNumber: q.estimate_number,
+    Reference: `${q.estimate_number} (Sloppy Kisses app)`, ExpiryDate: q.expiry_date ? xeroDate(q.expiry_date) : undefined,
+    LineAmountTypes: s.line_amount_type, ...(editable ? { LineItems: lines } : {}),
+  };
+  const order = ["DRAFT", "SENT"];
+  const steps = [...order, target].filter((st, i, all) => all.indexOf(st) === i)
+    .slice(0, [...order, target].filter((st, i, all) => all.indexOf(st) === i).indexOf(target) + 1)
+    .filter((st) => !current || (order.indexOf(st) > order.indexOf(current) || (!order.includes(st) && st !== current)));
+  let id: string | null = q.xero_quote_id;
+  let saved: any = { QuoteID: id };
+  if (!steps.length && editable) saved = await post({ ...full, QuoteID: id }); // same status, refresh content
+  for (const st of steps) { saved = await post({ ...full, ...(id ? { QuoteID: id } : {}), Status: st }); id = saved.QuoteID; }
 
   await admin.from("estimates").update({ xero_quote_id: saved.QuoteID }).eq("id", q.id);
   await log({ action: q.xero_quote_id ? "update" : "create", status: "success", xero_id: saved.QuoteID });
