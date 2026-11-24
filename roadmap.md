@@ -1,5 +1,11 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## Cancellation VAT correction (24 Nov 2026)
+- [ ] Correct cancellation quotes, issued credits and remaining draft totals to include VAT.
+- [ ] Run rollback-only regressions for full/partial credits, retained fees, retries and shared draft invoices.
+- [ ] Reconcile CN-00052 against INV-70007 with an audit entry and verify the R545 credit and zero balance.
+- [ ] Staff-screen readback: depends on an available authenticated staff session.
+
 ## Master daycare register import (23 Nov 2026)
 - [x] Revalidated all 150 source rows: Zoey appears twice, yielding 149 dogs across 109 accounts; source breeds resolve Kelly/Mila duplicate profiles without merging them.
 - [x] Added two customers and nine pets; imported 149 active enrolments and 240 expected visits for 23–27 November (47/45/55/41/52). Private batch evidence retains source rows and mappings.

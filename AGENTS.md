@@ -41,3 +41,4 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 - Register imports use null-booking batch evidence with a unique tenant/batch index; daycare carry-forwards suppress only the pro-rata trigger transactionally to avoid retrospective billing.
 - Imported hotel grooming placeholders use requested bookings linked to the parent stay and existing requests; quoted/billed grooms are guarded in invoice creation so later package edits cannot charge them again.
 - Imported hotel transport legs retain standard parent/link-kind relationships and requested review status; private source evidence guards original quote/invoice billing, and same-day hotel saves preserve imported trip times to avoid duplicate charges or lost route constraints.
+- Cancellation quotes and credits use invoice line net plus VAT; draft recalculation preserves tax totals so cancellations cannot leave VAT outstanding.
