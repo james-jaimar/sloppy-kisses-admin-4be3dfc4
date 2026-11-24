@@ -1,10 +1,11 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
 ## Cancellation VAT correction (24 Nov 2026)
-- [ ] Correct cancellation quotes, issued credits and remaining draft totals to include VAT.
-- [ ] Run rollback-only regressions for full/partial credits, retained fees, retries and shared draft invoices.
-- [ ] Reconcile CN-00052 against INV-70007 with an audit entry and verify the R545 credit and zero balance.
-- [ ] Staff-screen readback: depends on an available authenticated staff session.
+- [x] Corrected cancellation quotes, issued credits and remaining draft totals to include VAT without changing cancellation policies.
+- [x] Five rollback-only scenarios passed for full/partial credits, retained fees, retries and shared draft invoices; 11 related display/state tests passed and preview build OK.
+- [x] Reconciled unsynced CN-00052 to R545 with its original R473.91 application retained and a R71.09 correction application; invoice unchanged, cash paid R0, balance R0, audit entry recorded and document locks restored.
+- [x] Opened the real public INV-70007 page: R545 total and R0 balance read back without runtime errors. No regression fixtures retained.
+- [ ] Xero contact validation error: the existing customer ContactID is rejected by Xero; this separate contact reconciliation issue remains outside the VAT correction.
 
 ## Master daycare register import (23 Nov 2026)
 - [x] Revalidated all 150 source rows: Zoey appears twice, yielding 149 dogs across 109 accounts; source breeds resolve Kelly/Mila duplicate profiles without merging them.
