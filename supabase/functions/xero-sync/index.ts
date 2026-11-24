@@ -43,6 +43,19 @@ const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isGuid = (v: unknown) => typeof v === "string" && GUID.test(v.trim());
 const esc = (v: string) => v.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 
+/** True when the Xero contact exists and is ACTIVE (not archived/merged/deleted). */
+async function contactIsLive(ctx: { tenantId: string }, id: string): Promise<boolean> {
+  try {
+    const r = await xero(ctx, `Contacts/${id}`, { retries: 1 });
+    const c = r?.Contacts?.[0];
+    return !!c?.ContactID && (c.ContactStatus ?? "ACTIVE") === "ACTIVE";
+  } catch (e) {
+    const m = String((e as Error)?.message ?? e);
+    if (/\[(404|400)\]|not found/i.test(m)) return false;
+    throw e;
+  }
+}
+
 /** Look for an existing Xero contact before creating a new one. */
 async function findContact(ctx: { tenantId: string }, c: any): Promise<string | null> {
   const tries: string[] = [];
@@ -53,8 +66,8 @@ async function findContact(ctx: { tenantId: string }, c: any): Promise<string | 
 
   for (const where of tries) {
     const found = await xero(ctx, `Contacts?where=${encodeURIComponent(where)}`);
-    const id = found?.Contacts?.[0]?.ContactID;
-    if (id) return id as string;
+    const live = (found?.Contacts ?? []).find((x: any) => (x.ContactStatus ?? "ACTIVE") === "ACTIVE");
+    if (live?.ContactID) return live.ContactID as string;
   }
   return null;
 }
@@ -79,6 +92,13 @@ async function pushCustomer(s: Settings, customerId: string, actor: string | nul
 
   // Legacy imports stored names in this column — only trust a real Xero GUID.
   let contactId = isGuid(c.xero_customer_id) ? String(c.xero_customer_id).trim() : null;
+  // A stored id can go stale (contact deleted, merged or archived in Xero).
+  if (contactId && !(await contactIsLive(ctx, contactId))) {
+    await logSync({ tenant_id: s.tenant_id, entity_type: "customer", entity_id: c.id, entity_label: c.full_name,
+      action: "relink", status: "success", xero_id: contactId, triggered_by: actor,
+      error_message: "Stored Xero contact not found or inactive; re-matching" });
+    contactId = null;
+  }
   if (!contactId) contactId = await findContact(ctx, c);
 
   const contact: Record<string, unknown> = {
@@ -298,8 +318,10 @@ async function ensureContact(s: Settings, customerId: string, actor: string | nu
   // Legacy imports left non-GUID text here; only a real Xero id is usable.
   if (isGuid(data?.xero_customer_id)) {
     const id = String(data!.xero_customer_id).trim();
-    contactCache.set(customerId, id);
-    return id;
+    if (await contactIsLive({ tenantId: s.xero_tenant_id! }, id)) {
+      contactCache.set(customerId, id);
+      return id;
+    }
   }
   const id = await pushCustomer(s, customerId, actor);
   contactCache.set(customerId, id);
