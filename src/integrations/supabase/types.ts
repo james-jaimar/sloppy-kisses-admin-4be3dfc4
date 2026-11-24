@@ -5552,7 +5552,10 @@ export type Database = {
           payment_reference: string | null
           pdf_path: string | null
           public_view_token: string
+          rebill_credit_note_id: string | null
+          rebill_reason: string | null
           reminders_paused: boolean
+          replaces_invoice_id: string | null
           scheduled_release_date: string | null
           send_count: number
           sent_at: string | null
@@ -5592,7 +5595,10 @@ export type Database = {
           payment_reference?: string | null
           pdf_path?: string | null
           public_view_token?: string
+          rebill_credit_note_id?: string | null
+          rebill_reason?: string | null
           reminders_paused?: boolean
+          replaces_invoice_id?: string | null
           scheduled_release_date?: string | null
           send_count?: number
           sent_at?: string | null
@@ -5632,7 +5638,10 @@ export type Database = {
           payment_reference?: string | null
           pdf_path?: string | null
           public_view_token?: string
+          rebill_credit_note_id?: string | null
+          rebill_reason?: string | null
           reminders_paused?: boolean
+          replaces_invoice_id?: string | null
           scheduled_release_date?: string | null
           send_count?: number
           sent_at?: string | null
@@ -5667,6 +5676,20 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_rebill_credit_note_id_fkey"
+            columns: ["rebill_credit_note_id"]
+            isOneToOne: false
+            referencedRelation: "credit_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_replaces_invoice_id_fkey"
+            columns: ["replaces_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
           {
@@ -10363,6 +10386,10 @@ export type Database = {
       public_transport_info: {
         Args: { p_day?: string; p_tenant_id: string }
         Returns: Json
+      }
+      rebill_invoice: {
+        Args: { p_invoice_id: string; p_reason: string }
+        Returns: string
       }
       recompute_invoice_payments: {
         Args: { p_invoice_id: string }
