@@ -18,6 +18,7 @@ import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { PaymentChip, PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
 import { BookingFormModal } from "@/features/bookings/BookingFormModal";
 import { useGroomingBoardBookings, useRescheduleGrooming, type GroomingBoardCard } from "./queries";
+import { groomDayNumbers } from "./dayNumbers";
 import { InDaycareChip, useDaycarePetIdsForDay } from "./daycareLink";
 import { useGroomingPrefsStates } from "./instructions/prefsQueries";
 import { GroomingPrefsChip } from "./instructions/GroomingPrefsChip";
@@ -95,6 +96,10 @@ export function GroomingDiary({ day }: { day: Date }) {
 
   const cards = bookingsQ.data ?? [];
   const unassigned = cards.filter((c) => !c.resource_id);
+  const dayNums = useMemo(
+    () => groomDayNumbers(cards.map((c) => ({ id: c.id, start_at: c.start_at, station: c.resource?.name ?? "Unassigned", pets: c.pets }))),
+    [cards],
+  );
   const prefs = useGroomingPrefsStates(
     useMemo(() => cards.map((c) => ({ id: c.id, petIds: c.pets.map((p) => p.id) })), [cards]),
   );
@@ -407,6 +412,11 @@ export function GroomingDiary({ day }: { day: Date }) {
                           }}
                         >
                           <div className="flex items-center gap-1 font-semibold">
+                            {c.pets.map((p) => (
+                              <span key={p.id} className="grid h-5 min-w-5 shrink-0 place-items-center rounded bg-foreground px-1 text-xs font-black text-background tabular-nums">
+                                {dayNums.get(`${c.id}:${p.id}`)}
+                              </span>
+                            ))}
                             <span className="truncate">{c.pets[0]?.name ?? "Pet"}</span>
                             {c.booking_group_id && <Link2 className="h-3 w-3 shrink-0 text-muted-foreground" />}
                             {c.pets.some((p) => daycarePetIds.has(p.id)) && <InDaycareChip status={c.status} />}

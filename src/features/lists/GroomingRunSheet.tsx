@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { fmtTime, useGroomingBriefs, useGroomingSheet, usePetAlerts } from "./queries";
+import { groomDayNumbers } from "@/features/grooming/dayNumbers";
 import { AlertChips, EmptyState, Sheet, TABLE, TD, TH, Tick } from "./sheetUi";
 
 type Layout = "master" | "station";
@@ -35,6 +36,12 @@ export function GroomingRunSheet({
       ),
     [jobs],
   );
+
+  const nums = useMemo(
+    () => groomDayNumbers(jobs.map((j) => ({ id: j.id, start_at: j.start_at, station: j.groomer, pets: j.pets }))),
+    [jobs],
+  );
+  const petTotal = jobs.reduce((s, j) => s + j.pets.length, 0);
 
   const byStation = useMemo(() => {
     const m = new Map<string, typeof jobs>();
@@ -77,6 +84,9 @@ export function GroomingRunSheet({
     <td className={TD}>
       {j.pets.map((p) => (
         <div key={p.id} className="font-bold">
+          <span className="mr-1.5 inline-grid h-7 min-w-7 place-items-center rounded-md border-2 border-foreground px-1 text-base font-black tabular-nums print:text-[11pt]">
+            {nums.get(`${j.id}:${p.id}`) ?? "?"}
+          </span>
           {p.name}
           <AlertChips alerts={alerts[p.id]?.alerts ?? []} />
           {p.breed && <span className="ml-1 text-xs font-normal print:text-[8pt]">({p.breed})</span>}
@@ -116,7 +126,7 @@ export function GroomingRunSheet({
           subtitle={dayLabel}
           meta={
             <div>
-              {jobs.length} appointments · {byStation.length} station{byStation.length === 1 ? "" : "s"}
+              <span className="text-lg font-black">{petTotal} dogs</span> · {jobs.length} appointments · {byStation.length} station{byStation.length === 1 ? "" : "s"}
             </div>
           }
         >
@@ -167,7 +177,7 @@ export function GroomingRunSheet({
           key={station}
           title={`Grooming · ${station}`}
           subtitle={dayLabel}
-          meta={<div>{list.length} appointments</div>}
+          meta={<div><span className="text-lg font-black">{list.reduce((s, j) => s + j.pets.length, 0)} dogs</span> · {list.length} appointments</div>}
         >
           <table className={TABLE}>
             <thead>

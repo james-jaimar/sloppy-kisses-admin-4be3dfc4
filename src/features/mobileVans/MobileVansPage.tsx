@@ -95,13 +95,13 @@ export default function MobileVansPage() {
                     onClick={() => setSelectedVanId(v.id)}
                     className={
                       active
-                        ? "inline-flex items-center gap-2 rounded-lg bg-sk-coral px-3 h-9 text-sm font-semibold text-white"
-                        : "inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 h-9 text-sm font-medium hover:bg-sk-surface-muted"
+                        ? "inline-flex items-center gap-2 rounded-lg bg-sk-coral px-4 h-12 text-base font-bold text-white"
+                        : "inline-flex items-center gap-2 rounded-lg border border-border bg-white px-4 h-12 text-base font-bold hover:bg-sk-surface-muted"
                     }
                   >
                     <Truck className="h-4 w-4" />
                     {v.name}
-                    <span className={active ? "rounded-full bg-white/20 px-1.5 text-xs" : "rounded-full bg-muted px-1.5 text-xs text-muted-foreground"}>
+                    <span className={active ? "grid h-8 min-w-8 place-items-center rounded-full bg-primary-foreground px-2 text-lg font-black text-primary tabular-nums" : "grid h-8 min-w-8 place-items-center rounded-full bg-primary px-2 text-lg font-black text-primary-foreground tabular-nums"}>
                       {count}
                     </span>
                   </button>

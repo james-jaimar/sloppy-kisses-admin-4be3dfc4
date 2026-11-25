@@ -8,6 +8,8 @@ import { Link } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { GroomingBoard } from "./GroomingBoard";
 import { GroomingDiary } from "./GroomingDiary";
+import { useGroomingBoardBookings } from "./queries";
+import { PawPrint } from "lucide-react";
 
 type View = "diary" | "board";
 const VIEW_KEY = "sk.grooming.view";
@@ -30,6 +32,8 @@ export default function GroomingBoardPage() {
   const tenantId = tenant?.id ?? null;
   const [walkInStart, setWalkInStart] = useState<string | null>(null);
   const setStatus = useUpdateGroomingStatus(tenantId ?? "");
+  const dayQ = useGroomingBoardBookings({ tenantId, day });
+  const petTotal = (dayQ.data ?? []).reduce((s, c) => s + c.pets.length, 0);
 
   function openWalkIn() {
     const now = new Date();
@@ -111,6 +115,11 @@ export default function GroomingBoardPage() {
         }
       />
       <div className="flex-1 p-6">
+        <div className="mb-4 inline-flex items-center gap-3 rounded-2xl bg-primary px-5 py-3 text-primary-foreground shadow-sm">
+          <PawPrint className="h-7 w-7" />
+          <span className="text-4xl font-black tabular-nums leading-none">{dayQ.isLoading ? "…" : petTotal}</span>
+          <span className="text-lg font-bold leading-tight">dog{petTotal === 1 ? "" : "s"} in the parlour<br /><span className="text-sm font-medium opacity-90">{(dayQ.data ?? []).length} appointments</span></span>
+        </div>
         {view === "diary" ? <GroomingDiary day={day} /> : <GroomingBoard day={day} />}
         {walkInStart && tenantId && (
           <BookingFormModal

@@ -46,7 +46,7 @@ export function VanRunSheet({
           subtitle={dayLabel}
           meta={
             <>
-              <div>{list.length} stops</div>
+              <div><span className="text-lg font-black">{list.reduce((n, s) => n + s.pets.length, 0)} dogs</span> · {list.length} stops</div>
               <div>Driver: ______________</div>
             </>
           }
