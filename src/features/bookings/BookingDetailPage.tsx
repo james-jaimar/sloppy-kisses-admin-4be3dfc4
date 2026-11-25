@@ -153,7 +153,7 @@ export default function BookingDetailPage() {
                       <Field label="Pets & rooms"><ul className="space-y-1">{b.booking_pets.map((bp, i) => bp.pet ? <li key={bp.pet.id ?? i}><Link to={`/admin/pets/${bp.pet.id}`} className="font-medium hover:text-sk-coral-dark">{bp.pet.name}</Link> <span className="text-xs text-muted-foreground">· {resourcesQ.data?.find(r => r.id === (bp as any).resource_id)?.name ?? <span className="text-sk-orange">Room unassigned</span>}</span></li> : null)}</ul></Field>
                     </div>
                     <HotelMoneyStrip bookingId={b.id} mode="admin" />
-                    <HotelGroomRequestsPanel tenantId={tenantId} bookingId={b.id} />
+                    <HotelGroomRequestsPanel tenantId={tenantId} bookingId={b.id} customerId={b.customer_id} endAt={b.end_at} pets={b.booking_pets.flatMap(bp => bp.pet ? [bp.pet as any] : [])} />
                     <StayPlaySection tenantId={tenantId} bookingId={b.id} />
                     <AddressGateBanner booking={b as any} tenantId={tenantId} />
                     {(b.notes_internal || b.notes_customer) && <div className="grid gap-4 sm:grid-cols-2">{b.notes_internal && <Field label="Internal notes"><p className="whitespace-pre-wrap">{b.notes_internal}</p></Field>}{b.notes_customer && <Field label="Customer notes"><p className="whitespace-pre-wrap">{b.notes_customer}</p></Field>}</div>}
