@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS idx_invoices_replaces_invoice_id ON public.invoices(replaces_invoice_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_rebill_credit_note_id ON public.invoices(rebill_credit_note_id);

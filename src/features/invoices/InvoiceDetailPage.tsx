@@ -9,6 +9,7 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useInvoice, useIssueInvoice, useVoidInvoice, useUpsertInvoiceItem, useDeleteInvoiceItem, useInvoicingSettings, useUpdateInvoice, useInvoiceEvents, useSendInvoiceEmail, type InvoiceEvent } from "./queries";
 import { InvoiceStatusChip, fmtZar } from "./status";
 import { RecordPaymentDialog } from "./RecordPaymentDialog";
+import { RebillInvoiceDialog } from "./RebillInvoiceDialog";
 import { Can } from "@/components/auth/Can";
 import { useCurrentUser } from "@/lib/tenant/TenantContext";
 import { useCreditNotesForInvoice } from "@/features/creditNotes/queries";
@@ -19,6 +20,34 @@ import { useRefundsForInvoice, useVoidRefund } from "@/features/refunds/queries"
 import { AllocateCreditDialog } from "@/features/customerCredit/AllocateCreditDialog";
 import { useCustomerCreditBalance } from "@/features/customerCredit/queries";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+function RebillBanner({ tenantId, invoice }: { tenantId: string | null; invoice: { replaces_invoice_id: string; status: string; rebill_reason?: string | null } }) {
+  const q = useQuery({
+    queryKey: ["invoice_rebill_source", tenantId, invoice.replaces_invoice_id],
+    enabled: Boolean(tenantId),
+    queryFn: async () => {
+      const { data, error } = await supabase.from("invoices").select("id, invoice_number, total, balance_due")
+        .eq("id", invoice.replaces_invoice_id).eq("tenant_id", tenantId as string).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const src = q.data;
+  return (
+    <div className="rounded-2xl border border-primary/40 bg-primary/5 p-4 text-sm">
+      <div className="font-semibold">
+        Replacement for{" "}
+        {src ? <Link to={`/admin/invoices/${src.id}`} className="underline">{src.invoice_number}</Link> : "an earlier invoice"}
+        {invoice.rebill_reason ? ` — ${invoice.rebill_reason}` : ""}
+      </div>
+      {invoice.status === "draft" && (
+        <div className="mt-1 text-muted-foreground">Make your changes, then press Issue. Money already paid on the original is applied automatically.</div>
+      )}
+    </div>
+  );
+}
 
 export default function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -45,6 +74,7 @@ export default function InvoiceDetailPage() {
   const [issueCnOpen, setIssueCnOpen] = useState(false);
   const [refundFor, setRefundFor] = useState<any | null>(null);
   const [allocateOpen, setAllocateOpen] = useState(false);
+  const [rebillOpen, setRebillOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   type Draft = { description: string; quantity: number; unit_price: number; vat_rate: number; discount_pct: number; vat_inclusive: boolean };
   const [draft, setDraft] = useState<Draft>({ description: "", quantity: 1, unit_price: 0, vat_rate: 15, discount_pct: 0, vat_inclusive: false });
@@ -179,6 +209,14 @@ export default function InvoiceDetailPage() {
                 </button>
               </Can>
             )}
+            {inv && !isDraft && inv.status !== "cancelled" && !(cnQ.data?.linked ?? []).some((c: any) => c.status === "issued" || c.status === "applied") && (
+              <Can code="credit_notes.create">
+                <button onClick={() => setRebillOpen(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-sk-coral bg-white px-3 text-sm font-semibold text-sk-coral-dark hover:bg-sk-coral/10">
+                  <RotateCcw className="h-4 w-4" /> Adjust &amp; re-bill
+                </button>
+              </Can>
+            )}
             {inv && !isDraft && inv.status !== "cancelled" && (
               <Can code="credit_notes.create">
                 <button onClick={() => setIssueCnOpen(true)}
@@ -210,6 +248,9 @@ export default function InvoiceDetailPage() {
         ) : (
           <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
             <div className="space-y-6">
+              {(inv as any).replaces_invoice_id && (
+                <RebillBanner tenantId={tenantId} invoice={inv as any} />
+              )}
               <div className="sk-card p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -588,6 +629,10 @@ export default function InvoiceDetailPage() {
           onDone={() => setRefundFor(null)}
         />
       )}
+      {inv && (
+        <RebillInvoiceDialog open={rebillOpen} onOpenChange={setRebillOpen}
+          invoice={{ id: inv.id, invoice_number: inv.invoice_number, total: Number(inv.total), balance_due: Number(inv.balance_due) }} />
+      )}
       {allocateOpen && inv && tenantId && (
         <AllocateCreditDialog
           tenantId={tenantId}
@@ -627,6 +672,9 @@ function eventLabel(ev: InvoiceEvent): string {
     case "credit_note_applied": return "Credit note applied";
     case "credit_note_reversed": return "Credit note reversed";
     case "credit_note_cancelled": return "Credit note cancelled";
+    case "rebilled": return `Adjusted & re-billed as ${ev.payload?.new_invoice_number ?? "new invoice"}`;
+    case "rebill_created": return `Replaces ${ev.payload?.replaces_invoice_number ?? "earlier invoice"}`;
+    case "credit_allocated": return "Customer credit applied";
     case "refund_recorded": return "Refund recorded";
     case "refund_voided": return "Refund voided";
     case "refund_failed": return "Refund failed";
