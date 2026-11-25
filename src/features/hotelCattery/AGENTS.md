@@ -1,0 +1,1 @@
+- Hotel confirm & invoice is allowed with paperwork outstanding; safety is the check-in vaccination trigger (bypassed only by a booking vax override) plus the staff-only hotel_paperwork_alerts countdown.
