@@ -10,6 +10,8 @@ import { useHotelReviewAction } from "./reviewQueries";
 import { publicHotelQuoteLink } from "./quoteFlow";
 import { downloadQuotePdf, useSendQuote } from "@/features/quotes/queries";
 import { HotelQuoteViewModal } from "./HotelQuoteViewModal";
+import { useBookingGroomRequests } from "@/features/hotelGrooming/queries";
+import { groomsAddedAfterQuote } from "@/features/hotelGrooming/groomQuoteChanges";
 
 export function HotelQuoteActions({ bookingId, estimateId, tenantId }: { bookingId: string; estimateId?: string; tenantId: string }) {
   const { currentTenant, hasPermission } = useCurrentUser();
@@ -20,11 +22,13 @@ export function HotelQuoteActions({ bookingId, estimateId, tenantId }: { booking
   const [busy, setBusy] = useState(false);
   const [viewing, setViewing] = useState(false);
   const quote = useQuery({ queryKey: ["hotel_quote_actions", tenantId, estimateId], enabled: Boolean(estimateId), queryFn: async () => {
-    const { data, error } = await supabase.from("estimates").select("id, estimate_number, total, status, public_token, sent_at, expiry_date, customer:customers(email)").eq("tenant_id", tenantId).eq("id", estimateId ?? "").single();
+    const { data, error } = await supabase.from("estimates").select("id, estimate_number, total, status, public_token, sent_at, updated_at, expiry_date, customer:customers(email)").eq("tenant_id", tenantId).eq("id", estimateId ?? "").single();
     if (error) throw error;
     return data;
   }});
   const q = quote.data;
+  const groomsQ = useBookingGroomRequests(bookingId);
+  const newGrooms = q && q.status !== "accepted" ? groomsAddedAfterQuote(groomsQ.data ?? [], q.sent_at ?? q.updated_at) : [];
   const pending = busy || action.isPending || send.isPending;
   async function perform(kind: "create" | "email" | "copy" | "accept" | "download") {
     setBusy(true);
@@ -61,8 +65,9 @@ export function HotelQuoteActions({ bookingId, estimateId, tenantId }: { booking
     {!estimateId && <Button disabled={pending || !hasPermission("bookings.edit")} onClick={() => perform("create")}>Prepare quote</Button>}
     {quote.isLoading && <p role="status" className="text-sm text-muted-foreground">Loading quote…</p>}
     {quote.error && <div className="text-sm text-destructive">Could not load quote. <Button variant="outline" size="sm" onClick={() => quote.refetch()}>Retry</Button></div>}
+    {newGrooms.length > 0 && <div role="alert" className="rounded-lg border-2 border-sk-orange bg-sk-orange-soft p-3 text-sm font-semibold text-sk-orange">Changed since this quote was {q?.sent_at ? "sent" : "prepared"}: groom added for {newGrooms.map((g) => g.pet_name ?? "pet").join(", ")}. It shows under View quote at the hotel price and gets its own grooming invoice; the stay total and the emailed quote don't change.</div>}
     {q && <div className="flex flex-wrap gap-2"><Button size="lg" disabled={pending || !hasPermission("invoices.send") || !q.customer?.email} title={q.customer?.email ? undefined : "Add the customer's email address first"} onClick={() => perform("email")}><Mail className="mr-2 h-4 w-4" />{q.sent_at ? "Resend quote to customer" : "Email quote to customer"}</Button><Button variant="outline" disabled={pending} onClick={() => perform("copy")}><Copy className="mr-2 h-4 w-4" />Copy link for WhatsApp</Button><Button variant="outline" disabled={pending || !hasPermission("bookings.edit")} onClick={() => perform("accept")}><CheckCircle2 className="mr-2 h-4 w-4" />Mark accepted on phone</Button><Button variant="outline" disabled={pending} onClick={() => setViewing(true)}><Eye className="mr-2 h-4 w-4" />View quote</Button><Button variant="outline" disabled={pending} onClick={() => perform("download")}><FileDown className="mr-2 h-4 w-4" />Download quote</Button></div>}
-    {viewing && q && <HotelQuoteViewModal estimateId={q.id} onClose={() => setViewing(false)} />}
+    {viewing && q && <HotelQuoteViewModal estimateId={q.id} bookingId={bookingId} tenantId={tenantId} onClose={() => setViewing(false)} />}
     <p className="text-sm text-muted-foreground">Customer acceptance comes first. Vet details, emergency contacts, care instructions and vaccination checks follow; the invoice is issued after staff confirmation.</p>
   </section>;
 }

@@ -133,3 +133,20 @@ export function useDeclineHotelGroom() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["hotel_groom_requests"] }),
   });
 }
+
+/** Hotel checkout-groom discount % from Hotel workflow settings (same value the invoice trigger uses). */
+export function useCheckoutGroomDiscountPct(tenantId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["hotel_checkout_groom_pct", tenantId],
+    enabled: Boolean(tenantId),
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await supabase!
+        .from("hotel_workflow_settings" as any)
+        .select("checkout_groom_discount_pct")
+        .eq("tenant_id", tenantId as string)
+        .maybeSingle();
+      if (error) throw error;
+      return Number((data as any)?.checkout_groom_discount_pct ?? 0);
+    },
+  });
+}

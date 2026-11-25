@@ -9,8 +9,10 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   useBookingGroomRequests,
   useDeclineHotelGroom,
+  useCheckoutGroomDiscountPct,
   type HotelGroomRequest,
 } from "./queries";
+import { hotelGroomPrice } from "./groomQuoteChanges";
 import { ScheduleHotelGroomDialog } from "./ScheduleHotelGroomDialog";
 
 /** Staff panel on a hotel booking: grooms the customer asked for during the stay. */
@@ -29,6 +31,8 @@ export function HotelGroomRequestsPanel({
 }) {
   const qc = useQueryClient();
   const packagesQ = useGroomingPackages(tenantId, { activeOnly: true });
+  const pctQ = useCheckoutGroomDiscountPct(tenantId);
+  const pct = pctQ.data ?? 0;
   const dogs = pets.filter((p) => p.species !== "cat");
   const [adding, setAdding] = useState(false);
   const [petId, setPetId] = useState("");
@@ -51,6 +55,7 @@ export function HotelGroomRequestsPanel({
     toast.success("Groom added successfully");
     setAdding(false); setPetId(""); setPkgId(""); setNotes("");
     qc.invalidateQueries({ queryKey: ["hotel_groom_requests"] });
+    qc.invalidateQueries({ queryKey: ["hotel_quote_actions"] });
   };
   const q = useBookingGroomRequests(bookingId);
   const decline = useDeclineHotelGroom();
@@ -101,9 +106,10 @@ export function HotelGroomRequestsPanel({
           </select>
           <select aria-label="Groom package" value={pkgId} onChange={(e) => setPkgId(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm">
             <option value="">Choose package…</option>
-            {(packagesQ.data ?? []).filter((x: any) => x.species === "dog").map((x: any) => <option key={x.id} value={x.id}>{x.name} · R{Number(x.price_zar).toFixed(0)}</option>)}
+            {(packagesQ.data ?? []).filter((x: any) => x.species === "dog").map((x: any) => <option key={x.id} value={x.id}>{x.name} · {pct > 0 ? `R${hotelGroomPrice(Number(x.price_zar), pct).toFixed(0)} hotel price (was R${Number(x.price_zar).toFixed(0)})` : `R${Number(x.price_zar).toFixed(0)}`}</option>)}
           </select>
           <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" className="h-9 rounded-md border border-input bg-background px-2 text-sm" />
+          {pct > 0 && <p className="text-xs text-muted-foreground sm:col-span-4">Hotel guests get {pct}% off when the groom is on their check-out day.</p>}
           <button disabled={saving} onClick={addGroom} className="h-9 rounded-xl bg-sk-coral px-3 text-xs font-semibold text-white hover:bg-sk-coral-dark disabled:opacity-50">{saving ? "Saving…" : "Add"}</button>
         </div>
       )}
