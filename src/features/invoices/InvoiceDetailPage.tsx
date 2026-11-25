@@ -179,7 +179,8 @@ export default function InvoiceDetailPage() {
             )}
             {inv && !isDraft && inv.status !== "cancelled" && (
               <Can code="invoices.send">
-                <button onClick={doSend} disabled={sendEmail.isPending}
+                <button onClick={doSend} disabled={sendEmail.isPending || !inv.customer?.email}
+                  title={inv.customer?.email ? undefined : "Add the customer's email address first"}
                   className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-3 text-sm font-medium hover:bg-muted disabled:opacity-50">
                   <Mail className="h-4 w-4" /> {hasBeenSent ? "Resend" : "Send"}
                 </button>

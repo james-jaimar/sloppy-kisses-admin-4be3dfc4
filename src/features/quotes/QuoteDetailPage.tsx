@@ -24,6 +24,7 @@ export default function QuoteDetailPage() {
   const converted = Boolean(q?.booking_id || q?.enrolment_id);
   async function onSend() {
     if (!id) return;
+    if (!q?.customer?.email) { toast.error("Add the customer's email address first"); return; }
     try {
       await send.mutateAsync(id);
       toast.success("Quote sent successfully");
@@ -76,7 +77,8 @@ export default function QuoteDetailPage() {
             {q && q.status !== "cancelled" && (
               <button
                 onClick={onSend}
-                disabled={send.isPending}
+                disabled={send.isPending || !q.customer?.email}
+                title={q.customer?.email ? undefined : "Add the customer's email address first"}
                 className="inline-flex h-10 items-center gap-2 rounded-lg border border-border px-4 text-sm font-semibold disabled:opacity-50"
               >
                 <Send className="h-4 w-4" /> {send.isPending ? "Sending…" : q.sent_at ? "Resend to customer" : "Email to customer"}

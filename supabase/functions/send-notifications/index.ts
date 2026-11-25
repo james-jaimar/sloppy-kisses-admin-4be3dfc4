@@ -27,7 +27,8 @@ function render(tpl: string, ctx: Record<string, any>): string {
 }
 
 function isQuietHours(nowUtc: Date, quietStart: string, quietEnd: string): boolean {
-  const h = nowUtc.getUTCHours() + nowUtc.getUTCMinutes() / 60;
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Johannesburg", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(nowUtc);
+  const h = Number(parts.find((p) => p.type === "hour")?.value ?? 0) + Number(parts.find((p) => p.type === "minute")?.value ?? 0) / 60;
   const [sh, sm] = quietStart.split(":").map(Number);
   const [eh, em] = quietEnd.split(":").map(Number);
   const s = sh + (sm ?? 0) / 60;
