@@ -3160,6 +3160,8 @@ export type Database = {
           product_id: string | null
           quantity: number
           sort_order: number
+          source_id: string | null
+          source_type: string | null
           tenant_id: string
           unit_price: number
         }
@@ -3173,6 +3175,8 @@ export type Database = {
           product_id?: string | null
           quantity?: number
           sort_order?: number
+          source_id?: string | null
+          source_type?: string | null
           tenant_id: string
           unit_price?: number
         }
@@ -3186,6 +3190,8 @@ export type Database = {
           product_id?: string | null
           quantity?: number
           sort_order?: number
+          source_id?: string | null
+          source_type?: string | null
           tenant_id?: string
           unit_price?: number
         }
@@ -4658,6 +4664,7 @@ export type Database = {
       hotel_grooming_requests: {
         Row: {
           addon_ids: string[]
+          billed_invoice_id: string | null
           created_at: string
           customer_id: string | null
           customer_notes: string | null
@@ -4678,6 +4685,7 @@ export type Database = {
         }
         Insert: {
           addon_ids?: string[]
+          billed_invoice_id?: string | null
           created_at?: string
           customer_id?: string | null
           customer_notes?: string | null
@@ -4698,6 +4706,7 @@ export type Database = {
         }
         Update: {
           addon_ids?: string[]
+          billed_invoice_id?: string | null
           created_at?: string
           customer_id?: string | null
           customer_notes?: string | null
@@ -4717,6 +4726,13 @@ export type Database = {
           window_start?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "hotel_grooming_requests_billed_invoice_id_fkey"
+            columns: ["billed_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "hotel_grooming_requests_customer_id_fkey"
             columns: ["customer_id"]
@@ -10188,6 +10204,10 @@ export type Database = {
           day: string
           pets: number
         }[]
+      }
+      hotel_quote_sync_grooms: {
+        Args: { p_estimate_id: string }
+        Returns: undefined
       }
       hotel_required_percent: {
         Args: {
