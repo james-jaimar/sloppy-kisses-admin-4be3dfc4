@@ -55,7 +55,7 @@ export function HotelGroomRequestsPanel({
     toast.success("Groom added successfully");
     setAdding(false); setPetId(""); setPkgId(""); setNotes("");
     qc.invalidateQueries({ queryKey: ["hotel_groom_requests"] });
-    qc.invalidateQueries({ queryKey: ["hotel_quote_actions"] });
+    ["hotel_quote_actions", "estimate", "estimate_items", "estimates"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
   };
   const q = useBookingGroomRequests(bookingId);
   const decline = useDeclineHotelGroom();

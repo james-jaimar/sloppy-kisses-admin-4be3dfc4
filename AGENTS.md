@@ -23,12 +23,12 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 - Hotel room sharing is a booking-level hotel_booking_details.separate_rooms flag passed to stay pricing as a per-pet room_group; every caller of hotel_stay_lines_pets must forward it so quotes, invoices and credits agree.
 - Hotel extras staff writes use existing bookings.create/bookings.update/hotel.manage permissions and same-tenant hotel booking checks; portal customers have own-booking read access only because mutations pass through validated portal endpoints.
 - Admin boards open bookings via BookingPeekProvider (useBookingPeekClick on real links) so staff keep their place; modified clicks still navigate to the full page.
-- Checkout-groom quote selections carry package IDs into hotel grooming requests; accommodation confirmation reprices stay/extras only, and scheduled grooming issues its own invoice to avoid double billing.
+- Hotel stay grooms bill once: hotel_quote_sync_grooms owns tagged quote lines for unconfirmed stays; confirmation stamps billed_invoice_id so schedule_hotel_groom links that invoice instead of auto-invoicing.
 - Mobile visit travel fees are deduplicated within a booking group, local service day, address and van; reporting groups stops by local day, van, customer and address.
 - Weekly daycare printing combines enrolment weekdays/swaps, recorded attendance, hotel/grooming Stay & Play and assessment bookings in a Monday–Saturday grid; scheduling settings remain authoritative.
 - New-stock CSV imports use an atomic caller-authenticated RPC with product/stock permission checks, duplicate-code validation and receive movements; Retail settings supply VAT defaults and existing products are never overwritten.
 - New grooming billing uses scheduled draft invoices with per-visit grouping; the daily release transaction issues them and activates payment holds, leaving already-issued invoices and hotel lifecycle untouched.
-- Hotel list view is a read-only register over existing bookings/invoices/quotes; only desk prep ticks/notes are written, to hotel_desk_prep, so it never alters booking or billing state.
+- Hotel list view is read-only; only desk prep ticks/notes are written (hotel_desk_prep).
 - Hotel registers query overlapping stays using Johannesburg day boundaries and share pure movement/sort helpers; today's overview queries independently of the occupancy window so date navigation cannot hide current guests.
 - POS bill previews read persisted invoice lines and balances, adding unsaved cart lines only before sale; paid receipts are queued by an invoice trigger and sent through the existing dispatcher to survive till closure without duplicate automatic sends.
 - Comms warning dismissal conditionally moves only failed tenant-scoped events to skipped while preserving delivery errors; dismissal and retry invalidate both inbox and sidebar counts so history is retained without stale alerts.

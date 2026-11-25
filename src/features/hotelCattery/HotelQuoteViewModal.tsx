@@ -3,9 +3,6 @@ import { format, parseISO } from "date-fns";
 import { FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { ModalShell } from "@/components/modals/ModalShell";
-import { useBookingGroomRequests, useCheckoutGroomDiscountPct } from "@/features/hotelGrooming/queries";
-import { hotelGroomPrice } from "@/features/hotelGrooming/groomQuoteChanges";
-import { useGroomingPackages } from "@/features/settings/groomingRateCardQueries";
 import { useQuote, useQuoteItems, downloadQuotePdf, isQuoteExpired } from "@/features/quotes/queries";
 
 const money = (n: number) => new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR" }).format(n);
@@ -22,15 +19,6 @@ function Info({ label, value }: { label: string; value: string }) {
 /** Read-only quote preview so staff can check what the customer will see before sending. */
 export function HotelQuoteViewModal({ estimateId, bookingId, tenantId, onClose }: { estimateId: string; bookingId?: string; tenantId?: string; onClose: () => void }) {
   const quoteQ = useQuote(estimateId);
-  // Grooms are billed on their own grooming invoice, so they're listed live here rather than saved as quote lines.
-  const groomsQ = useBookingGroomRequests(bookingId);
-  const pkgsQ = useGroomingPackages(tenantId ?? null, { activeOnly: false });
-  const pct = useCheckoutGroomDiscountPct(tenantId).data ?? 0;
-  const grooms = (groomsQ.data ?? []).filter((g) => g.status === "pending" || g.status === "scheduled").map((g) => {
-    const pkg = (pkgsQ.data ?? []).find((p: any) => p.id === g.package_id) as any;
-    const list = Number(pkg?.price_zar ?? 0);
-    return { id: g.id, label: `Groom — ${pkg?.name ?? "package"} for ${g.pet_name ?? "pet"}`, list, price: hotelGroomPrice(list, pct) };
-  });
   const itemsQ = useQuoteItems(estimateId);
   const q = quoteQ.data;
   const expired = q ? isQuoteExpired(q) : false;
@@ -120,18 +108,6 @@ export function HotelQuoteViewModal({ estimateId, bookingId, tenantId, onClose }
                 </tfoot>
               </table>
             </div>
-
-            {grooms.length > 0 && (
-              <div className="rounded-xl border border-border p-4 text-sm">
-                <div className="mb-2 font-semibold">Grooming on check-out day (invoiced separately)</div>
-                {grooms.map((g) => (
-                  <div key={g.id} className="flex justify-between gap-3 py-1">
-                    <span>{g.label}{pct > 0 ? ` · ${pct}% hotel discount` : ""}</span>
-                    <span className="font-semibold">{pct > 0 && <span className="mr-2 text-muted-foreground line-through">{money(g.list)}</span>}{money(g.price)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
 
             {q.notes && <div className="rounded-xl border border-border p-4 text-sm text-muted-foreground">{q.notes}</div>}
           </>

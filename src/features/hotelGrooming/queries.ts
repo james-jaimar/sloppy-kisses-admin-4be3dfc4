@@ -116,6 +116,7 @@ export function useScheduleHotelGroom() {
       qc.invalidateQueries({ queryKey: ["hotel_groom_requests"] });
       qc.invalidateQueries({ queryKey: ["grooming_board"] });
       qc.invalidateQueries({ queryKey: ["bookings"] });
+      ["hotel_quote_actions", "estimate", "estimate_items", "estimates"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
     },
   });
 }
@@ -130,7 +131,10 @@ export function useDeclineHotelGroom() {
       });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["hotel_groom_requests"] }),
+    onSuccess: () => {
+      // The open hotel quote re-prices automatically when a groom is declined.
+      ["hotel_groom_requests", "hotel_quote_actions", "estimate", "estimate_items", "estimates"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
+    },
   });
 }
 
