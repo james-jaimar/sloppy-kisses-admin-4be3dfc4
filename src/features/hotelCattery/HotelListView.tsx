@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { invoiceState } from "@/features/shared/payments/invoiceSummary";
 import { toast } from "sonner";
 import { HOTEL_SERVICE_TYPES } from "./queries";
+import { PaperworkChip, usePaperworkAlerts } from "./PaperworkAlerts";
 import { hotelListRange, hotelLocalDay, hotelRegisterRows, sortHotelRegister, type HotelListScope, type HotelMovementFilter, type HotelListSort } from "./hotelListScope";
 
 const supabase = sb as any;
@@ -61,6 +62,8 @@ function useListRows(tenantId: string | null, month: Date, scope: HotelListScope
 }
 
 export function HotelListView({ tenantId, showCancelled }: { tenantId: string | null; showCancelled: boolean }) {
+  const paperwork = usePaperworkAlerts(tenantId);
+  const paperworkFor = new Map((paperwork.data ?? []).map(a => [a.booking_id, a]));
   const qc = useQueryClient();
   const [month, setMonth] = useState(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); });
   const [q, setQ] = useState("");
@@ -178,7 +181,7 @@ export function HotelListView({ tenantId, showCancelled }: { tenantId: string | 
                 <tr key={`${r.b.id}-${r.movement ?? "stay"}`} className={`border-t border-border align-top ${cancelled ? "opacity-50 line-through" : i % 2 ? "bg-muted/40" : ""}`}>
                   <td className="px-2 py-2 text-muted-foreground">{i + 1}</td>
                   {showMovement && <td className="px-2 py-2"><span className={`inline-block rounded px-2 py-1 text-xs font-semibold ${r.movement === "arrival" ? "bg-sk-green-soft text-sk-green" : "bg-sk-turquoise-soft text-sk-turquoise"}`}>{r.movement === "arrival" ? "Arrival" : "Departure"}</span></td>}
-                  <td className="px-2 py-2 font-medium"><Link className="hover:underline" to={`/admin/bookings/${r.b.id}`}>{r.b.customer?.full_name ?? "—"}</Link></td>
+                  <td className="px-2 py-2 font-medium"><Link className="hover:underline" to={`/admin/bookings/${r.b.id}`}>{r.b.customer?.full_name ?? "—"}</Link>{r.movement !== "departure" && paperworkFor.get(r.b.id) && <div className="mt-1" title={paperworkFor.get(r.b.id)!.issues.join(" · ")}><PaperworkChip startDate={paperworkFor.get(r.b.id)!.start_date} /></div>}</td>
                   <td className="px-2 py-2">{r.pets.map((p: any) => p.name).join(", ") || "—"}</td>
                   <td className="px-2 py-2 text-muted-foreground">{r.pets.map((p: any) => p.breed || (p.species === "cat" ? "Cat" : "—")).join(", ")}</td>
                   <td className="whitespace-nowrap px-2 py-2">{dShort(r.b.start_at)}</td>

@@ -18,6 +18,7 @@ import { downloadQuotePdf } from "@/features/quotes/queries";
 import { HotelIntakeEditor } from "@/features/hotelForm/HotelIntakeEditor";
 import { HotelPaymentProof } from "./HotelPaymentProof";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { PaperworkChip } from "./PaperworkAlerts";
 import { emailIssuedInvoice } from "@/features/invoices/autoEmail";
 import { HotelQuoteActions } from "./HotelQuoteActions";
 import { hotelNeedsAcceptance } from "./quoteFlow";
@@ -157,6 +158,7 @@ export function HotelReviewPanel({ bookingId, tenantId, customerId, startDate, p
     </div>}
     {estimate && !confirmed && <div className="space-y-3 border-y border-border py-4"><div className="flex flex-wrap justify-between gap-2"><span className="font-semibold">{r?.approved_at ? "Pro forma" : "Estimate"} {estimate.estimate_number}</span><span className="font-semibold">{money(Number(estimate.total))}</span></div><div className="text-sm">{requiredPct}% payable now · {money(Number(estimate.total) * requiredPct / 100)}</div><p className="text-xs text-muted-foreground">Not a tax invoice. Use the document’s bank details and reference for EFT.</p><div className="flex flex-wrap gap-2"><Button variant="outline" disabled={busy} onClick={() => handleDocument()}><FileDown className="mr-2 h-4 w-4" />Download</Button>{canEdit && hasPermission("invoices.send") && <Button variant="outline" disabled={busy} onClick={() => handleDocument(true)}><Mail className="mr-2 h-4 w-4" />Email document</Button>}</div></div>}
     {canEdit && r?.approved_at && !confirmed && hasPermission("payments.create") && <div className="space-y-3"><h3 className="font-semibold">Verify received payment</h3><HotelReceiptForm bookingId={bookingId} suggested={Number(estimate?.total ?? 0) * requiredPct / 100} /><select aria-label="Received payment" value={payment} onChange={e => setPayment(e.target.value)} className="w-full rounded-md border border-input bg-background p-3"><option value="">Or select an existing unallocated receipt</option>{receipts.data?.map(p => <option key={p.id} value={p.id}>{p.paid_at?.slice(0, 10)} · {money(Number(p.amount))} · {p.payment_reference ?? p.payment_method}</option>)}</select><Button disabled={!payment || action.isPending} onClick={() => run("receipt")}>Verify existing receipt & issue invoice</Button></div>}
+    {confirmed && !portal && !checkedIn && status && remaining > 0 && startDate && <div role="alert" className="flex flex-wrap items-center gap-2 rounded-lg border-2 border-sk-orange bg-sk-orange-soft p-3 text-sm font-semibold"><PaperworkChip startDate={startDate.slice(0, 10)} />Confirmed & invoiced — {remaining} paperwork {remaining === 1 ? "item" : "items"} still outstanding. Vaccinations must be cleared before check-in.</div>}
     {confirmed && !portal && <p className="text-sm text-muted-foreground">The tax invoice is issued. Record payments against it under Invoice below — {requiredPct}% is payable now{requiredPct < 100 ? ", the balance before arrival" : ""}.</p>}
     {r?.approved_at && <HotelPaymentProof tenantId={tenantId} customerId={customerId} bookingId={bookingId} portal={portal} />}
     </StageBand>

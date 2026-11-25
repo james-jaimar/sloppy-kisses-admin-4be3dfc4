@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { HotelReviewNotice } from "./HotelReviewNotice";
 import { useHotelReviewCounts } from "./useHotelReviewCounts";
 import { TodayPanel } from "./TodayPanel";
+import { PaperworkAlertsBanner } from "./PaperworkAlerts";
 import { useHotelBookingsInWindow, useHotelQuotesInWindow, useHotelResources } from "./queries";
 import { hotelListRange, hotelTodayRows } from "./hotelListScope";
 
@@ -119,6 +120,7 @@ export default function HotelBoardPage() {
       />
       <div className="flex-1 space-y-6 p-6">
         <HotelReviewNotice tenantId={tenantId} />
+        <PaperworkAlertsBanner tenantId={tenantId} />
         <div className="grid grid-cols-1 gap-3 border-y border-border py-3 sm:grid-cols-3" aria-label="Hotel today overview">
           {todayStats.map(({ label, count, Icon, tone }) => <div key={label} className="flex items-center gap-3"><Icon className={`h-5 w-5 shrink-0 ${tone}`} /><div className="text-2xl font-bold tabular-nums">{todayBookingsQ.isLoading || todayBookingsQ.isError ? "—" : count}</div><span className="text-sm font-medium text-muted-foreground">{label}</span></div>)}
           {todayBookingsQ.isError && <div className="text-sm text-destructive sm:col-span-3">Today's overview couldn't load. <Button variant="outline" size="sm" onClick={() => todayBookingsQ.refetch()}>Retry</Button></div>}
