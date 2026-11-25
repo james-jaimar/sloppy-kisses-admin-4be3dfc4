@@ -10164,6 +10164,17 @@ export type Database = {
         Args: { p_date: string; p_kind: string; p_tenant_id: string }
         Returns: string
       }
+      hotel_paperwork_alerts: {
+        Args: { p_days?: number; p_tenant_id: string }
+        Returns: {
+          booking_id: string
+          booking_number: string
+          customer_name: string
+          issues: string[]
+          pet_names: string
+          start_date: string
+        }[]
+      }
       hotel_pay_in_full: { Args: { p_booking_id: string }; Returns: string }
       hotel_pencilled_by_day: {
         Args: {
