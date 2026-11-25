@@ -39,17 +39,29 @@ export function HotelGroomRequestsPanel({
   const [pkgId, setPkgId] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const q = useBookingGroomRequests(bookingId);
+  const rows = q.data ?? [];
   const addGroom = async () => {
     const pet = dogs.find((p) => p.id === petId);
     if (!tenantId || !pet || !pkgId) return toast.error("Choose a dog and a groom package");
     setSaving(true);
     const end = endAt ? new Date(endAt) : new Date();
     const start = new Date(end); start.setHours(8, 0, 0, 0);
-    const { error } = await supabase.from("hotel_grooming_requests" as any).insert({
-      tenant_id: tenantId, hotel_booking_id: bookingId, pet_id: pet.id, customer_id: customerId ?? null,
-      pet_name: pet.name, window_start: start.toISOString(), window_end: end.toISOString(),
-      customer_notes: notes.trim() || "Groom added by staff", status: "pending", package_id: pkgId, addon_ids: [],
-    });
+    // One groom request per dog per stay: if this dog already has one (e.g. an
+    // imported "grooming: yes" row without a package), update it instead of
+    // inserting a duplicate that the database would reject.
+    const existing = rows.find((r: any) => r.pet_id === pet.id || (!r.pet_id && (r.pet_name ?? "").toLowerCase() === pet.name.toLowerCase()));
+    const { error } = existing
+      ? await supabase.from("hotel_grooming_requests" as any).update({
+          package_id: pkgId,
+          ...(existing.status === "declined" || existing.status === "cancelled" ? { status: "pending", decline_reason: null } : {}),
+          ...(notes.trim() ? { customer_notes: notes.trim() } : {}),
+        }).eq("id", existing.id)
+      : await supabase.from("hotel_grooming_requests" as any).insert({
+          tenant_id: tenantId, hotel_booking_id: bookingId, pet_id: pet.id, customer_id: customerId ?? null,
+          pet_name: pet.name, window_start: start.toISOString(), window_end: end.toISOString(),
+          customer_notes: notes.trim() || "Groom added by staff", status: "pending", package_id: pkgId, addon_ids: [],
+        });
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Groom added successfully");
@@ -57,12 +69,10 @@ export function HotelGroomRequestsPanel({
     qc.invalidateQueries({ queryKey: ["hotel_groom_requests"] });
     ["hotel_quote_actions", "estimate", "estimate_items", "estimates"].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
   };
-  const q = useBookingGroomRequests(bookingId);
   const decline = useDeclineHotelGroom();
   const confirm = useConfirm();
   const [active, setActive] = useState<HotelGroomRequest | null>(null);
 
-  const rows = q.data ?? [];
   const visible = rows.filter((r) => r.status !== "cancelled");
   if (q.isLoading) {
     return (
@@ -122,6 +132,9 @@ export function HotelGroomRequestsPanel({
           >
             <div className="min-w-0">
               <div className="text-sm font-medium">{r.pet_name ?? "Pet"}</div>
+              {!(r as any).package_id && r.status !== "declined" && (
+                <p className="mt-0.5 text-xs font-semibold text-sk-orange">No package chosen — not on the quote yet. Use “Add groom” to pick one.</p>
+              )}
               {r.customer_notes && (
                 <p className="mt-0.5 whitespace-pre-wrap text-xs text-muted-foreground">
                   {r.customer_notes}
