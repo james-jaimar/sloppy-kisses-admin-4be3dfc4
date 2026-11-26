@@ -23,7 +23,7 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 - Hotel room sharing is a booking-level hotel_booking_details.separate_rooms flag passed to stay pricing as a per-pet room_group; every caller of hotel_stay_lines_pets must forward it so quotes, invoices and credits agree.
 - Hotel extras staff writes use existing bookings.create/bookings.update/hotel.manage permissions and same-tenant hotel booking checks; portal customers have own-booking read access only because mutations pass through validated portal endpoints.
 - Admin boards open bookings via BookingPeekProvider (useBookingPeekClick on real links) so staff keep their place; modified clicks still navigate to the full page.
-- Hotel stay grooms bill once: hotel_quote_sync_grooms owns tagged quote lines for unconfirmed stays; confirmation stamps billed_invoice_id so schedule_hotel_groom links that invoice instead of auto-invoicing.
+- Hotel grooms link to their parent at insert; unconfirmed stays suppress separate invoices. Quote sync owns groom lines; confirmation links scheduled grooms to the combined invoice to prevent double billing.
 - Mobile visit travel fees are deduplicated within a booking group, local service day, address and van; reporting groups stops by local day, van, customer and address.
 - Weekly daycare printing combines enrolment weekdays/swaps, recorded attendance, hotel/grooming Stay & Play and assessment bookings in a Monday–Saturday grid; scheduling settings remain authoritative.
 - New-stock CSV imports use an atomic caller-authenticated RPC with product/stock permission checks, duplicate-code validation and receive movements; Retail settings supply VAT defaults and existing products are never overwritten.
