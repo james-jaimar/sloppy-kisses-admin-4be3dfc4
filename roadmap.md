@@ -1,5 +1,11 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## Standalone grooming treatments (26 Nov 2026)
+- [x] Preserve directly selected individual treatments when no package is chosen; retain instruction-driven add-ons for package bookings.
+- [x] Add active standalone De-shed only at R150 in the existing editable grooming add-on catalogue (20-minute starting duration).
+- [x] All 15 selection/pricing regressions passed; catalogue readback confirms R130 nails, R185 anal glands and R150 De-shed only; preview build OK.
+- [ ] Live staff booking selection/save/reopen: blocked by unavailable staff session on external user-managed Supabase.
+
 ## Hotel groom scheduled before confirmation (26 Nov 2026)
 - [x] Prevent separate grooming invoices at quote stage; link scheduled grooms to the hotel invoice on confirmation. Staff queue and alternate checkout creation both preserve parent and package links.
 - [x] QU-4889 verified at R10,457.50, including R222.50 discounted groom; BK00299 linked to hotel BK00281. INV-70058 retained as cancelled unsent draft history. Other separate invoices unchanged.

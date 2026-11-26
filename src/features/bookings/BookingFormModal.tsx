@@ -514,7 +514,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       let changed = false;
       const next = { ...prev };
       for (const [k, p] of Object.entries(prev)) {
-        const a = applyInstructionAddons(p.addons, p.instructions.selections ?? {}, cat as any, addons as any);
+        const a = applyInstructionAddons(p.addons, p.instructions.selections ?? {}, cat as any, addons as any, p.packageId);
         if (a !== p.addons) {
           next[k] = { ...p, addons: a };
           changed = true;

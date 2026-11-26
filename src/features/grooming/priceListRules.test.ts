@@ -2,6 +2,15 @@ import { describe, expect, it } from "vitest";
 import { groomingAddonPrice, mattedOvertimePrice, pensionerEligible } from "./priceListRules";
 
 describe("October grooming price list", () => {
+  it("charges standalone nails at R130", () => {
+    expect(groomingAddonPrice("nails_trim", 130, undefined)).toBe(130);
+  });
+  it("charges standalone anal glands at R185", () => {
+    expect(groomingAddonPrice("anal_gland", 185, undefined)).toBe(185);
+  });
+  it("charges De-shed only at R150", () => {
+    expect(groomingAddonPrice("deshed_only", 150, undefined)).toBe(150);
+  });
   it("includes standard treatments in Full grooming", () => {
     for (const [code, price] of [["hygiene_cut", 50], ["teeth_gel", 130], ["ear_clean", 130], ["nail_trim", 130], ["anal_gland", 185], ["shampoo_hypo", 80]] as const) {
       expect(groomingAddonPrice(code, price, "full")).toBe(0);

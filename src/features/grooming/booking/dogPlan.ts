@@ -28,7 +28,7 @@ export const EMPTY_INSTRUCTIONS: GroomingInstructionsValue = {
 export type TimingMode = "together" | "back_to_back" | "custom";
 
 /**
- * Instructions are the source of truth for any add-on linked to an instruction
+ * With a package, instructions are the source of truth for any add-on linked to an instruction
  * option: add when ticked, remove when un-ticked. Returns `prev` untouched when
  * nothing changes so callers can bail out of state updates.
  */
@@ -37,7 +37,10 @@ export function applyInstructionAddons(
   selections: Record<string, any>,
   cat: { groups: any[]; options: any[]; byGroup: Record<string, any[]> },
   addons: { id: string; code: string }[],
+  packageId: string | null,
 ): GroomingAddonSelection[] {
+  // Individual-treatment visits use the direct checkboxes, not the package sheet.
+  if (!packageId) return prev;
   const triggered = new Set<string>();
   for (const g of cat.groups) {
     const val = selections[g.code];
