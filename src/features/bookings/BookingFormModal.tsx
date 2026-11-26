@@ -776,8 +776,12 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     }
     if (!durationMins || durationMins <= 0) return toast.error("Please set a duration");
     const endComputed = new Date(new Date(startAt).getTime() + durationMins * 60000);
-    if ((petsQ.data?.length ?? 0) > 0 && petIds.length === 0) {
-      return toast.error("Select at least one pet for this booking");
+    if (petIds.length === 0) {
+      return toast.error(
+        (petsQ.data?.length ?? 0) > 0
+          ? "Select at least one pet for this booking"
+          : "This customer has no pets on file. Add their pet to the profile first, then make the booking.",
+      );
     }
 
     if (hotelNeedsVan && !serviceAddressId) {
