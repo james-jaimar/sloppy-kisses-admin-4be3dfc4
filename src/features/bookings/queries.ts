@@ -318,6 +318,7 @@ export function useCreateBooking(tenantId: string) {
         }
       }
 
+      if (!input.pet_ids?.length) throw new Error("Add a pet to this booking first — every booking needs at least one pet.");
       const { data: created, error } = await supabase
         .from("bookings")
         .insert({
@@ -424,6 +425,7 @@ export function useUpdateBooking(tenantId: string) {
         if (error) throw error;
       }
 
+      if (pet_ids && pet_ids.length === 0) throw new Error("Add a pet to this booking first — every booking needs at least one pet.");
       if (pet_ids) {
         const { error: delErr } = await supabase
           .from("booking_pets")

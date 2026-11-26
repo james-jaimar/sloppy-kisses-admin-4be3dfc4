@@ -125,6 +125,7 @@ export function useCreateRecurringBooking(tenantId: string) {
         ...addressSnapshot,
       }));
 
+      if (!input.pet_ids?.length) throw new Error("Add a pet to this booking first — every booking needs at least one pet.");
       const { data: created, error: bErr } = await supabase
         .from("bookings")
         .insert(bookingRows as any)
