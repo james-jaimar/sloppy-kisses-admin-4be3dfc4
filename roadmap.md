@@ -1,5 +1,10 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## Hotel groom scheduled before confirmation (26 Nov 2026)
+- [ ] Prevent separate grooming invoices at quote stage; link scheduled grooms to the hotel invoice on confirmation.
+- [ ] Correct QU-4889 and retire its unsent separate grooming draft without changing issued invoices.
+- [ ] Run rollback billing regressions and verify the updated public quote; staff scheduling screens require an unavailable signed-in session.
+
 ## Cancellation VAT correction (24 Nov 2026)
 - [x] Related-flow sweep: manual full credits, daycare endings, linked transport/source removals, draft retained fees, payment refresh and new Xero credit exports now include VAT once; settled records unchanged.
 - [x] Sweep checks: 20 frontend tests, five cancellation and seven related rollback-only database scenarios passed.
