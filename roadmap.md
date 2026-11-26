@@ -1,9 +1,12 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
 ## Hotel groom scheduled before confirmation (26 Nov 2026)
-- [ ] Prevent separate grooming invoices at quote stage; link scheduled grooms to the hotel invoice on confirmation.
-- [ ] Correct QU-4889 and retire its unsent separate grooming draft without changing issued invoices.
-- [ ] Run rollback billing regressions and verify the updated public quote; staff scheduling screens require an unavailable signed-in session.
+- [x] Prevent separate grooming invoices at quote stage; link scheduled grooms to the hotel invoice on confirmation. Staff queue and alternate checkout creation both preserve parent and package links.
+- [x] QU-4889 verified at R10,457.50, including R222.50 discounted groom; BK00299 linked to hotel BK00281. INV-70058 retained as cancelled unsent draft history. Other separate invoices unchanged.
+- [x] Rollback regressions passed for scheduling before confirmation, quote totals, single invoice linkage, repeat confirmation/saves, unchanged settings, and alternate checkout creation. No fixtures remain. Public QU-4889 visually verified with no runtime errors; price helper test passed and build OK.
+- [x] Read-path sweep: staff add/schedule/decline and intake use request quote sync; public quote/PDF and Xero quote export read saved combined lines. Package auto-invoicing routes through the guarded invoice builder; add-on sync skips missing/locked invoices. Scheduled release only releases existing due drafts, so cannot create a separate bill. Existing issued/paid hotel invoices remain untouched.
+- [ ] Staff scheduling/confirmation UI walkthrough: unavailable external Supabase staff session. Xero quote refresh queued, provider readback not yet verified.
+- [ ] Existing unrelated database security advisories: 195 pre-existing findings, outside this billing correction.
 
 ## Cancellation VAT correction (24 Nov 2026)
 - [x] Related-flow sweep: manual full credits, daycare endings, linked transport/source removals, draft retained fees, payment refresh and new Xero credit exports now include VAT once; settled records unchanged.
