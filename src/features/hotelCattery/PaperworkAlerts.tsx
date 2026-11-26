@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { FileWarning, ChevronDown } from "lucide-react";
+import { FileWarning, ChevronDown, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookingPeekClick } from "@/features/bookings/BookingPeek";
 import { cn } from "@/lib/utils";
@@ -49,6 +49,7 @@ export function PaperworkAlertsBanner({ tenantId }: { tenantId: string | null })
     {open && <ul className="mt-3 max-h-80 space-y-2 overflow-y-auto">
       {rows.map(a => <li key={a.booking_id} className="flex flex-wrap items-center gap-2 rounded-lg bg-background px-3 py-2 text-sm">
         <PaperworkChip startDate={a.start_date} />
+        <Link to={`/admin/bookings/${a.booking_id}`} state={{ from: "/admin/hotel-cattery" }} className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-bold text-primary-foreground hover:bg-primary/90" title="Open the full stay to complete paperwork">{a.booking_number ?? "Open stay"} <ExternalLink className="h-3.5 w-3.5" /></Link>
         <Link to={`/admin/bookings/${a.booking_id}`} onClick={peek(a.booking_id)} className="font-semibold hover:underline">{a.pet_names ?? "Pet"} · {a.customer_name || "—"}</Link>
         <span className="text-muted-foreground">arrives {new Date(`${a.start_date}T12:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}</span>
         <span className="basis-full text-xs text-muted-foreground">Outstanding: {a.issues.join(" · ")}</span>

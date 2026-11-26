@@ -123,6 +123,14 @@ export function BookingDetailPanel({ tenantId, booking, onClose }: Props) {
             )}
           </div>
           <div className="flex items-center gap-1">
+            <Link
+              to={`/admin/bookings/${booking.id}`}
+              onClick={onClose}
+              className="inline-flex h-9 items-center gap-1 rounded-lg border border-border px-2.5 text-xs font-semibold hover:bg-muted"
+              title="Open full booking page"
+            >
+              Open full page <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
             <button
               onClick={() => setEditOpen(true)}
               className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted"
