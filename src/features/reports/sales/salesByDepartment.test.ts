@@ -47,3 +47,19 @@ describe("sales by department", () => {
     expect(rows.map((r) => [r.date, r.kind, r.reference, r.customer, r.gross])).toEqual([["2026-11-27", "credit", "CN-1", "Ann", -57.5], ["2026-11-27", "sale", "INV-1", "Ann", 115]]);
   });
 });
+
+describe("groupSalesItems", () => {
+  it("collapses an invoice's lines into one row with summed totals", async () => {
+    const { groupSalesItems } = await import("./salesByDepartment");
+    const base = { date: "2026-11-27", kind: "sale" as const, reference: "INV-1", customer: "A", quantity: 1 };
+    const g = groupSalesItems([
+      { ...base, description: "Full Package", net: 386.96, vat: 58.04, gross: 445 },
+      { ...base, description: "Nail trim", net: 0, vat: 0, gross: 0 },
+      { ...base, reference: "INV-2", description: "Wash", net: 100, vat: 15, gross: 115 },
+    ]);
+    expect(g).toHaveLength(2);
+    expect(g[0].summary).toBe("Full Package (+1 more)");
+    expect(g[0].gross).toBe(445);
+    expect(g[0].lines).toHaveLength(2);
+  });
+});

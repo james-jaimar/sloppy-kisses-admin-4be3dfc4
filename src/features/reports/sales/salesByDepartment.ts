@@ -199,3 +199,21 @@ export function salesLineItems(invoices: SalesInvoice[], credits: SalesCredit[],
   }
   return rows.sort((a, b) => a.date.localeCompare(b.date) || a.reference.localeCompare(b.reference));
 }
+
+export interface SalesItemGroup { key: string; date: string; kind: "sale" | "credit"; reference: string; customer: string; summary: string; lines: SalesItemRow[]; net: number; vat: number; gross: number; }
+
+/** One row per invoice (or credit note) per day; the first line names the main service, later lines are counted as extras. */
+export function groupSalesItems(rows: SalesItemRow[]): SalesItemGroup[] {
+  const map = new Map<string, SalesItemGroup>();
+  for (const r of rows) {
+    const key = `${r.kind}|${r.reference}|${r.date}`;
+    let g = map.get(key);
+    if (!g) { g = { key, date: r.date, kind: r.kind, reference: r.reference, customer: r.customer, summary: "", lines: [], net: 0, vat: 0, gross: 0 }; map.set(key, g); }
+    g.lines.push(r); g.net = r2(g.net + r.net); g.vat = r2(g.vat + r.vat); g.gross = r2(g.gross + r.gross);
+  }
+  for (const g of map.values()) {
+    const more = g.lines.length - 1;
+    g.summary = (g.lines[0].description || "—") + (more > 0 ? ` (+${more} more)` : "");
+  }
+  return [...map.values()].sort((a, b) => a.date.localeCompare(b.date) || a.reference.localeCompare(b.reference));
+}

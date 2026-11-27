@@ -1,13 +1,13 @@
-import { useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { addDays, eachDayOfInterval, endOfMonth, format, startOfMonth, startOfWeek, subMonths } from "date-fns";
-import { Download, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Loader2 } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { fmtZar } from "@/features/invoices/status";
 import { downloadSheetPdf, PdfButton, pdfDay } from "@/features/lists/sheetPdf";
 import { useSalesData } from "./useSalesData";
-import { buildSalesReport, DEPARTMENTS, salesLineItems, takings, type DateBasis, type Department } from "./salesByDepartment";
+import { buildSalesReport, DEPARTMENTS, groupSalesItems, salesLineItems, takings, type DateBasis, type Department } from "./salesByDepartment";
 
 type Preset = "today" | "yesterday" | "week" | "month" | "last_month" | "day" | "custom";
 const PRESETS: { key: Preset; label: string }[] = [
@@ -45,13 +45,26 @@ export default function SalesByDepartmentPage() {
   const deptLabel = dept ? DEPARTMENTS.find((x) => x.key === dept)!.label : "";
   const items = useMemo(() => dept ? salesLineItems(q.data?.invoices ?? [], q.data?.credits ?? [], dept, { basis, from, to }) : [], [q.data, dept, basis, from, to]);
   const setDept = (v: string) => { const n = new URLSearchParams(sp); if (v) n.set("dept", v); else n.delete("dept"); setSp(n, { replace: true }); };
-  const itemRow = (r: typeof items[number]) => [r.date, r.reference, r.customer, r.description, r.quantity ? String(r.quantity) : "", money(r.net), money(r.vat), money(r.gross)];
+  const groups = useMemo(() => groupSalesItems(items), [items]);
+  const [open, setOpen] = useState<Set<string>>(new Set());
+  const [withLines, setWithLines] = useState(false);
+  const toggle = (k: string) => setOpen((o) => { const n = new Set(o); if (n.has(k)) n.delete(k); else n.add(k); return n; });
   const itemSum = items.reduce((a, r) => ({ net: a.net + r.net, vat: a.vat + r.vat, gross: a.gross + r.gross }), { net: 0, vat: 0, gross: 0 });
-  const itemTotal = ["Total", "", "", `${items.filter((r) => r.kind === "sale").length} lines`, "", money(itemSum.net), money(itemSum.vat), money(itemSum.gross)];
+  const saleCount = groups.filter((g) => g.kind === "sale").length;
+  const groupExportRows = (pdfDate: boolean) => {
+    const out: string[][] = [];
+    for (const g of groups) {
+      out.push([pdfDate ? format(new Date(g.date + "T00:00:00"), "dd MMM") : g.date, g.reference, g.customer, g.summary, money(g.net), money(g.vat), money(g.gross)]);
+      if (withLines && g.lines.length > 1) for (const l of g.lines) out.push(["", "", "", `   • ${l.description}${l.quantity > 1 ? ` ×${l.quantity}` : ""}`, money(l.net), money(l.vat), money(l.gross)]);
+    }
+    out.push(["Total", "", "", `${saleCount} invoices`, money(itemSum.net), money(itemSum.vat), money(itemSum.gross)]);
+    return out;
+  };
   const multiDay = from !== to;
   const days = useMemo(() => multiDay ? eachDayOfInterval({ start: new Date(from + "T00:00:00"), end: new Date(to + "T00:00:00") }).map(pdfDay) : [], [from, to, multiDay]);
   const shown = DEPARTMENTS.filter((x) => x.key !== "other" || report.byDept.other.gross || report.byDept.other.credits);
-  const total = takings(report.totals);
+  const total = dept ? takings(report.byDept[dept]) : takings(report.totals);
+  const kpiCredits = dept ? report.byDept[dept].credits : report.totals.credits;
   const period = multiDay ? `${d(from)} – ${d(to)}` : d(from);
 
   const setPreset = (p: Preset) => { const n = new URLSearchParams(sp); n.set("p", p); if (p === "day") { n.set("from", from); n.delete("to"); } else if (p === "custom") { n.set("from", from); n.set("to", to); } else { n.delete("from"); n.delete("to"); } setSp(n, { replace: true }); };
@@ -63,15 +76,15 @@ export default function SalesByDepartmentPage() {
 
   function csv() {
     const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
-    const lines = [`Sales by department,${esc(period)},${esc(basisLabel)}`, "", ["Department", "Items", "Invoiced (incl. VAT)", "Credits (incl. VAT)", "Net sales (excl. VAT)", "VAT", "Gross takings"].join(","),
-      ...[...summaryRows, summaryTotal].map((r) => r.map(esc).join(","))];
-    if (multiDay) {
+    const lines = [`Sales by department${dept ? ` — ${deptLabel}` : ""},${esc(period)},${esc(basisLabel)}`, ""];
+    if (dept) {
+      lines.push(["Date", "Reference", "Customer", "Services", "Net excl. VAT", "VAT", "Gross incl. VAT"].map(esc).join(","));
+      for (const r of groupExportRows(false)) lines.push(r.map(esc).join(","));
+    } else lines.push(...[["Department", "Items", "Invoiced (incl. VAT)", "Credits (incl. VAT)", "Net sales (excl. VAT)", "VAT", "Gross takings"].join(","),
+      ...[...summaryRows, summaryTotal].map((r) => r.map(esc).join(","))]);
+    if (multiDay && !dept) {
       lines.push("", ["Date", ...shown.map((x) => x.label), "Total"].map(esc).join(","));
       for (const day of days) { const row = report.byDay.get(day); const vals = shown.map((x) => row?.[x.key] ?? 0); lines.push([day, ...vals.map(money), money(vals.reduce((a, b) => a + b, 0))].map(esc).join(",")); }
-    }
-    if (dept) {
-      lines.push("", esc(`${deptLabel} — line items`), ["Date", "Reference", "Customer", "Description", "Qty", "Net excl. VAT", "VAT", "Gross incl. VAT"].map(esc).join(","));
-      for (const r of [...items.map(itemRow), itemTotal]) lines.push(r.map(esc).join(","));
     }
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" }));
@@ -79,10 +92,10 @@ export default function SalesByDepartmentPage() {
   }
 
   async function pdf() {
-    const sections = [{ heading: "Sales by department", columns: [{ label: "Department", width: 52 }, { label: "Items" }, { label: "Invoiced" }, { label: "Credits" }, { label: "Net excl. VAT" }, { label: "VAT" }, { label: "Gross takings" }], rows: [...summaryRows, summaryTotal], footer: "Amounts in ZAR. Invoiced and credits include VAT. Based on invoice and credit note dates; drafts and voided invoices excluded." }];
-    if (multiDay) sections.push({ heading: "Daily takings by department", columns: [{ label: "Date", width: 24 }, ...shown.map((x) => ({ label: x.label })), { label: "Total" }], rows: days.map((day) => { const row = report.byDay.get(day); const vals = shown.map((x) => row?.[x.key] ?? 0); return [format(new Date(day + "T00:00:00"), "EEE dd MMM"), ...vals.map(money), money(vals.reduce((a, b) => a + b, 0))]; }), footer: "Gross takings incl. VAT, after credit notes." } as any);
-    if (dept) sections.push({ heading: `${deptLabel} — line items`, columns: [{ label: "Date", width: 22 }, { label: "Reference", width: 24 }, { label: "Customer", width: 38 }, { label: "Description", width: 60 }, { label: "Qty", width: 10 }, { label: "Net" }, { label: "VAT" }, { label: "Gross" }], rows: [...items.map((r) => { const x = itemRow(r); x[0] = format(new Date(r.date + "T00:00:00"), "dd MMM"); return x; }), itemTotal], footer: "Credit notes are shown as negative lines." } as any);
-    await downloadSheetPdf({ title: "Sales by department", subtitle: `${tenant?.name ?? ""} · ${period} · ${basisLabel}`, landscape: multiDay || !!dept, sections, fileName: `sales-by-department${dept ? `-${dept}` : ""}-${basis}-date-${from}-to-${to}.pdf` });
+    const sections: any[] = dept ? [] : [{ heading: "Sales by department", columns: [{ label: "Department", width: 52 }, { label: "Items" }, { label: "Invoiced" }, { label: "Credits" }, { label: "Net excl. VAT" }, { label: "VAT" }, { label: "Gross takings" }], rows: [...summaryRows, summaryTotal], footer: "Amounts in ZAR. Invoiced and credits include VAT. Based on invoice and credit note dates; drafts and voided invoices excluded." }];
+    if (multiDay && !dept) sections.push({ heading: "Daily takings by department", columns: [{ label: "Date", width: 24 }, ...shown.map((x) => ({ label: x.label })), { label: "Total" }], rows: days.map((day) => { const row = report.byDay.get(day); const vals = shown.map((x) => row?.[x.key] ?? 0); return [format(new Date(day + "T00:00:00"), "EEE dd MMM"), ...vals.map(money), money(vals.reduce((a, b) => a + b, 0))]; }), footer: "Gross takings incl. VAT, after credit notes." } as any);
+    if (dept) sections.push({ heading: `${deptLabel} — sales`, columns: [{ label: "Date", width: 20 }, { label: "Reference", width: 26 }, { label: "Customer", width: 44 }, { label: "Services", width: 90 }, { label: "Net" }, { label: "VAT" }, { label: "Gross" }], rows: groupExportRows(true), footer: "One row per invoice. Credit notes are shown as negative rows." });
+    await downloadSheetPdf({ title: "Sales by department", subtitle: `${tenant?.name ?? ""} · ${period} · ${basisLabel}`, landscape: (multiDay && !dept) || !!dept, sections, fileName: `sales-by-department${dept ? `-${dept}` : ""}-${basis}-date-${from}-to-${to}.pdf` });
   }
 
   return (
@@ -125,19 +138,10 @@ export default function SalesByDepartmentPage() {
             <Kpi label="Gross takings (incl. VAT)" value={fmtZar(total.gross)} strong />
             <Kpi label="Net sales (excl. VAT)" value={fmtZar(total.net)} />
             <Kpi label="VAT" value={fmtZar(total.vat)} />
-            <Kpi label="Credit notes" value={report.totals.credits ? `−${fmtZar(report.totals.credits)}` : fmtZar(0)} />
+            <Kpi label="Credit notes" value={kpiCredits ? `−${fmtZar(kpiCredits)}` : fmtZar(0)} />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {shown.map((x) => { const t = report.byDept[x.key]; const k = takings(t); return (
-              <div key={x.key} className="sk-card p-4">
-                <div className="text-sm font-semibold">{x.label}</div>
-                <div className="mt-1 text-2xl font-bold tabular-nums">{fmtZar(k.gross)}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{t.count} items · net {fmtZar(k.net)} · VAT {fmtZar(k.vat)}{t.credits ? ` · credits −${fmtZar(t.credits)}` : ""}</div>
-              </div>); })}
-          </div>
-
-          <div className="sk-card overflow-x-auto">
+          {!dept && <div className="sk-card overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-muted text-left text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>{["Department", "Items", "Invoiced", "Credits", "Net excl. VAT", "VAT", "Gross takings"].map((h, i) => <th key={h} className={"px-4 py-2 " + (i ? "text-right" : "")}>{h}</th>)}</tr>
@@ -149,33 +153,49 @@ export default function SalesByDepartmentPage() {
                   </tr>))}
               </tbody>
             </table>
-          </div>
+          </div>}
 
           {dept && <div className="sk-card overflow-x-auto">
-            <div className="flex items-center justify-between border-b border-border px-4 py-3"><span className="font-semibold">{deptLabel} — line items</span><span className="text-sm text-muted-foreground">{items.filter((r) => r.kind === "sale").length} lines · {fmtZar(itemSum.gross)}</span></div>
-            {items.length === 0 ? <div className="p-6 text-center text-sm text-muted-foreground">No sales for {deptLabel} in this period.</div> :
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+              <span className="font-semibold">{deptLabel} — sales</span>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <label className="inline-flex items-center gap-2"><input type="checkbox" checked={withLines} onChange={(e) => setWithLines(e.target.checked)} /> Include item lines in export</label>
+                <span>{saleCount} invoices · {fmtZar(itemSum.gross)}</span>
+              </div>
+            </div>
+            {groups.length === 0 ? <div className="p-6 text-center text-sm text-muted-foreground">No sales for {deptLabel} in this period.</div> :
             <table className="w-full text-sm">
               <thead className="bg-muted text-left text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>{["Date", "Reference", "Customer", "Description", "Qty", "Net excl. VAT", "VAT", "Gross"].map((h, i) => <th key={h} className={"px-4 py-2 " + (i >= 4 ? "text-right" : "")}>{h}</th>)}</tr>
+                <tr><th className="w-8 px-2 py-2" />{["Date", "Invoice", "Customer", "Services", "Net excl. VAT", "VAT", "Gross"].map((h, i) => <th key={h} className={"px-4 py-2 " + (i >= 4 ? "text-right" : "")}>{h}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {items.map((r, i) => (
-                  <tr key={i} className={r.kind === "credit" ? "text-destructive" : ""}>
-                    <td className="whitespace-nowrap px-4 py-2">{format(new Date(r.date + "T00:00:00"), "dd MMM yyyy")}</td>
-                    <td className="whitespace-nowrap px-4 py-2 font-medium">{r.reference}</td>
-                    <td className="px-4 py-2">{r.customer || "—"}</td>
-                    <td className="px-4 py-2">{r.description}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{r.quantity || ""}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{fmtZar(r.net)}</td>
-                    <td className="px-4 py-2 text-right tabular-nums">{fmtZar(r.vat)}</td>
-                    <td className="px-4 py-2 text-right font-semibold tabular-nums">{fmtZar(r.gross)}</td>
-                  </tr>))}
+                {groups.map((g) => { const isOpen = open.has(g.key); const canOpen = g.lines.length > 1; return (
+                  <Fragment key={g.key}>
+                    <tr className={(g.kind === "credit" ? "text-destructive " : "") + (canOpen ? "cursor-pointer hover:bg-muted/50" : "")} onClick={canOpen ? () => toggle(g.key) : undefined}>
+                      <td className="px-2 py-2 text-muted-foreground">{canOpen && (isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}</td>
+                      <td className="whitespace-nowrap px-4 py-2">{format(new Date(g.date + "T00:00:00"), "dd MMM yyyy")}</td>
+                      <td className="whitespace-nowrap px-4 py-2 font-semibold">{g.reference}</td>
+                      <td className="px-4 py-2">{g.customer || "—"}</td>
+                      <td className="px-4 py-2">{g.summary}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{fmtZar(g.net)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{fmtZar(g.vat)}</td>
+                      <td className="px-4 py-2 text-right font-semibold tabular-nums">{fmtZar(g.gross)}</td>
+                    </tr>
+                    {isOpen && g.lines.map((l, i) => (
+                      <tr key={i} className="bg-muted/30 text-xs text-muted-foreground">
+                        <td /><td /><td /><td />
+                        <td className="px-4 py-1.5">• {l.description}{l.quantity > 1 ? ` ×${l.quantity}` : ""}</td>
+                        <td className="px-4 py-1.5 text-right tabular-nums">{fmtZar(l.net)}</td>
+                        <td className="px-4 py-1.5 text-right tabular-nums">{fmtZar(l.vat)}</td>
+                        <td className="px-4 py-1.5 text-right tabular-nums">{fmtZar(l.gross)}</td>
+                      </tr>))}
+                  </Fragment>); })}
                 <tr className="bg-muted font-bold"><td className="px-4 py-2" colSpan={5}>Total</td><td className="px-4 py-2 text-right tabular-nums">{fmtZar(itemSum.net)}</td><td className="px-4 py-2 text-right tabular-nums">{fmtZar(itemSum.vat)}</td><td className="px-4 py-2 text-right tabular-nums">{fmtZar(itemSum.gross)}</td></tr>
               </tbody>
             </table>}
           </div>}
 
-          {multiDay && <div className="sk-card overflow-x-auto">
+          {multiDay && !dept && <div className="sk-card overflow-x-auto">
             <div className="border-b border-border px-4 py-3 font-semibold">Day by day (gross takings incl. VAT)</div>
             <table className="w-full text-sm">
               <thead className="bg-muted text-left text-xs uppercase tracking-wide text-muted-foreground">
