@@ -43,4 +43,3 @@ Render grooming save progress in a body-level portal above the review dialog; ne
 - Imported hotel transport legs retain standard parent/link-kind relationships and requested review status; private source evidence guards original quote/invoice billing, and same-day hotel saves preserve imported trip times to avoid duplicate charges or lost route constraints.
 - Cancellation quotes and credits use invoice line net plus VAT; draft recalculation preserves tax totals so cancellations cannot leave VAT outstanding.
 - Invoice corrections go through rebill_invoice (full credit, held customer credit, auto-settled draft copy); never edit issued invoices in place.
-- Xero line accounts: lines with no booking or product inherit the invoice's single service account code, so unlinked grooming extras don't fall back to default Sales.

@@ -1,0 +1,1 @@
+- Line accounts: lines with no booking or product inherit the invoice's single service account code, so unlinked extras don't fall back to default Sales.
