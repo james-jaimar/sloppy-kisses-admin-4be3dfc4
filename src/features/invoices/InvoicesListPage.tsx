@@ -272,7 +272,7 @@ export default function InvoicesListPage() {
   async function bulkVoid() {
     const targets = selectedRows.filter((r) => r.status !== "cancelled");
     if (!targets.length) { toast.error("Nothing to void"); return; }
-    if (!(await confirm({ title: `Void ${targets.length} invoice(s)?`, description: "This cannot be undone.", confirmLabel: "Void", tone: "destructive" }))) return;
+    if (!(await confirm({ title: `Void ${targets.length} invoice(s)?`, description: "These invoices will be cancelled and can no longer be paid. Their bookings stay active. This cannot be undone.", confirmLabel: "Yes, void", cancelLabel: "Keep invoices", tone: "destructive" }))) return;
     setWorking(true);
     let ok = 0, fail = 0;
     for (const r of targets) {

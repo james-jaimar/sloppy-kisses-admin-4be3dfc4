@@ -133,7 +133,7 @@ export default function InvoiceDetailPage() {
 
   async function doVoid() {
     if (!inv) return;
-    if (!(await confirm({ title: "Void invoice?", description: "It will be marked as cancelled.", confirmLabel: "Void", tone: "destructive" }))) return;
+    if (!(await confirm({ title: `Are you sure you want to void ${inv.invoice_number}?`, description: `This cancels the whole invoice (${fmtZar(Number(inv.total ?? 0))}) and it can no longer be paid. The booking itself stays active. Only void if this invoice was created by mistake — to correct an invoice, use Adjust & re-bill instead.`, confirmLabel: "Yes, void invoice", cancelLabel: "Keep invoice", tone: "destructive" }))) return;
     try { await voidInv.mutateAsync(inv.id); toast.success("Invoice voided"); }
     catch (err: any) { toast.error(err?.message ?? "Failed"); }
   }
