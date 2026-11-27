@@ -4,6 +4,12 @@ import { BarChart3, FileText, TrendingUp, Percent, Download, SlidersHorizontal }
 
 const CARDS = [
   {
+    to: "/admin/reports/sales",
+    title: "Sales by department",
+    description: "Today, yesterday, this week or month: takings for parlour and mobile grooming, hotel, daycare, transport and the shop, with VAT, credit notes, a day-by-day view and CSV/PDF export.",
+    icon: TrendingUp,
+  },
+  {
     to: "/admin/reports/custom",
     title: "Custom report builder",
     description: "Pick any bookings, grooming, hotel, daycare, invoice, customer, pet or shop fields; filter, group by month/breed/suburb/package and export to Excel.",
