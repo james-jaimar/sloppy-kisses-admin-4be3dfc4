@@ -101,7 +101,7 @@ export default function AddressAutocomplete({
   useEffect(() => {
     if (!configured) return;
     if (abortRef.current) window.clearTimeout(abortRef.current);
-    abortRef.current = window.setTimeout(() => fetchSuggestions(value), 250);
+    abortRef.current = window.setTimeout(() => fetchSuggestions(value), 600);
     return () => {
       if (abortRef.current) window.clearTimeout(abortRef.current);
     };
@@ -203,7 +203,7 @@ export default function AddressAutocomplete({
           }}
           onFocus={() => value.trim().length >= 3 && setOpen(true)}
           placeholder={placeholder}
-          disabled={disabled || loading}
+          disabled={disabled}
           className="h-10 w-full rounded-lg border border-border bg-white pl-9 pr-9 text-sm"
         />
         {loading && <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />}
