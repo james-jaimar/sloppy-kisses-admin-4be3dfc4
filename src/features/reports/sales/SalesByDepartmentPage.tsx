@@ -7,12 +7,12 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { fmtZar } from "@/features/invoices/status";
 import { downloadSheetPdf, PdfButton, pdfDay } from "@/features/lists/sheetPdf";
 import { useSalesData } from "./useSalesData";
-import { buildSalesReport, DEPARTMENTS, takings, type DateBasis } from "./salesByDepartment";
+import { buildSalesReport, DEPARTMENTS, salesLineItems, takings, type DateBasis, type Department } from "./salesByDepartment";
 
-type Preset = "today" | "yesterday" | "week" | "month" | "last_month" | "custom";
+type Preset = "today" | "yesterday" | "week" | "month" | "last_month" | "day" | "custom";
 const PRESETS: { key: Preset; label: string }[] = [
   { key: "today", label: "Today" }, { key: "yesterday", label: "Yesterday" }, { key: "week", label: "This week" },
-  { key: "month", label: "This month" }, { key: "last_month", label: "Last month" }, { key: "custom", label: "Custom" },
+  { key: "month", label: "This month" }, { key: "last_month", label: "Last month" }, { key: "day", label: "Pick a day" }, { key: "custom", label: "Custom" },
 ];
 
 function range(p: Preset, from?: string | null, to?: string | null) {
@@ -22,6 +22,7 @@ function range(p: Preset, from?: string | null, to?: string | null) {
     case "week": { const s = startOfWeek(now, { weekStartsOn: 1 }); return [pdfDay(s), pdfDay(addDays(s, 6))]; }
     case "month": return [pdfDay(startOfMonth(now)), pdfDay(endOfMonth(now))];
     case "last_month": { const m = subMonths(now, 1); return [pdfDay(startOfMonth(m)), pdfDay(endOfMonth(m))]; }
+    case "day": { const x = from || pdfDay(now); return [x, x]; }
     case "custom": return [from || pdfDay(now), to || from || pdfDay(now)];
     default: return [pdfDay(now), pdfDay(now)];
   }
@@ -39,13 +40,22 @@ export default function SalesByDepartmentPage() {
   const q = useSalesData(tenant?.id, from, to, basis);
   const report = useMemo(() => buildSalesReport(q.data?.invoices ?? [], q.data?.credits ?? [], { basis, from, to }), [q.data, basis, from, to]);
   const setBasis = (b: DateBasis) => { const n = new URLSearchParams(sp); if (b === "service") n.delete("basis"); else n.set("basis", b); setSp(n, { replace: true }); };
+  const deptParam = sp.get("dept") as Department | null;
+  const dept = DEPARTMENTS.some((x) => x.key === deptParam) ? deptParam : null;
+  const deptLabel = dept ? DEPARTMENTS.find((x) => x.key === dept)!.label : "";
+  const items = useMemo(() => dept ? salesLineItems(q.data?.invoices ?? [], q.data?.credits ?? [], dept, { basis, from, to }) : [], [q.data, dept, basis, from, to]);
+  const setDept = (v: string) => { const n = new URLSearchParams(sp); if (v) n.set("dept", v); else n.delete("dept"); setSp(n, { replace: true }); };
+  const itemRow = (r: typeof items[number]) => [r.date, r.reference, r.customer, r.description, r.quantity ? String(r.quantity) : "", money(r.net), money(r.vat), money(r.gross)];
+  const itemSum = items.reduce((a, r) => ({ net: a.net + r.net, vat: a.vat + r.vat, gross: a.gross + r.gross }), { net: 0, vat: 0, gross: 0 });
+  const itemTotal = ["Total", "", "", `${items.filter((r) => r.kind === "sale").length} lines`, "", money(itemSum.net), money(itemSum.vat), money(itemSum.gross)];
   const multiDay = from !== to;
   const days = useMemo(() => multiDay ? eachDayOfInterval({ start: new Date(from + "T00:00:00"), end: new Date(to + "T00:00:00") }).map(pdfDay) : [], [from, to, multiDay]);
   const shown = DEPARTMENTS.filter((x) => x.key !== "other" || report.byDept.other.gross || report.byDept.other.credits);
   const total = takings(report.totals);
   const period = multiDay ? `${d(from)} – ${d(to)}` : d(from);
 
-  const setPreset = (p: Preset) => { const n = new URLSearchParams(sp); n.set("p", p); if (p === "custom") { n.set("from", from); n.set("to", to); } else { n.delete("from"); n.delete("to"); } setSp(n, { replace: true }); };
+  const setPreset = (p: Preset) => { const n = new URLSearchParams(sp); n.set("p", p); if (p === "day") { n.set("from", from); n.delete("to"); } else if (p === "custom") { n.set("from", from); n.set("to", to); } else { n.delete("from"); n.delete("to"); } setSp(n, { replace: true }); };
+  const setDay = (v: string) => { if (!v) return; const n = new URLSearchParams(sp); n.set("p", "day"); n.set("from", v); n.delete("to"); setSp(n, { replace: true }); };
   const setDate = (k: "from" | "to", v: string) => { const n = new URLSearchParams(sp); n.set("p", "custom"); n.set("from", from); n.set("to", to); n.set(k, v); setSp(n, { replace: true }); };
 
   const summaryRows = shown.map((x) => { const t = report.byDept[x.key]; const k = takings(t); return [x.label, String(t.count), money(t.gross), money(t.credits), money(k.net), money(k.vat), money(k.gross)]; });
@@ -59,15 +69,20 @@ export default function SalesByDepartmentPage() {
       lines.push("", ["Date", ...shown.map((x) => x.label), "Total"].map(esc).join(","));
       for (const day of days) { const row = report.byDay.get(day); const vals = shown.map((x) => row?.[x.key] ?? 0); lines.push([day, ...vals.map(money), money(vals.reduce((a, b) => a + b, 0))].map(esc).join(",")); }
     }
+    if (dept) {
+      lines.push("", esc(`${deptLabel} — line items`), ["Date", "Reference", "Customer", "Description", "Qty", "Net excl. VAT", "VAT", "Gross incl. VAT"].map(esc).join(","));
+      for (const r of [...items.map(itemRow), itemTotal]) lines.push(r.map(esc).join(","));
+    }
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" }));
-    a.download = `sales-by-department-${basis}-date-${from}-to-${to}.csv`; document.body.appendChild(a); a.click(); a.remove();
+    a.download = `sales-by-department${dept ? `-${dept}` : ""}-${basis}-date-${from}-to-${to}.csv`; document.body.appendChild(a); a.click(); a.remove();
   }
 
   async function pdf() {
     const sections = [{ heading: "Sales by department", columns: [{ label: "Department", width: 52 }, { label: "Items" }, { label: "Invoiced" }, { label: "Credits" }, { label: "Net excl. VAT" }, { label: "VAT" }, { label: "Gross takings" }], rows: [...summaryRows, summaryTotal], footer: "Amounts in ZAR. Invoiced and credits include VAT. Based on invoice and credit note dates; drafts and voided invoices excluded." }];
     if (multiDay) sections.push({ heading: "Daily takings by department", columns: [{ label: "Date", width: 24 }, ...shown.map((x) => ({ label: x.label })), { label: "Total" }], rows: days.map((day) => { const row = report.byDay.get(day); const vals = shown.map((x) => row?.[x.key] ?? 0); return [format(new Date(day + "T00:00:00"), "EEE dd MMM"), ...vals.map(money), money(vals.reduce((a, b) => a + b, 0))]; }), footer: "Gross takings incl. VAT, after credit notes." } as any);
-    await downloadSheetPdf({ title: "Sales by department", subtitle: `${tenant?.name ?? ""} · ${period} · ${basisLabel}`, landscape: multiDay, sections, fileName: `sales-by-department-${basis}-date-${from}-to-${to}.pdf` });
+    if (dept) sections.push({ heading: `${deptLabel} — line items`, columns: [{ label: "Date", width: 22 }, { label: "Reference", width: 24 }, { label: "Customer", width: 38 }, { label: "Description", width: 60 }, { label: "Qty", width: 10 }, { label: "Net" }, { label: "VAT" }, { label: "Gross" }], rows: [...items.map((r) => { const x = itemRow(r); x[0] = format(new Date(r.date + "T00:00:00"), "dd MMM"); return x; }), itemTotal], footer: "Credit notes are shown as negative lines." } as any);
+    await downloadSheetPdf({ title: "Sales by department", subtitle: `${tenant?.name ?? ""} · ${period} · ${basisLabel}`, landscape: multiDay || !!dept, sections, fileName: `sales-by-department${dept ? `-${dept}` : ""}-${basis}-date-${from}-to-${to}.pdf` });
   }
 
   return (
@@ -83,6 +98,12 @@ export default function SalesByDepartmentPage() {
             <button key={p.key} onClick={() => setPreset(p.key)}
               className={"h-10 rounded-xl border px-4 text-sm font-semibold " + (preset === p.key ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:bg-muted")}>{p.label}</button>
           ))}
+          {preset === "day" && <input type="date" value={from} onChange={(e) => setDay(e.target.value)} className="h-10 rounded-xl border border-border bg-card px-2 text-sm" aria-label="Day" />}
+          <select value={dept ?? ""} onChange={(e) => setDept(e.target.value)} aria-label="Department"
+            className="h-10 rounded-xl border border-border bg-card px-3 text-sm font-semibold">
+            <option value="">All departments</option>
+            {DEPARTMENTS.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
+          </select>
           {preset === "custom" && <>
             <input type="date" value={from} onChange={(e) => setDate("from", e.target.value)} className="h-10 rounded-xl border border-border bg-card px-2 text-sm" aria-label="From" />
             <input type="date" value={to} min={from} onChange={(e) => setDate("to", e.target.value)} className="h-10 rounded-xl border border-border bg-card px-2 text-sm" aria-label="To" />
@@ -129,6 +150,30 @@ export default function SalesByDepartmentPage() {
               </tbody>
             </table>
           </div>
+
+          {dept && <div className="sk-card overflow-x-auto">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3"><span className="font-semibold">{deptLabel} — line items</span><span className="text-sm text-muted-foreground">{items.filter((r) => r.kind === "sale").length} lines · {fmtZar(itemSum.gross)}</span></div>
+            {items.length === 0 ? <div className="p-6 text-center text-sm text-muted-foreground">No sales for {deptLabel} in this period.</div> :
+            <table className="w-full text-sm">
+              <thead className="bg-muted text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>{["Date", "Reference", "Customer", "Description", "Qty", "Net excl. VAT", "VAT", "Gross"].map((h, i) => <th key={h} className={"px-4 py-2 " + (i >= 4 ? "text-right" : "")}>{h}</th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {items.map((r, i) => (
+                  <tr key={i} className={r.kind === "credit" ? "text-destructive" : ""}>
+                    <td className="whitespace-nowrap px-4 py-2">{format(new Date(r.date + "T00:00:00"), "dd MMM yyyy")}</td>
+                    <td className="whitespace-nowrap px-4 py-2 font-medium">{r.reference}</td>
+                    <td className="px-4 py-2">{r.customer || "—"}</td>
+                    <td className="px-4 py-2">{r.description}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{r.quantity || ""}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{fmtZar(r.net)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{fmtZar(r.vat)}</td>
+                    <td className="px-4 py-2 text-right font-semibold tabular-nums">{fmtZar(r.gross)}</td>
+                  </tr>))}
+                <tr className="bg-muted font-bold"><td className="px-4 py-2" colSpan={5}>Total</td><td className="px-4 py-2 text-right tabular-nums">{fmtZar(itemSum.net)}</td><td className="px-4 py-2 text-right tabular-nums">{fmtZar(itemSum.vat)}</td><td className="px-4 py-2 text-right tabular-nums">{fmtZar(itemSum.gross)}</td></tr>
+              </tbody>
+            </table>}
+          </div>}
 
           {multiDay && <div className="sk-card overflow-x-auto">
             <div className="border-b border-border px-4 py-3 font-semibold">Day by day (gross takings incl. VAT)</div>

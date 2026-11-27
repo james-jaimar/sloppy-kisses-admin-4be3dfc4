@@ -46,11 +46,12 @@ export interface SalesInvoice {
   id: string;
   invoice_number: string | null;
   issue_date: string;
+  customer_name?: string | null;
   booking_service: string | null; // invoice-level booking
   service_date?: string | null; // local day of the invoice-level booking
   lines: SalesLine[];
 }
-export interface SalesCredit { id: string; issue_date: string; total: number; invoice: SalesInvoice | null; }
+export interface SalesCredit { id: string; credit_note_number?: string | null; issue_date: string; total: number; invoice: SalesInvoice | null; }
 
 export function classifyLine(line: SalesLine, inv: SalesInvoice): Department {
   if (line.product_id || line.stock_movement_id) return "retail";
@@ -165,3 +166,36 @@ export function buildSalesReport(invoices: SalesInvoice[], credits: SalesCredit[
 
 /** Net takings after credits for a department. */
 export const takings = (t: DeptTotals) => ({ gross: r2(t.gross - t.credits), vat: r2(t.vat - t.creditVat), net: r2(t.net - (t.credits - t.creditVat)) });
+
+export interface SalesItemRow { date: string; kind: "sale" | "credit"; reference: string; customer: string; description: string; quantity: number; net: number; vat: number; gross: number; }
+
+/** Individual sale lines (and credit-note deductions) for one department, using the same date and department rules as the totals. */
+export function salesLineItems(invoices: SalesInvoice[], credits: SalesCredit[], dept: Department, opts: ReportOptions = {}): SalesItemRow[] {
+  const service = opts.basis === "service";
+  const inRange = (d: string) => (!opts.from || d >= opts.from) && (!opts.to || d <= opts.to);
+  const rows: SalesItemRow[] = [];
+  for (const inv of invoices) for (const l of inv.lines) {
+    if (classifyLine(l, inv) !== dept) continue;
+    const date = service ? lineServiceDate(l, inv) : inv.issue_date;
+    if (service && !inRange(date)) continue;
+    const g = Number(l.line_total) || 0, v = Number(l.vat_amount) || 0;
+    rows.push({ date, kind: "sale", reference: inv.invoice_number ?? "", customer: inv.customer_name ?? "", description: l.description ?? "", quantity: Number(l.quantity) || 1, net: r2(g - v), vat: r2(v), gross: r2(g) });
+  }
+  for (const cn of credits) {
+    const amount = Number(cn.total) || 0; const inv = cn.invoice;
+    const base = inv ? inv.lines.reduce((a, l) => a + (Number(l.line_total) || 0), 0) : 0;
+    const byDate = new Map<string, { g: number; v: number }>();
+    if (!inv || base <= 0) {
+      if (dept !== "other" || !inRange(cn.issue_date)) continue;
+      byDate.set(cn.issue_date, { g: amount, v: amount * 15 / 115 });
+    } else for (const l of inv.lines) {
+      const g = Number(l.line_total) || 0; if (!g || classifyLine(l, inv) !== dept) continue;
+      const date = service ? lineServiceDate(l, inv) : cn.issue_date;
+      if (service && !inRange(date)) continue;
+      const part = amount * (g / base); const b = byDate.get(date) ?? { g: 0, v: 0 };
+      b.g += part; b.v += part * ((Number(l.vat_amount) || 0) / g); byDate.set(date, b);
+    }
+    for (const [date, b] of byDate) rows.push({ date, kind: "credit", reference: cn.credit_note_number ?? "", customer: inv?.customer_name ?? "", description: `Credit note${inv?.invoice_number ? ` against ${inv.invoice_number}` : ""}`, quantity: 0, net: -r2(b.g - b.v), vat: -r2(b.v), gross: -r2(b.g) });
+  }
+  return rows.sort((a, b) => a.date.localeCompare(b.date) || a.reference.localeCompare(b.reference));
+}

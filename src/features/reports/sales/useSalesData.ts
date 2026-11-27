@@ -4,7 +4,7 @@ import type { DateBasis, SalesCredit, SalesInvoice } from "./salesByDepartment";
 
 const localDay = (iso: string) => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Johannesburg", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
 
-const INV_SELECT = "id, invoice_number, issue_date, status, booking_id, invoice_items(description, line_total, vat_amount, quantity, product_id, stock_movement_id, booking_id)";
+const INV_SELECT = "id, invoice_number, issue_date, status, booking_id, customer:customers(full_name), invoice_items(description, line_total, vat_amount, quantity, product_id, stock_movement_id, booking_id)";
 
 async function pageAll<T>(build: (from: number, to: number) => any): Promise<T[]> {
   const out: T[] = [];
@@ -30,7 +30,7 @@ async function serviceMap(tenantId: string, ids: string[]) {
 
 function shape(raw: any, svc: Svc): SalesInvoice {
   return {
-    id: raw.id, invoice_number: raw.invoice_number, issue_date: raw.issue_date,
+    id: raw.id, invoice_number: raw.invoice_number, issue_date: raw.issue_date, customer_name: raw.customer?.full_name ?? null,
     booking_service: raw.booking_id ? svc[raw.booking_id]?.service ?? null : null,
     service_date: raw.booking_id ? svc[raw.booking_id]?.day ?? null : null,
     lines: (raw.invoice_items ?? []).map((l: any) => ({
@@ -90,13 +90,13 @@ export function useSalesData(tenantId: string | null | undefined, from: string, 
         const ids = invs.map((i) => i.id as string);
         cns = [];
         for (let i = 0; i < ids.length; i += 200) {
-          const { data, error } = await supabase.from("credit_notes").select("id, issue_date, total, invoice_id")
+          const { data, error } = await supabase.from("credit_notes").select("id, credit_note_number, issue_date, total, invoice_id")
             .eq("tenant_id", t).in("invoice_id", ids.slice(i, i + 200)).in("status", ["issued", "applied"]);
           if (error) throw error;
           cns.push(...(data ?? []));
         }
       } else {
-        cns = await pageAll<any>((a, b) => supabase.from("credit_notes").select("id, issue_date, total, invoice_id")
+        cns = await pageAll<any>((a, b) => supabase.from("credit_notes").select("id, credit_note_number, issue_date, total, invoice_id")
           .eq("tenant_id", t).gte("issue_date", from).lte("issue_date", to)
           .in("status", ["issued", "applied"]).order("issue_date").range(a, b));
       }
@@ -106,7 +106,7 @@ export function useSalesData(tenantId: string | null | undefined, from: string, 
       const svc = await serviceMap(t, all.flatMap((i) => [i.booking_id, ...(i.invoice_items ?? []).map((l: any) => l.booking_id)]));
       const byId = new Map(all.map((i) => [i.id, shape(i, svc)]));
       const invoices: SalesInvoice[] = invs.map((i) => byId.get(i.id)!);
-      const credits: SalesCredit[] = cns.map((c) => ({ id: c.id, issue_date: c.issue_date, total: Number(c.total ?? 0), invoice: c.invoice_id ? byId.get(c.invoice_id) ?? null : null }));
+      const credits: SalesCredit[] = cns.map((c) => ({ id: c.id, credit_note_number: c.credit_note_number, issue_date: c.issue_date, total: Number(c.total ?? 0), invoice: c.invoice_id ? byId.get(c.invoice_id) ?? null : null }));
       return { invoices, credits };
     },
   });

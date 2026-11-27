@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildSalesReport, classifyLine, type SalesInvoice, type SalesLine } from "./salesByDepartment";
+import { buildSalesReport, classifyLine, salesLineItems, type SalesInvoice, type SalesLine } from "./salesByDepartment";
 
 const line = (p: Partial<SalesLine>): SalesLine => ({ description: "x", line_total: 115, vat_amount: 15, quantity: 1, product_id: null, stock_movement_id: null, booking_service: null, ...p });
 const inv = (lines: SalesLine[], p: Partial<SalesInvoice> = {}): SalesInvoice => ({ id: "i", invoice_number: "INV", issue_date: "2026-11-26", booking_service: null, lines, ...p });
@@ -40,5 +40,10 @@ describe("sales by department", () => {
     expect(r.byDept.retail.gross).toBe(115);
     expect(r.byDept.grooming_mobile.credits).toBe(115);
     expect(r.byDay.get("2026-11-27")!.grooming_mobile).toBe(0);
+  });
+  it("department line items list only that department's lines on their service day, with credits as deductions", () => {
+    const g = inv([line({ description: "Full groom", booking_service: "grooming_inhouse", service_date: "2026-11-27" }), line({ description: "Dog food", product_id: "p" })], { invoice_number: "INV-1", issue_date: "2026-11-24", customer_name: "Ann" });
+    const rows = salesLineItems([g], [{ id: "c", credit_note_number: "CN-1", issue_date: "2026-11-30", total: 115, invoice: g }], "grooming_inhouse", { basis: "service", from: "2026-11-27", to: "2026-11-27" });
+    expect(rows.map((r) => [r.date, r.kind, r.reference, r.customer, r.gross])).toEqual([["2026-11-27", "credit", "CN-1", "Ann", -57.5], ["2026-11-27", "sale", "INV-1", "Ann", 115]]);
   });
 });
