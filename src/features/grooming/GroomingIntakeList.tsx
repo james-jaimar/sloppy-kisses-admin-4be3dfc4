@@ -1,9 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { downloadIntakePdf } from "./intakePdf";
 import { Link } from "react-router-dom";
-import { Printer } from "lucide-react";
+import { FileDown, Loader2 } from "lucide-react";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useBookingPeekClick } from "@/features/bookings/BookingPeek";
-import { PaymentChip, PaymentFlagsProvider } from "@/features/shared/payments/paymentFlags";
+import { PaymentChip, PaymentFlagsProvider, useBookingPaymentFlags } from "@/features/shared/payments/paymentFlags";
 import { BookingStatusChip } from "@/features/bookings/statusMeta";
 import { useGroomingBoardBookings } from "./queries";
 import { useDaycarePetIdsForDay } from "./daycareLink";
@@ -32,6 +34,33 @@ export function GroomingIntakeList({ day }: { day: Date }) {
     return buildIntakeRows(cards.flatMap((c) => c.pets.map((p) => ({ bookingId: c.id, customerId: c.customer?.id ?? null, petId: p.id, number: nums.get(`${c.id}:${p.id}`) }))));
   }, [cards]);
 
+  const flags = useBookingPaymentFlags(cards.map((c) => c.id));
+  const [busy, setBusy] = useState(false);
+  async function makePdf() {
+    setBusy(true);
+    try {
+      await downloadIntakePdf({
+        day, appointments: cards.length, business: tenant?.name ?? "Sloppy Kisses",
+        rows: rows.map((r) => {
+          const c = byId.get(r.bookingId)!;
+          const pet = c.pets.find((p) => p.id === r.petId);
+          const t = fmtTime(c.start_at);
+          const src = c.parent_booking_id ? "Hotel" : daycare.has(r.petId) ? "D/C" : t;
+          const pkg = c.details?.package_id ? pkgNames.get(c.details.package_id) : null;
+          return {
+            number: r.number, timeIn: src, timeSub: src !== t ? t : null,
+            owner: c.customer?.full_name ?? null,
+            ownerSub: [c.customer?.mobile, r.ownerSize > 1 ? `${r.ownerSize} pets` : null].filter(Boolean).join(" · ") || null,
+            pet: pet?.name ?? "Pet", breed: pet?.breed || pet?.species || "—",
+            pkg: pkg ?? "Individual treatments", station: c.resource?.name ?? "Unassigned",
+            band: r.band, firstOfOwner: r.firstOfOwner, payment: flags[c.id],
+          };
+        }),
+      });
+    } catch (e: any) { toast.error(e?.message ?? "Couldn't create the PDF"); }
+    finally { setBusy(false); }
+  }
+
   if (q.isLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
   if (q.error) return <div className="text-sm text-destructive">Couldn't load today's grooms.</div>;
 
@@ -39,8 +68,8 @@ export function GroomingIntakeList({ day }: { day: Date }) {
     <PaymentFlagsProvider bookingIds={cards.map((c) => c.id)}>
       <div className="mb-3 flex items-center justify-between print:hidden">
         <p className="text-sm text-muted-foreground">Same colour = same owner.</p>
-        <button onClick={() => window.print()} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-white px-3 text-sm font-semibold hover:bg-sk-surface-muted">
-          <Printer className="h-4 w-4" /> Print sheet
+        <button onClick={makePdf} disabled={busy || rows.length === 0} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-white px-3 text-sm font-semibold hover:bg-sk-surface-muted">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Download PDF
         </button>
       </div>
       <div className="hidden print:block mb-2 text-lg font-bold">
