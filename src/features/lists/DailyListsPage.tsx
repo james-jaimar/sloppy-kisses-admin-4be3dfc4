@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Printer } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { useCustomerContactVisibility } from "@/lib/privacy/useCustomerContactVisibility";
@@ -48,20 +48,12 @@ export default function DailyListsPage() {
       <div className="print:hidden">
         <AppHeader
           title="Daily lists"
-          subtitle="Clean printouts for staff working off paper"
+          subtitle="Download a PDF of each list for staff working off paper"
           tabs={TABS.map((t) => ({
             label: t.label,
             active: dept === t.key,
             onClick: () => setDept(t.key),
           }))}
-          actions={
-            <button
-              onClick={() => window.print()}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-sk-coral px-4 text-sm font-semibold text-white hover:bg-sk-coral-dark"
-            >
-              <Printer className="h-4 w-4" /> Print
-            </button>
-          }
         />
       </div>
 

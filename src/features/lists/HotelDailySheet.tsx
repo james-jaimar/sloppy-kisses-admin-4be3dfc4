@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { fmtTime, useHotelSheet, usePetAlerts } from "./queries";
+import { downloadSheetPdf, fmtShort, PdfButton, pdfDay } from "./sheetPdf";
 import { AlertChips, EmptyState, Sheet, TABLE, TD, TH, Tick } from "./sheetUi";
 import { addonLabel, isWalk, walksPerDay, useHotelBookingAddons } from "@/features/hotelCattery/bookingAddons";
 
@@ -27,7 +28,28 @@ export function HotelDailySheet({
   const arrivals = stays.filter((s) => s.arrivingToday);
   const departures = stays.filter((s) => s.leavingToday);
 
+  const pdf = () => downloadSheetPdf({
+    title: "Dog & Cat Hotel day sheet", subtitle: dayLabel, landscape: true, fileName: `hotel-day-sheet-${pdfDay(day)}.pdf`,
+    total: { value: petIds.length, label: "pets", sub: `${arrivals.length} in · ${departures.length} out` }, notesBox: "Handover notes / incidents",
+    sections: [{
+      columns: [{ label: "Room", width: 28 }, { label: "Pet & breed", width: 45 }, { label: "Owner", width: 36 }, { label: "Stay", width: 24 }, { label: "Feeding · Medication · Notes" }, { label: "Rounds", width: 50 }],
+      rows: stays.map((s) => {
+        const ex = addons[s.id] ?? [];
+        return [
+          [s.room, s.arrivingToday ? `ARRIVES ${fmtTime(s.start_at)}` : "", s.leavingToday ? `LEAVES ${fmtTime(s.end_at)}` : ""].filter(Boolean).join("\n"),
+          s.pets.map((p) => [p.name ?? "Pet", p.breed ? `(${p.breed})` : "", (alerts[p.id]?.alerts ?? []).join(", ")].filter(Boolean).join(" ")).join("\n"),
+          `${s.customer_name}${showPhone && s.customer_mobile ? `\n${s.customer_mobile}` : ""}`,
+          `${fmtShort(s.start_at)} – ${fmtShort(s.end_at)}`,
+          [ex.length ? `PAID EXTRAS: ${ex.map(addonLabel).join(" · ")}` : "", s.feeding ? `Food: ${s.feeding}` : "", s.medication ? `Meds: ${s.medication}` : "", s.notes ?? "", ...s.pets.map((p) => alerts[p.id]?.medical ? `Medical: ${alerts[p.id]?.medical}` : "")].filter(Boolean).join("\n"),
+          ["[ ] Fed AM  [ ] Meds", Array.from({ length: walksPerDay(ex) }, (_, i) => `[ ] Walk ${i + 1}`).join("  "), "[ ] Fed PM  [ ] Clean"].filter(Boolean).join("\n"),
+        ];
+      }),
+    }],
+  });
+
   return (
+    <>
+    {stays.length > 0 && <PdfButton onClick={pdf} />}
     <Sheet
       title="Dog & Cat Hotel day sheet"
       subtitle={dayLabel}
@@ -127,5 +149,6 @@ export function HotelDailySheet({
         </>
       )}
     </Sheet>
+    </>
   );
 }

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAttendanceForRange, useDaycareEnrolments, useDaySwapsForRange } from "@/features/daycare/queries";
 import { weekDays, weeklyDaycareRows, type WeeklyVisit } from "./weeklyDaycare";
+import { downloadSheetPdf, PdfButton } from "./sheetPdf";
 import { Sheet, TABLE, TD, TH, Tick } from "./sheetUi";
 
 export function WeeklyDaycareSheet({ tenantId, day }: { tenantId: string | null; day: Date }) {
@@ -25,7 +26,14 @@ export function WeeklyDaycareSheet({ tenantId, day }: { tenantId: string | null;
   const rows = weeklyDaycareRows(days, enrolments.data ?? [], swaps.data ?? [], [...visits.data ?? [], ...recorded]);
   const error = enrolments.error || swaps.error || attendance.error || visits.error;
   const loading = enrolments.isLoading || swaps.isLoading || attendance.isLoading || visits.isLoading;
-  return <Sheet title="Daycare weekly register" subtitle={`${new Date(`${from}T12:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })} – ${new Date(`${to}T12:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}`} meta={<div>{rows.length} dogs · Staff: __________</div>}>
+  const pdf = () => downloadSheetPdf({
+    title: "Daycare weekly register", subtitle: `Week ${from} to ${to}`, landscape: true, fileName: `daycare-week-${from}.pdf`,
+    total: { value: rows.length, label: "dogs" },
+    sections: [{ counts: "Staff: ______________",
+      columns: [{ label: "#", width: 9, big: true }, { label: "Dog / owner", width: 45 }, ...days.map((d, i) => ({ label: `${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i]} ${d.slice(8)}` }))],
+      rows: rows.map((r, i) => [String(i + 1), `${r.pet}\n${r.owner}`, ...days.map((d) => r.days[d] ? `${r.days[d].join(" / ")}\n[ ] In  [ ] Out` : "")]) }],
+  });
+  return <>{!loading && !error && rows.length > 0 && <PdfButton onClick={pdf} />}<Sheet title="Daycare weekly register" subtitle={`${new Date(`${from}T12:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short" })} – ${new Date(`${to}T12:00:00`).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}`} meta={<div>{rows.length} dogs · Staff: __________</div>}>
     {error ? <p role="alert" className="text-destructive">Unable to load the complete register.</p> : loading ? <p>Loading…</p> : <div className="overflow-x-auto print:overflow-visible"><table className={`${TABLE} min-w-[700px] print:min-w-0`}><thead><tr><th className={`${TH} w-48`}>Dog / owner</th>{days.map((date, i) => <th key={date} className={TH}>{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i]} {date.slice(8)}</th>)}</tr></thead><tbody>{rows.map(r => <tr key={r.petId} className="break-inside-avoid"><td className={TD}><div className="font-bold">{r.pet}</div><div className="text-xs">{r.owner}</div></td>{days.map(date => <td key={date} className={`${TD} ${r.days[date] ? "bg-muted print:bg-muted" : ""}`}><div className="min-h-14">{r.days[date] && <><div className="mb-2 text-[10px] font-semibold">{r.days[date].join(" / ")}</div><Tick /> <span className="text-[10px]">In</span> <Tick /> <span className="text-[10px]">Out</span></>}</div></td>)}</tr>)}</tbody></table></div>}
-  </Sheet>;
+  </Sheet></>;
 }

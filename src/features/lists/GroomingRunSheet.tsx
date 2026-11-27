@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { fmtTime, useGroomingBriefs, useGroomingSheet, usePetAlerts } from "./queries";
 import { groomDayNumbers } from "@/features/grooming/dayNumbers";
+import { downloadSheetPdf, PdfButton, pdfDay } from "./sheetPdf";
 import { AlertChips, EmptyState, Sheet, TABLE, TD, TH, Tick } from "./sheetUi";
 
 type Layout = "master" | "station";
@@ -61,8 +62,29 @@ export function GroomingRunSheet({
     );
   }
 
+  const petLine = (j: (typeof jobs)[number]) => j.pets.map((p) => [`#${nums.get(`${j.id}:${p.id}`) ?? "?"}`, p.name ?? "Pet", p.breed ? `(${p.breed})` : "", (alerts[p.id]?.alerts ?? []).join(", ")].filter(Boolean).join(" ")).join("\n");
+  const owner = (j: (typeof jobs)[number]) => `${j.customer_name}${showPhone && j.customer_mobile ? `\n${j.customer_mobile}` : ""}`;
+  const brief = (j: (typeof jobs)[number]) => [j.package_name ?? "—", ...(briefs[j.id] ?? []), j.notes, ...j.pets.map((p) => alerts[p.id]?.medical ? `Medical: ${alerts[p.id]?.medical}` : "")].filter(Boolean).join("\n");
+  const time = (j: (typeof jobs)[number]) => `${fmtTime(j.start_at)}${j.duration_minutes ? `\n${j.duration_minutes} min` : ""}`;
+  const pdf = () => layout === "master"
+    ? downloadSheetPdf({
+        title: "Master parlour sheet", subtitle: dayLabel, landscape: true, fileName: `parlour-sheet-${pdfDay(day)}.pdf`,
+        total: { value: petTotal, label: "dogs", sub: `${jobs.length} appts` },
+        sections: [{ columns: [{ label: "Time", width: 18 }, { label: "Station", width: 22 }, { label: "Dog & breed", width: 50 }, { label: "Owner", width: 36 }, { label: "Service / brief" }, { label: "Groomer", width: 26 }, { label: "Start", width: 16 }, { label: "Finish", width: 16 }],
+          rows: chronological.map((j) => [time(j), j.groomer, petLine(j), owner(j), brief(j), "", "", ""]),
+          footer: "Write your name or initials when you take a dog. Front desk checked: ______________________" }],
+      })
+    : downloadSheetPdf({
+        title: "Grooming", subtitle: dayLabel, fileName: `grooming-stations-${pdfDay(day)}.pdf`,
+        total: { value: petTotal, label: "dogs", sub: `${jobs.length} appts` },
+        sections: byStation.map(([station, list]) => ({ heading: `Grooming · ${station}`, counts: `${list.reduce((s, j) => s + j.pets.length, 0)} dogs · ${list.length} appointments`,
+          columns: [{ label: "Time", width: 18 }, { label: "Dog & breed", width: 45 }, { label: "Owner", width: 32 }, { label: "Service / brief" }, { label: "Groomer", width: 24 }, { label: "Start / Done / Out", width: 30 }],
+          rows: list.map((j) => [time(j), petLine(j), owner(j), brief(j), "", "[ ]   [ ]   [ ]"]) })),
+      });
+
   const toggle = (
-    <div className="mb-3 flex gap-2 print:hidden">
+    <div className="mb-3 flex flex-wrap items-start gap-2 print:hidden">
+      <PdfButton onClick={pdf} />
       {(["master", "station"] as Layout[]).map((l) => (
         <button
           key={l}

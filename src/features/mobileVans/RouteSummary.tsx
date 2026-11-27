@@ -118,7 +118,7 @@ export function RouteSummary({
             {stops.map((s) => (
               <li key={s.id} className="flex items-center gap-2 px-4 py-2.5 text-xs">
                 <div className="w-12 shrink-0 tabular-nums text-muted-foreground">{fmtTime(s.start_at)}</div>
-                <div className="flex-1 truncate">{s.pets[0]?.name ?? "?"}</div>
+                <div className="flex-1 truncate">{s.pets.map((p) => `${p.name ?? "?"}${p.breed ? ` (${p.breed})` : ""}`).join(", ") || "?"}</div>
                 <button
                   title="Start"
                   disabled={updateStatus.isPending}

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useExpectedForDay } from "@/features/daycare/queries";
 import { useDayNotes, usePetAlerts } from "./queries";
+import { downloadSheetPdf, PdfButton, pdfDay } from "./sheetPdf";
 import { AlertChips, EmptyState, Sheet, TABLE, TD, TH, Tick } from "./sheetUi";
 
 /** Daycare attendance register: one line per dog, tick in / tick out, feed + meds. */
@@ -23,7 +24,23 @@ export function DaycareRegisterSheet({
   const alerts = alertsQ.data ?? {};
   const notes = notesQ.data ?? [];
 
+  const pdf = () => downloadSheetPdf({
+    title: "Daycare register", subtitle: dayLabel, fileName: `daycare-register-${pdfDay(day)}.pdf`,
+    total: { value: rows.length, label: "dogs" }, notesBox: "Incidents / things to tell the office",
+    sections: [{
+      counts: "Staff on duty: ______________",
+      columns: [{ label: "#", width: 9, big: true }, { label: "Dog & breed", width: 42 }, { label: "Owner", width: 32 }, { label: "Plan", width: 22 }, { label: "In", width: 15 }, { label: "Out", width: 15 }, { label: "Fed", width: 10 }, { label: "Meds", width: 11 }, { label: "Notes" }],
+      rows: rows.map((r, i) => {
+        const a = alerts[r.pet_id];
+        return [String(i + 1), [r.pet_name, a?.breed ? `(${a.breed})` : "", (a?.alerts ?? []).join(", ")].filter(Boolean).join(" "), r.customer_name ?? "", r.plan_name ?? "—", "", "", "[ ]", "[ ]",
+          [a?.medical ? `Medical: ${a.medical}` : "", ...notes.filter((n) => n.pet_id === r.pet_id).map((n) => `${n.office_flag ? "! " : ""}${n.body}`)].filter(Boolean).join("\n")];
+      }),
+    }],
+  });
+
   return (
+    <>
+    {rows.length > 0 && <PdfButton onClick={pdf} />}
     <Sheet
       title="Daycare register"
       subtitle={dayLabel}
@@ -98,5 +115,6 @@ export function DaycareRegisterSheet({
         </div>
       </div>
     </Sheet>
+    </>
   );
 }

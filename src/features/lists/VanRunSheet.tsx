@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { fmtTime, usePetAlerts, useVanSheet } from "./queries";
+import { downloadSheetPdf, PdfButton, pdfDay } from "./sheetPdf";
 import { AlertChips, EmptyState, Sheet, TABLE, TD, TH, Tick } from "./sheetUi";
 
 /** Mobile van route sheet: stops in order with address, access notes and sign-off. */
@@ -37,8 +38,25 @@ export function VanRunSheet({
     );
   }
 
+  const pdf = () => downloadSheetPdf({
+    title: "Van route", subtitle: dayLabel, landscape: true, fileName: `van-routes-${pdfDay(day)}.pdf`,
+    total: { value: stops.reduce((n, s) => n + s.pets.length, 0), label: "dogs", sub: `${byVan.length} van${byVan.length === 1 ? "" : "s"}` },
+    sections: byVan.map(([van, list]) => ({
+      heading: `Van route · ${van}`,
+      counts: `${list.reduce((n, s) => n + s.pets.length, 0)} dogs · ${list.length} stops    Driver: ______________`,
+      columns: [{ label: "#", width: 10, big: true }, { label: "Time", width: 16 }, { label: "Dog & breed", width: 48 }, { label: "Owner", width: 40 }, { label: "Address & access" }, { label: "Service", width: 45 }, { label: "Arrived / Done", width: 28 }],
+      rows: list.map((s, i) => [String(i + 1), fmtTime(s.start_at),
+        s.pets.map((p) => [p.name ?? "Pet", p.breed ? `(${p.breed})` : "", (alerts[p.id]?.alerts ?? []).join(", ")].filter(Boolean).join(" ")).join("\n"),
+        `${s.customer_name}${showPhone && s.customer_mobile ? `\n${s.customer_mobile}` : ""}`,
+        [s.address, s.access_notes].filter(Boolean).join("\n"),
+        [s.package_name ?? "—", s.notes].filter(Boolean).join("\n"), "[  ]   [  ]"]),
+      footer: "Km start: __________   Km end: __________   Driver signature: ______________________",
+    })),
+  });
+
   return (
     <>
+      <PdfButton onClick={pdf} />
       {byVan.map(([van, list]) => (
         <Sheet
           key={van}
@@ -71,6 +89,7 @@ export function VanRunSheet({
                     {s.pets.map((p) => (
                       <div key={p.id} className="font-bold">
                         {p.name}
+                        {p.breed && <span className="ml-1 text-xs font-normal print:text-[8pt]">({p.breed})</span>}
                         <AlertChips alerts={alerts[p.id]?.alerts ?? []} />
                       </div>
                     ))}
