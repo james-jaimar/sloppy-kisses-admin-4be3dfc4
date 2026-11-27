@@ -421,6 +421,9 @@ export function GroomingDiary({ day }: { day: Date }) {
                             {c.booking_group_id && <Link2 className="h-3 w-3 shrink-0 text-muted-foreground" />}
                             {c.pets.some((p) => daycarePetIds.has(p.id)) && <InDaycareChip status={c.status} />}
                           </div>
+                          {c.customer?.full_name && (
+                            <div className="truncate font-semibold text-foreground/80">{c.customer.full_name}</div>
+                          )}
                           <div className="truncate text-muted-foreground">
                             {minutesToLabel(startMin)}–{minutesToLabel(startMin + dur)}
                             {pkgName ? ` · ${pkgName}` : ""}

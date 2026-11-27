@@ -8,10 +8,11 @@ import { Link } from "react-router-dom";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { GroomingBoard } from "./GroomingBoard";
 import { GroomingDiary } from "./GroomingDiary";
+import { GroomingIntakeList } from "./GroomingIntakeList";
 import { useGroomingBoardBookings } from "./queries";
 import { PawPrint } from "lucide-react";
 
-type View = "diary" | "board";
+type View = "diary" | "board" | "list";
 const VIEW_KEY = "sk.grooming.view";
 
 function addDays(d: Date, n: number) {
@@ -55,12 +56,15 @@ export default function GroomingBoardPage() {
 
   return (
     <>
+      <div className="print:hidden">
       <AppHeader
         title="Grooming board"
         subtitle={
           view === "diary"
             ? "One lane per station — drag to change station or time. First groomer free takes the next dog."
-            : "Drag cards across columns as pets move through the salon."
+            : view === "board"
+              ? "Drag cards across columns as pets move through the salon."
+              : "Today's intake sheet — one colour per owner, numbered in crate order. Print it for the morning."
         }
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -74,7 +78,7 @@ export default function GroomingBoardPage() {
             <Link to="/kiosk/grooming" title="Parlour tablet" className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-white hover:bg-sk-surface-muted"><Tablet className="h-4 w-4" /></Link>
             <Link to="/kiosk/grooming/tv" title="Parlour TV" className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-white hover:bg-sk-surface-muted"><Tv className="h-4 w-4" /></Link>
             <div className="inline-flex overflow-hidden rounded-lg border border-border bg-white">
-              {(["diary", "board"] as View[]).map((v) => (
+              {(["diary", "board", "list"] as View[]).map((v) => (
                 <button
                   key={v}
                   onClick={() => setView(v)}
@@ -114,13 +118,14 @@ export default function GroomingBoardPage() {
           </div>
         }
       />
-      <div className="flex-1 p-6">
-        <div className="mb-4 inline-flex items-center gap-3 rounded-2xl bg-primary px-5 py-3 text-primary-foreground shadow-sm">
+      </div>
+      <div className="flex-1 p-6 print:p-0">
+        <div className="mb-4 inline-flex print:hidden items-center gap-3 rounded-2xl bg-primary px-5 py-3 text-primary-foreground shadow-sm">
           <PawPrint className="h-7 w-7" />
           <span className="text-4xl font-black tabular-nums leading-none">{dayQ.isLoading ? "…" : petTotal}</span>
           <span className="text-lg font-bold leading-tight">dog{petTotal === 1 ? "" : "s"} in the parlour<br /><span className="text-sm font-medium opacity-90">{(dayQ.data ?? []).length} appointments</span></span>
         </div>
-        {view === "diary" ? <GroomingDiary day={day} /> : <GroomingBoard day={day} />}
+        {view === "diary" ? <GroomingDiary day={day} /> : view === "board" ? <GroomingBoard day={day} /> : <GroomingIntakeList day={day} />}
         {walkInStart && tenantId && (
           <BookingFormModal
             tenantId={tenantId}
