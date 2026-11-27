@@ -235,6 +235,9 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
   for (const r of codeRows ?? []) if (r.kind === "addon" && r.code) addonItemCode[r.ref_key] = r.code;
 
   const validCodes = await knownItemCodes(ctx);
+  // Service lines without a booking link (e.g. extra add-ons) inherit the invoice's single service.
+  const distinctServices = [...new Set(Object.values(serviceByBooking))];
+  const invoiceService = distinctServices.length === 1 ? distinctServices[0] : null;
 
   const lines = (inv.invoice_items ?? [])
     .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
@@ -253,6 +256,7 @@ async function pushInvoice(s: Settings, invoiceId: string, actor: string | null)
         AccountCode: l.xero_account_code
           || l.product?.xero_account_code
           || (l.booking_id ? s.service_account_codes?.[serviceByBooking[l.booking_id]] : null)
+          || (!l.booking_id && !l.product_id && !l.product && invoiceService ? s.service_account_codes?.[invoiceService] : null)
           || s.default_sales_account,
         TaxType: Number(l.vat_rate ?? 0) > 0 ? s.default_tax_type : s.zero_rated_tax_type,
       };
