@@ -7,7 +7,7 @@ import { useCurrentTenant } from "@/lib/tenant/TenantContext";
 import { fmtZar } from "@/features/invoices/status";
 import { downloadSheetPdf, PdfButton, pdfDay } from "@/features/lists/sheetPdf";
 import { useSalesData } from "./useSalesData";
-import { buildSalesReport, DEPARTMENTS, takings } from "./salesByDepartment";
+import { buildSalesReport, DEPARTMENTS, takings, type DateBasis } from "./salesByDepartment";
 
 type Preset = "today" | "yesterday" | "week" | "month" | "last_month" | "custom";
 const PRESETS: { key: Preset; label: string }[] = [
@@ -34,8 +34,11 @@ export default function SalesByDepartmentPage() {
   const [sp, setSp] = useSearchParams();
   const preset = (sp.get("p") as Preset) || "today";
   const [from, to] = range(preset, sp.get("from"), sp.get("to"));
-  const q = useSalesData(tenant?.id, from, to);
-  const report = useMemo(() => buildSalesReport(q.data?.invoices ?? [], q.data?.credits ?? []), [q.data]);
+  const basis: DateBasis = sp.get("basis") === "invoice" ? "invoice" : "service";
+  const basisLabel = basis === "service" ? "By service date" : "By invoice date";
+  const q = useSalesData(tenant?.id, from, to, basis);
+  const report = useMemo(() => buildSalesReport(q.data?.invoices ?? [], q.data?.credits ?? [], { basis, from, to }), [q.data, basis, from, to]);
+  const setBasis = (b: DateBasis) => { const n = new URLSearchParams(sp); if (b === "service") n.delete("basis"); else n.set("basis", b); setSp(n, { replace: true }); };
   const multiDay = from !== to;
   const days = useMemo(() => multiDay ? eachDayOfInterval({ start: new Date(from + "T00:00:00"), end: new Date(to + "T00:00:00") }).map(pdfDay) : [], [from, to, multiDay]);
   const shown = DEPARTMENTS.filter((x) => x.key !== "other" || report.byDept.other.gross || report.byDept.other.credits);
@@ -50,7 +53,7 @@ export default function SalesByDepartmentPage() {
 
   function csv() {
     const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
-    const lines = [`Sales by department,${esc(period)}`, "", ["Department", "Items", "Invoiced (incl. VAT)", "Credits (incl. VAT)", "Net sales (excl. VAT)", "VAT", "Gross takings"].join(","),
+    const lines = [`Sales by department,${esc(period)},${esc(basisLabel)}`, "", ["Department", "Items", "Invoiced (incl. VAT)", "Credits (incl. VAT)", "Net sales (excl. VAT)", "VAT", "Gross takings"].join(","),
       ...[...summaryRows, summaryTotal].map((r) => r.map(esc).join(","))];
     if (multiDay) {
       lines.push("", ["Date", ...shown.map((x) => x.label), "Total"].map(esc).join(","));
@@ -58,13 +61,13 @@ export default function SalesByDepartmentPage() {
     }
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" }));
-    a.download = `sales-by-department-${from}-to-${to}.csv`; document.body.appendChild(a); a.click(); a.remove();
+    a.download = `sales-by-department-${basis}-date-${from}-to-${to}.csv`; document.body.appendChild(a); a.click(); a.remove();
   }
 
   async function pdf() {
     const sections = [{ heading: "Sales by department", columns: [{ label: "Department", width: 52 }, { label: "Items" }, { label: "Invoiced" }, { label: "Credits" }, { label: "Net excl. VAT" }, { label: "VAT" }, { label: "Gross takings" }], rows: [...summaryRows, summaryTotal], footer: "Amounts in ZAR. Invoiced and credits include VAT. Based on invoice and credit note dates; drafts and voided invoices excluded." }];
     if (multiDay) sections.push({ heading: "Daily takings by department", columns: [{ label: "Date", width: 24 }, ...shown.map((x) => ({ label: x.label })), { label: "Total" }], rows: days.map((day) => { const row = report.byDay.get(day); const vals = shown.map((x) => row?.[x.key] ?? 0); return [format(new Date(day + "T00:00:00"), "EEE dd MMM"), ...vals.map(money), money(vals.reduce((a, b) => a + b, 0))]; }), footer: "Gross takings incl. VAT, after credit notes." } as any);
-    await downloadSheetPdf({ title: "Sales by department", subtitle: `${tenant?.name ?? ""} · ${period}`, landscape: multiDay, sections, fileName: `sales-by-department-${from}-to-${to}.pdf` });
+    await downloadSheetPdf({ title: "Sales by department", subtitle: `${tenant?.name ?? ""} · ${period} · ${basisLabel}`, landscape: multiDay, sections, fileName: `sales-by-department-${basis}-date-${from}-to-${to}.pdf` });
   }
 
   return (
@@ -84,7 +87,14 @@ export default function SalesByDepartmentPage() {
             <input type="date" value={from} onChange={(e) => setDate("from", e.target.value)} className="h-10 rounded-xl border border-border bg-card px-2 text-sm" aria-label="From" />
             <input type="date" value={to} min={from} onChange={(e) => setDate("to", e.target.value)} className="h-10 rounded-xl border border-border bg-card px-2 text-sm" aria-label="To" />
           </>}
-          <div className="ml-auto text-sm font-medium text-muted-foreground">{period}</div>
+          <div className="ml-auto flex items-center gap-3">
+            <div className="inline-flex rounded-xl border border-border bg-card p-1" role="group" aria-label="Date basis">
+              {([["service", "Service date"], ["invoice", "Invoice date"]] as const).map(([k, l]) => (
+                <button key={k} onClick={() => setBasis(k)} aria-pressed={basis === k}
+                  className={"h-8 rounded-lg px-3 text-sm font-semibold " + (basis === k ? "bg-primary text-primary-foreground" : "hover:bg-muted")}>{l}</button>))}
+            </div>
+            <div className="text-sm font-medium text-muted-foreground">{period} · {basisLabel}</div>
+          </div>
         </div>
 
         {q.isLoading ? <div className="sk-card p-10 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div>
@@ -135,7 +145,9 @@ export default function SalesByDepartmentPage() {
             </table>
           </div>}
 
-          <p className="text-xs text-muted-foreground">Based on invoice date (the day each invoice was issued) and credit note date. Drafts and voided invoices are excluded. Credit notes are deducted from the department of the invoice they reverse.</p>
+          <p className="text-xs text-muted-foreground">{basis === "service"
+            ? "Based on service date: each item counts on the day of its appointment (hotel stays on arrival day), whenever it was invoiced. Till sales count on the sale day. Credit notes reduce the same service day as the item they reverse."
+            : "Based on invoice date (the day each invoice was issued, matching Xero) and credit note date."} Drafts and voided invoices are excluded. Credit notes are deducted from the department of the invoice they reverse.</p>
         </>}
       </div>
     </>

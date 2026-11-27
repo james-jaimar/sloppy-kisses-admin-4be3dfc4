@@ -40,12 +40,14 @@ export interface SalesLine {
   product_id: string | null;
   stock_movement_id: string | null;
   booking_service: string | null; // service of the line's own booking
+  service_date?: string | null; // local (Johannesburg) day of the line's own booking
 }
 export interface SalesInvoice {
   id: string;
   invoice_number: string | null;
   issue_date: string;
   booking_service: string | null; // invoice-level booking
+  service_date?: string | null; // local day of the invoice-level booking
   lines: SalesLine[];
 }
 export interface SalesCredit { id: string; issue_date: string; total: number; invoice: SalesInvoice | null; }
@@ -87,8 +89,16 @@ export interface SalesReport {
   totals: DeptTotals;
 }
 
+export type DateBasis = "service" | "invoice";
+export interface ReportOptions { basis?: DateBasis; from?: string; to?: string; }
+
+/** Service date of a line: its own booking, else the invoice's booking, else the invoice date (till sales). */
+export const lineServiceDate = (l: SalesLine, inv: SalesInvoice) => l.service_date || inv.service_date || inv.issue_date;
+
 /** Credits net against the department of the invoice they reverse, in proportion to that invoice's lines. */
-export function buildSalesReport(invoices: SalesInvoice[], credits: SalesCredit[]): SalesReport {
+export function buildSalesReport(invoices: SalesInvoice[], credits: SalesCredit[], opts: ReportOptions = {}): SalesReport {
+  const service = opts.basis === "service";
+  const inRange = (d: string) => (!opts.from || d >= opts.from) && (!opts.to || d <= opts.to);
   const byDept = Object.fromEntries(DEPARTMENTS.map((d) => [d.key, empty()])) as Record<Department, DeptTotals>;
   const byDay = new Map<string, Record<Department, number>>();
   const day = (d: string) => {
@@ -96,23 +106,53 @@ export function buildSalesReport(invoices: SalesInvoice[], credits: SalesCredit[
     if (!row) { row = Object.fromEntries(DEPARTMENTS.map((x) => [x.key, 0])) as Record<Department, number>; byDay.set(d, row); }
     return row;
   };
-  for (const inv of invoices) {
-    for (const [d, b] of invoiceSplit(inv)) {
-      const t = byDept[d];
-      t.gross += b.gross; t.vat += b.vat; t.net += b.gross - b.vat; t.count += b.count;
-      day(inv.issue_date)[d] += b.gross;
+  if (!service) {
+    for (const inv of invoices) {
+      for (const [d, b] of invoiceSplit(inv)) {
+        const t = byDept[d];
+        t.gross += b.gross; t.vat += b.vat; t.net += b.gross - b.vat; t.count += b.count;
+        day(inv.issue_date)[d] += b.gross;
+      }
     }
-  }
-  for (const cn of credits) {
-    const amount = Number(cn.total) || 0;
-    const split = cn.invoice ? invoiceSplit(cn.invoice) : new Map();
-    const base = [...split.values()].reduce((a, b) => a + b.gross, 0);
-    const parts: [Department, number, number][] = base > 0
-      ? [...split.entries()].map(([d, b]) => [d, amount * (b.gross / base), b.gross ? b.vat / b.gross : 0])
-      : [["other", amount, 15 / 115]];
-    for (const [d, gross, vatRatio] of parts) {
-      byDept[d].credits += gross; byDept[d].creditVat += gross * vatRatio;
-      day(cn.issue_date)[d] -= gross;
+    for (const cn of credits) {
+      const amount = Number(cn.total) || 0;
+      const split = cn.invoice ? invoiceSplit(cn.invoice) : new Map();
+      const base = [...split.values()].reduce((a, b) => a + b.gross, 0);
+      const parts: [Department, number, number][] = base > 0
+        ? [...split.entries()].map(([d, b]) => [d, amount * (b.gross / base), b.gross ? b.vat / b.gross : 0])
+        : [["other", amount, 15 / 115]];
+      for (const [d, gross, vatRatio] of parts) {
+        byDept[d].credits += gross; byDept[d].creditVat += gross * vatRatio;
+        day(cn.issue_date)[d] -= gross;
+      }
+    }
+  } else {
+    // Service date: each line counts on the day the service happens; credits reverse those same days.
+    for (const inv of invoices) {
+      for (const l of inv.lines) {
+        const sd = lineServiceDate(l, inv); if (!inRange(sd)) continue;
+        const d = classifyLine(l, inv); const t = byDept[d];
+        const g = Number(l.line_total) || 0, v = Number(l.vat_amount) || 0;
+        t.gross += g; t.vat += v; t.net += g - v; t.count += Number(l.quantity) || 1;
+        day(sd)[d] += g;
+      }
+    }
+    for (const cn of credits) {
+      const amount = Number(cn.total) || 0;
+      const inv = cn.invoice;
+      const base = inv ? inv.lines.reduce((a, l) => a + (Number(l.line_total) || 0), 0) : 0;
+      if (!inv || base <= 0) {
+        if (!inRange(cn.issue_date)) continue;
+        byDept.other.credits += amount; byDept.other.creditVat += amount * 15 / 115; day(cn.issue_date).other -= amount;
+        continue;
+      }
+      for (const l of inv.lines) {
+        const sd = lineServiceDate(l, inv); if (!inRange(sd)) continue;
+        const g = Number(l.line_total) || 0; if (!g) continue;
+        const d = classifyLine(l, inv); const part = amount * (g / base);
+        byDept[d].credits += part; byDept[d].creditVat += part * ((Number(l.vat_amount) || 0) / g);
+        day(sd)[d] -= part;
+      }
     }
   }
   const totals = empty();

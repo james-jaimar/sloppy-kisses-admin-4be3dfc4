@@ -24,4 +24,21 @@ describe("sales by department", () => {
     expect(r.byDept.grooming_inhouse.creditVat).toBe(71.09);
     expect(r.byDay.get("2026-11-27")!.grooming_inhouse).toBe(-545);
   });
+  it("service date counts a Friday groom invoiced on Monday on Friday, not Monday", () => {
+    const i = inv([line({ booking_service: "grooming_inhouse", service_date: "2026-11-27" })], { issue_date: "2026-11-23" });
+    const svc = buildSalesReport([i], [], { basis: "service", from: "2026-11-27", to: "2026-11-27" });
+    expect(svc.byDept.grooming_inhouse.gross).toBe(115);
+    expect(svc.byDay.get("2026-11-27")!.grooming_inhouse).toBe(115);
+    const mon = buildSalesReport([i], [], { basis: "service", from: "2026-11-23", to: "2026-11-23" });
+    expect(mon.totals.gross).toBe(0);
+    expect(buildSalesReport([i], [], { basis: "invoice" }).byDay.get("2026-11-23")!.grooming_inhouse).toBe(115);
+  });
+  it("service date keeps till sales on their sale day and credits on the reversed service day", () => {
+    const till = inv([line({ description: "Coke" })], { id: "t", issue_date: "2026-11-27" });
+    const g = inv([line({ booking_service: "grooming_mobile", service_date: "2026-11-27" })], { id: "g", issue_date: "2026-11-20" });
+    const r = buildSalesReport([till, g], [{ id: "c", issue_date: "2026-11-30", total: 115, invoice: g }], { basis: "service", from: "2026-11-27", to: "2026-11-27" });
+    expect(r.byDept.retail.gross).toBe(115);
+    expect(r.byDept.grooming_mobile.credits).toBe(115);
+    expect(r.byDay.get("2026-11-27")!.grooming_mobile).toBe(0);
+  });
 });
