@@ -33,6 +33,7 @@ export function GroomingExtrasPanel({
   petSize,
   petId,
   visitDate,
+  durationMinutes,
 }: {
   tenantId: string;
   bookingId: string | null;
@@ -53,6 +54,7 @@ export function GroomingExtrasPanel({
   /** Primary pet + visit date — used to preview puppy / daycare member discounts. */
   petId?: string | null;
   visitDate?: string | null;
+  durationMinutes?: number;
 }) {
   const packagesQ = useGroomingPackages(tenantId, { activeOnly: true });
   const addonsQ = useGroomingAddons(tenantId, { activeOnly: true });
@@ -362,7 +364,7 @@ export function GroomingExtrasPanel({
             {preview.minutes > 0 && (
               <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
                 <span>Appointment length</span>
-                <span>{preview.minutes} min{preview.addonMinutes > 0 ? ` (incl. ${preview.addonMinutes} min extras)` : ""}</span>
+                <span>{durationMinutes ?? preview.minutes} min{preview.addonMinutes > 0 ? ` (incl. ${preview.addonMinutes} min extras)` : ""}</span>
               </div>
             )}
           </div>

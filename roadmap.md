@@ -1,5 +1,11 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## Per-dog grooming duration and surcharge (28 Nov 2026)
+- [x] Add per-dog duration and editable automatic matted surcharge using the existing workflow rate, including repeated and mobile appointments.
+- [x] Use the same overridden duration for slot availability, review and persistence; preserve saved duration and charge when editing.
+- [ ] Run pricing/scheduling and form interaction regressions; check preview build.
+- [ ] Staff save/reopen and invoice readback: blocked by unavailable staff session on external user-managed Supabase.
+
 ## Credit-note loading repair (28 Nov 2026)
 - [x] Disambiguate the original invoice relationship in staff list/detail and customer portal credit queries; failed loads no longer appear as an empty staff list.
 - [x] Two query regressions and three existing VAT-credit tests passed; preview build OK. Database readback confirms CN-00052–CN-00055 and their original invoices.

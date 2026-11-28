@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { GroomingDurationFields } from "@/features/grooming/booking/GroomingDurationFields";
+import { groomingDurationPrice } from "@/features/grooming/booking/durationOverride";
 import { BookingStatusChip } from "./statusMeta";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -368,6 +370,8 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
   // Per-dog grooming plan: package, extras and grooming sheet for each dog.
   const [defaultPlan] = useState<DogPlan>(() => ({
     packageId: (!isEdit && prefill?.grooming?.package_id) || null,
+    durationOverride: !isEdit && prefill?.end_at ? initialDurationMins : null,
+    mattedSurchargeOverride: !isEdit ? prefill?.grooming?.matted_surcharge_zar ?? null : null,
     addons: [],
     instructions: {
       ...EMPTY_INSTRUCTIONS,
@@ -530,11 +534,18 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     serviceType,
     tenantId,
   );
+  const groomingDetailsSeeded = useRef(false);
   useEffect(() => {
     if (!isEdit || !detailsQ.data) return;
     if (detailsQ.data.kind === "grooming" && detailsQ.data.data) {
+      if (groomingDetailsSeeded.current) return;
+      groomingDetailsSeeded.current = true;
       setGrooming(detailsQ.data.data);
-      updatePlan(EDIT_KEY, { packageId: (detailsQ.data.data as any).package_id ?? null });
+      updatePlan(EDIT_KEY, {
+        packageId: detailsQ.data.data.package_id ?? null,
+        durationOverride: diffMinutes(booking?.start_at, booking?.end_at) ?? detailsQ.data.data.duration_minutes,
+        mattedSurchargeOverride: detailsQ.data.data.matted_surcharge_zar ?? 0,
+      });
     }
     if (detailsQ.data.kind === "hotel" && detailsQ.data.data) setHotel(detailsQ.data.data);
     if (detailsQ.data.kind === "transport" && detailsQ.data.data) setTransport(detailsQ.data.data);
@@ -604,7 +615,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
   const resourceType = SERVICE_TYPES.find((s) => s.value === serviceType)?.resourceType;
   // Grooming: each dog's package + extras decide its appointment length.
-  function planMinutes(key: string): number {
+  function planBaseMinutes(key: string): number {
     const p = planFor(key);
     const pkg = (packagesQ.data ?? []).find((x) => x.id === p.packageId) ?? null;
     const addonMins = p.addons.reduce((sum, s) => {
@@ -613,6 +624,13 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     }, 0);
     const total = (pkg ? Number(pkg.expected_minutes) || 60 : 0) + addonMins;
     return total > 0 ? Math.max(15, total) : 0;
+  }
+  function planPrice(key: string) {
+    const plan = planFor(key);
+    return groomingDurationPrice(planBaseMinutes(key), plan.durationOverride, plan.mattedSurchargeOverride, Number(groomingWfQ.data?.matted_rate_per_15min_zar ?? 50));
+  }
+  function planMinutes(key: string): number {
+    return planPrice(key).durationMinutes;
   }
   function planHasWork(key: string): boolean {
     const p = planFor(key);
@@ -739,7 +757,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
     return total + Number(pkg?.price_zar ?? 0) * (1 - pct / 100) + plan.addons.reduce((sum, selection) => {
       const addon = addonsCatalogQ.data?.find((a) => a.id === selection.addon_id);
       return sum + groomingAddonPrice(addon?.code ?? "", Number(addon?.price_zar ?? 0), pkg?.package_type) * selection.qty;
-    }, 0);
+    }, 0) + planPrice(isMultiPetGrooming ? id : groomCardKeys[0] ?? EDIT_KEY).mattedSurchargeZar;
   }, 0);
   const reviewTravelFee = serviceType === "grooming_mobile"
     ? Number(grooming.travel_fee ?? groomingWfQ.data?.default_mobile_travel_fee_zar ?? 0)
@@ -758,6 +776,13 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
       if (dogNoPkg) return toast.error(`Choose Express or Full groom for ${dogNoPkg.name}`);
     }
     if (kind === "grooming") {
+      if (!groomingWfQ.data || groomingWfQ.isError) return toast.error("Grooming surcharge settings could not load. Please retry before saving.");
+      if (isEdit && detailsQ.isPending) return toast.error("Please wait for the booking details to load.");
+      const invalid = groomCardKeys.find(key => {
+        const price = planPrice(key);
+        return !Number.isFinite(price.durationMinutes) || !Number.isInteger(price.durationMinutes) || price.durationMinutes < 15 || !Number.isFinite(price.mattedSurchargeZar) || price.mattedSurchargeZar < 0;
+      });
+      if (invalid !== undefined) return toast.error("Set a duration of at least 15 minutes and a non-negative matted coat surcharge for each dog.");
       const missing = groomCardKeys.find((k) => !planHasWork(k));
       if (missing !== undefined) {
         const name = petsQ.data?.find((p) => p.id === missing)?.name;
@@ -978,7 +1003,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
             });
             createdIds.push(res.id);
             const plan = planFor(s.key);
-            await saveDetails(res.id, { packageId: plan.packageId, durationMinutes: s.mins, quiet: true });
+            await saveDetails(res.id, { packageId: plan.packageId, durationMinutes: s.mins, mattedSurchargeZar: planPrice(s.key).mattedSurchargeZar, quiet: true });
             await persistGroomingAddons(res.id, plan.addons);
             await persistInstructions(res.id, plan.instructions);
             setBatchProgress({ done: createdIds.length, total });
@@ -1079,7 +1104,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
 
   async function saveDetails(
     bookingId: string,
-    opts?: { packageId?: string | null; durationMinutes?: number; quiet?: boolean },
+    opts?: { packageId?: string | null; durationMinutes?: number; mattedSurchargeZar?: number; quiet?: boolean },
   ) {
     if (kind === "grooming") {
       // Source service_package label from selected rate-card package so we
@@ -1098,6 +1123,7 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
           grooming_mode: serviceType === "grooming_mobile" ? "mobile" : "inhouse",
           service_package: pkg?.name ?? grooming.service_package ?? null,
           duration_minutes: opts?.durationMinutes ?? durationMins,
+          matted_surcharge_zar: opts?.mattedSurchargeZar ?? planPrice(groomCardKeys[0] ?? EDIT_KEY).mattedSurchargeZar,
         },
       });
     } else if (kind === "hotel") {
@@ -1656,13 +1682,23 @@ export function BookingFormModal({ tenantId, onClose, onSaved, booking, prefill 
                     addonSelection={plan.addons}
                     onAddonChange={(rows) => updatePlan(key, { addons: rows })}
                     pensionerDiscount={grooming.pensioner_discount ?? false}
-                    mattedSurchargeZar={grooming.matted_surcharge_zar ?? null}
+                    mattedSurchargeZar={planPrice(key).mattedSurchargeZar}
+                    durationMinutes={planMinutes(key)}
                     sedationSurchargeZar={grooming.sedation_surcharge_zar ?? null}
                     travelFee={grooming.travel_fee ?? null}
                     onTravelFeeChange={(v) => setGrooming((p) => ({ ...p, travel_fee: v }))}
                     petSize={effectivePetSize(petForSize)}
                     petId={petForSize?.id ?? null}
                     visitDate={startAt || null}
+                  />
+                  <GroomingDurationFields
+                    petName={label}
+                    baseMinutes={planBaseMinutes(key)}
+                    durationOverride={plan.durationOverride}
+                    surchargeOverride={plan.mattedSurchargeOverride}
+                    rate={Number(groomingWfQ.data?.matted_rate_per_15min_zar ?? 50)}
+                    disabled={!ready || !groomingWfQ.data || (isEdit && detailsQ.isPending)}
+                    onChange={patch => updatePlan(key, patch)}
                   />
                 </div>
               );

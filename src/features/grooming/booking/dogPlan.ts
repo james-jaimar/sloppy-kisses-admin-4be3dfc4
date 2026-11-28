@@ -16,6 +16,8 @@ export interface DogPlan {
   packageId: string | null;
   addons: GroomingAddonSelection[];
   instructions: GroomingInstructionsValue;
+  durationOverride?: number | null;
+  mattedSurchargeOverride?: number | null;
 }
 
 export const EMPTY_INSTRUCTIONS: GroomingInstructionsValue = {
