@@ -1,5 +1,10 @@
 # Roadmap — Charlotte's grooming snags (25 Oct 2026)
 
+## Credit-note loading repair (28 Nov 2026)
+- [x] Disambiguate the original invoice relationship in staff list/detail and customer portal credit queries; failed loads no longer appear as an empty staff list.
+- [x] Two query regressions and three existing VAT-credit tests passed; preview build OK. Database readback confirms CN-00052–CN-00055 and their original invoices.
+- [ ] Live staff list/detail and customer credits walkthrough: external user-managed Supabase cannot provide a signed-in session; anonymous API probe returned 401, so live row visibility remains unverified.
+
 ## Standalone grooming treatments (26 Nov 2026)
 - [x] Preserve directly selected individual treatments when no package is chosen; retain instruction-driven add-ons for package bookings.
 - [x] Add active standalone De-shed only at R150 in the existing editable grooming add-on catalogue (20-minute starting duration).

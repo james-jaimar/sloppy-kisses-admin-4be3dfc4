@@ -66,7 +66,7 @@ export function useCreditNotes(tenantId: string | null | undefined, opts?: { cus
     queryFn: async (): Promise<CreditNoteListItem[]> => {
       let q = db()
         .from("credit_notes")
-        .select("*, customer:customers(id, full_name, customer_number), invoice:invoices(id, invoice_number)")
+        .select("*, customer:customers(id, full_name, customer_number), invoice:invoices!credit_notes_invoice_id_fkey(id, invoice_number)")
         .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false });
       if (opts?.customerId) q = q.eq("customer_id", opts.customerId);
@@ -84,7 +84,7 @@ export function useCreditNote(id: string | undefined, tenantId: string | null | 
     enabled: Boolean(id && tenantId),
     queryFn: async (): Promise<CreditNoteDetail | null> => {
       const cnP = db().from("credit_notes")
-        .select("*, customer:customers(id, full_name, email, mobile, customer_number), invoice:invoices(id, invoice_number, total, balance_due, status)")
+        .select("*, customer:customers(id, full_name, email, mobile, customer_number), invoice:invoices!credit_notes_invoice_id_fkey(id, invoice_number, total, balance_due, status)")
         .eq("id", id).eq("tenant_id", tenantId).maybeSingle();
       const itemsP = db().from("credit_note_items")
         .select("*").eq("credit_note_id", id).eq("tenant_id", tenantId)

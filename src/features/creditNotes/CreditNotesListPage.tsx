@@ -69,7 +69,12 @@ export default function CreditNotesListPage() {
                 {listQ.isLoading && (
                   <tr><td colSpan={8} className="px-5 py-10 text-center text-muted-foreground">Loading…</td></tr>
                 )}
-                {!listQ.isLoading && rows.length === 0 && (
+                {listQ.isError && (
+                  <tr><td colSpan={8} role="alert" className="px-5 py-10 text-center text-destructive">
+                    Credit notes could not be loaded. Please refresh to try again.
+                  </td></tr>
+                )}
+                {!listQ.isLoading && !listQ.isError && rows.length === 0 && (
                   <tr><td colSpan={8} className="px-5 py-10 text-center text-muted-foreground">
                     <FileMinus className="mx-auto mb-2 h-6 w-6 opacity-50" />
                     No credit notes yet. Issue one from an invoice's detail page.

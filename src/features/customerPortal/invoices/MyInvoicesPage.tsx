@@ -31,8 +31,8 @@ export default function MyInvoicesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("credit_notes")
-        .select("id, credit_note_number, status, issue_date, total, invoice:invoices(id, invoice_number)")
-        .eq("customer_id", cust.data!.id)
+        .select("id, credit_note_number, status, issue_date, total, invoice:invoices!credit_notes_invoice_id_fkey(id, invoice_number)")
+        .eq("customer_id", cust.data?.id ?? "")
         .order("issue_date", { ascending: false });
       if (error) throw error;
       return data ?? [];
@@ -93,6 +93,7 @@ export default function MyInvoicesPage() {
         </>)}
         {tab === "credits" && (<>
           {credits.isLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>}
+          {credits.isError && <div role="alert" className="p-4 text-sm text-destructive">Credit notes could not be loaded. Please refresh to try again.</div>}
           {credits.data && credits.data.length === 0 && <div className="sk-card p-10 text-center text-sm text-muted-foreground">No credit notes.</div>}
           {credits.data && credits.data.length > 0 && (
             <div className="sk-card overflow-hidden">
