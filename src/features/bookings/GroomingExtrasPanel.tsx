@@ -369,7 +369,7 @@ export function GroomingExtrasPanel({
             )}
           </div>
           <div className="mt-2 text-[11px] text-muted-foreground">
-            The booking's invoice is re-priced automatically after save (until it is sent or paid).
+            Draft invoices update after save. Issued invoices require Adjust & re-bill for price changes.
           </div>
         </div>
       )}

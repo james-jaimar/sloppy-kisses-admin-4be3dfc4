@@ -3,7 +3,8 @@
 ## Per-dog grooming duration and surcharge (28 Nov 2026)
 - [x] Add per-dog duration and editable automatic matted surcharge using the existing workflow rate, including repeated and mobile appointments.
 - [x] Use the same overridden duration for slot availability, review and persistence; preserve saved duration and charge when editing.
-- [ ] Run pricing/scheduling and form interaction regressions; check preview build.
+- [x] All 13 pricing/scheduling and per-dog control tests passed; rollback-only invoice checks passed for independent charges, custom amounts, R0 and issued-invoice protection; preview build OK.
+- [x] Draft invoice surcharge synchronization added without changing package prices or existing issued/paid invoices; database test changes rolled back.
 - [ ] Staff save/reopen and invoice readback: blocked by unavailable staff session on external user-managed Supabase.
 
 ## Credit-note loading repair (28 Nov 2026)
